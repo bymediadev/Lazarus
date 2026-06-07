@@ -1,0 +1,47 @@
+[00:00] Rep (Alex): Thanks for joining, Priya. Quick recap — you lead RevOps at Meridian Health, and you're evaluating our platform to unify pipeline reporting across sales and CS. Does that still match?
+
+[00:12] Prospect (Priya): Yeah, that's right. We're on Salesforce, HubSpot for marketing, and a homegrown BI layer. Leadership wants one source of truth by Q3.
+
+[00:28] Rep: Perfect. Last time you mentioned the CFO cares about forecast accuracy. Is that still the north star?
+
+[00:35] Prospect: Forecast accuracy, yes — but honestly, security has become the blocker. Our CISO sent a questionnaire last week and I haven't had time to answer half of it.
+
+[00:48] Rep: Totally fair. We are SOC 2 Type II, GDPR-ready, and we support SSO. I can send the trust pack after this call.
+
+[00:58] Prospect: That helps, but IT wants to know where call recordings and deal notes are stored. We have a policy that customer data can't leave US-East unless Legal signs off. Also Procurement said anything over $40K needs three quotes.
+
+[01:18] Rep: We can store in US-East. On pricing, our Pro tier is $52K annually for 40 seats — I know that's above your threshold. We could look at a phased rollout to get under $40K year one.
+
+[01:35] Prospect: Phased might work, but I'd need Security and Legal in the same room. Last vendor we picked stalled for two months on DPA language.
+
+[01:48] Rep: Understood. What if we schedule a 30-minute security review with your CISO next week? I can bring our solutions engineer.
+
+[02:00] Prospect: Maybe. I'll check calendars. Honestly Alex, I'm also getting pressure to "just use what Salesforce offers" since we already pay for Einstein Analytics.
+
+[02:15] Rep: Salesforce is great for reporting inside CRM, but you mentioned CS data lives outside Salesforce — that's where we shine. Can I share a 2-minute clip of how we reconcile HubSpot + SFDC?
+
+[02:28] Prospect: Send it. I have to drop for another meeting.
+
+[02:35] Rep: Will do. I'll follow up Thursday if I don't hear back.
+
+[02:42] Prospect: Sounds good.
+
+--- 3 WEEKS LATER — FOLLOW-UP CALL ---
+
+[00:00] Rep: Priya, wanted to check in. Did the security pack and demo clip help?
+
+[00:08] Prospect: Sorry, been underwater. I skimmed the security doc — IT had questions about subprocessors. I forwarded it but haven't gotten a response.
+
+[00:22] Rep: No problem. Happy to do a live subprocessor review. Any movement on the phased pricing option?
+
+[00:30] Prospect: Procurement is asking why we're not evaluating native Salesforce first. I don't have bandwidth to fight that battle this month.
+
+[00:42] Rep: What would help you justify us vs. native? ROI model? Reference call?
+
+[00:50] Prospect: Maybe a reference, but not this week. We're in a hiring freeze and every new tool is under a microscope.
+
+[01:00] Rep: Got it. I'll send a one-pager comparing us to Einstein for your RevOps use case.
+
+[01:08] Prospect: Thanks. Gotta run.
+
+--- NO RESPONSE TO 4 FOLLOW-UP EMAILS OVER 10 DAYS ---
