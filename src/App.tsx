@@ -1,4 +1,5 @@
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { runPostMortem } from "./lib/api";
 import { MOCK_POST_MORTEM, PostMortemResult } from "./types";
 
 const ACCEPTED_EXT = [".mp3", ".wav", ".mp4", ".m4a", ".webm", ".mpeg", ".mpga"];
@@ -16,6 +17,11 @@ function isAcceptedFile(file: File): boolean {
   return false;
 }
 
+function formatFileSize(bytes: number): string {
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+}
+
 export default function App() {
   const [file, setFile] = useState<File | null>(null);
   const [dealValue, setDealValue] = useState("52000");
@@ -25,6 +31,23 @@ export default function App() {
   const [error, setError] = useState<string | null>(null);
   const [dragOver, setDragOver] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [apiOnline, setApiOnline] = useState<boolean | null>(null);
+
+  const hasAudio = !!file;
+  const hasTranscript = transcript.trim().length > 0;
+  const hasDualInput = hasAudio && hasTranscript;
+
+  const loadingMessage = useMemo(() => {
+    if (hasDualInput) return "Transcribing recording + merging with notes...";
+    if (hasAudio) return "Transcribing recording...";
+    return "Analyzing stall patterns...";
+  }, [hasAudio, hasDualInput]);
+
+  useEffect(() => {
+    fetch(`${import.meta.env.VITE_API_URL ?? ""}/api/health`)
+      .then((r) => r.ok && setApiOnline(true))
+      .catch(() => setApiOnline(false));
+  }, []);
 
   const handleFile = useCallback((f: File | undefined) => {
     if (!f) return;
@@ -65,9 +88,9 @@ export default function App() {
     [handleFile]
   );
 
-  const runPostMortem = async () => {
-    if (!file && !transcript.trim()) {
-      setError("Drop a recording or paste a transcript to run the post-mortem.");
+  const handleRun = async () => {
+    if (!hasAudio && !hasTranscript) {
+      setError("Add a recording, a transcript, or both.");
       return;
     }
 
@@ -75,29 +98,11 @@ export default function App() {
     setError(null);
 
     try {
-      const formData = new FormData();
-      if (file) formData.append("recording", file);
-      if (transcript.trim()) formData.append("transcript", transcript.trim());
-      formData.append("deal_value", dealValue || "0");
-
-      const res = await fetch("/api/post-mortem", {
-        method: "POST",
-        body: formData,
+      const data = await runPostMortem({
+        file,
+        transcript,
+        dealValue,
       });
-
-      const contentType = res.headers.get("content-type") ?? "";
-      const data = contentType.includes("application/json")
-        ? await res.json()
-        : null;
-
-      if (!res.ok) {
-        throw new Error(data?.error || `Post-mortem failed (${res.status}).`);
-      }
-
-      if (!data) {
-        throw new Error("API server unavailable. Run npm run dev to start the backend.");
-      }
-
       setResult(data);
     } catch (err) {
       if (err instanceof TypeError) {
@@ -126,7 +131,12 @@ export default function App() {
           <span className="tag">Deal Rescue Console</span>
         </div>
         <span className="header-status">
-          {loading ? "AUTOPSY IN PROGRESS..." : result ? "TRIAGE COMPLETE" : "STANDBY"}
+          {loading
+            ? "AUTOPSY IN PROGRESS..."
+            : result
+              ? "TRIAGE COMPLETE"
+              : "STANDBY"}
+          {apiOnline === false && " · API OFFLINE"}
         </span>
       </header>
 
@@ -134,9 +144,19 @@ export default function App() {
         <section className="panel panel-left">
           <div className="panel-label">Input Log</div>
 
-          <div
-            className={`dropzone ${dragOver ? "drag-over" : ""} ${file ? "has-file" : ""}`}
-          >
+          {(hasAudio || hasTranscript) && (
+            <div className="input-badges">
+              {hasAudio && <span className="input-badge input-badge-audio">Recording loaded</span>}
+              {hasTranscript && (
+                <span className="input-badge input-badge-text">Transcript attached</span>
+              )}
+              {hasDualInput && (
+                <span className="input-badge input-badge-merge">Dual-source merge enabled</span>
+              )}
+            </div>
+          )}
+
+          <div className={`dropzone ${dragOver ? "drag-over" : ""} ${file ? "has-file" : ""}`}>
             <input
               id="recording-upload"
               className="dropzone-file-input"
@@ -158,12 +178,21 @@ export default function App() {
                   ? "Recording loaded — ready for autopsy"
                   : "Drop Stalled Call Recording (.mp3/.wav/.mp4) — Initiate Autopsy"}
               </span>
-              {file && <span className="dropzone-filename">{file.name}</span>}
-              {!file && (
-                <span className="dropzone-hint">Click or drag a file here</span>
+              {file && (
+                <>
+                  <span className="dropzone-filename">{file.name}</span>
+                  <span className="dropzone-meta">{formatFileSize(file.size)}</span>
+                </>
               )}
+              {!file && <span className="dropzone-hint">Click or drag a file here</span>}
             </div>
           </div>
+
+          {file && (
+            <button type="button" className="file-clear-btn" onClick={() => setFile(null)}>
+              Remove recording
+            </button>
+          )}
 
           <div className="input-group">
             <label htmlFor="deal-value">Estimated Deal Value ($)</label>
@@ -177,19 +206,24 @@ export default function App() {
             />
           </div>
 
-          <div className="or-divider">— OR PASTE TRANSCRIPT —</div>
+          <div className="or-divider">— PLUS OPTIONAL TRANSCRIPT / CONTEXT —</div>
 
           <div className="input-group">
-            <label htmlFor="transcript">Call Transcript (for testing without audio)</label>
+            <label htmlFor="transcript">
+              Call Transcript &amp; Notes
+              <span className="label-hint">
+                Use alone, or together with a recording for richer analysis
+              </span>
+            </label>
             <textarea
               id="transcript"
               value={transcript}
               onChange={(e) => setTranscript(e.target.value)}
-              placeholder="Paste stalled call transcript here..."
+              placeholder="Paste transcript, email thread, CRM notes, or follow-up context..."
             />
           </div>
 
-          <button className="run-button" onClick={runPostMortem} disabled={loading}>
+          <button className="run-button" onClick={handleRun} disabled={loading}>
             {loading ? "Running Autopsy..." : "Run Sales Post-Mortem"}
           </button>
 
@@ -202,10 +236,20 @@ export default function App() {
           {loading ? (
             <div className="loading-overlay">
               <div className="spinner" />
-              <span>Analyzing stall patterns...</span>
+              <span>{loadingMessage}</span>
             </div>
           ) : result ? (
             <div className="cards">
+              {result.sources && (
+                <div className="sources-bar">
+                  {result.sources.audio && <span>Audio transcribed</span>}
+                  {result.sources.manual && <span>Manual notes merged</span>}
+                  {result.sources.audio && result.sources.manual && (
+                    <span className="sources-merged">Combined analysis</span>
+                  )}
+                </div>
+              )}
+
               <article className="card card-red">
                 <h2 className="card-title">Primary Cause of Death</h2>
                 <div className="card-body">
@@ -240,7 +284,7 @@ export default function App() {
           ) : (
             <div className="empty-state">
               <span>AWAITING INPUT</span>
-              <span>Drop a recording or paste a transcript to begin</span>
+              <span>Drop a recording, paste a transcript, or use both</span>
             </div>
           )}
         </section>

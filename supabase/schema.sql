@@ -6,6 +6,7 @@ CREATE TABLE call_post_mortems (
     user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE,
     client_name TEXT DEFAULT 'Unknown Deal',
     deal_value NUMERIC DEFAULT 0,
+    deal_status TEXT NOT NULL DEFAULT 'stalled' CHECK (deal_status IN ('failed', 'stalled', 'successful')),
     stall_cause TEXT NOT NULL,
     why_it_stalled TEXT NOT NULL,
     restart_plan TEXT NOT NULL,

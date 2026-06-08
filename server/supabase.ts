@@ -4,9 +4,10 @@ export interface SavePostMortemInput {
   userId?: string;
   clientName: string;
   dealValue: number;
-  stallCause: string;
-  whyItStalled: string;
-  restartPlan: string;
+  dealStatus: string;
+  headline: string;
+  diagnosis: string;
+  actionPlan: string;
   transcriptText?: string;
 }
 
@@ -20,17 +21,20 @@ export async function savePostMortem(input: SavePostMortemInput): Promise<string
 
   const supabase = createClient(url, key);
 
+  const row = {
+    user_id: input.userId ?? null,
+    client_name: input.clientName,
+    deal_value: input.dealValue,
+    deal_status: input.dealStatus,
+    stall_cause: input.headline,
+    why_it_stalled: input.diagnosis,
+    restart_plan: input.actionPlan,
+    transcript_text: input.transcriptText ?? null,
+  };
+
   const { data, error } = await supabase
     .from("call_post_mortems")
-    .insert({
-      user_id: input.userId ?? null,
-      client_name: input.clientName,
-      deal_value: input.dealValue,
-      stall_cause: input.stallCause,
-      why_it_stalled: input.whyItStalled,
-      restart_plan: input.restartPlan,
-      transcript_text: input.transcriptText ?? null,
-    })
+    .insert(row)
     .select("id")
     .single();
 
