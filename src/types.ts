@@ -8,6 +8,7 @@ export interface PostMortemResult {
   action_plan: string[];
   sources?: { audio: boolean; manual: boolean };
   id?: string | null;
+  warnings?: string[];
   /** @deprecated Use headline */
   stall_cause?: string;
   /** @deprecated Use diagnosis */

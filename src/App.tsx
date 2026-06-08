@@ -36,6 +36,7 @@ export default function App() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [dragOver, setDragOver] = useState(false);
+  const [warnings, setWarnings] = useState<string[]>([]);
   const [copied, setCopied] = useState(false);
   const [apiOnline, setApiOnline] = useState<boolean | null>(null);
 
@@ -44,9 +45,9 @@ export default function App() {
   const hasDualInput = hasAudio && hasTranscript;
 
   const loadingMessage = useMemo(() => {
-    if (hasDualInput) return "Transcribing recording and analyzing deal...";
-    if (hasAudio) return "Transcribing recording and analyzing deal...";
-    return "Analyzing deal...";
+    if (hasDualInput) return "Transcribing audio and reading between the lines...";
+    if (hasAudio) return "Listening to recording and analyzing the call...";
+    return "Reading transcript and analyzing the call...";
   }, [hasAudio, hasDualInput]);
 
   const statusUi = result ? DEAL_STATUS_UI[result.deal_status] : null;
@@ -110,6 +111,7 @@ export default function App() {
 
     setLoading(true);
     setError(null);
+    setWarnings([]);
 
     try {
       const data = await runPostMortem({
@@ -118,6 +120,7 @@ export default function App() {
         dealValue,
       });
       setResult(normalizeResult(data));
+      setWarnings(data.warnings ?? []);
     } catch (err) {
       if (err instanceof TypeError) {
         setError("Cannot reach API server. Run npm run dev and try again.");
@@ -237,6 +240,14 @@ export default function App() {
           <button className="run-button" onClick={handleRun} disabled={loading}>
             {loading ? "Running Analysis..." : "Run Deal Analysis"}
           </button>
+
+          {warnings.length > 0 && (
+            <div className="warning-banner">
+              {warnings.map((w, i) => (
+                <p key={i}>{w}</p>
+              ))}
+            </div>
+          )}
 
           {error && <div className="error-banner">{error}</div>}
         </section>

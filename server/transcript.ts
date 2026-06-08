@@ -1,3 +1,5 @@
+import { enrichManualTranscript } from "./enrich.js";
+
 export interface TranscriptSources {
   audio: boolean;
   manual: boolean;
@@ -6,30 +8,39 @@ export interface TranscriptSources {
 export interface BuiltTranscript {
   text: string;
   sources: TranscriptSources;
+  audioMeta?: {
+    durationSeconds?: number;
+    speakerCount?: number;
+  };
 }
 
 export function buildAnalysisTranscript(options: {
   audioTranscript?: string;
   manualTranscript?: string;
+  audioMeta?: { durationSeconds?: number; speakerCount?: number };
 }): BuiltTranscript {
   const audio = options.audioTranscript?.trim() ?? "";
-  const manual = options.manualTranscript?.trim() ?? "";
+  const manual = enrichManualTranscript(options.manualTranscript ?? "");
 
   if (audio && manual) {
     return {
       text: [
-        "=== CALL RECORDING TRANSCRIPT (AssemblyAI) ===",
         audio,
         "",
         "=== SUPPLEMENTAL NOTES / MANUAL TRANSCRIPT ===",
         manual,
       ].join("\n"),
       sources: { audio: true, manual: true },
+      audioMeta: options.audioMeta,
     };
   }
 
   if (audio) {
-    return { text: audio, sources: { audio: true, manual: false } };
+    return {
+      text: audio,
+      sources: { audio: true, manual: false },
+      audioMeta: options.audioMeta,
+    };
   }
 
   if (manual) {

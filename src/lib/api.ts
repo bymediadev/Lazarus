@@ -5,6 +5,7 @@ const API_BASE = (import.meta.env.VITE_API_URL ?? "").replace(/\/$/, "");
 export interface PostMortemResponse extends PostMortemResult {
   id?: string | null;
   sources?: { audio: boolean; manual: boolean };
+  warnings?: string[];
 }
 
 export interface PostMortemPayload {

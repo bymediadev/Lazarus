@@ -10,6 +10,7 @@ import { analyzeTranscript } from "./gemini.js";
 import { savePostMortem } from "./supabase.js";
 import { buildAnalysisTranscript } from "./transcript.js";
 import { stripOutcomeMetadata } from "./sanitize.js";
+import { normalizeManualTranscript } from "./normalize.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const distPath = path.join(__dirname, "../dist");
@@ -62,16 +63,25 @@ function normalizeTextField(value: unknown): string {
 app.post("/api/post-mortem", upload.single("recording"), async (req, res) => {
   try {
     const dealValue = parseFloat(String(req.body.deal_value)) || 0;
-    const manualTranscript = normalizeTextField(req.body.transcript);
+    const manualRaw = normalizeTextField(req.body.transcript);
+    const manualTranscript = normalizeManualTranscript(manualRaw);
+    const strippedPriorAnalysis = manualRaw.trim().length - manualTranscript.length > 80;
     let audioTranscript = "";
+    let audioMeta: { durationSeconds?: number; speakerCount?: number } | undefined;
 
     if (req.file) {
-      audioTranscript = await transcribeAudio(req.file.buffer, req.file.originalname);
+      const transcription = await transcribeAudio(req.file.buffer, req.file.originalname);
+      audioTranscript = transcription.formatted;
+      audioMeta = {
+        durationSeconds: transcription.durationSeconds,
+        speakerCount: transcription.speakerCount,
+      };
     }
 
     const { text: rawTranscript, sources } = buildAnalysisTranscript({
       audioTranscript,
       manualTranscript,
+      audioMeta,
     });
 
     if (!rawTranscript.trim()) {
@@ -94,7 +104,15 @@ app.post("/api/post-mortem", upload.single("recording"), async (req, res) => {
       transcriptText: rawTranscript,
     });
 
-    res.json({ ...result, id: savedId, sources });
+    res.json({
+      ...result,
+      id: savedId,
+      sources,
+      audio_meta: audioMeta ?? null,
+      warnings: strippedPriorAnalysis
+        ? ["Removed a prior Lazarus analysis that was pasted below the call transcript. Only the call text was analyzed."]
+        : [],
+    });
   } catch (err) {
     console.error("Post-mortem error:", err);
     res.status(500).json({

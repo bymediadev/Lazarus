@@ -1,0 +1,29 @@
+[CELLPHONE RINGS]
+
+PROSPECT: Hello, this is Sarah.
+
+REP: Hi Sarah, this is John from OmniGlobal Tech Solutions. I know I caught you out of the blue here—do you have two minutes to see if we can save your engineering team some time, or did I catch you at a terrible time?
+
+PROSPECT: (Sighs) I'm actually about to jump into a meeting in a couple of minutes. What do you have?
+
+REP: I appreciate you giving me a minute. We work with engineering leaders who are frustrated that their developers spend 10 hours a week manually cleaning backend data instead of building new features. I saw you just launched your new platform updates, and I was curious how you are managing that data engineering bottleneck right now?
+
+PROSPECT: Look, we already have a system that handles our data pipeline. We're happy with it.
+
+REP: That makes total sense. Most teams we talk to already have something solid in place. If it's working perfectly, there is no reason to switch. Usually, companies only look at us if their current system is causing severe reporting delays for their analytics team. Is that lag something you ever run into?
+
+PROSPECT: Well, I mean, our dashboard reporting does take about six hours to refresh, which frustrates our product team. But we are locked into a contract for the next eight months, so we really aren't looking to change anything right now.
+
+REP: Understood, eight months is a long way out. Honestly, since you are under contract, it wouldn't make sense to do a deep dive anyway. But since your product team is feeling that lag, would it make sense to schedule 10 minutes next week just to look at how we eliminate that delay? That way, when your contract is up, you'll already know if we are a viable option to fix that bottleneck.
+
+PROSPECT: (Pauses) Actually, if it's just 10 minutes to see how you handle the delay, I suppose that could be useful for later. 
+
+REP: Perfect. Let's look at next Thursday at 10:00 AM, or does 2:00 PM work better for you?
+
+PROSPECT: Let's do Thursday at 2:00 PM. Send an invite to sarah@company.com.
+
+REP: Will do, Sarah. I will send over a calendar invite with a brief agenda right now. Have a great meeting.
+
+PROSPECT: Thanks, John. Bye.
+
+[CALL DISCONNECTS]

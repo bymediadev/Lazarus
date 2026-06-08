@@ -394,6 +394,20 @@ body {
   color: var(--crimson);
 }
 
+.warning-banner {
+  margin-top: 1rem;
+  padding: 0.75rem 1rem;
+  background: rgba(255, 179, 0, 0.08);
+  border: 1px solid rgba(255, 179, 0, 0.45);
+  border-radius: 4px;
+  font-size: 0.85rem;
+  color: var(--amber);
+}
+
+.warning-banner p {
+  margin: 0;
+}
+
 .cards {
   display: flex;
   flex-direction: column;

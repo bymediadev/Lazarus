@@ -110,7 +110,7 @@ async function generateWithModel(
     model: modelName,
     generationConfig: {
       responseMimeType: "application/json",
-      temperature: 0.3,
+      temperature: 0.4,
     },
   });
 
@@ -136,7 +136,7 @@ export async function analyzeTranscript(
   const systemPrompt = loadSystemPrompt();
   const userMessage = `DEAL VALUE: $${dealValue.toLocaleString()}
 
-Classify deal_status from prospect dialogue and behavioral evidence in the transcript below — not from CRM labels, metadata, or rep summaries.
+Analyze the transcript below. Classify deal_status from literal dialogue AND contextual subtext — tone, hedging, contradictions, commitment quality, speaker turns, sentiment tags, timestamps, and delivery cues. Treat audio enrichment markers as if you listened to the call. Ignore CRM labels and rep summaries.
 
 TRANSCRIPT:
 ${transcript}`;
