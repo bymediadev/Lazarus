@@ -17,8 +17,12 @@ export interface PostMortemResult {
 }
 
 export interface DealStatusPresentation {
+  mode: string;
   label: string;
   tagClass: string;
+  headerLoading: string;
+  headerComplete: string;
+  outputPanelLabel: string;
   card1: { title: string; border: "red" | "amber" | "emerald" };
   card2: { title: string; border: "red" | "amber" | "emerald" };
   card3: { title: string; border: "red" | "amber" | "emerald"; copyLabel: string };
@@ -26,26 +30,44 @@ export interface DealStatusPresentation {
 
 export const DEAL_STATUS_UI: Record<DealStatus, DealStatusPresentation> = {
   failed: {
+    mode: "Post-Mortem",
     label: "FAILED — CLOSED LOST",
     tagClass: "status-failed",
+    headerLoading: "POST-MORTEM IN PROGRESS...",
+    headerComplete: "POST-MORTEM COMPLETE",
+    outputPanelLabel: "Close-Out Brief",
     card1: { title: "Primary Cause of Death", border: "red" },
     card2: { title: "Failure Autopsy", border: "amber" },
     card3: { title: "Close-Out & Lessons", border: "red", copyLabel: "Copy Close-Out Items" },
   },
   stalled: {
+    mode: "Rescue Brief",
     label: "STALLED — RECOVERABLE",
     tagClass: "status-stalled",
+    headerLoading: "RESCUE ANALYSIS IN PROGRESS...",
+    headerComplete: "RESCUE BRIEF READY",
+    outputPanelLabel: "Rescue Triage Output",
     card1: { title: "Primary Blocker", border: "red" },
     card2: { title: "Why Momentum Froze", border: "amber" },
     card3: { title: "Resuscitation Plan", border: "emerald", copyLabel: "Copy Action Items" },
   },
   successful: {
+    mode: "Win Brief",
     label: "SUCCESSFUL — WON",
     tagClass: "status-success",
+    headerLoading: "WIN ANALYSIS IN PROGRESS...",
+    headerComplete: "WIN BRIEF READY",
+    outputPanelLabel: "Win Analysis Output",
     card1: { title: "Win Driver", border: "emerald" },
     card2: { title: "Why It Closed", border: "emerald" },
     card3: { title: "Protect & Expand Plan", border: "emerald", copyLabel: "Copy Next Steps" },
   },
+};
+
+export const NEUTRAL_UI = {
+  headerLoading: "ANALYSIS IN PROGRESS...",
+  headerComplete: "ANALYSIS COMPLETE",
+  outputPanelLabel: "Analysis Output",
 };
 
 export const MOCK_POST_MORTEM: PostMortemResult = {

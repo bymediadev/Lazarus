@@ -1,6 +1,12 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { runPostMortem } from "./lib/api";
-import { MOCK_POST_MORTEM, PostMortemResult } from "./types";
+import {
+  DEAL_STATUS_UI,
+  MOCK_POST_MORTEM,
+  NEUTRAL_UI,
+  normalizeResult,
+  PostMortemResult,
+} from "./types";
 
 const ACCEPTED_EXT = [".mp3", ".wav", ".mp4", ".m4a", ".webm", ".mpeg", ".mpga"];
 const ACCEPT_ATTR = ".mp3,.wav,.mp4,.m4a,.webm,audio/*,video/mp4,video/webm";
@@ -38,10 +44,18 @@ export default function App() {
   const hasDualInput = hasAudio && hasTranscript;
 
   const loadingMessage = useMemo(() => {
-    if (hasDualInput) return "Transcribing recording + merging with notes...";
-    if (hasAudio) return "Transcribing recording...";
-    return "Analyzing stall patterns...";
+    if (hasDualInput) return "Transcribing recording and analyzing deal...";
+    if (hasAudio) return "Transcribing recording and analyzing deal...";
+    return "Analyzing deal...";
   }, [hasAudio, hasDualInput]);
+
+  const statusUi = result ? DEAL_STATUS_UI[result.deal_status] : null;
+  const headerStatus = loading
+    ? statusUi?.headerLoading ?? NEUTRAL_UI.headerLoading
+    : result
+      ? statusUi?.headerComplete ?? NEUTRAL_UI.headerComplete
+      : "STANDBY";
+  const outputLabel = statusUi?.outputPanelLabel ?? NEUTRAL_UI.outputPanelLabel;
 
   useEffect(() => {
     fetch(`${import.meta.env.VITE_API_URL ?? ""}/api/health`)
@@ -103,7 +117,7 @@ export default function App() {
         transcript,
         dealValue,
       });
-      setResult(data);
+      setResult(normalizeResult(data));
     } catch (err) {
       if (err instanceof TypeError) {
         setError("Cannot reach API server. Run npm run dev and try again.");
@@ -117,7 +131,8 @@ export default function App() {
 
   const copyActionItems = async () => {
     if (!result) return;
-    const text = result.restart_plan.map((item, i) => `${i + 1}. ${item}`).join("\n");
+    const items = result.action_plan;
+    const text = items.map((item, i) => `${i + 1}. ${item}`).join("\n");
     await navigator.clipboard.writeText(text);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
@@ -131,11 +146,7 @@ export default function App() {
           <span className="tag">Deal Rescue Console</span>
         </div>
         <span className="header-status">
-          {loading
-            ? "AUTOPSY IN PROGRESS..."
-            : result
-              ? "TRIAGE COMPLETE"
-              : "STANDBY"}
+          {headerStatus}
           {apiOnline === false && " · API OFFLINE"}
         </span>
       </header>
@@ -175,8 +186,8 @@ export default function App() {
               <span className="dropzone-icon">{file ? "✓" : "⬡"}</span>
               <span className="dropzone-text">
                 {file
-                  ? "Recording loaded — ready for autopsy"
-                  : "Drop Stalled Call Recording (.mp3/.wav/.mp4) — Initiate Autopsy"}
+                  ? "Recording loaded — ready for analysis"
+                  : "Drop Call Recording (.mp3/.wav/.mp4)"}
               </span>
               {file && (
                 <>
@@ -212,34 +223,42 @@ export default function App() {
             <label htmlFor="transcript">
               Call Transcript &amp; Notes
               <span className="label-hint">
-                Use alone, or together with a recording for richer analysis
+                Optional. Combined with a recording when both are available. Outcome is inferred from the conversation — do not label the deal status yourself.
               </span>
             </label>
             <textarea
               id="transcript"
               value={transcript}
               onChange={(e) => setTranscript(e.target.value)}
-              placeholder="Paste transcript, email thread, CRM notes, or follow-up context..."
+              placeholder="Paste call transcript, email thread, or meeting notes — Lazarus infers deal status from what was said"
             />
           </div>
 
           <button className="run-button" onClick={handleRun} disabled={loading}>
-            {loading ? "Running Autopsy..." : "Run Sales Post-Mortem"}
+            {loading ? "Running Analysis..." : "Run Deal Analysis"}
           </button>
 
           {error && <div className="error-banner">{error}</div>}
         </section>
 
         <section className="panel panel-right">
-          <div className="panel-label">Engine Triage Output</div>
+          <div className="panel-label">{outputLabel}</div>
 
           {loading ? (
             <div className="loading-overlay">
               <div className="spinner" />
               <span>{loadingMessage}</span>
             </div>
-          ) : result ? (
+          ) : result && statusUi ? (
             <div className="cards">
+              <div className={`deal-status-banner ${statusUi.tagClass}`}>
+                <span className="deal-status-mode">{statusUi.mode}</span>
+                <span className="deal-status-label">{statusUi.label}</span>
+                {result.client_name && (
+                  <span className="deal-status-client">{result.client_name}</span>
+                )}
+              </div>
+
               {result.sources && (
                 <div className="sources-bar">
                   {result.sources.audio && <span>Audio transcribed</span>}
@@ -250,25 +269,25 @@ export default function App() {
                 </div>
               )}
 
-              <article className="card card-red">
-                <h2 className="card-title">Primary Cause of Death</h2>
+              <article className={`card card-${statusUi.card1.border}`}>
+                <h2 className="card-title">{statusUi.card1.title}</h2>
                 <div className="card-body">
-                  <p>{result.stall_cause}</p>
+                  <p>{result.headline}</p>
                 </div>
               </article>
 
-              <article className="card card-amber">
-                <h2 className="card-title">Momentum Blocker Analysis</h2>
+              <article className={`card card-${statusUi.card2.border}`}>
+                <h2 className="card-title">{statusUi.card2.title}</h2>
                 <div className="card-body">
-                  <p>{result.why_it_stalled}</p>
+                  <p>{result.diagnosis}</p>
                 </div>
               </article>
 
-              <article className="card card-emerald">
-                <h2 className="card-title">Resuscitation Plan</h2>
+              <article className={`card card-${statusUi.card3.border}`}>
+                <h2 className="card-title">{statusUi.card3.title}</h2>
                 <div className="card-body">
                   <ul className="restart-list">
-                    {result.restart_plan.map((item, i) => (
+                    {result.action_plan.map((item, i) => (
                       <li key={i}>{item}</li>
                     ))}
                   </ul>
@@ -276,7 +295,7 @@ export default function App() {
                     className={`copy-button ${copied ? "copied" : ""}`}
                     onClick={copyActionItems}
                   >
-                    {copied ? "Copied!" : "Copy Action Items"}
+                    {copied ? "Copied!" : statusUi.card3.copyLabel}
                   </button>
                 </div>
               </article>

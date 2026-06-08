@@ -136,6 +136,8 @@ export async function analyzeTranscript(
   const systemPrompt = loadSystemPrompt();
   const userMessage = `DEAL VALUE: $${dealValue.toLocaleString()}
 
+Classify deal_status from prospect dialogue and behavioral evidence in the transcript below — not from CRM labels, metadata, or rep summaries.
+
 TRANSCRIPT:
 ${transcript}`;
 

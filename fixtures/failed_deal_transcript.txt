@@ -1,0 +1,11 @@
+[00:00] Rep (Alex): Hi Priya, following up on Meridian Health. Wanted to see if security had any remaining questions.
+
+[00:10] Prospect (Priya): Alex, I'll be direct — we signed with Salesforce last week. Leadership decided to consolidate on Einstein Analytics. We're not moving forward with any external vendors this year.
+
+[00:28] Rep: I appreciate the transparency. Was there anything we could have done differently?
+
+[00:35] Prospect: Honestly, timing. By the time security finished their review, procurement had already short-listed native tools. It's closed on our end.
+
+[00:50] Rep: Understood. Should I formally close the opportunity in our system?
+
+[00:55] Prospect: Yes, please do. Thanks for your time.

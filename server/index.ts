@@ -9,6 +9,7 @@ import { transcribeAudio } from "./assemblyai.js";
 import { analyzeTranscript } from "./gemini.js";
 import { savePostMortem } from "./supabase.js";
 import { buildAnalysisTranscript } from "./transcript.js";
+import { stripOutcomeMetadata } from "./sanitize.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const distPath = path.join(__dirname, "../dist");
@@ -68,18 +69,19 @@ app.post("/api/post-mortem", upload.single("recording"), async (req, res) => {
       audioTranscript = await transcribeAudio(req.file.buffer, req.file.originalname);
     }
 
-    const { text: transcript, sources } = buildAnalysisTranscript({
+    const { text: rawTranscript, sources } = buildAnalysisTranscript({
       audioTranscript,
       manualTranscript,
     });
 
-    if (!transcript.trim()) {
+    if (!rawTranscript.trim()) {
       res.status(400).json({
         error: "Provide a recording, a transcript, or both.",
       });
       return;
     }
 
+    const transcript = stripOutcomeMetadata(rawTranscript);
     const result = await analyzeTranscript(transcript, dealValue);
 
     const savedId = await savePostMortem({
@@ -89,7 +91,7 @@ app.post("/api/post-mortem", upload.single("recording"), async (req, res) => {
       headline: result.headline,
       diagnosis: result.diagnosis,
       actionPlan: result.action_plan.join("\n"),
-      transcriptText: transcript,
+      transcriptText: rawTranscript,
     });
 
     res.json({ ...result, id: savedId, sources });

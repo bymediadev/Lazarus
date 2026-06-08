@@ -1,0 +1,13 @@
+[00:00] Rep (Alex): Priya, thanks for jumping on. Legal signed off this morning — does that mean we're good to kick off?
+
+[00:12] Prospect (Priya): Yes. Contract is executed. Procurement issued the PO for $48K Phase 1 — 20 seats, SFDC + HubSpot sync. Implementation starts April 7.
+
+[00:28] Rep: Fantastic. I'll send the onboarding calendar invite today. Who from IT should be on the kickoff?
+
+[00:35] Prospect: Loop in our Salesforce admin, Marcus, and our CISO delegate, Elena. They'll handle SSO and data residency setup in week one.
+
+[00:50] Rep: Perfect. Any expansion plans for CS seats in Q3?
+
+[00:58] Prospect: If Phase 1 hits forecast accuracy targets by June, we'll add 20 CS seats. I'll introduce you to our CS director next month.
+
+[01:10] Rep: Looking forward to it. Welcome aboard.
