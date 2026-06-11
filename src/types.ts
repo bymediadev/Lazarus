@@ -238,6 +238,23 @@ export interface CrmIntelligence {
   constraint_severity?: string;
 }
 
+export interface StakeholderSignal {
+  name: string;
+  role: string;
+  stance: string;
+  evidence: string;
+}
+
+export interface GroundingAudit {
+  pass: boolean;
+  grounded_force_count: number;
+  ungrounded_forces: { factor: string; evidence: string; reason: string }[];
+  invented_terms: string[];
+  stakeholders: StakeholderSignal[];
+  ungrounded_stakeholders: { name: string; reason: string }[];
+  warnings: string[];
+}
+
 export interface PostMortemResult {
   deal_classification?: DealClassification;
   deal_status?: EnterpriseDealStatus | string;
@@ -245,6 +262,8 @@ export interface PostMortemResult {
   recoverability_score?: number;
   client_name?: string;
   executive_summary?: string;
+  stakeholders?: StakeholderSignal[];
+  grounding_audit?: GroundingAudit;
   force_initialization?: ForceInitialization;
   causal_forces?: CausalForce[];
   resolution_cycles?: ResolutionCycles;
@@ -488,6 +507,14 @@ export function normalizeResult(raw: PostMortemResult): PostMortemResult {
 
 export const MOCK_POST_MORTEM: PostMortemResult = normalizeResult({
   deal_classification: { status: "STALLED — RECOVERABLE", confidence_level: 91 },
+  stakeholders: [
+    {
+      name: "Marcus Vance",
+      role: "CIO",
+      stance: "economic_buyer",
+      evidence: "Marcus Vance (MV) – Chief Information Officer, CyberCore Logistics",
+    },
+  ],
   client_name: "CyberCore Logistics",
   executive_summary:
     "CyberCore discovery call: acquisition bandwidth and board capex create structural lock-in with high constraint pressure. Genuine intent present but suppressed by force interaction. Temporary blockers — defer until equilibrium shifts.",

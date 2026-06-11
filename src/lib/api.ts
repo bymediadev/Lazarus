@@ -1,11 +1,22 @@
-import { PostMortemResult } from "../types";
+import { GroundingAudit, PostMortemResult } from "../types";
 
-const API_BASE = (import.meta.env.VITE_API_URL ?? "").replace(/\/$/, "");
+/** Empty = same-origin / Vite proxy to localhost:3001. Set to Railway URL for remote API. */
+export const API_BASE = (import.meta.env.VITE_API_URL ?? "").replace(/\/$/, "");
+
+export function apiTargetLabel(): string {
+  if (!API_BASE) return "local API (localhost:3001)";
+  try {
+    return new URL(API_BASE).host;
+  } catch {
+    return API_BASE;
+  }
+}
 
 export interface PostMortemResponse extends PostMortemResult {
   id?: string | null;
   sources?: { audio: boolean; manual: boolean };
   warnings?: string[];
+  grounding_audit?: GroundingAudit;
 }
 
 export interface PostMortemPayload {
@@ -28,7 +39,8 @@ export async function runPostMortem(payload: PostMortemPayload): Promise<PostMor
 
   formData.append("deal_value", payload.dealValue || "0");
 
-  const res = await fetch(`${API_BASE}/api/post-mortem`, {
+  const url = `${API_BASE}/api/post-mortem`;
+  const res = await fetch(url, {
     method: "POST",
     body: formData,
   });

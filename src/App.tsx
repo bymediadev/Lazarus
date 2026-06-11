@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import AnalysisReport from "./components/AnalysisReport";
-import { runPostMortem } from "./lib/api";
-import { MOCK_POST_MORTEM, normalizeResult, PostMortemResult } from "./types";
+import { API_BASE, apiTargetLabel, runPostMortem } from "./lib/api";
+import { normalizeResult, PostMortemResult } from "./types";
 
 const ACCEPTED_EXT = [".mp3", ".wav", ".mp4", ".m4a", ".webm", ".mpeg", ".mpga"];
 const ACCEPT_ATTR = ".mp3,.wav,.mp4,.m4a,.webm,audio/*,video/mp4,video/webm";
@@ -27,7 +27,7 @@ export default function App() {
   const [file, setFile] = useState<File | null>(null);
   const [dealValue, setDealValue] = useState("52000");
   const [transcript, setTranscript] = useState("");
-  const [result, setResult] = useState<PostMortemResult | null>(MOCK_POST_MORTEM);
+  const [result, setResult] = useState<PostMortemResult | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [dragOver, setDragOver] = useState(false);
@@ -52,7 +52,7 @@ export default function App() {
 
   useEffect(() => {
     const check = () => {
-      fetch(`${import.meta.env.VITE_API_URL ?? ""}/api/health`)
+      fetch(`${API_BASE}/api/health`)
         .then((r) => setApiOnline(r.ok))
         .catch(() => setApiOnline(false));
     };
@@ -107,7 +107,11 @@ export default function App() {
     }
 
     if (apiOnline === false) {
-      setError("API server is offline. Run npm run dev in the Lazarus folder and try again.");
+      setError(
+        API_BASE
+          ? `Cannot reach Railway API (${apiTargetLabel()}). Check VITE_API_URL and FRONTEND_ORIGIN on Railway.`
+          : "API server is offline. Run npm run dev in the Lazarus folder and try again."
+      );
       return;
     }
 
@@ -118,10 +122,19 @@ export default function App() {
     try {
       const data = await runPostMortem({ file, transcript, dealValue });
       setResult(normalizeResult(data));
-      setWarnings(data.warnings ?? []);
+      const groundingWarnings = data.grounding_audit?.warnings ?? [];
+      const auditWarning =
+        data.grounding_audit && !data.grounding_audit.pass
+          ? ["Some output failed transcript grounding — ungrounded forces were removed. Review evidence quotes."]
+          : [];
+      setWarnings([...(data.warnings ?? []), ...groundingWarnings, ...auditWarning]);
     } catch (err) {
       if (err instanceof TypeError) {
-        setError("Cannot reach API server. Run npm run dev and try again.");
+        setError(
+          API_BASE
+            ? `Cannot reach Railway API (${apiTargetLabel()}). Check the URL and CORS settings.`
+            : "Cannot reach API server. Run npm run dev and try again."
+        );
       } else {
         setError(err instanceof Error ? err.message : "Something went wrong.");
       }
@@ -139,7 +152,11 @@ export default function App() {
         </div>
         <span className="header-status">
           {headerStatus}
-          {apiOnline === false && " · API OFFLINE — run npm run dev"}
+          {apiOnline === false &&
+            (API_BASE
+              ? ` · API OFFLINE (${apiTargetLabel()})`
+              : " · API OFFLINE — run npm run dev")}
+          {apiOnline === true && API_BASE && ` · API: ${apiTargetLabel()}`}
         </span>
       </header>
 

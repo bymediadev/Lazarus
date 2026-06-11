@@ -141,10 +141,49 @@ export default function AnalysisReport({ result: raw, sources }: Props) {
         </div>
       )}
 
+      {r.grounding_audit && !r.grounding_audit.pass && (
+        <div className="warning-banner" style={{ marginBottom: "1rem" }}>
+          <p>
+            <strong>Transcript grounding:</strong> Some claims could not be verified against the call
+            text and were removed or corrected.
+            {r.grounding_audit.invented_terms.length > 0 &&
+              ` Template bleed blocked: ${r.grounding_audit.invented_terms.join(", ")}.`}
+          </p>
+        </div>
+      )}
+
       <article className="card card-emerald">
         <h2 className="card-title">Resolution Outcome</h2>
         <div className="card-body"><p>{r.executive_summary}</p></div>
       </article>
+
+      {r.stakeholders && r.stakeholders.length > 0 && (
+        <article className="card card-neutral">
+          <h2 className="card-title">Stakeholders (from transcript)</h2>
+          <div className="card-body">
+            <table className="trigger-table">
+              <thead>
+                <tr>
+                  <th>Name</th>
+                  <th>Role</th>
+                  <th>Stance</th>
+                  <th>Evidence</th>
+                </tr>
+              </thead>
+              <tbody>
+                {r.stakeholders.map((s, i) => (
+                  <tr key={i}>
+                    <td>{s.name}</td>
+                    <td>{s.role || "—"}</td>
+                    <td>{s.stance}</td>
+                    <td className="force-evidence">"{s.evidence.replace(/^"|"$/g, "")}"</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </article>
+      )}
 
       {init && (
         <article className="card card-neutral">

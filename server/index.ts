@@ -54,6 +54,13 @@ app.get("/api/health", (_req, res) => {
 });
 
 function formatApiError(message: string): string {
+  if (
+    message.includes("401") ||
+    message.includes("invalid authentication") ||
+    message.includes("API key not valid")
+  ) {
+    return "GEMINI_API_KEY is invalid or expired. Create a new key at https://aistudio.google.com/apikey (starts with AIza…) and update .env, then restart npm run dev.";
+  }
   if (message.includes("429") || message.includes("quota")) {
     return "Gemini API quota exceeded. Wait a few minutes and retry, or set GEMINI_MODEL=gemini-2.5-flash in .env.";
   }
@@ -125,14 +132,22 @@ app.post("/api/post-mortem", upload.single("recording"), async (req, res) => {
       analysisJson: JSON.stringify(result),
     });
 
+    const warnings = [
+      ...(strippedPriorAnalysis
+        ? ["Removed a prior Lazarus analysis that was pasted below the call transcript. Only the call text was analyzed."]
+        : []),
+      ...(result.grounding_audit?.warnings ?? []),
+      ...(result.grounding_audit && !result.grounding_audit.pass
+        ? ["Transcript grounding check failed — ungrounded claims were stripped. Verify evidence quotes."]
+        : []),
+    ];
+
     res.json({
       ...result,
       id: savedId,
       sources,
       audio_meta: audioMeta ?? null,
-      warnings: strippedPriorAnalysis
-        ? ["Removed a prior Lazarus analysis that was pasted below the call transcript. Only the call text was analyzed."]
-        : [],
+      warnings,
     });
   } catch (err) {
     console.error("Post-mortem error:", err);

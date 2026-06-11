@@ -3,6 +3,13 @@ import { readFileSync } from "fs";
 import { dirname, join } from "path";
 import { fileURLToPath } from "url";
 import {
+  auditTranscriptGrounding,
+  buildGroundingRetryMessage,
+  evidenceMatchesTranscript,
+  type GroundingAudit,
+  type StakeholderSignal,
+} from "./grounding.js";
+import {
   assertFrozenConsistency,
   buildDependencyGraph,
   dedupeCouplings,
@@ -179,6 +186,7 @@ export interface EnterpriseAnalysis {
   deal_classification: DealClassification;
   client_name: string;
   executive_summary: string;
+  stakeholders: StakeholderSignal[];
   force_initialization: ForceInitialization;
   causal_forces: CausalForce[];
   resolution_cycles: ResolutionCycles;
@@ -461,6 +469,19 @@ function flattenPlan(plan?: Partial<RescueTriagePlan>): string[] {
   ];
 }
 
+function normalizeStakeholders(raw: Record<string, unknown>): StakeholderSignal[] {
+  if (!Array.isArray(raw.stakeholders)) return [];
+  return raw.stakeholders.map((item) => {
+    const s = item as Record<string, unknown>;
+    return {
+      name: String(s.name ?? "").trim(),
+      role: String(s.role ?? "").trim(),
+      stance: String(s.stance ?? "unknown").trim(),
+      evidence: String(s.evidence ?? "").trim(),
+    };
+  }).filter((s) => s.name.length > 0);
+}
+
 function normalizeCausalForces(raw: Record<string, unknown>): CausalForce[] {
   if (Array.isArray(raw.causal_forces) && raw.causal_forces.length > 0) {
     return raw.causal_forces.map((item) => {
@@ -599,11 +620,13 @@ function normalizeOutput(raw: Record<string, unknown>): EnterpriseAnalysis {
   }
 
   const causal_forces = normalizeCausalForces(raw);
+  const stakeholders = normalizeStakeholders(raw);
 
   const result: EnterpriseAnalysis = {
     deal_classification,
     client_name: String(raw.client_name ?? "Unknown Deal"),
     executive_summary,
+    stakeholders,
     force_initialization: normalizeForceInitialization(raw, executive_summary),
     causal_forces,
     resolution_cycles: {
@@ -705,6 +728,7 @@ export type AnalysisResponse = EnterpriseAnalysis & {
   stall_cause: string;
   why_it_stalled: string;
   restart_plan: string[];
+  grounding_audit?: GroundingAudit;
 };
 
 function toApiResponse(result: EnterpriseAnalysis): AnalysisResponse {
@@ -724,12 +748,24 @@ function toApiResponse(result: EnterpriseAnalysis): AnalysisResponse {
   };
 }
 
+function buildExtractionMessage(transcript: string, dealValue: number): string {
+  return `DEAL VALUE: $${dealValue.toLocaleString()}
+
+Extract causal forces with verbatim evidence quotes and ALL named stakeholders.
+Do NOT output viability_state, buyer_state, deal_trajectory, or resolution_cycles — server computes scores.
+Do NOT invent blockers, systems, dollar amounts, or policies not spoken in the transcript.
+Merge duplicate root causes. Max 6 forces, max 3 triggers.
+
+TRANSCRIPT:
+${transcript}`;
+}
+
 async function generateWithModel(
   apiKey: string,
   modelName: string,
   systemPrompt: string,
   userMessage: string
-): Promise<AnalysisResponse> {
+): Promise<EnterpriseAnalysis> {
   const genAI = new GoogleGenerativeAI(apiKey);
   const model = genAI.getGenerativeModel({
     model: modelName,
@@ -746,26 +782,14 @@ async function generateWithModel(
 
   const text = result.response.text();
   const parsed = JSON.parse(text) as Record<string, unknown>;
-  return toApiResponse(normalizeOutput(parsed));
+  return normalizeOutput(parsed);
 }
 
-export async function analyzeTranscript(
-  transcript: string,
-  dealValue: number
-): Promise<AnalysisResponse> {
-  const apiKey = process.env.GEMINI_API_KEY;
-  if (!apiKey) {
-    throw new Error("GEMINI_API_KEY is not set. Add it to your .env file.");
-  }
-
-  const systemPrompt = loadSystemPrompt();
-  const userMessage = `DEAL VALUE: $${dealValue.toLocaleString()}
-
-Extract causal forces with weights and evidence only. Do NOT output viability_state, buyer_state, deal_trajectory, or resolution_cycles — server computes all scores deterministically. Merge duplicate root causes. Max 6 forces, max 3 triggers.
-
-TRANSCRIPT:
-${transcript}`;
-
+async function extractWithModels(
+  apiKey: string,
+  systemPrompt: string,
+  userMessage: string
+): Promise<EnterpriseAnalysis> {
   const candidates = modelCandidates();
   let lastError: unknown;
 
@@ -784,6 +808,79 @@ ${transcript}`;
   }
 
   throw new Error(quotaErrorMessage(lastError));
+}
+
+function applyGroundingFilter(
+  analysis: EnterpriseAnalysis,
+  transcript: string,
+  audit: GroundingAudit
+): EnterpriseAnalysis {
+  const groundedForces = analysis.causal_forces.filter((f) =>
+    evidenceMatchesTranscript(f.evidence, transcript)
+  );
+  const groundedStakeholders = analysis.stakeholders.filter((s) =>
+    evidenceMatchesTranscript(s.evidence, transcript)
+  );
+
+  if (groundedForces.length === 0) {
+    throw new Error(
+      "No causal forces could be grounded in the transcript. Check that the transcript contains dialogue, not just notes."
+    );
+  }
+
+  return applyCanonicalScoring({
+    ...analysis,
+    causal_forces: groundedForces,
+    stakeholders: groundedStakeholders,
+  });
+}
+
+export async function analyzeTranscript(
+  transcript: string,
+  dealValue: number
+): Promise<AnalysisResponse> {
+  const apiKey = process.env.GEMINI_API_KEY;
+  if (!apiKey) {
+    throw new Error("GEMINI_API_KEY is not set. Add it to your .env file.");
+  }
+
+  const systemPrompt = loadSystemPrompt();
+  let userMessage = buildExtractionMessage(transcript, dealValue);
+
+  let analysis = await extractWithModels(apiKey, systemPrompt, userMessage);
+  let audit = auditTranscriptGrounding({
+    transcript,
+    dealValue,
+    causal_forces: analysis.causal_forces,
+    executive_summary: analysis.executive_summary,
+    stakeholders: analysis.stakeholders,
+  });
+
+  if (!audit.pass) {
+    console.warn("Grounding audit failed — retrying with correction prompt", audit);
+    userMessage = buildGroundingRetryMessage(transcript, dealValue, audit);
+    analysis = await extractWithModels(apiKey, systemPrompt, userMessage);
+    audit = auditTranscriptGrounding({
+      transcript,
+      dealValue,
+      causal_forces: analysis.causal_forces,
+      executive_summary: analysis.executive_summary,
+      stakeholders: analysis.stakeholders,
+    });
+  }
+
+  if (!audit.pass) {
+    console.warn("Grounding still failed after retry — filtering ungrounded forces", audit);
+    analysis = applyGroundingFilter(analysis, transcript, audit);
+    audit.warnings.push(
+      `${audit.ungrounded_forces.length} ungrounded force(s) removed after failed retry`
+    );
+  }
+
+  return {
+    ...toApiResponse(analysis),
+    grounding_audit: audit,
+  };
 }
 
 export function formatRootCause(result: EnterpriseAnalysis): string {
