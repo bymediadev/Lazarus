@@ -5,6 +5,7 @@ import { existsSync } from "fs";
 import multer from "multer";
 import path from "path";
 import { fileURLToPath } from "url";
+
 import { transcribeAudio } from "./assemblyai.js";
 import { analyzeTranscript } from "./gemini.js";
 import { savePostMortem } from "./supabase.js";
@@ -52,6 +53,25 @@ app.get("/api/health", (_req, res) => {
   });
 });
 
+function formatApiError(message: string): string {
+  if (message.includes("429") || message.includes("quota")) {
+    return "Gemini API quota exceeded. Wait a few minutes and retry, or set GEMINI_MODEL=gemini-2.5-flash in .env.";
+  }
+  if (message.includes("GEMINI_API_KEY")) {
+    return "GEMINI_API_KEY is missing. Add it to your .env file.";
+  }
+  if (message.includes("ASSEMBLYAI_API_KEY")) {
+    return "Audio upload requires ASSEMBLYAI_API_KEY in .env — or paste a transcript instead.";
+  }
+  if (message.includes("fetch failed") || message.includes("UNABLE_TO_VERIFY")) {
+    return "HTTPS connection to Gemini failed (TLS). Stop the server, run: powershell -File scripts/export-windows-cas.ps1 then npm run dev";
+  }
+  if (message.includes("invalid analysis structure") || message.includes("JSON")) {
+    return "AI returned an invalid response. Retry in a few seconds.";
+  }
+  return message.split("\n")[0].slice(0, 280);
+}
+
 function normalizeTextField(value: unknown): string {
   if (typeof value === "string") return value;
   if (Array.isArray(value)) {
@@ -97,11 +117,12 @@ app.post("/api/post-mortem", upload.single("recording"), async (req, res) => {
     const savedId = await savePostMortem({
       clientName: result.client_name,
       dealValue,
-      dealStatus: result.deal_status,
-      headline: result.headline,
+      dealStatus: result.deal_classification.status,
+      headline: result.executive_summary,
       diagnosis: result.diagnosis,
       actionPlan: result.action_plan.join("\n"),
       transcriptText: rawTranscript,
+      analysisJson: JSON.stringify(result),
     });
 
     res.json({
@@ -115,9 +136,9 @@ app.post("/api/post-mortem", upload.single("recording"), async (req, res) => {
     });
   } catch (err) {
     console.error("Post-mortem error:", err);
-    res.status(500).json({
-      error: err instanceof Error ? err.message : "Post-mortem failed.",
-    });
+    const raw = err instanceof Error ? err.message : "Post-mortem failed.";
+    const friendly = formatApiError(raw);
+    res.status(500).json({ error: friendly });
   }
 });
 

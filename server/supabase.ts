@@ -9,6 +9,7 @@ export interface SavePostMortemInput {
   diagnosis: string;
   actionPlan: string;
   transcriptText?: string;
+  analysisJson?: string;
 }
 
 export async function savePostMortem(input: SavePostMortemInput): Promise<string | null> {
@@ -21,7 +22,7 @@ export async function savePostMortem(input: SavePostMortemInput): Promise<string
 
   const supabase = createClient(url, key);
 
-  const row = {
+  const row: Record<string, unknown> = {
     user_id: input.userId ?? null,
     client_name: input.clientName,
     deal_value: input.dealValue,
@@ -31,6 +32,9 @@ export async function savePostMortem(input: SavePostMortemInput): Promise<string
     restart_plan: input.actionPlan,
     transcript_text: input.transcriptText ?? null,
   };
+  if (input.analysisJson) {
+    row.analysis_json = input.analysisJson;
+  }
 
   const { data, error } = await supabase
     .from("call_post_mortems")
