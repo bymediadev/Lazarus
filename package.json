@@ -16,7 +16,7 @@
     "test:scoring": "node --import tsx scripts/test-scoring-regression.mjs",
     "test": "npm run test:scoring && npm run test:grounding && npm run check:env",
     "purge:retention": "node --use-system-ca -r ./server/preload-ca.cjs ./node_modules/tsx/dist/cli.mjs server/purge-retention.ts",
-    "cleanup:ports": "powershell.exe -File scripts/cleanup-ports.ps1"
+    "cleanup:ports": "node scripts/cleanup-ports.mjs"
   },
   "dependencies": {
     "@google/generative-ai": "^0.24.0",
