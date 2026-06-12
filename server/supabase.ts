@@ -49,3 +49,41 @@ export async function savePostMortem(input: SavePostMortemInput): Promise<string
 
   return data.id;
 }
+
+/** Null out transcript_text older than retention window. Keeps analysis_json for audit. */
+export async function purgeExpiredTranscripts(retentionDays?: number): Promise<{
+  purged: number;
+  retentionDays: number;
+} | null> {
+  const url = process.env.SUPABASE_URL;
+  const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
+
+  if (!url || !key) {
+    console.warn("Purge skipped: SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY required");
+    return null;
+  }
+
+  const days = retentionDays ?? parseInt(process.env.DATA_RETENTION_DAYS ?? "30", 10);
+  if (!Number.isFinite(days) || days < 1) {
+    throw new Error("DATA_RETENTION_DAYS must be a positive integer");
+  }
+
+  const cutoff = new Date();
+  cutoff.setDate(cutoff.getDate() - days);
+  const cutoffIso = cutoff.toISOString();
+
+  const supabase = createClient(url, key);
+
+  const { data, error } = await supabase
+    .from("call_post_mortems")
+    .update({ transcript_text: null })
+    .lt("created_at", cutoffIso)
+    .not("transcript_text", "is", null)
+    .select("id");
+
+  if (error) {
+    throw new Error(`Purge failed: ${error.message}`);
+  }
+
+  return { purged: data?.length ?? 0, retentionDays: days };
+}

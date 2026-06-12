@@ -159,15 +159,16 @@ export default function AnalysisReport({ result: raw, sources }: Props) {
 
       {r.stakeholders && r.stakeholders.length > 0 && (
         <article className="card card-neutral">
-          <h2 className="card-title">Stakeholders (from transcript)</h2>
+          <h2 className="card-title">People Map (Human Bottlenecks)</h2>
           <div className="card-body">
             <table className="trigger-table">
               <thead>
                 <tr>
                   <th>Name</th>
                   <th>Role</th>
-                  <th>Stance</th>
-                  <th>Evidence</th>
+                  <th>Authority</th>
+                  <th>Persona</th>
+                  <th>Verbatim Evidence</th>
                 </tr>
               </thead>
               <tbody>
@@ -175,7 +176,8 @@ export default function AnalysisReport({ result: raw, sources }: Props) {
                   <tr key={i}>
                     <td>{s.name}</td>
                     <td>{s.role || "—"}</td>
-                    <td>{s.stance}</td>
+                    <td>{s.authority_level || "—"}</td>
+                    <td>{s.persona_type || s.stance}</td>
                     <td className="force-evidence">"{s.evidence.replace(/^"|"$/g, "")}"</td>
                   </tr>
                 ))}

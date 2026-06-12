@@ -1,6 +1,6 @@
 /**
  * Three-layer deterministic compiler:
- *   Layer 1 — CausalState (inputs only)
+ *   Layer 1 — CausalState (inputs only, polarity-resolved)
  *   Layer 2 — FrozenDerivation (single derivation pass)
  *   Layer 3 — Output projection (read-only, no math)
  */
@@ -8,11 +8,14 @@
 export type CanonicalEquilibrium = "STABLE" | "MIXED" | "UNSTABLE";
 
 export type CanonicalTrajectory =
+  | "VALIDATED / VELOCITY"
   | "DEFERRED (locked)"
   | "DEFERRED (recoverable)"
-  | "ACTIVE";
+  | "ACTIVE"
+  | "NON-VIABLE / DEAD";
 
 export type ViabilityStateLabel =
+  | "VALIDATED / CLOSED"
   | "HIGHLY VIABLE"
   | "CONDITIONALLY VIABLE"
   | "DEFERRED VIABILITY"
@@ -27,7 +30,6 @@ export interface ScoringForce {
   evidence: string;
 }
 
-/** Layer 1 — inputs only, no derived scores */
 export interface CausalState {
   forces: ScoringForce[];
   blocker_classification: string;
@@ -38,6 +40,7 @@ export interface CycleSnapshot {
   effective_intent: number;
   structural_lock_in: number;
   timing_accessibility: number;
+  enabler_strength: number;
   viability_score: number;
   equilibrium_state: CanonicalEquilibrium;
 }
@@ -54,11 +57,11 @@ export interface ResolutionCyclesFrozen {
   convergence_summary: string;
 }
 
-/** Layer 2 — frozen after single derivation pass; immutable downstream */
 export interface FrozenDerivation {
   intent_strength: number;
   constraint_pressure: number;
   structural_lock_in: number;
+  enabler_strength: number;
   timing_factor: number;
   effective_intent: number;
   viability_score: number;
@@ -87,15 +90,77 @@ function maxWeight(forces: ScoringForce[], type: string): number {
   return weights.length ? Math.max(...weights) : 0;
 }
 
+const ENABLER_SIGNALS = [
+  "pre-approved",
+  "preapproved",
+  "approved budget",
+  "budget approved",
+  "95%",
+  "signed off",
+  "legal signed",
+  "contract executed",
+  "contract is executed",
+  "po issued",
+  "purchase order",
+  "executive mandate",
+  "green light",
+  "closed won",
+  "closed-won",
+  "ready to kick",
+  "accelerate",
+  "aligned champion",
+  "no remaining blockers",
+  "none security cleared",
+];
+
+const CONSTRAINT_SIGNALS = [
+  "freeze",
+  "frozen",
+  "audit",
+  "merger",
+  "acquisition",
+  "block",
+  "veto",
+  "skeptical",
+  "cannot",
+  "won't proceed",
+  "not actionable",
+  "stalled",
+  "no budget",
+  "board freeze",
+  "pull the plug",
+  "signing authority",
+];
+
 const CLUSTER_KEYWORDS = [
   "contract", "vendor", "commitment", "signed", "salesforce", "capex",
   "allocation", "implementation", "deployment", "integration", "acquisition",
-  "merger", "procurement", "budget", "board",
+  "merger", "procurement", "budget", "board", "audit",
 ];
 
-const TIMING_IMMEDIATE = ["immediate", "now", "asap", "this quarter", "right away"];
-const TIMING_SHORT = ["30", "60", "90", "weeks", "short-term", "near-term"];
+const TIMING_IMMEDIATE = ["immediate", "now", "asap", "this quarter", "right away", "kick off", "this week"];
+const TIMING_SHORT = ["30", "60", "90", "weeks", "short-term", "near-term", "july", "august"];
 const TIMING_LONG = ["fiscal", "6 month", "12 month", "long-term", "year", "annual"];
+
+/** Binary polarity — enablers must never enter constraint/lock-in math */
+export function resolveForcePolarity(f: ScoringForce): ScoringForce {
+  const type = f.type.toLowerCase();
+  if (type === "intent" || type === "timing" || type === "behavioral" || type === "enabler") {
+    return type === "enabler" ? f : f;
+  }
+
+  const text = normalizeText(`${f.factor} ${f.evidence}`);
+  const enablerHit = ENABLER_SIGNALS.some((k) => text.includes(normalizeText(k)));
+  const constraintHit = CONSTRAINT_SIGNALS.some((k) => text.includes(normalizeText(k)));
+
+  if (enablerHit && !constraintHit) {
+    return { ...f, type: "Enabler", role: f.role ?? "independent" };
+  }
+  if (type === "structural" || type === "constraint") {
+    return { ...f, type: type === "structural" ? "Structural" : "Constraint" };
+  }
+  return f;
+}
 
 function clusterId(text: string): string | null {
   const t = normalizeText(text);
@@ -108,12 +173,13 @@ function clusterId(text: string): string | null {
 export function mergeForces(forces: ScoringForce[]): ScoringForce[] {
   if (!forces.length) return forces;
 
+  const polarized = forces.map(resolveForcePolarity);
   const merged: ScoringForce[] = [];
   const consumed = new Set<number>();
   const clusterGroups = new Map<string, ScoringForce[]>();
 
-  for (let i = 0; i < forces.length; i++) {
-    const f = forces[i];
+  for (let i = 0; i < polarized.length; i++) {
+    const f = polarized[i];
     const t = f.type.toLowerCase();
     if (t !== "structural" && t !== "constraint") continue;
     const id = clusterId(f.factor + " " + f.evidence) ?? `structural-${i}`;
@@ -137,9 +203,9 @@ export function mergeForces(forces: ScoringForce[]): ScoringForce[] {
 
   const structuralParent = merged.find((m) => m.type.toLowerCase() === "structural");
 
-  for (let i = 0; i < forces.length; i++) {
+  for (let i = 0; i < polarized.length; i++) {
     if (consumed.has(i)) continue;
-    const f = forces[i];
+    const f = polarized[i];
     const t = f.type.toLowerCase();
     const text = normalizeText(f.factor + " " + f.evidence);
 
@@ -156,7 +222,8 @@ export function mergeForces(forces: ScoringForce[]): ScoringForce[] {
       const tied =
         CLUSTER_KEYWORDS.some((k) => text.includes(k)) ||
         text.includes("merger") ||
-        text.includes("fiscal");
+        text.includes("fiscal") ||
+        text.includes("audit");
       merged.push({
         ...f,
         role: tied ? "derivative" : f.role ?? "independent",
@@ -183,16 +250,32 @@ function inferTimingFactor(forces: ScoringForce[]): number {
   return 0;
 }
 
-function effectiveIntent(intent: number, constraint: number, structural: number): number {
-  return clamp(intent * ((100 - constraint) / 100) * ((100 - structural) / 100));
+/** Effective Intent = Raw Intent × constraintFactor × enablerMultiplier */
+function constraintFactor(constraint: number): number {
+  if (constraint <= 0) return 1;
+  return (100 - constraint) / 100;
+}
+
+function enablerMultiplier(enabler: number): number {
+  if (enabler <= 0) return 1;
+  return 1 + enabler / 200;
+}
+
+function effectiveIntent(intent: number, constraint: number, enabler: number): number {
+  return clamp(intent * constraintFactor(constraint) * enablerMultiplier(enabler));
 }
 
 function viabilityScore(
+  intent: number,
   eff: number,
   timing: number,
   structural: number,
-  constraint: number
+  constraint: number,
+  enabler: number
 ): number {
+  if (constraint <= 0 && enabler > 0 && structural <= 15) {
+    return clamp(Math.max(eff, intent) + timing);
+  }
   return clamp(eff + timing - Math.max(structural, constraint));
 }
 
@@ -203,7 +286,21 @@ function equilibrium(structural: number, constraint: number): CanonicalEquilibri
   return "UNSTABLE";
 }
 
-function trajectory(viability: number): CanonicalTrajectory {
+function trajectory(
+  viability: number,
+  constraint: number,
+  structural: number,
+  enabler: number,
+  blocker: string
+): CanonicalTrajectory {
+  const b = blocker.toUpperCase();
+  if (constraint >= 100 && (b.includes("STRUCTURAL LOCK") || b.includes("PERMANENT"))) {
+    return "NON-VIABLE / DEAD";
+  }
+  if (constraint <= 0 && enabler >= 50 && structural <= 15 && viability >= 50) {
+    return "VALIDATED / VELOCITY";
+  }
+  if (constraint > 70) return "DEFERRED (locked)";
   if (viability <= 20) return "DEFERRED (locked)";
   if (viability <= 50) return "DEFERRED (recoverable)";
   return "ACTIVE";
@@ -225,8 +322,17 @@ function decisionFreedom(constraint: number): string {
 function viabilityLabel(
   viability: number,
   structural: number,
+  constraint: number,
+  enabler: number,
+  trajectory_type: CanonicalTrajectory,
   blocker: string
 ): ViabilityStateLabel {
+  if (trajectory_type === "VALIDATED / VELOCITY" && constraint <= 0 && enabler >= 50) {
+    return "VALIDATED / CLOSED";
+  }
+  if (trajectory_type === "NON-VIABLE / DEAD") {
+    return "NON-VIABLE (STRUCTURALLY LOCKED)";
+  }
   const b = blocker.toUpperCase();
   if (b.includes("STRUCTURAL LOCK") && structural >= 80 && viability <= 20) {
     return "NON-VIABLE (STRUCTURALLY LOCKED)";
@@ -242,16 +348,19 @@ function formatFormula(f: {
   intent_strength: number;
   constraint_pressure: number;
   structural_lock_in: number;
+  enabler_strength: number;
   timing_factor: number;
   effective_intent: number;
   viability_score: number;
   equilibrium_state: CanonicalEquilibrium;
   trajectory_type: CanonicalTrajectory;
 }): string {
+  const cf = constraintFactor(f.constraint_pressure);
+  const em = enablerMultiplier(f.enabler_strength);
   return [
-    `Effective Intent = ${f.intent_strength} × (100−${f.constraint_pressure})/100 × (100−${f.structural_lock_in})/100 = ${f.effective_intent}`,
-    `Viability = clamp(${f.effective_intent} + ${f.timing_factor} − max(${f.structural_lock_in}, ${f.constraint_pressure}), 0, 100) = ${f.viability_score}`,
-    `Equilibrium: ${f.structural_lock_in}+${f.constraint_pressure}=${f.structural_lock_in + f.constraint_pressure} → ${f.equilibrium_state}. Trajectory: ${f.trajectory_type}.`,
+    `Effective Intent = ${f.intent_strength} × ${cf.toFixed(2)} (constraint) × ${em.toFixed(2)} (enabler) = ${f.effective_intent}`,
+    `Viability = ${f.viability_score} | Enabler ${f.enabler_strength} | Constraint ${f.constraint_pressure} | Structural ${f.structural_lock_in}`,
+    `Equilibrium: ${f.structural_lock_in}+${f.constraint_pressure} → ${f.equilibrium_state}. Trajectory: ${f.trajectory_type}.`,
   ].join(" | ");
 }
 
@@ -259,23 +368,22 @@ function snapshot(
   intent: number,
   constraint: number,
   structural: number,
+  enabler: number,
   timing: number
 ): CycleSnapshot {
-  const eff = effectiveIntent(intent, constraint, structural);
-  const via = viabilityScore(eff, timing, structural, constraint);
+  const eff = effectiveIntent(intent, constraint, enabler);
+  const via = viabilityScore(intent, eff, timing, structural, constraint, enabler);
   return {
     constraint_pressure: constraint,
     effective_intent: eff,
     structural_lock_in: structural,
     timing_accessibility: timing,
+    enabler_strength: enabler,
     viability_score: via,
     equilibrium_state: equilibrium(structural, constraint),
   };
 }
 
-/**
- * Layer 1 + Layer 2 — ONLY place where math is permitted.
- */
 export function deriveCanonicalState(
   rawForces: ScoringForce[],
   blockerClassification = "MIXED"
@@ -286,24 +394,36 @@ export function deriveCanonicalState(
   const intent_strength = maxWeight(forces, "Intent");
   const constraint_pressure = maxWeight(forces, "Constraint");
   const structural_lock_in = maxWeight(forces, "Structural");
+  const enabler_strength = maxWeight(forces, "Enabler");
   const timing_factor = inferTimingFactor(forces);
 
   const effective_intent = effectiveIntent(
     intent_strength,
     constraint_pressure,
-    structural_lock_in
+    enabler_strength
   );
   const viability_score = viabilityScore(
+    intent_strength,
     effective_intent,
     timing_factor,
     structural_lock_in,
-    constraint_pressure
+    constraint_pressure,
+    enabler_strength
   );
   const equilibrium_state = equilibrium(structural_lock_in, constraint_pressure);
-  const trajectory_type = trajectory(viability_score);
+  const trajectory_type = trajectory(
+    viability_score,
+    constraint_pressure,
+    structural_lock_in,
+    enabler_strength,
+    blockerClassification
+  );
   const viability_state = viabilityLabel(
     viability_score,
     structural_lock_in,
+    constraint_pressure,
+    enabler_strength,
+    trajectory_type,
     blockerClassification
   );
   const buyer_intent_level = buyerIntentLevel(effective_intent);
@@ -313,12 +433,14 @@ export function deriveCanonicalState(
     intent_strength,
     clamp(constraint_pressure * 0.75),
     clamp(structural_lock_in * 0.9),
+    clamp(enabler_strength * 0.9),
     timing_factor
   );
   const c2 = snapshot(
     intent_strength,
     clamp((constraint_pressure + c1.constraint_pressure) / 2),
     structural_lock_in,
+    enabler_strength,
     timing_factor
   );
   const c3: CycleSnapshot = {
@@ -326,6 +448,7 @@ export function deriveCanonicalState(
     effective_intent,
     structural_lock_in,
     timing_accessibility: timing_factor,
+    enabler_strength,
     viability_score,
     equilibrium_state,
   };
@@ -334,6 +457,7 @@ export function deriveCanonicalState(
     intent_strength,
     constraint_pressure,
     structural_lock_in,
+    enabler_strength,
     timing_factor,
     effective_intent,
     viability_score,
@@ -407,7 +531,6 @@ export function dedupeCouplings<T extends { source: string; target: string }>(it
   });
 }
 
-/** Layer 3 consistency gate — throws if any section disagrees with frozen state */
 export function assertFrozenConsistency(check: {
   frozen: FrozenDerivation;
   viability_score: number;
@@ -444,7 +567,6 @@ export function assertFrozenConsistency(check: {
   }
 }
 
-// Legacy exports for tests
 export const computeCanonicalScores = (
   forces: ScoringForce[],
   blocker = "MIXED"

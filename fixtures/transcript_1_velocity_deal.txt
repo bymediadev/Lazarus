@@ -1,0 +1,17 @@
+TRANSCRIPT: Nexus Platform & Meridian Health — Contract Close Call
+DATE: May 15, 2026
+SPEAKERS:
+Alex Rivera (AR) – Enterprise AE, Nexus Platform
+Priya Shah (PS) – VP Revenue Operations, Meridian Health
+
+[00:00:45] PS: Alex, good news — the board pre-approved the full $320,000 annual platform budget last week. Finance gave us a 95% confidence allocation for this fiscal year.
+
+[00:01:20] PS: Legal signed off this morning. Procurement issued the PO for Phase 1 — we are ready to kick off implementation April 7.
+
+[00:01:55] AR: That's great. Any remaining blockers on your side?
+
+[00:02:05] PS: None. Security cleared SSO last Friday. My CEO asked me to accelerate — she wants this live before Q2 close. Marcus from IT and Elena from Security are aligned champions.
+
+[00:02:40] PS: Contract is executed. We are closed-won from our perspective. Let's schedule onboarding this week.
+
+[00:03:00] AR: Perfect. I'll send the kickoff calendar today.

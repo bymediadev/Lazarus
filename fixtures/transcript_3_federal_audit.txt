@@ -1,0 +1,19 @@
+TRANSCRIPT: Apex Analytics & Federal Systems Inc. — Security Review Call
+DATE: April 3, 2026
+SPEAKERS:
+Jordan Lee (JL) – Account Executive, Apex Analytics
+Teresa Wu (TW) – Director of Compliance, Federal Systems Inc.
+
+[00:01:05] TW: Jordan, we like the platform, but I need to be direct — we are in the middle of a mandatory federal audit window. Nothing over $200K gets signed until audit closes.
+
+[00:01:40] TW: Legal and procurement are frozen for the next 90 days. My team cannot run a pilot during active audit scrutiny.
+
+[00:02:15] JL: Understood. Is this a permanent block or a timing issue?
+
+[00:02:28] TW: Temporary. Once audit clears in July, we can revisit. But right now, I do not have signing authority — that sits with our CFO, Richard, who is not on this call.
+
+[00:03:05] TW: Richard is supportive in principle, but he will not release budget until audit sign-off. Dave from IT security also flagged concerns about data residency — he missed today's session.
+
+[00:03:50] JL: Can we schedule Richard and Dave for a follow-up post-audit?
+
+[00:04:02] TW: Yes. Park this in nurture until August. The $240,000 annual contract is still the number we modeled, but it is not actionable today.

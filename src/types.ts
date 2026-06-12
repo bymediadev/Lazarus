@@ -9,6 +9,7 @@ export type EnterpriseDealStatus =
 
 export type CausalForceType =
   | "Intent"
+  | "Enabler"
   | "Constraint"
   | "Structural"
   | "Timing"
@@ -24,15 +25,18 @@ export type BlockerClassification =
 export type ConvergenceStatus = "converged" | "locked" | "oscillating";
 
 export type ViabilityStateLabel =
+  | "VALIDATED / CLOSED"
   | "HIGHLY VIABLE"
   | "CONDITIONALLY VIABLE"
   | "DEFERRED VIABILITY"
   | "NON-VIABLE (STRUCTURALLY LOCKED)";
 
 export type TrajectoryType =
+  | "VALIDATED / VELOCITY"
   | "DEFERRED (locked)"
   | "DEFERRED (recoverable)"
-  | "ACTIVE";
+  | "ACTIVE"
+  | "NON-VIABLE / DEAD";
 
 export type EquilibriumState = "STABLE" | "MIXED" | "UNSTABLE";
 
@@ -150,6 +154,7 @@ export interface ViabilityDerivationComponents {
   constraint_pressure: number;
   structural_lock_in_impact: number;
   timing_accessibility: number;
+  enabler_strength?: number;
 }
 
 export interface ViabilityModel {
@@ -241,7 +246,10 @@ export interface CrmIntelligence {
 export interface StakeholderSignal {
   name: string;
   role: string;
+  /** Mirrors persona_type for display */
   stance: string;
+  authority_level?: string;
+  persona_type?: string;
   evidence: string;
 }
 
@@ -250,6 +258,8 @@ export interface GroundingAudit {
   grounded_force_count: number;
   ungrounded_forces: { factor: string; evidence: string; reason: string }[];
   invented_terms: string[];
+  invented_amounts?: string[];
+  missing_critical_stakeholders?: string[];
   stakeholders: StakeholderSignal[];
   ungrounded_stakeholders: { name: string; reason: string }[];
   warnings: string[];
@@ -307,7 +317,9 @@ export function statusTagClass(status: string): string {
 
 export function viabilityTagClass(state: string): string {
   const s = state.toUpperCase();
-  if (s.includes("HIGHLY VIABLE") || s.includes("HIGH VIABILITY")) return "status-success";
+  if (s.includes("VALIDATED") || s.includes("HIGHLY VIABLE") || s.includes("HIGH VIABILITY")) {
+    return "status-success";
+  }
   if (s.includes("CONDITIONAL")) return "status-stalled";
   if (s.includes("DEFERRED")) return "status-active";
   if (s.includes("NON-VIABLE") || s.includes("LOCKED")) return "status-failed";
@@ -316,9 +328,9 @@ export function viabilityTagClass(state: string): string {
 
 export function trajectoryTagClass(trajectory: string): string {
   const t = trajectory.toUpperCase();
-  if (t === "ACTIVE") return "status-success";
+  if (t.includes("VALIDATED") || t === "ACTIVE") return "status-success";
   if (t.includes("RECOVERABLE")) return "status-stalled";
-  if (t.includes("LOCKED")) return "status-failed";
+  if (t.includes("LOCKED") || t.includes("NON-VIABLE") || t.includes("DEAD")) return "status-failed";
   return "status-stalled";
 }
 
@@ -338,7 +350,7 @@ export function blockerTagClass(blocker: string): string {
 
 export function forceTypeClass(type: string): "emerald" | "amber" | "red" | "neutral" {
   const t = type.toLowerCase();
-  if (t === "intent") return "emerald";
+  if (t === "intent" || t === "enabler") return "emerald";
   if (t === "constraint" || t === "behavioral") return "amber";
   if (t === "structural" || t === "timing") return "red";
   return "neutral";
@@ -511,7 +523,9 @@ export const MOCK_POST_MORTEM: PostMortemResult = normalizeResult({
     {
       name: "Marcus Vance",
       role: "CIO",
-      stance: "economic_buyer",
+      stance: "Neutral",
+      authority_level: "economic_buyer",
+      persona_type: "Neutral",
       evidence: "Marcus Vance (MV) – Chief Information Officer, CyberCore Logistics",
     },
   ],

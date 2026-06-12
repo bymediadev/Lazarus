@@ -1,0 +1,25 @@
+TRANSCRIPT: SyncFlow & Northline Manufacturing — Discovery Call
+DATE: March 12, 2026
+SPEAKERS:
+Sarah Chen (SC) – Account Executive, SyncFlow
+Mark O'Brien (MO) – Director of Operations, Northline Manufacturing
+
+[00:01:12] SC: Mark, thanks for making time. Last week you mentioned the $280,000 annual platform fee was in range if we could prove ROI on the shop-floor workflow piece.
+
+[00:01:35] MO: Sarah, I like what I saw in the overview. But I need to be straight with you — Dave, our VP of Infrastructure, missed the technical demo yesterday. He had a P1 outage and couldn't join.
+
+[00:02:08] MO: Dave is skeptical of anything that touches our production VLAN. He wasn't on the call, so nothing's approved on the infrastructure side yet.
+
+[00:02:42] SC: Understood. Should we reschedule with Dave in the room?
+
+[00:02:55] MO: Yes, but he's underwater until month-end. He's the one who signs off on anything that routes near our OT network. Without him, I'm not moving this forward.
+
+[00:03:30] MO: Budget-wise, $280K is what we modeled. It's not a board-level capex fight — it's that Dave hasn't validated the architecture.
+
+[00:04:10] SC: What would Dave need to see to get comfortable?
+
+[00:04:22] MO: A phased pilot on a non-production line, reference customers in discrete manufacturing, and a clear answer on who owns uptime if the integration fails during a shift.
+
+[00:05:01] SC: We can build that. I'll send a one-pager for Dave and propose three slots after month-end.
+
+[00:05:18] MO: Do that. If Dave buys in, we can accelerate. If not, this stays parked until Q3.

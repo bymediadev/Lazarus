@@ -1,5 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import AnalysisReport from "./components/AnalysisReport";
+import EnterpriseTrust, { HeroTrustBanner } from "./components/EnterpriseTrust";
+import SiteFooter from "./components/SiteFooter";
 import { API_BASE, apiTargetLabel, runPostMortem } from "./lib/api";
 import { normalizeResult, PostMortemResult } from "./types";
 
@@ -122,12 +124,7 @@ export default function App() {
     try {
       const data = await runPostMortem({ file, transcript, dealValue });
       setResult(normalizeResult(data));
-      const groundingWarnings = data.grounding_audit?.warnings ?? [];
-      const auditWarning =
-        data.grounding_audit && !data.grounding_audit.pass
-          ? ["Some output failed transcript grounding — ungrounded forces were removed. Review evidence quotes."]
-          : [];
-      setWarnings([...(data.warnings ?? []), ...groundingWarnings, ...auditWarning]);
+      setWarnings(data.warnings ?? []);
     } catch (err) {
       if (err instanceof TypeError) {
         setError(
@@ -160,7 +157,10 @@ export default function App() {
         </span>
       </header>
 
-      <div className="workspace">
+      <div className="app-main">
+        <HeroTrustBanner />
+
+        <div className="workspace">
         <section className="panel panel-left">
           <div className="panel-label">Input Log</div>
 
@@ -275,7 +275,12 @@ export default function App() {
             </div>
           )}
         </section>
+        </div>
+
+        <EnterpriseTrust />
       </div>
+
+      <SiteFooter />
     </div>
   );
 }

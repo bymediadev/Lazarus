@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Lazarus — Enterprise Security Battlecard</title>
+  <style>
+    @media print { body { margin: 0; } .no-print { display: none; } }
+    body { font-family: Georgia, serif; max-width: 8.5in; margin: 0 auto; padding: 1.25in 1in; color: #111; line-height: 1.45; font-size: 11pt; }
+    h1 { font-family: system-ui, sans-serif; font-size: 22pt; margin: 0 0 0.25rem; letter-spacing: -0.02em; }
+    .subtitle { font-family: system-ui, sans-serif; color: #444; font-size: 11pt; margin-bottom: 1.5rem; }
+    h2 { font-family: system-ui, sans-serif; font-size: 10pt; text-transform: uppercase; letter-spacing: 0.12em; color: #0a7; border-bottom: 2px solid #0a7; padding-bottom: 0.25rem; margin-top: 1.25rem; }
+    table { width: 100%; border-collapse: collapse; margin: 0.75rem 0; font-size: 10pt; }
+    th, td { border: 1px solid #ccc; padding: 0.5rem 0.6rem; text-align: left; vertical-align: top; }
+    th { background: #f4f4f4; font-family: system-ui, sans-serif; width: 28%; }
+    ul { margin: 0.5rem 0; padding-left: 1.2rem; }
+    .vs { background: #f9f9f9; padding: 0.75rem; border-left: 4px solid #c00; margin: 0.75rem 0; font-size: 10pt; }
+    .win { background: #f0faf4; padding: 0.75rem; border-left: 4px solid #0a7; margin: 0.75rem 0; font-size: 10pt; }
+    .footer { margin-top: 2rem; font-size: 9pt; color: #666; font-family: system-ui, sans-serif; }
+    .no-print { margin-bottom: 1rem; font-family: system-ui, sans-serif; }
+  </style>
+</head>
+<body>
+  <p class="no-print"><button onclick="window.print()">Print / Save as PDF</button> · <a href="/">← App</a></p>
+
+  <h1>Lazarus</h1>
+  <p class="subtitle">Enterprise Security Battlecard · Deterministic Deal Intelligence · Not a note-taker</p>
+
+  <h2>Positioning</h2>
+  <div class="win">
+    <strong>Lazarus is a forecasting protection engine for sales leadership.</strong>
+    It runs deterministic deal autopsies on stalled calls — force maps, People Map bottlenecks,
+    and resuscitation scripts — without sending customer data to train public AI models.
+  </div>
+  <div class="vs">
+    <strong>Not competing with:</strong> Gong/Chorus recording, ChatGPT paste, or rep note tools.<br />
+    <strong>Competing with:</strong> Blind pipeline, happy ears, and hour-long call forensics by VPs.
+  </div>
+
+  <h2>Security &amp; Compliance</h2>
+  <table>
+    <tr><th>Zero model training</th><td>API configured for zero retention. Recordings and transcripts are never used to train public models.</td></tr>
+    <tr><th>Encryption</th><td>TLS 1.3 in transit · AES-256 at rest (Supabase infrastructure)</td></tr>
+    <tr><th>Tenant isolation</th><td>Row-Level Security — teams only access their own post-mortems</td></tr>
+    <tr><th>Data retention</th><td>Raw transcript text purged on 30-day policy (analysis metadata retained)</td></tr>
+    <tr><th>Legal pack</th><td>Privacy Policy · Terms of Service · DPA (GDPR / CCPA)</td></tr>
+    <tr><th>Recording consent</th><td>Customer warrants legal right to upload calls (ToS)</td></tr>
+  </table>
+
+  <h2>Architecture (why InfoSec approves)</h2>
+  <table>
+    <tr><th>UI shell</th><td>Lovable / web console — display only, no scoring logic</td></tr>
+    <tr><th>Compiler</th><td>Private API server — grounding audit + deterministic scoring engine</td></tr>
+    <tr><th>Memory</th><td>Supabase with RLS — service role server-side only</td></tr>
+    <tr><th>Anti-hallucination</th><td>Verbatim evidence required; template bleed blocked server-side</td></tr>
+  </table>
+
+  <h2>Demo proof points</h2>
+  <ul>
+    <li><strong>Velocity deal</strong> — pre-approved budget → VALIDATED / VELOCITY (not crushed as constraint)</li>
+    <li><strong>Audit stall</strong> — federal audit freeze → DEFERRED (locked), kingmakers surfaced</li>
+    <li><strong>People Map</strong> — absent VPs and hidden detractors extracted with quoted evidence</li>
+  </ul>
+
+  <h2>Objection handlers</h2>
+  <table>
+    <tr><th>"Reps won't upload"</th><td>Buyer is the Sales Manager / VP — triage tool, not rep hygiene</td></tr>
+    <tr><th>"We have Gong"</th><td>Gong records. Lazarus autopsies and outputs a rescue script in 60 seconds.</td></tr>
+    <tr><th>"AI hallucinates"</th><td>Server-side grounding strips invented AS/400, fake dollar caps; quotes verified</td></tr>
+    <tr><th>"Data privacy"</th><td>RLS + encryption + DPA + 30-day purge + zero training policy</td></tr>
+  </table>
+
+  <p class="footer">
+    Lazarus · Confidential sales enablement · Have legal review policies before customer signature ·
+    lazarusdealrescue.lovable.app
+  </p>
+</body>
+</html>

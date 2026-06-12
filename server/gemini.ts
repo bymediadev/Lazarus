@@ -5,7 +5,10 @@ import { fileURLToPath } from "url";
 import {
   auditTranscriptGrounding,
   buildGroundingRetryMessage,
+  buildTranscriptConstraints,
   evidenceMatchesTranscript,
+  filterInventedForces,
+  scrubInventedSummary,
   type GroundingAudit,
   type StakeholderSignal,
 } from "./grounding.js";
@@ -32,6 +35,7 @@ export type EnterpriseDealStatus =
 
 export type CausalForceType =
   | "Intent"
+  | "Enabler"
   | "Constraint"
   | "Structural"
   | "Timing"
@@ -270,7 +274,7 @@ function normalizeEnterpriseStatus(value: unknown): EnterpriseDealStatus {
 }
 
 function trajectoryDirection(t: CanonicalTrajectory): string {
-  if (t === "ACTIVE") return "positive";
+  if (t === "VALIDATED / VELOCITY" || t === "ACTIVE") return "positive";
   if (t === "DEFERRED (recoverable)") return "neutral";
   return "negative";
 }
@@ -337,6 +341,7 @@ function applyCanonicalScoring(result: EnterpriseAnalysis): EnterpriseAnalysis {
         constraint_pressure: frozen.constraint_pressure,
         structural_lock_in_impact: frozen.structural_lock_in,
         timing_accessibility: frozen.timing_factor,
+        enabler_strength: frozen.enabler_strength,
       },
     },
     deal_trajectory: {
@@ -396,6 +401,7 @@ function normalizeForceType(value: unknown): CausalForceType {
   const s = String(value ?? "").trim();
   const types: CausalForceType[] = [
     "Intent",
+    "Enabler",
     "Constraint",
     "Structural",
     "Timing",
@@ -404,6 +410,7 @@ function normalizeForceType(value: unknown): CausalForceType {
   for (const valid of types) {
     if (s.toLowerCase() === valid.toLowerCase()) return valid;
   }
+  if (s.toLowerCase().includes("enabler") || s.toLowerCase().includes("enable")) return "Enabler";
   if (s.toLowerCase().includes("intent")) return "Intent";
   if (s.toLowerCase().includes("behavioral")) return "Behavioral";
   if (s.toLowerCase().includes("structural")) return "Structural";
@@ -469,17 +476,36 @@ function flattenPlan(plan?: Partial<RescueTriagePlan>): string[] {
   ];
 }
 
+function normalizePersonaType(s: Record<string, unknown>): string {
+  const raw = String(s.persona_type ?? s.stance ?? "Unknown").trim();
+  const lower = raw.toLowerCase();
+  if (lower.includes("champion") || lower.includes("aligned")) return "Aligned Champion";
+  if (lower.includes("absent") || lower.includes("no_show") || lower.includes("no-show")) {
+    return "Absent Decision Maker";
+  }
+  if (lower.includes("detractor") || lower.includes("blocker") || lower.includes("skeptic")) {
+    return "Hidden Detractor";
+  }
+  if (lower === "neutral") return "Neutral";
+  return raw || "Unknown";
+}
+
 function normalizeStakeholders(raw: Record<string, unknown>): StakeholderSignal[] {
   if (!Array.isArray(raw.stakeholders)) return [];
-  return raw.stakeholders.map((item) => {
-    const s = item as Record<string, unknown>;
-    return {
-      name: String(s.name ?? "").trim(),
-      role: String(s.role ?? "").trim(),
-      stance: String(s.stance ?? "unknown").trim(),
-      evidence: String(s.evidence ?? "").trim(),
-    };
-  }).filter((s) => s.name.length > 0);
+  return raw.stakeholders
+    .map((item) => {
+      const s = item as Record<string, unknown>;
+      const persona_type = normalizePersonaType(s);
+      return {
+        name: String(s.name ?? "").trim(),
+        role: String(s.role ?? "").trim(),
+        stance: persona_type,
+        authority_level: String(s.authority_level ?? "unknown").trim(),
+        persona_type,
+        evidence: String(s.evidence ?? "").trim(),
+      };
+    })
+    .filter((s) => s.name.length > 0);
 }
 
 function normalizeCausalForces(raw: Record<string, unknown>): CausalForce[] {
@@ -749,11 +775,11 @@ function toApiResponse(result: EnterpriseAnalysis): AnalysisResponse {
 }
 
 function buildExtractionMessage(transcript: string, dealValue: number): string {
-  return `DEAL VALUE: $${dealValue.toLocaleString()}
+  return `${buildTranscriptConstraints(transcript, dealValue)}
 
-Extract causal forces with verbatim evidence quotes and ALL named stakeholders.
+Build the People Map (every persona + persona_type) and causal forces with verbatim evidence.
+Structural parent forces must quote the buyer/prospect — not the rep's pitch.
 Do NOT output viability_state, buyer_state, deal_trajectory, or resolution_cycles — server computes scores.
-Do NOT invent blockers, systems, dollar amounts, or policies not spoken in the transcript.
 Merge duplicate root causes. Max 6 forces, max 3 triggers.
 
 TRANSCRIPT:
@@ -812,11 +838,18 @@ async function extractWithModels(
 
 function applyGroundingFilter(
   analysis: EnterpriseAnalysis,
-  transcript: string,
-  audit: GroundingAudit
+  transcript: string
 ): EnterpriseAnalysis {
-  const groundedForces = analysis.causal_forces.filter((f) =>
-    evidenceMatchesTranscript(f.evidence, transcript)
+  const extraOutput = [
+    analysis.executive_summary,
+    analysis.force_initialization.summary,
+    analysis.force_initialization.classification_rationale,
+  ].join(" ");
+
+  const groundedForces = filterInventedForces(
+    analysis.causal_forces,
+    transcript,
+    extraOutput
   );
   const groundedStakeholders = analysis.stakeholders.filter((s) =>
     evidenceMatchesTranscript(s.evidence, transcript)
@@ -830,6 +863,15 @@ function applyGroundingFilter(
 
   return applyCanonicalScoring({
     ...analysis,
+    executive_summary: scrubInventedSummary(analysis.executive_summary, transcript),
+    force_initialization: {
+      ...analysis.force_initialization,
+      summary: scrubInventedSummary(analysis.force_initialization.summary, transcript),
+      classification_rationale: scrubInventedSummary(
+        analysis.force_initialization.classification_rationale,
+        transcript
+      ),
+    },
     causal_forces: groundedForces,
     stakeholders: groundedStakeholders,
   });
@@ -853,6 +895,7 @@ export async function analyzeTranscript(
     dealValue,
     causal_forces: analysis.causal_forces,
     executive_summary: analysis.executive_summary,
+    force_initialization: analysis.force_initialization,
     stakeholders: analysis.stakeholders,
   });
 
@@ -865,16 +908,17 @@ export async function analyzeTranscript(
       dealValue,
       causal_forces: analysis.causal_forces,
       executive_summary: analysis.executive_summary,
+      force_initialization: analysis.force_initialization,
       stakeholders: analysis.stakeholders,
     });
   }
 
   if (!audit.pass) {
-    console.warn("Grounding still failed after retry — filtering ungrounded forces", audit);
-    analysis = applyGroundingFilter(analysis, transcript, audit);
-    audit.warnings.push(
-      `${audit.ungrounded_forces.length} ungrounded force(s) removed after failed retry`
-    );
+    console.warn("Grounding still failed after retry — filtering invented content", audit);
+    analysis = applyGroundingFilter(analysis, transcript);
+    audit.warnings.push("Invented or ungrounded content was removed — scores derived from transcript-only forces.");
+  } else {
+    analysis = applyGroundingFilter(analysis, transcript);
   }
 
   return {

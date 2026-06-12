@@ -8,7 +8,7 @@ import { fileURLToPath } from "url";
 
 import { transcribeAudio } from "./assemblyai.js";
 import { analyzeTranscript } from "./gemini.js";
-import { savePostMortem } from "./supabase.js";
+import { savePostMortem, purgeExpiredTranscripts } from "./supabase.js";
 import { buildAnalysisTranscript } from "./transcript.js";
 import { stripOutcomeMetadata } from "./sanitize.js";
 import { normalizeManualTranscript } from "./normalize.js";
@@ -45,9 +45,12 @@ app.use(
 app.use(express.json());
 
 app.get("/api/health", (_req, res) => {
+  const geminiKey = (process.env.GEMINI_API_KEY ?? "").trim();
+  const geminiKeyValid = /^AIza/.test(geminiKey) || /^AQ\./.test(geminiKey);
   res.json({
     status: "ok",
-    gemini: !!process.env.GEMINI_API_KEY,
+    gemini: !!geminiKey,
+    gemini_key_format_valid: geminiKeyValid,
     assemblyai: !!process.env.ASSEMBLYAI_API_KEY,
     supabase: !!process.env.SUPABASE_URL,
   });
@@ -59,7 +62,7 @@ function formatApiError(message: string): string {
     message.includes("invalid authentication") ||
     message.includes("API key not valid")
   ) {
-    return "GEMINI_API_KEY is invalid or expired. Create a new key at https://aistudio.google.com/apikey (starts with AIza…) and update .env, then restart npm run dev.";
+    return "GEMINI_API_KEY was rejected by Google (401). Create a new key at https://aistudio.google.com/apikey — AIza or AQ. format both work. Restart npm run dev after updating .env.";
   }
   if (message.includes("429") || message.includes("quota")) {
     return "Gemini API quota exceeded. Wait a few minutes and retry, or set GEMINI_MODEL=gemini-2.5-flash in .env.";
@@ -71,7 +74,7 @@ function formatApiError(message: string): string {
     return "Audio upload requires ASSEMBLYAI_API_KEY in .env — or paste a transcript instead.";
   }
   if (message.includes("fetch failed") || message.includes("UNABLE_TO_VERIFY")) {
-    return "HTTPS connection to Gemini failed (TLS). Stop the server, run: powershell -File scripts/export-windows-cas.ps1 then npm run dev";
+    return "HTTPS connection to Gemini failed (Windows TLS). Stop the server and run: npm run dev — the server uses node --use-system-ca. If it still fails: powershell -File scripts/export-windows-cas.ps1";
   }
   if (message.includes("invalid analysis structure") || message.includes("JSON")) {
     return "AI returned an invalid response. Retry in a few seconds.";
@@ -132,15 +135,21 @@ app.post("/api/post-mortem", upload.single("recording"), async (req, res) => {
       analysisJson: JSON.stringify(result),
     });
 
-    const warnings = [
-      ...(strippedPriorAnalysis
-        ? ["Removed a prior Lazarus analysis that was pasted below the call transcript. Only the call text was analyzed."]
-        : []),
-      ...(result.grounding_audit?.warnings ?? []),
-      ...(result.grounding_audit && !result.grounding_audit.pass
-        ? ["Transcript grounding check failed — ungrounded claims were stripped. Verify evidence quotes."]
-        : []),
-    ];
+    const warnings: string[] = [];
+    const addWarning = (msg: string) => {
+      if (!warnings.includes(msg)) warnings.push(msg);
+    };
+    if (strippedPriorAnalysis) {
+      addWarning(
+        "Removed a prior Lazarus analysis that was pasted below the call transcript. Only the call text was analyzed."
+      );
+    }
+    for (const w of result.grounding_audit?.warnings ?? []) addWarning(w);
+    if (result.grounding_audit && !result.grounding_audit.pass) {
+      addWarning(
+        "Transcript grounding check failed — ungrounded claims were stripped. Verify evidence quotes."
+      );
+    }
 
     res.json({
       ...result,
@@ -154,6 +163,30 @@ app.post("/api/post-mortem", upload.single("recording"), async (req, res) => {
     const raw = err instanceof Error ? err.message : "Post-mortem failed.";
     const friendly = formatApiError(raw);
     res.status(500).json({ error: friendly });
+  }
+});
+
+/** Cron-only: purge transcript_text past retention window. Requires PURGE_CRON_SECRET header. */
+app.post("/api/admin/purge-retention", async (req, res) => {
+  const secret = process.env.PURGE_CRON_SECRET;
+  if (!secret || req.headers["x-cron-secret"] !== secret) {
+    res.status(401).json({ error: "Unauthorized" });
+    return;
+  }
+  try {
+    const days = req.body?.retention_days
+      ? parseInt(String(req.body.retention_days), 10)
+      : undefined;
+    const result = await purgeExpiredTranscripts(days);
+    if (!result) {
+      res.status(503).json({ error: "Supabase not configured" });
+      return;
+    }
+    res.json({ ok: true, ...result });
+  } catch (err) {
+    res.status(500).json({
+      error: err instanceof Error ? err.message : "Purge failed",
+    });
   }
 });
 
