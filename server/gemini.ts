@@ -17,8 +17,10 @@ import {
   buildDependencyGraph,
   dedupeCouplings,
   deriveCanonicalState,
+  deriveProprietaryIndices,
   type CanonicalEquilibrium,
   type CanonicalTrajectory,
+  type ProprietaryIndices,
   type ScoringForce,
 } from "./scoring.js";
 
@@ -184,6 +186,8 @@ export interface CrmIntelligence {
   constraint_pressure: string;
   reactivation_probability: string;
   recommended_next_action: string;
+  deal_risk_index?: string;
+  risk_tier?: string;
 }
 
 export interface EnterpriseAnalysis {
@@ -191,6 +195,7 @@ export interface EnterpriseAnalysis {
   client_name: string;
   executive_summary: string;
   stakeholders: StakeholderSignal[];
+  proprietary_indices?: ProprietaryIndices;
   force_initialization: ForceInitialization;
   causal_forces: CausalForce[];
   resolution_cycles: ResolutionCycles;
@@ -280,7 +285,7 @@ function trajectoryDirection(t: CanonicalTrajectory): string {
 }
 
 /** Layer 3 — project frozen derivation read-only; no math here */
-function applyCanonicalScoring(result: EnterpriseAnalysis): EnterpriseAnalysis {
+function applyCanonicalScoring(result: EnterpriseAnalysis, transcript = ""): EnterpriseAnalysis {
   const rawForces: ScoringForce[] = result.causal_forces.map((f) => ({
     factor: f.factor,
     type: f.type,
@@ -300,6 +305,7 @@ function applyCanonicalScoring(result: EnterpriseAnalysis): EnterpriseAnalysis {
     .sort((a, b) => b.weight - a.weight)[0];
 
   const finalCycle = frozen.resolution_cycles.cycles[frozen.resolution_cycles.cycles.length - 1];
+  const proprietary_indices = deriveProprietaryIndices(frozen, result.stakeholders, transcript);
 
   const projected: EnterpriseAnalysis = {
     ...result,
@@ -374,7 +380,10 @@ function applyCanonicalScoring(result: EnterpriseAnalysis): EnterpriseAnalysis {
       buyer_intent_strength: String(frozen.intent_strength),
       effective_intent: String(frozen.effective_intent),
       constraint_pressure: String(frozen.constraint_pressure),
+      deal_risk_index: String(proprietary_indices.deal_risk_index),
+      risk_tier: proprietary_indices.risk_tier,
     },
+    proprietary_indices,
   };
 
   assertFrozenConsistency({
@@ -874,7 +883,7 @@ function applyGroundingFilter(
     },
     causal_forces: groundedForces,
     stakeholders: groundedStakeholders,
-  });
+  }, transcript);
 }
 
 export async function analyzeTranscript(

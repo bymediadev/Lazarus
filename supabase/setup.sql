@@ -1,5 +1,5 @@
 -- Lazarus — FULL SETUP (run this first in Supabase SQL Editor)
-
+-- For existing projects, prefer migrations/003 through 006 instead of re-running this file.
 CREATE TABLE IF NOT EXISTS call_post_mortems (
     id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
     user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE,

@@ -241,6 +241,37 @@ export interface CrmIntelligence {
   structural_cause_type?: string;
   recoverability_score?: string;
   constraint_severity?: string;
+  deal_risk_index?: string;
+  risk_tier?: string;
+}
+
+export interface DialogueStallSignals {
+  score: number;
+  deferral_phrase_count: number;
+  handoff_mention_count: number;
+  rep_monologue_ratio: number | null;
+  avg_turn_gap_seconds: number | null;
+  flagged_patterns: string[];
+}
+
+export interface StakeholderDispersionDetail {
+  index: number;
+  authority_gap: boolean;
+  multi_department_friction: number;
+  persona_breakdown: Record<string, number>;
+  flags: string[];
+}
+
+export interface ProprietaryIndices {
+  deal_risk_index: number;
+  stakeholder_dispersion_index: number;
+  dialogue_stall_score: number;
+  authority_gap_flag: boolean;
+  multi_department_friction: number;
+  risk_tier: "LOW" | "MODERATE" | "HIGH" | "CRITICAL";
+  formula: string;
+  dialogue_stall: DialogueStallSignals;
+  stakeholder_dispersion: StakeholderDispersionDetail;
 }
 
 export interface StakeholderSignal {
@@ -287,6 +318,7 @@ export interface PostMortemResult {
   pipeline_entry_validity?: PipelineEntryValidity;
   rescue_triage_plan?: RescueTriagePlan;
   crm_intelligence?: CrmIntelligence;
+  proprietary_indices?: ProprietaryIndices;
   sources?: { audio: boolean; manual: boolean };
   id?: string | null;
   warnings?: string[];
@@ -354,6 +386,19 @@ export function forceTypeClass(type: string): "emerald" | "amber" | "red" | "neu
   if (t === "constraint" || t === "behavioral") return "amber";
   if (t === "structural" || t === "timing") return "red";
   return "neutral";
+}
+
+export function driTagClass(tier?: string): string {
+  switch (tier?.toUpperCase()) {
+    case "CRITICAL":
+      return "dri-critical";
+    case "HIGH":
+      return "dri-high";
+    case "MODERATE":
+      return "dri-moderate";
+    default:
+      return "dri-low";
+  }
 }
 
 export function flattenRescuePlan(plan?: RescueTriagePlan): string[] {
@@ -517,265 +562,3 @@ export function normalizeResult(raw: PostMortemResult): PostMortemResult {
   };
 }
 
-export const MOCK_POST_MORTEM: PostMortemResult = normalizeResult({
-  deal_classification: { status: "STALLED — RECOVERABLE", confidence_level: 91 },
-  stakeholders: [
-    {
-      name: "Marcus Vance",
-      role: "CIO",
-      stance: "Neutral",
-      authority_level: "economic_buyer",
-      persona_type: "Neutral",
-      evidence: "Marcus Vance (MV) – Chief Information Officer, CyberCore Logistics",
-    },
-  ],
-  client_name: "CyberCore Logistics",
-  executive_summary:
-    "CyberCore discovery call: acquisition bandwidth and board capex create structural lock-in with high constraint pressure. Genuine intent present but suppressed by force interaction. Temporary blockers — defer until equilibrium shifts.",
-  force_initialization: {
-    summary: "5 forces initialized from discovery call: 2 structural parents, 2 derivatives, 1 intent",
-    blocker_classification: "TEMPORARY BLOCKERS",
-    classification_rationale:
-      "Acquisition bandwidth and fiscal timing are time-bound (Type A). No competitive contract lock or permanent vendor commitment (Type B).",
-  },
-  resolution_cycles: {
-    convergence_status: "converged",
-    total_cycles: 3,
-    cycles: [
-      {
-        cycle: 1,
-        phase: "structural propagation",
-        state_snapshot: {
-          constraint_pressure: 60,
-          effective_intent: 7,
-          structural_lock_in: 77,
-          timing_accessibility: 5,
-          viability_score: 0,
-          equilibrium_state: "MIXED",
-        },
-        state_change: "Structural propagation (intermediate)",
-      },
-      {
-        cycle: 2,
-        phase: "constraint feedback",
-        state_snapshot: {
-          constraint_pressure: 70,
-          effective_intent: 4,
-          structural_lock_in: 85,
-          timing_accessibility: 5,
-          viability_score: 0,
-          equilibrium_state: "MIXED",
-        },
-        state_change: "Constraint feedback (intermediate)",
-      },
-      {
-        cycle: 3,
-        phase: "frozen equilibrium",
-        state_snapshot: {
-          constraint_pressure: 80,
-          effective_intent: 2,
-          structural_lock_in: 85,
-          timing_accessibility: 5,
-          viability_score: 0,
-          equilibrium_state: "STABLE",
-        },
-        state_change: "Frozen — final derived state",
-      },
-    ],
-    convergence_summary:
-      "Viability 0→0→0. Effective intent 7→4→2. Equilibrium: STABLE.",
-  },
-  causal_forces: [
-    {
-      factor: "Technical validation and solution praise",
-      type: "Intent",
-      weight: 78,
-      role: "independent",
-      derived_from: [],
-      evidence: '"The technology is definitely there. You guys have clearly done this before."',
-    },
-    {
-      factor: "Acquisition integration bandwidth exhaustion",
-      type: "Structural",
-      weight: 85,
-      role: "parent",
-      derived_from: [],
-      evidence: '"My DBA and InfoSec teams are working 60-hour weeks during the acquisition."',
-    },
-    {
-      factor: "Operational constraint pressure on team availability",
-      type: "Constraint",
-      weight: 80,
-      role: "derivative",
-      derived_from: ["Acquisition integration bandwidth exhaustion"],
-      evidence: '"I can\'t allocate 5 hours a week, let alone 20."',
-    },
-    {
-      factor: "Board capex freeze policy",
-      type: "Structural",
-      weight: 82,
-      role: "parent",
-      derived_from: [],
-      evidence: '"The board has frozen any IT spend over $500K without same-fiscal-year ROI."',
-    },
-    {
-      factor: "Fiscal calendar timing lock",
-      type: "Timing",
-      weight: 70,
-      role: "derivative",
-      derived_from: ["Board capex freeze policy", "Operational constraint pressure on team availability"],
-      evidence: '"9-month deployment pushes us past the fiscal window entirely."',
-    },
-  ],
-  force_interaction_map: {
-    amplifies: [
-      {
-        source: "Acquisition integration bandwidth exhaustion",
-        target: "Operational constraint pressure on team availability",
-        mechanism: "Structural bandwidth lock directly generates operational constraint — not independent",
-      },
-      {
-        source: "Board capex freeze policy",
-        target: "Fiscal calendar timing lock",
-        mechanism: "Capex policy makes 9-month deployment structurally impossible within fiscal year",
-      },
-    ],
-    suppresses: [
-      {
-        source: "Operational constraint pressure on team availability",
-        target: "Technical validation and solution praise",
-        mechanism: "High constraint pressure reduces effective intent — praise cannot convert to action",
-      },
-      {
-        source: "Board capex freeze policy",
-        target: "Technical validation and solution praise",
-        mechanism: "Structural lock-in caps effective intent impact regardless of enthusiasm",
-      },
-    ],
-    dependent_forces: [
-      {
-        force: "Operational constraint pressure on team availability",
-        depends_on: "Acquisition integration bandwidth exhaustion",
-        relationship: "Constraint is CAUSED by structural acquisition lock — not standalone",
-      },
-      {
-        force: "Fiscal calendar timing lock",
-        depends_on: "Board capex freeze policy",
-        relationship: "Timing force is derivative of structural fiscal policy",
-      },
-    ],
-    derivative_forces: [
-      {
-        force: "Fiscal calendar timing lock",
-        derived_from: ["Board capex freeze policy", "Operational constraint pressure"],
-        derivation_logic: "Timing emerges from intersection of fiscal policy and resource unavailability",
-      },
-    ],
-  },
-  force_dependency_graph: {
-    parent_forces: [
-      { force: "Acquisition integration bandwidth exhaustion", generates: ["Operational constraint pressure on team availability"] },
-      { force: "Board capex freeze policy", generates: ["Fiscal calendar timing lock"] },
-    ],
-    child_forces: [
-      { force: "Operational constraint pressure", derived_from: "Acquisition integration bandwidth exhaustion" },
-      { force: "Fiscal calendar timing lock", derived_from: "Board capex freeze policy" },
-    ],
-    feedback_loops: [
-      {
-        loop: "Constraint-intent suppression cycle",
-        forces: ["Operational constraint pressure", "Technical validation and solution praise"],
-        effect: "Reinforcing: constraint suppresses intent → reduces resource allocation urgency",
-      },
-    ],
-    cycle_evolution: [
-      "Cycle 1: structural→constraint coupling established",
-      "Cycle 2: feedback loop strengthened, intent decay accelerated",
-      "Cycle 3: graph locked — no new derivatives, equilibrium frozen",
-    ],
-  },
-  equilibrium_analysis: {
-    state: "STABLE",
-    derived_from_cycles: true,
-    net_force_balance: "Structural(85)+Constraint(80)=165 → STABLE",
-    dominating_forces: [
-      "Acquisition integration bandwidth exhaustion (85)",
-      "Board capex freeze policy (82)",
-    ],
-    equilibrium_breaker: "Acquisition integration completes — releases bandwidth constraint and shifts structural rigidity",
-    explanation:
-      "Effective Intent = 78 × (100−80)/100 × (100−85)/100 = 2 | Viability = clamp(2 + 5 − max(85, 80), 0, 100) = 0 | Equilibrium: 85+80=165 → STABLE. Trajectory: DEFERRED (locked).",
-  },
-  viability_state: {
-    state: "DEFERRED VIABILITY",
-    viability_score: 0,
-    equilibrium_derivation:
-      "Effective Intent = 78 × (100−80)/100 × (100−85)/100 = 2 | Viability = clamp(2 + 5 − max(85, 80), 0, 100) = 0 | Equilibrium: 85+80=165 → STABLE. Trajectory: DEFERRED (locked).",
-    derivation_components: {
-      intent_strength: 78,
-      constraint_pressure: 80,
-      structural_lock_in_impact: 85,
-      timing_accessibility: 5,
-    },
-  },
-  deal_trajectory: {
-    trajectory_type: "DEFERRED (locked)",
-    derivation: "Viability 0 → DEFERRED (locked)",
-    net_force_direction: "negative",
-    driving_interactions: [],
-  },
-  buyer_state: {
-    intent_strength: 78,
-    constraint_pressure: 80,
-    effective_intent: 2,
-    decision_freedom: "limited",
-    evidence: [
-      "Intent 78 | Effective 2 | suppressed intent",
-      "Constraint 80 | Freedom limited",
-    ],
-  },
-  reactivation_modeling: [
-    {
-      trigger_event: "Acquisition integration completes",
-      probability: 75,
-      equilibrium_shift: "Breaks metastable equilibrium — reduces structural parent force, releases derivative constraint",
-      forces_modified: ["Acquisition bandwidth 85→40", "Constraint pressure 88→55", "Effective intent rises to ~60"],
-      timeframe: "60-90 days",
-    },
-    {
-      trigger_event: "New fiscal year / capex policy reset",
-      probability: 55,
-      equilibrium_shift: "Shifts structural equilibrium — timing accessibility increases",
-      forces_modified: ["Board capex force 82→35", "Timing lock dissolves", "Trajectory shifts FROZEN→DEFERRED"],
-      timeframe: "3-6 months",
-    },
-  ],
-  pipeline_entry_validity: {
-    classification: "SHOULD HAVE BEEN DEFERRED",
-    system_basis:
-      "Structural lock-in (acquisition + board policy) was dominant at discovery — force interaction indicates deferral, not active pipeline pursuit",
-    signals_missed: ["Pending acquisition", "Board capex policy", "Resource availability"],
-    stage_should_have_changed: "First discovery — once structural parents identified, defer not pursue",
-    optimal_decision: "Nurture with documentation; re-engage post-equilibrium shift at day 55",
-  },
-  rescue_triage_plan: {
-    immediate_0_30_days: ["Deliver AS/400 docs", "Move to deferred nurture; CRM alert day 55"],
-    near_term_30_90_days: ["Build phased sub-$500K ROI model for post-equilibrium re-engagement"],
-    long_term_90_plus_days: ["Re-engage when acquisition equilibrium breaks"],
-  },
-  crm_intelligence: {
-    dominant_equilibrium_force: "Acquisition integration bandwidth exhaustion",
-    blocker_classification: "TEMPORARY BLOCKERS",
-    structural_constraint_type: "Structural→Constraint coupling / fiscal timing",
-    deal_state: "DEFERRED VIABILITY",
-    viability_score: "0",
-    trajectory_type: "DEFERRED (locked)",
-    equilibrium_state: "STABLE",
-    convergence_status: "converged",
-    buyer_intent_strength: "78",
-    effective_intent: "2",
-    constraint_pressure: "80",
-    reactivation_probability: "65",
-    recommended_next_action: "Maintain nurture; monitor acquisition close as equilibrium breaker",
-  },
-});

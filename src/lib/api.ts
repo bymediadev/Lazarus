@@ -74,3 +74,27 @@ export async function checkHealth(): Promise<{
   const res = await fetch(`${API_BASE}/api/health`);
   return res.json();
 }
+
+export async function saveRescueOutcome(
+  postMortemId: string,
+  body: {
+    outcome: string;
+    rescue_action_taken: string;
+    proprietary_indices: PostMortemResult["proprietary_indices"];
+    viability_score: number;
+    trajectory_type: string;
+    constraint_pressure: number;
+    stakeholders: PostMortemResult["stakeholders"];
+  }
+): Promise<{ ok: boolean; id?: string }> {
+  const res = await fetch(`${API_BASE}/api/post-mortem/${postMortemId}/rescue-outcome`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  });
+  const data = (await res.json()) as { ok?: boolean; id?: string; error?: string };
+  if (!res.ok) {
+    throw new Error(data.error || `Save failed (${res.status})`);
+  }
+  return data;
+}

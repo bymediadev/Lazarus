@@ -265,16 +265,38 @@ function effectiveIntent(intent: number, constraint: number, enabler: number): n
   return clamp(intent * constraintFactor(constraint) * enablerMultiplier(enabler));
 }
 
+function isAuthorityGapRecoverable(
+  constraint: number,
+  structural: number,
+  enabler: number,
+  blocker: string
+): boolean {
+  const b = blocker.toUpperCase();
+  if (
+    b.includes("PERMANENT") ||
+    b.includes("STRUCTURAL LOCK") ||
+    b.includes("AUDIT") ||
+    b.includes("FREEZE")
+  ) {
+    return false;
+  }
+  return enabler >= 40 && constraint >= 50 && constraint < 88 && structural < 80;
+}
+
 function viabilityScore(
   intent: number,
   eff: number,
   timing: number,
   structural: number,
   constraint: number,
-  enabler: number
+  enabler: number,
+  blocker = "MIXED"
 ): number {
   if (constraint <= 0 && enabler > 0 && structural <= 15) {
     return clamp(Math.max(eff, intent) + timing);
+  }
+  if (isAuthorityGapRecoverable(constraint, structural, enabler, blocker)) {
+    return clamp(intent * 0.55 + enabler * 0.4 + timing - structural * 0.2);
   }
   return clamp(eff + timing - Math.max(structural, constraint));
 }
@@ -300,7 +322,11 @@ function trajectory(
   if (constraint <= 0 && enabler >= 50 && structural <= 15 && viability >= 50) {
     return "VALIDATED / VELOCITY";
   }
-  if (constraint > 70) return "DEFERRED (locked)";
+  if (isAuthorityGapRecoverable(constraint, structural, enabler, blocker)) {
+    if (viability <= 50) return "DEFERRED (recoverable)";
+    return "ACTIVE";
+  }
+  if (constraint > 85 || (constraint > 70 && enabler < 40)) return "DEFERRED (locked)";
   if (viability <= 20) return "DEFERRED (locked)";
   if (viability <= 50) return "DEFERRED (recoverable)";
   return "ACTIVE";
@@ -369,10 +395,11 @@ function snapshot(
   constraint: number,
   structural: number,
   enabler: number,
-  timing: number
+  timing: number,
+  blocker = "MIXED"
 ): CycleSnapshot {
   const eff = effectiveIntent(intent, constraint, enabler);
-  const via = viabilityScore(intent, eff, timing, structural, constraint, enabler);
+  const via = viabilityScore(intent, eff, timing, structural, constraint, enabler, blocker);
   return {
     constraint_pressure: constraint,
     effective_intent: eff,
@@ -408,7 +435,8 @@ export function deriveCanonicalState(
     timing_factor,
     structural_lock_in,
     constraint_pressure,
-    enabler_strength
+    enabler_strength,
+    blockerClassification
   );
   const equilibrium_state = equilibrium(structural_lock_in, constraint_pressure);
   const trajectory_type = trajectory(
@@ -434,14 +462,16 @@ export function deriveCanonicalState(
     clamp(constraint_pressure * 0.75),
     clamp(structural_lock_in * 0.9),
     clamp(enabler_strength * 0.9),
-    timing_factor
+    timing_factor,
+    blockerClassification
   );
   const c2 = snapshot(
     intent_strength,
     clamp((constraint_pressure + c1.constraint_pressure) / 2),
     structural_lock_in,
     enabler_strength,
-    timing_factor
+    timing_factor,
+    blockerClassification
   );
   const c3: CycleSnapshot = {
     constraint_pressure,
@@ -575,3 +605,344 @@ export const computeCanonicalScores = (
 export const formatCanonicalDerivation = (f: FrozenDerivation) => f.derivation_formula;
 
 export const buildResolutionCycles = (f: FrozenDerivation) => f.resolution_cycles;
+
+// --- Phase 1 proprietary indices (uncopyable moat) ---
+
+export interface StakeholderIndexInput {
+  name: string;
+  role?: string;
+  stance?: string;
+  persona_type?: string;
+  authority_level?: string;
+  evidence?: string;
+}
+
+export interface DialogueStallSignals {
+  score: number;
+  deferral_phrase_count: number;
+  handoff_mention_count: number;
+  rep_monologue_ratio: number | null;
+  avg_turn_gap_seconds: number | null;
+  flagged_patterns: string[];
+}
+
+export interface StakeholderDispersion {
+  index: number;
+  authority_gap: boolean;
+  multi_department_friction: number;
+  persona_breakdown: Record<string, number>;
+  flags: string[];
+}
+
+export type DealRiskTier = "LOW" | "MODERATE" | "HIGH" | "CRITICAL";
+
+export interface ProprietaryIndices {
+  deal_risk_index: number;
+  stakeholder_dispersion_index: number;
+  dialogue_stall_score: number;
+  authority_gap_flag: boolean;
+  multi_department_friction: number;
+  risk_tier: DealRiskTier;
+  formula: string;
+  dialogue_stall: DialogueStallSignals;
+  stakeholder_dispersion: StakeholderDispersion;
+}
+
+const PERSONA_WEIGHTS: Record<string, number> = {
+  "absent decision maker": 28,
+  "hidden detractor": 24,
+  "suppressed champion": 12,
+  "aligned champion": -8,
+};
+
+const DEFERRAL_PHRASES = [
+  "i'll check",
+  "ill check",
+  "let me get back",
+  "loop in",
+  "not on this call",
+  "not on the call",
+  "missed the",
+  "missed today's",
+  "reschedule",
+  "need to talk to",
+  "get back to you",
+  "underwater until",
+  "stays parked",
+  "if not",
+  "can't join",
+  "couldn't join",
+  "without him",
+  "without her",
+  "hasn't validated",
+  "has not validated",
+];
+
+const HANDOFF_DEPARTMENTS = [
+  "procurement",
+  "legal",
+  "finance",
+  "security",
+  "infrastructure",
+  "it ",
+  " cfo",
+  " cto",
+  " vp ",
+  "operations",
+  "compliance",
+  "audit",
+];
+
+const DEPARTMENT_FRICTION = [
+  "procurement",
+  "legal",
+  "finance",
+  "security",
+  "infrastructure",
+  "compliance",
+  "audit",
+  "operations",
+  "it",
+  "engineering",
+];
+
+function normalizePersona(s: StakeholderIndexInput): string {
+  const raw = (s.persona_type ?? s.stance ?? "").toLowerCase().trim();
+  if (raw.includes("absent")) return "absent decision maker";
+  if (raw.includes("hidden") && raw.includes("detractor")) return "hidden detractor";
+  if (raw.includes("suppressed")) return "suppressed champion";
+  if (raw.includes("aligned")) return "aligned champion";
+  return raw || "unknown";
+}
+
+export function computeStakeholderDispersion(
+  stakeholders: StakeholderIndexInput[]
+): StakeholderDispersion {
+  const persona_breakdown: Record<string, number> = {};
+  const flags: string[] = [];
+  let raw = 0;
+
+  for (const s of stakeholders) {
+    const persona = normalizePersona(s);
+    persona_breakdown[persona] = (persona_breakdown[persona] ?? 0) + 1;
+    const weight = PERSONA_WEIGHTS[persona] ?? 0;
+    raw += weight;
+    if (persona === "absent decision maker") {
+      flags.push(`Absent decision maker: ${s.name}`);
+    }
+    if (persona === "hidden detractor") {
+      flags.push(`Hidden detractor: ${s.name}`);
+    }
+  }
+
+  const aligned = persona_breakdown["aligned champion"] ?? 0;
+  const suppressed = persona_breakdown["suppressed champion"] ?? 0;
+  const absent = persona_breakdown["absent decision maker"] ?? 0;
+  const authority_gap =
+    absent > 0 || (suppressed > 0 && aligned === 0);
+
+  if (authority_gap) {
+    flags.push("Authority gap — no aligned champion with signing power on call");
+  }
+
+  const deptMentions = new Set<string>();
+  for (const s of stakeholders) {
+    const blob = normalizeText(`${s.role ?? ""} ${s.evidence ?? ""} ${s.name}`);
+    for (const dept of DEPARTMENT_FRICTION) {
+      if (blob.includes(dept)) deptMentions.add(dept);
+    }
+  }
+  const multi_department_friction = clamp(deptMentions.size * 14 + (absent > 0 ? 12 : 0));
+
+  const index = clamp(raw + multi_department_friction * 0.25);
+
+  return {
+    index,
+    authority_gap,
+    multi_department_friction,
+    persona_breakdown,
+    flags,
+  };
+}
+
+function parseTimestampSeconds(line: string): number | null {
+  const m = line.match(/\[(\d{1,2}):(\d{2}):(\d{2})\]/);
+  if (!m) return null;
+  return parseInt(m[1], 10) * 3600 + parseInt(m[2], 10) * 60 + parseInt(m[3], 10);
+}
+
+function speakerLabel(line: string): string | null {
+  const m = line.match(/^\[[^\]]+\]\s*([A-Za-z]{1,3}):/);
+  if (m) return m[1].toUpperCase();
+  const m2 = line.match(/^(Prospect|Rep|Speaker \d+)/i);
+  if (m2) return m2[1].toLowerCase();
+  return null;
+}
+
+export function computeDialogueStallSignals(transcript: string): DialogueStallSignals {
+  const lower = transcript.toLowerCase();
+  const flagged_patterns: string[] = [];
+
+  let deferral_phrase_count = 0;
+  for (const phrase of DEFERRAL_PHRASES) {
+    if (lower.includes(phrase)) {
+      deferral_phrase_count++;
+      flagged_patterns.push(phrase);
+    }
+  }
+
+  let handoff_mention_count = 0;
+  for (const dept of HANDOFF_DEPARTMENTS) {
+    if (lower.includes(dept.trim())) {
+      handoff_mention_count++;
+    }
+  }
+
+  const lines = transcript.split(/\r?\n/).filter((l) => l.trim());
+  const timestamps: number[] = [];
+  const speakerWords = new Map<string, number>();
+  let totalWords = 0;
+
+  for (const line of lines) {
+    const ts = parseTimestampSeconds(line);
+    if (ts !== null) timestamps.push(ts);
+
+    const speaker = speakerLabel(line);
+    const words = line.split(/\s+/).filter(Boolean).length;
+    if (speaker) {
+      speakerWords.set(speaker, (speakerWords.get(speaker) ?? 0) + words);
+      totalWords += words;
+    }
+  }
+
+  let rep_monologue_ratio: number | null = null;
+  if (totalWords > 0 && speakerWords.size >= 2) {
+    const repWords =
+      [...speakerWords.entries()]
+        .filter(([k]) => /^(sc|rep|ae|seller|sales)/i.test(k) || k === "rep")
+        .reduce((sum, [, w]) => sum + w, 0) ||
+      Math.max(...speakerWords.values());
+    rep_monologue_ratio = Math.round((repWords / totalWords) * 100) / 100;
+    if (rep_monologue_ratio > 0.65) {
+      flagged_patterns.push("rep-dominated dialogue");
+    }
+  }
+
+  let avg_turn_gap_seconds: number | null = null;
+  if (timestamps.length >= 2) {
+    const gaps: number[] = [];
+    for (let i = 1; i < timestamps.length; i++) {
+      const gap = timestamps[i] - timestamps[i - 1];
+      if (gap > 0 && gap < 600) gaps.push(gap);
+    }
+    if (gaps.length) {
+      avg_turn_gap_seconds = Math.round(gaps.reduce((a, b) => a + b, 0) / gaps.length);
+      if (avg_turn_gap_seconds > 45) flagged_patterns.push("long turn gaps");
+    }
+  }
+
+  const score = clamp(
+    deferral_phrase_count * 8 +
+      handoff_mention_count * 5 +
+      (rep_monologue_ratio !== null && rep_monologue_ratio > 0.65 ? 15 : 0) +
+      (avg_turn_gap_seconds !== null && avg_turn_gap_seconds > 45 ? 12 : 0)
+  );
+
+  return {
+    score,
+    deferral_phrase_count,
+    handoff_mention_count,
+    rep_monologue_ratio,
+    avg_turn_gap_seconds,
+    flagged_patterns,
+  };
+}
+
+function riskTier(dri: number): DealRiskTier {
+  if (dri >= 75) return "CRITICAL";
+  if (dri >= 55) return "HIGH";
+  if (dri >= 35) return "MODERATE";
+  return "LOW";
+}
+
+/** Deal Risk Index — higher = more stall/recovery risk. Proprietary composite, not LLM-derived. */
+export function computeDealRiskIndex(
+  frozen: FrozenDerivation,
+  dispersion: StakeholderDispersion,
+  stall: DialogueStallSignals
+): number {
+  const viabilityInverse = 100 - frozen.viability_score;
+  const timingPenalty =
+    frozen.timing_factor <= 5 && frozen.constraint_pressure > 40 ? 10 : 0;
+
+  const authorityGapRecoverable =
+    frozen.enabler_strength >= 40 &&
+    frozen.constraint_pressure >= 50 &&
+    frozen.constraint_pressure < 88 &&
+    frozen.structural_lock_in < 80;
+
+  const stallContribution = authorityGapRecoverable
+    ? Math.min(stall.score, 40)
+    : stall.score;
+
+  return clamp(
+    viabilityInverse * 0.3 +
+      frozen.constraint_pressure * 0.25 +
+      frozen.structural_lock_in * 0.15 +
+      dispersion.index * 0.2 +
+      stallContribution * 0.1 +
+      timingPenalty -
+      frozen.enabler_strength * 0.15
+  );
+}
+
+export function deriveProprietaryIndices(
+  frozen: FrozenDerivation,
+  stakeholders: StakeholderIndexInput[],
+  transcript = ""
+): ProprietaryIndices {
+  const stakeholder_dispersion = computeStakeholderDispersion(stakeholders);
+  const dialogue_stall = computeDialogueStallSignals(transcript);
+  const deal_risk_index = computeDealRiskIndex(
+    frozen,
+    stakeholder_dispersion,
+    dialogue_stall
+  );
+  const risk_tier = riskTier(deal_risk_index);
+
+  const formula = [
+    `DRI ${deal_risk_index} = 0.30×(100−${frozen.viability_score}) + 0.25×${frozen.constraint_pressure} + 0.15×${frozen.structural_lock_in}`,
+    `+ 0.20×dispersion(${stakeholder_dispersion.index}) + 0.10×stall(${dialogue_stall.score}) − 0.15×enabler(${frozen.enabler_strength})`,
+    `Tier: ${risk_tier} | Authority gap: ${stakeholder_dispersion.authority_gap}`,
+  ].join(" | ");
+
+  return {
+    deal_risk_index,
+    stakeholder_dispersion_index: stakeholder_dispersion.index,
+    dialogue_stall_score: dialogue_stall.score,
+    authority_gap_flag: stakeholder_dispersion.authority_gap,
+    multi_department_friction: stakeholder_dispersion.multi_department_friction,
+    risk_tier,
+    formula,
+    dialogue_stall,
+    stakeholder_dispersion,
+  };
+}
+
+export function personaSignature(stakeholders: StakeholderIndexInput[]): string {
+  const counts: Record<string, number> = {};
+  for (const s of stakeholders) {
+    const p = normalizePersona(s);
+    counts[p] = (counts[p] ?? 0) + 1;
+  }
+  return Object.entries(counts)
+    .sort(([a], [b]) => a.localeCompare(b))
+    .map(([k, v]) => `${k}:${v}`)
+    .join(",");
+}
+
+export function constraintBand(constraint: number): "low" | "medium" | "high" {
+  if (constraint >= 70) return "high";
+  if (constraint >= 40) return "medium";
+  return "low";
+}

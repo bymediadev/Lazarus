@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { saveRescueOutcome } from "../lib/api";
 import {
   CausalForce,
   ForceCoupling,
@@ -10,6 +11,7 @@ import {
   equilibriumTagClass,
   blockerTagClass,
   forceTypeClass,
+  driTagClass,
 } from "../types";
 
 interface Props {
@@ -70,7 +72,13 @@ function CouplingList({ title, items, className }: { title: string; items: Force
 
 export default function AnalysisReport({ result: raw, sources }: Props) {
   const [copied, setCopied] = useState(false);
+  const [rescueAction, setRescueAction] = useState("");
+  const [rescueOutcome, setRescueOutcome] = useState("still_stalled");
+  const [rescueSaved, setRescueSaved] = useState(false);
+  const [rescueError, setRescueError] = useState<string | null>(null);
+  const [rescueSaving, setRescueSaving] = useState(false);
   const r = normalizeResult(raw);
+  const pi = r.proprietary_indices;
   const dc = r.deal_classification!;
   const plan = r.rescue_triage_plan!;
   const vs = r.viability_state!;
@@ -103,9 +111,46 @@ export default function AnalysisReport({ result: raw, sources }: Props) {
   };
 
   const dc_comp = vs.derivation_components;
+  const driClass = driTagClass(pi?.risk_tier);
+
+  const submitRescueOutcome = async () => {
+    if (!raw.id || !pi) return;
+    setRescueSaving(true);
+    setRescueError(null);
+    try {
+      await saveRescueOutcome(raw.id, {
+        outcome: rescueOutcome,
+        rescue_action_taken: rescueAction.trim(),
+        proprietary_indices: pi,
+        viability_score: vs.viability_score,
+        trajectory_type: dt.trajectory_type,
+        constraint_pressure: dc_comp.constraint_pressure,
+        stakeholders: r.stakeholders,
+      });
+      setRescueSaved(true);
+    } catch (err) {
+      setRescueError(err instanceof Error ? err.message : "Failed to save outcome");
+    } finally {
+      setRescueSaving(false);
+    }
+  };
 
   return (
     <div className="cards">
+      {pi && (
+        <div className={`dri-banner ${driClass}`}>
+          <span className="dri-label">Deal Risk Index</span>
+          <span className="dri-score">{pi.deal_risk_index}</span>
+          <span className="dri-tier">{pi.risk_tier} RISK</span>
+          <div className="dri-components">
+            <span>Dispersion {pi.stakeholder_dispersion_index}</span>
+            <span>Stall signals {pi.dialogue_stall_score}</span>
+            <span>Dept friction {pi.multi_department_friction}</span>
+            {pi.authority_gap_flag && <span className="dri-flag">Authority gap</span>}
+          </div>
+        </div>
+      )}
+
       <div className={`deal-status-banner ${tagClass}`}>
         <span className="deal-status-mode">Deterministic Scoring Engine</span>
         <span className="deal-status-label">{dc.status}</span>
@@ -523,8 +568,86 @@ export default function AnalysisReport({ result: raw, sources }: Props) {
             <CrmField label="Intent Strength" value={r.crm_intelligence.buyer_intent_strength} />
             <CrmField label="Effective Intent" value={r.crm_intelligence.effective_intent} />
             <CrmField label="Constraint Pressure" value={r.crm_intelligence.constraint_pressure} />
-            <CrmField label="Reactivation Probability" value={r.crm_intelligence.reactivation_probability} />
+            <CrmField label="Deal Risk Index (Derived)" value={r.crm_intelligence.deal_risk_index ?? String(pi?.deal_risk_index ?? "")} />
+            <CrmField label="Risk Tier" value={r.crm_intelligence.risk_tier ?? pi?.risk_tier} />
             <CrmField label="Recommended Next Action" value={r.crm_intelligence.recommended_next_action} />
+          </div>
+        </article>
+      )}
+
+      {pi && (
+        <article className="card card-neutral">
+          <h2 className="card-title">Proprietary Risk Compiler</h2>
+          <div className="card-body">
+            <p className="meta-line">{pi.formula}</p>
+            {pi.stakeholder_dispersion.flags.length > 0 && (
+              <>
+                <h4 style={{ marginTop: "0.75rem" }}>Stakeholder friction flags</h4>
+                <ul className="restart-list">
+                  {pi.stakeholder_dispersion.flags.map((f, i) => (
+                    <li key={i}>{f}</li>
+                  ))}
+                </ul>
+              </>
+            )}
+            {pi.dialogue_stall.flagged_patterns.length > 0 && (
+              <>
+                <h4 style={{ marginTop: "0.75rem" }}>Dialogue stall patterns</h4>
+                <ul className="restart-list">
+                  {pi.dialogue_stall.flagged_patterns.map((p, i) => (
+                    <li key={i}>{p}</li>
+                  ))}
+                </ul>
+              </>
+            )}
+          </div>
+        </article>
+      )}
+
+      {pi && raw.id && (
+        <article className="card card-emerald">
+          <h2 className="card-title">Rescue Loop Feedback</h2>
+          <div className="card-body">
+            <p className="meta-line">
+              Record what rescue action was taken and the outcome. Stores anonymous metadata only — no
+              transcript text.
+            </p>
+            {rescueSaved ? (
+              <p className="meta-line" style={{ marginTop: "0.75rem" }}>
+                Outcome recorded. Thank you — this feeds the rescue success flywheel.
+              </p>
+            ) : (
+              <>
+                <label className="rescue-field">
+                  <span>Rescue action taken</span>
+                  <input
+                    type="text"
+                    value={rescueAction}
+                    onChange={(e) => setRescueAction(e.target.value)}
+                    placeholder="e.g. Sent 90-sec Loom + rescheduled Dave demo"
+                  />
+                </label>
+                <label className="rescue-field">
+                  <span>Outcome</span>
+                  <select value={rescueOutcome} onChange={(e) => setRescueOutcome(e.target.value)}>
+                    <option value="still_stalled">Still stalled</option>
+                    <option value="closed_won">Closed won</option>
+                    <option value="lost">Lost</option>
+                    <option value="unknown">Unknown</option>
+                  </select>
+                </label>
+                {rescueError && <p className="error-text">{rescueError}</p>}
+                <button
+                  type="button"
+                  className="btn-primary"
+                  style={{ marginTop: "0.75rem" }}
+                  disabled={rescueSaving || !rescueAction.trim()}
+                  onClick={submitRescueOutcome}
+                >
+                  {rescueSaving ? "Saving…" : "Record outcome"}
+                </button>
+              </>
+            )}
           </div>
         </article>
       )}

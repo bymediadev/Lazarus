@@ -8,7 +8,7 @@ import { fileURLToPath } from "url";
 
 import { transcribeAudio } from "./assemblyai.js";
 import { analyzeTranscript } from "./gemini.js";
-import { savePostMortem, purgeExpiredTranscripts } from "./supabase.js";
+import { savePostMortem, purgeExpiredTranscripts, saveRescueOutcome } from "./supabase.js";
 import { buildAnalysisTranscript } from "./transcript.js";
 import { stripOutcomeMetadata } from "./sanitize.js";
 import { normalizeManualTranscript } from "./normalize.js";
@@ -90,7 +90,24 @@ function normalizeTextField(value: unknown): string {
   return "";
 }
 
-app.post("/api/post-mortem", upload.single("recording"), async (req, res) => {
+/** Optional — set LAZARUS_API_KEY in production to require X-Api-Key header. */
+function requireApiKey(req: express.Request, res: express.Response, next: express.NextFunction) {
+  const expected = (process.env.LAZARUS_API_KEY ?? "").trim();
+  if (!expected) {
+    next();
+    return;
+  }
+  const provided =
+    (req.headers["x-api-key"] as string | undefined)?.trim() ??
+    req.headers.authorization?.replace(/^Bearer\s+/i, "").trim();
+  if (provided !== expected) {
+    res.status(401).json({ error: "Unauthorized — invalid or missing API key" });
+    return;
+  }
+  next();
+}
+
+app.post("/api/post-mortem", requireApiKey, upload.single("recording"), async (req, res) => {
   try {
     const dealValue = parseFloat(String(req.body.deal_value)) || 0;
     const manualRaw = normalizeTextField(req.body.transcript);
@@ -163,6 +180,59 @@ app.post("/api/post-mortem", upload.single("recording"), async (req, res) => {
     const raw = err instanceof Error ? err.message : "Post-mortem failed.";
     const friendly = formatApiError(raw);
     res.status(500).json({ error: friendly });
+  }
+});
+
+/** Record rescue loop outcome — anonymous metadata only, no transcript. */
+app.post("/api/post-mortem/:id/rescue-outcome", async (req, res) => {
+  const outcome = String(req.body?.outcome ?? "").trim() as
+    | "closed_won"
+    | "still_stalled"
+    | "lost"
+    | "unknown";
+  const valid = ["closed_won", "still_stalled", "lost", "unknown"];
+  if (!valid.includes(outcome)) {
+    res.status(400).json({ error: "outcome must be closed_won, still_stalled, lost, or unknown" });
+    return;
+  }
+
+  const rescueActionTaken = String(req.body?.rescue_action_taken ?? "").trim();
+  if (!rescueActionTaken) {
+    res.status(400).json({ error: "rescue_action_taken is required" });
+    return;
+  }
+
+  const indices = req.body?.proprietary_indices;
+  const viabilityScore = Number(req.body?.viability_score ?? 0);
+  const trajectoryType = String(req.body?.trajectory_type ?? "");
+  const constraintPressure = Number(req.body?.constraint_pressure ?? 0);
+  const stakeholders = Array.isArray(req.body?.stakeholders) ? req.body.stakeholders : [];
+
+  if (!indices?.deal_risk_index && indices?.deal_risk_index !== 0) {
+    res.status(400).json({ error: "proprietary_indices required" });
+    return;
+  }
+
+  try {
+    const savedId = await saveRescueOutcome({
+      postMortemId: req.params.id,
+      rescueActionTaken,
+      outcome,
+      proprietaryIndices: indices,
+      viabilityScore,
+      trajectoryType,
+      constraintPressure,
+      stakeholders,
+    });
+    if (!savedId) {
+      res.status(503).json({ error: "Supabase not configured or rescue_outcomes table missing" });
+      return;
+    }
+    res.json({ ok: true, id: savedId });
+  } catch (err) {
+    res.status(500).json({
+      error: err instanceof Error ? err.message : "Failed to save rescue outcome",
+    });
   }
 });
 

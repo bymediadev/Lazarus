@@ -1,4 +1,10 @@
 import { createClient } from "@supabase/supabase-js";
+import {
+  constraintBand,
+  personaSignature,
+  type ProprietaryIndices,
+  type StakeholderIndexInput,
+} from "./scoring.js";
 
 export interface SavePostMortemInput {
   userId?: string;
@@ -86,4 +92,52 @@ export async function purgeExpiredTranscripts(retentionDays?: number): Promise<{
   }
 
   return { purged: data?.length ?? 0, retentionDays: days };
+}
+
+export interface SaveRescueOutcomeInput {
+  postMortemId?: string | null;
+  userId?: string;
+  proprietaryIndices: ProprietaryIndices;
+  viabilityScore: number;
+  trajectoryType: string;
+  constraintPressure: number;
+  stakeholders: StakeholderIndexInput[];
+  rescueActionTaken: string;
+  outcome: "closed_won" | "still_stalled" | "lost" | "unknown";
+}
+
+export async function saveRescueOutcome(input: SaveRescueOutcomeInput): Promise<string | null> {
+  const url = process.env.SUPABASE_URL;
+  const key = process.env.SUPABASE_SERVICE_ROLE_KEY ?? process.env.SUPABASE_ANON_KEY;
+
+  if (!url || !key) {
+    return null;
+  }
+
+  const supabase = createClient(url, key);
+  const pi = input.proprietaryIndices;
+
+  const { data, error } = await supabase
+    .from("rescue_outcomes")
+    .insert({
+      post_mortem_id: input.postMortemId ?? null,
+      user_id: input.userId ?? null,
+      deal_risk_index: pi.deal_risk_index,
+      viability_score: input.viabilityScore,
+      trajectory_type: input.trajectoryType,
+      constraint_band: constraintBand(input.constraintPressure),
+      stakeholder_dispersion: pi.stakeholder_dispersion_index,
+      persona_signature: personaSignature(input.stakeholders),
+      rescue_action_taken: input.rescueActionTaken,
+      outcome: input.outcome,
+    })
+    .select("id")
+    .single();
+
+  if (error) {
+    console.error("Rescue outcome save failed:", error.message);
+    return null;
+  }
+
+  return data.id;
 }
