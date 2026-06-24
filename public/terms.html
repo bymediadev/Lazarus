@@ -4,50 +4,130 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Terms of Service — Lazarus</title>
-  <style>
-    body { font-family: system-ui, sans-serif; max-width: 720px; margin: 2rem auto; padding: 0 1rem; line-height: 1.6; color: #222; }
-    h1 { font-size: 1.5rem; } h2 { font-size: 1.1rem; margin-top: 1.5rem; }
-    .note { background: #f5f5f5; padding: 1rem; border-radius: 6px; font-size: 0.9rem; }
-  </style>
+  <link rel="stylesheet" href="/legal-shared.css" />
 </head>
 <body>
-  <h1>Terms of Service</h1>
-  <p><strong>Last updated:</strong> June 2026</p>
+  <div class="legal-nav no-print">
+    <a href="/">App</a>
+    <a href="/privacy.html">Privacy</a>
+    <a href="/dpa.html">DPA</a>
+    <a href="/security-overview.html">Security Overview</a>
+    <a href="/security-battlecard.html">Battlecard</a>
+  </div>
 
-  <h2>Service</h2>
+  <header class="legal-header">
+    <img src="/logo.png" alt="Lazarus" />
+    <h1>Terms of Service</h1>
+    <p class="legal-meta">
+      <strong>Version:</strong> 1.0 · June 2026<br />
+      <strong>Provider:</strong> Lazarus — [Legal entity name, Ontario, Canada]<br />
+      <strong>Contact:</strong> [legal@yourdomain.com]
+    </p>
+    <p class="doc-ref">Trust Pack: ToS-001 · Companion docs: PP-001, DPA-001, SEC-001</p>
+  </header>
+
+  <h2>1. Service description</h2>
   <p>
-    Lazarus provides automated sales call analysis and deal recovery intelligence for B2B teams.
-    The service is provided "as is" for business use.
+    Lazarus provides automated sales call analysis, deal recovery intelligence, and related B2B tools.
+    The service uses AI-assisted extraction combined with deterministic server-side scoring to produce
+    deal autopsies, pipeline insights, and resuscitation recommendations. See
+    <a href="/security-overview.html">Security Overview</a> for architecture detail.
   </p>
 
-  <h2>Recording consent (critical)</h2>
+  <h2>2. Recording consent (critical)</h2>
+  <div class="critical">
+    <p>
+      <strong>You are solely responsible</strong> for ensuring you have the legal right or explicit
+      consent to record, upload, and analyze any call audio or transcript submitted to Lazarus.
+    </p>
+    <p>This includes compliance with:</p>
+    <ul>
+      <li>PIPEDA and Canadian provincial recording requirements</li>
+      <li>U.S. federal and state wiretap / all-party consent laws</li>
+      <li>Employment agreements, internal policies, and customer contracts</li>
+      <li>Industry-specific rules where applicable</li>
+    </ul>
+    <p>
+      By uploading content, you represent and warrant that you have obtained all required consents.
+      Lazarus does not record calls and does not verify consent on your behalf.
+    </p>
+  </div>
+
+  <h2>3. Data ownership</h2>
   <p>
-    <strong>You are solely responsible</strong> for ensuring you have the legal right or explicit
-    consent to record, upload, and analyze any call audio or transcript submitted to Lazarus.
-    This includes compliance with wiretap laws, two-party consent jurisdictions, employment
-    agreements, and customer contracts.
+    Customers retain ownership of uploaded recordings, transcripts, deal metadata, and related content.
+    Lazarus receives a limited, non-exclusive license to process such data solely to provide the service,
+    as described in the <a href="/privacy.html">Privacy Policy</a>. Analysis outputs are licensed to
+    you for internal business use.
   </p>
 
-  <h2>Acceptable use</h2>
+  <h2>4. Acceptable use</h2>
   <ul>
     <li>Do not upload content you do not have rights to process</li>
-    <li>Do not use the service to violate privacy, employment, or securities regulations</li>
-    <li>Do not attempt to bypass tenant isolation or access other customers' data</li>
+    <li>Do not violate privacy, employment, securities, or anti-spam regulations</li>
+    <li>Do not bypass tenant isolation or access other customers&rsquo; data</li>
+    <li>Do not reverse-engineer, scrape, or overload the service</li>
+    <li>Do not submit malicious files or attempt unauthorized access</li>
   </ul>
 
-  <h2>AI outputs</h2>
+  <h2>5. AI outputs &amp; disclaimers</h2>
   <p>
-    Analysis outputs are probabilistic intelligence aids, not legal or financial advice.
-    Verify all recommendations before acting on them in live deals.
+    Outputs are intelligence aids, not legal, financial, HR, or compliance advice. Verify recommendations
+    before acting on them. Lazarus does not guarantee accuracy or business outcomes.
   </p>
 
-  <h2>Limitation of liability</h2>
+  <h2>6. Service availability</h2>
   <p>
-    Lazarus is not liable for lost revenue, pipeline errors, or decisions made based on analysis output.
-    Maximum liability is limited to fees paid in the prior 12 months.
+    Lazarus does not guarantee uninterrupted availability. We may modify, suspend, or discontinue portions
+    of the service for maintenance, security, or product changes.
   </p>
 
-  <p class="note">Template only — have legal counsel review before production use.</p>
-  <p><a href="/">← Back to Lazarus</a></p>
+  <h2>7. Account termination</h2>
+  <p>
+    You may stop using the service at any time. We may suspend or terminate accounts that violate these
+    Terms or pose a security risk. Data handling after termination is governed by the
+    <a href="/privacy.html">Privacy Policy</a> and <a href="/dpa.html">DPA</a>.
+  </p>
+
+  <h2>8. Warranty disclaimer</h2>
+  <p>
+    THE SERVICE IS PROVIDED &ldquo;AS IS&rdquo; AND &ldquo;AS AVAILABLE&rdquo; WITHOUT WARRANTIES OF ANY KIND,
+    EXPRESS OR IMPLIED, INCLUDING MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE, AND NON-INFRINGEMENT.
+  </p>
+
+  <h2>9. Limitation of liability</h2>
+  <p>
+    To the maximum extent permitted by law, Lazarus is not liable for lost revenue, pipeline errors,
+    regulatory penalties from your failure to obtain recording consent, or decisions based on outputs.
+    Aggregate liability is limited to fees paid in the twelve (12) months preceding the claim.
+  </p>
+
+  <h2>10. Indemnification</h2>
+  <p>
+    You agree to indemnify Lazarus from claims arising from your uploads, failure to obtain recording
+    consent, or violation of these Terms or applicable law.
+  </p>
+
+  <h2>11. Data processing</h2>
+  <p>
+    B2B customers: the <a href="/dpa.html">Data Processing Addendum (DPA-001)</a> applies and is incorporated
+    by reference. Security controls are described in <a href="/security-overview.html">SEC-001</a>.
+  </p>
+
+  <h2>12. Governing law</h2>
+  <p>
+    Laws of the Province of Ontario and applicable federal laws of Canada. Courts in Ontario, Canada, have
+    exclusive jurisdiction unless otherwise required by law.
+  </p>
+
+  <h2>13. Changes &amp; contact</h2>
+  <p>
+    We may update these Terms; the Version date will change. Contact: [legal@yourdomain.com]
+  </p>
+
+  <p class="note">
+    Suitable for early launch. Have counsel review before annual contracts, enterprise sales, or
+    regulated-industry customers — especially recording-consent and DPA language.
+  </p>
 </body>
 </html>

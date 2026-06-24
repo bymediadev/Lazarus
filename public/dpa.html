@@ -4,56 +4,141 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Data Processing Addendum — Lazarus</title>
-  <style>
-    body { font-family: system-ui, sans-serif; max-width: 720px; margin: 2rem auto; padding: 0 1rem; line-height: 1.6; color: #222; }
-    h1 { font-size: 1.5rem; } h2 { font-size: 1.1rem; margin-top: 1.5rem; }
-    .note { background: #f5f5f5; padding: 1rem; border-radius: 6px; font-size: 0.9rem; }
-  </style>
+  <link rel="stylesheet" href="/legal-shared.css" />
 </head>
 <body>
-  <h1>Data Processing Addendum (DPA)</h1>
-  <p><strong>For B2B customers</strong> · GDPR Article 28 · CCPA/CPRA service provider terms</p>
+  <div class="legal-nav no-print">
+    <a href="/">App</a>
+    <a href="/terms.html">Terms</a>
+    <a href="/privacy.html">Privacy</a>
+    <a href="/security-overview.html">Security Overview</a>
+    <a href="/security-battlecard.html">Battlecard</a>
+  </div>
 
-  <h2>Roles</h2>
+  <header class="legal-header">
+    <img src="/logo.png" alt="Lazarus" />
+    <h1>Data Processing Addendum (DPA)</h1>
+    <p class="legal-meta">
+      <strong>Version:</strong> 1.0 · June 2026<br />
+      <strong>Processor:</strong> Lazarus — [Legal entity name, Ontario, Canada]<br />
+      <strong>Contact:</strong> [privacy@yourdomain.com]
+    </p>
+    <p class="doc-ref">Trust Pack: DPA-001 · Incorporates Security Overview SEC-001 by reference</p>
+  </header>
+
   <p>
-    <strong>Customer</strong> = Data Controller · <strong>Lazarus</strong> = Data Processor.
-    Customer personal data in uploaded recordings/transcripts is processed solely to provide the service.
+    This DPA forms part of the agreement between <strong>Customer</strong> (Controller) and
+    <strong>Lazarus</strong> (Processor) for B2B use of the Lazarus platform. It supplements the
+    <a href="/terms.html">Terms of Service</a> and <a href="/privacy.html">Privacy Policy</a>.
   </p>
 
-  <h2>Processing scope</h2>
+  <h2>1. Roles and scope</h2>
+  <table class="legal-table">
+    <tr><th>Customer</th><td>Data Controller for personal data in uploaded recordings, transcripts, and related content</td></tr>
+    <tr><th>Lazarus</th><td>Data Processor — processes personal data only on Customer&rsquo;s documented instructions</td></tr>
+    <tr><th>Scope</th><td>Transcription, AI-assisted extraction, deterministic scoring, storage of analysis outputs, rescue feedback metadata</td></tr>
+  </table>
+
+  <h2>2. Customer instructions &amp; recording consent</h2>
+  <div class="critical">
+    <p>
+      Customer is solely responsible for obtaining all legally required consents and permissions to
+      record, upload, and analyze call content — including PIPEDA, U.S. state wiretap laws, employment
+      agreements, and end-customer contracts.
+    </p>
+    <p>
+      Customer&rsquo;s upload of content constitutes instruction to process that data for the service.
+      Lazarus does not verify consent. See <a href="/terms.html">Terms §2</a>.
+    </p>
+  </div>
+
+  <h2>3. Processor obligations</h2>
   <ul>
-    <li>Transcription and analysis of sales call content</li>
-    <li>Storage of analysis outputs in Customer's tenant (Supabase RLS)</li>
-    <li>No sale of data · No use for advertising · No public model training</li>
+    <li>Process personal data only to provide the service and as documented in this DPA</li>
+    <li>Not sell personal data or use it for advertising</li>
+    <li>Not use Customer content to train public AI models</li>
+    <li>Ensure personnel with data access are bound by confidentiality</li>
+    <li>Assist Customer with reasonable data subject requests (at Customer&rsquo;s expense if excessive)</li>
+    <li>Delete or return data upon termination per §8 below</li>
   </ul>
 
-  <h2>Security measures</h2>
+  <h2>4. Security measures</h2>
+  <p>
+    Lazarus implements technical and organizational measures described in
+    <a href="/security-overview.html">Security Overview (SEC-001)</a>, including:
+  </p>
   <ul>
-    <li>TLS 1.3 in transit · AES-256 at rest</li>
-    <li>Row-Level Security tenant isolation</li>
-    <li>Service role keys server-side only (never in browser)</li>
-    <li>Access logging and principle of least privilege</li>
+    <li>TLS 1.3 encryption in transit</li>
+    <li>AES-256 encryption at rest (infrastructure provider)</li>
+    <li>Row-Level Security (RLS) tenant isolation on customer tables</li>
+    <li>Server-side-only privileged credentials (service role never exposed to browsers)</li>
+    <li>Grounding audit and anti-hallucination controls on AI outputs</li>
+    <li>Scheduled transcript retention purge (default 30 days for raw transcript text)</li>
   </ul>
 
-  <h2>Sub-processors</h2>
-  <p>Supabase, Google (Gemini API), AssemblyAI (optional). Customer will be notified of material changes.</p>
-
-  <h2>Data location</h2>
+  <h2>5. Sub-processors</h2>
+  <table class="legal-table">
+    <tr><th>Sub-processor</th><th>Purpose</th><th>Data processed</th></tr>
+    <tr><td>Supabase Inc.</td><td>Database, auth, storage</td><td>Account data, transcripts, analysis JSON</td></tr>
+    <tr><td>Google LLC (Gemini API)</td><td>LLM text extraction</td><td>Transcript text (ephemeral API call)</td></tr>
+    <tr><td>AssemblyAI</td><td>Speech-to-text (optional)</td><td>Audio content (if Customer enables)</td></tr>
+  </table>
   <p>
-    EU customers: project may be hosted in EU region (Frankfurt/Ireland) upon request.
-    Standard US hosting available for US customers.
+    Lazarus will notify Customer of intended changes to sub-processors. Customer may object on reasonable
+    grounds related to data protection.
   </p>
 
-  <h2>Breach notification</h2>
-  <p>Lazarus will notify Customer without undue delay upon becoming aware of a personal data breach.</p>
-
-  <h2>Deletion</h2>
+  <h2>6. Data location</h2>
   <p>
-    Upon contract termination or written request, Customer data will be deleted within 30 days unless
-    legal retention applies.
+    <strong>Default:</strong> North America (United States / Canada regions as configured in Supabase).<br />
+    <strong>Alternative regions:</strong> available upon written agreement for enterprise customers.
   </p>
 
-  <p class="note">Template only — execute signed DPA with legal counsel for enterprise deals.</p>
-  <p><a href="/">← Back to Lazarus</a></p>
+  <h2>7. Personal data breach</h2>
+  <p>
+    Lazarus will notify Customer without undue delay after becoming aware of a personal data breach
+    affecting Customer data, and will provide information reasonably available to assist Customer in
+    meeting its regulatory obligations.
+  </p>
+
+  <h2>8. Deletion and return</h2>
+  <table class="legal-table">
+    <tr><th>Trigger</th><th>Action</th><th>Timeline</th></tr>
+    <tr><td>Contract termination</td><td>Delete Customer personal data from production systems</td><td>Within 30 days</td></tr>
+    <tr><td>Written deletion request</td><td>Delete specified data where technically feasible</td><td>Within 30 days</td></tr>
+    <tr><td>Retention policy</td><td>Automatic nulling of raw transcript text</td><td>Default 30 days from creation</td></tr>
+  </table>
+  <p>Analysis metadata and anonymized rescue vectors may be retained where they no longer contain personal data.</p>
+
+  <h2>9. Audits</h2>
+  <p>
+    Upon reasonable notice, Customer may request information necessary to demonstrate compliance with
+    this DPA. Formal on-site audits may be conducted no more than once per year unless required by
+    regulators, subject to confidentiality and scheduling constraints.
+  </p>
+
+  <h2>10. International transfers (GDPR)</h2>
+  <p>
+    Where GDPR applies, parties will execute Standard Contractual Clauses or another valid transfer
+    mechanism upon request. Until then, this DPA reflects Processor obligations consistent with Article 28.
+  </p>
+
+  <h2>11. Term</h2>
+  <p>
+    This DPA remains in effect for the duration of the service agreement. Sections on confidentiality,
+    deletion, and liability survive termination as applicable.
+  </p>
+
+  <h2>12. Signatures (enterprise)</h2>
+  <p>For pilot/self-serve use, acceptance of Terms constitutes acceptance of this DPA. For annual or enterprise deals, execute below:</p>
+  <table class="legal-table">
+    <tr><th>Customer</th><td>Name: _______________ Title: _______________ Date: _______________</td></tr>
+    <tr><th>Lazarus</th><td>Name: _______________ Title: _______________ Date: _______________</td></tr>
+  </table>
+
+  <p class="note">
+    Review with legal counsel before regulated-industry deployments, government contracts, or deals
+    involving large volumes of recorded calls.
+  </p>
 </body>
 </html>

@@ -99,7 +99,7 @@ function requireApiKey(req: express.Request, res: express.Response, next: expres
   }
   const provided =
     (req.headers["x-api-key"] as string | undefined)?.trim() ??
-    req.headers.authorization?.replace(/^Bearer\s+/i, "").trim();
+    req.headers.authorization?.replace(/^Bearer\s+/i, "")?.trim();
   if (provided !== expected) {
     res.status(401).json({ error: "Unauthorized — invalid or missing API key" });
     return;
@@ -184,7 +184,7 @@ app.post("/api/post-mortem", requireApiKey, upload.single("recording"), async (r
 });
 
 /** Record rescue loop outcome — anonymous metadata only, no transcript. */
-app.post("/api/post-mortem/:id/rescue-outcome", async (req, res) => {
+app.post("/api/post-mortem/:id/rescue-outcome", requireApiKey, async (req, res) => {
   const outcome = String(req.body?.outcome ?? "").trim() as
     | "closed_won"
     | "still_stalled"
@@ -208,7 +208,7 @@ app.post("/api/post-mortem/:id/rescue-outcome", async (req, res) => {
   const constraintPressure = Number(req.body?.constraint_pressure ?? 0);
   const stakeholders = Array.isArray(req.body?.stakeholders) ? req.body.stakeholders : [];
 
-  if (!indices?.deal_risk_index && indices?.deal_risk_index !== 0) {
+  if (indices?.deal_risk_index == null) {
     res.status(400).json({ error: "proprietary_indices required" });
     return;
   }

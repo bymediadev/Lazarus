@@ -14,7 +14,8 @@
     "check:env": "node scripts/check-env.mjs",
     "test:grounding": "node --import tsx scripts/test-grounding-regression.mjs",
     "test:scoring": "node --import tsx scripts/test-scoring-regression.mjs",
-    "test": "npm run test:scoring && npm run test:grounding && npm run check:env",
+    "test": "npm run test:scoring && npm run test:grounding && npm run test:pipeline && npm run check:env",
+    "test:pipeline": "node --import tsx scripts/test-pipeline-leak.mjs",
     "purge:retention": "node --use-system-ca -r ./server/preload-ca.cjs ./node_modules/tsx/dist/cli.mjs server/purge-retention.ts",
     "cleanup:ports": "node scripts/cleanup-ports.mjs"
   },

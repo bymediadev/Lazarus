@@ -3,8 +3,8 @@ $ports = 3001, 5173, 5174, 5175, 5176
 $pids = @()
 
 foreach ($port in $ports) {
-  $matches = netstat -ano | Select-String ":$port\s"
-  foreach ($line in $matches) {
+  $portLines = netstat -ano | Select-String ":$port\s"
+  foreach ($line in $portLines) {
     if ($line -match '\s(\d+)\s*$') {
       $pids += [int]$Matches[1]
     }
@@ -17,11 +17,11 @@ if (-not $unique.Count) {
   exit 0
 }
 
-foreach ($pid in $unique) {
-  $proc = Get-Process -Id $pid -ErrorAction SilentlyContinue
+foreach ($processId in $unique) {
+  $proc = Get-Process -Id $processId -ErrorAction SilentlyContinue
   if ($proc -and $proc.ProcessName -eq "node") {
-    Write-Host "Stopping node.exe PID $pid"
-    Stop-Process -Id $pid -Force -ErrorAction SilentlyContinue
+    Write-Host "Stopping node.exe PID $processId"
+    Stop-Process -Id $processId -Force -ErrorAction SilentlyContinue
   }
 }
 

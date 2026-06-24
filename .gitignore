@@ -4,3 +4,7 @@ dist
 *.local
 windows-extra-cas.pem
 npm-install.log
+
+# Cursor / debug session logs
+.cursor/
+debug-*.log

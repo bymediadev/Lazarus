@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Security Overview — Lazarus</title>
+  <link rel="stylesheet" href="/legal-shared.css" />
+</head>
+<body>
+  <div class="legal-nav no-print">
+    <a href="/">App</a>
+    <a href="/terms.html">Terms</a>
+    <a href="/privacy.html">Privacy</a>
+    <a href="/dpa.html">DPA</a>
+    <a href="/security-battlecard.html">Battlecard</a>
+  </div>
+
+  <header class="legal-header">
+    <img src="/logo.png" alt="Lazarus" />
+    <h1>Security Overview</h1>
+    <p class="legal-meta">
+      <strong>Version:</strong> 1.0 · June 2026<br />
+      <strong>Provider:</strong> Lazarus — [Legal entity name, Ontario, Canada]<br />
+      <strong>Contact:</strong> [security@yourdomain.com]
+    </p>
+    <p class="doc-ref">Trust Pack: SEC-001 · Referenced by Privacy Policy (PP-001) and DPA (DPA-001)</p>
+  </header>
+
+  <p>
+    This document summarizes security and data-handling controls for InfoSec and procurement reviews.
+    It describes the <strong>current</strong> Lazarus architecture — not a certification claim.
+  </p>
+
+  <h2>1. Product summary</h2>
+  <p>
+    Lazarus is a B2B deal recovery platform. Customers upload sales call recordings and/or transcripts.
+    A private API server runs AI extraction (Layer 1), deterministic scoring (Layer 2), and stores
+    results in a tenant-isolated database. The web UI is display-only — scoring logic never runs in the browser.
+  </p>
+
+  <h2>2. Architecture</h2>
+  <table class="legal-table">
+    <tr><th>Component</th><th>Role</th><th>Data access</th></tr>
+    <tr><td>Web console</td><td>Upload UI, report display</td><td>Anon/authenticated Supabase key only; RLS enforced</td></tr>
+    <tr><td>API server</td><td>Transcription, Gemini extract, scoring, persistence</td><td>Service role (server-side only)</td></tr>
+    <tr><td>Supabase</td><td>PostgreSQL + auth</td><td>RLS on all tenant tables</td></tr>
+    <tr><td>Google Gemini</td><td>Text extraction API</td><td>Transcript sent per request; zero-training config</td></tr>
+    <tr><td>AssemblyAI</td><td>Optional STT</td><td>Audio sent if Customer uploads recordings</td></tr>
+  </table>
+
+  <h2>3. Data classification</h2>
+  <table class="legal-table">
+    <tr><th>Class</th><th>Examples</th><th>Handling</th></tr>
+    <tr><td>Customer confidential</td><td>Recordings, transcripts, deal names</td><td>Encrypted, RLS-isolated, retention-limited</td></tr>
+    <tr><td>Derived intelligence</td><td>Scores, DRI, People Map JSON</td><td>Stored per tenant; no public model training</td></tr>
+    <tr><td>Anonymous metadata</td><td>Rescue outcome vectors (no transcript)</td><td>Retained post-purge for product analytics</td></tr>
+    <tr><td>Credentials</td><td>API keys, service role</td><td>Environment variables; never in frontend</td></tr>
+  </table>
+
+  <h2>4. Security controls</h2>
+  <table class="legal-table">
+    <tr><th>Control</th><th>Implementation</th></tr>
+    <tr><td>Encryption in transit</td><td>TLS 1.3 (HTTPS) for all client and API traffic</td></tr>
+    <tr><td>Encryption at rest</td><td>AES-256 via Supabase / cloud infrastructure</td></tr>
+    <tr><td>Tenant isolation</td><td>PostgreSQL Row-Level Security — <code>auth.uid() = user_id</code></td></tr>
+    <tr><td>Privileged access</td><td>Service role bypasses RLS server-side only; RPC functions locked to service role</td></tr>
+    <tr><td>Browser exposure</td><td>Service role and Gemini keys never shipped to client</td></tr>
+    <tr><td>AI data use</td><td>APIs configured for zero retention / no public model training</td></tr>
+    <tr><td>Anti-hallucination</td><td>Server-side grounding audit; invented content stripped before scoring</td></tr>
+    <tr><td>Retention</td><td>Default 30-day purge of raw <code>transcript_text</code>; analysis JSON retained</td></tr>
+    <tr><td>API hardening (prod)</td><td>Optional <code>LAZARUS_API_KEY</code>, CORS allowlist, cron secret for purge jobs</td></tr>
+  </table>
+
+  <h2>5. Recording consent</h2>
+  <div class="critical">
+    Lazarus does not record calls. Customers upload content and warrant they have legal authority to do so
+    (PIPEDA, U.S. state laws, employment and customer agreements). This is the primary legal risk surface
+    for the product — see <a href="/terms.html">Terms §2</a> and <a href="/dpa.html">DPA §2</a>.
+  </div>
+
+  <h2>6. Sub-processors</h2>
+  <p>Same list as <a href="/privacy.html">Privacy Policy §7</a>. Primary hosting: North America.</p>
+
+  <h2>7. Incident response</h2>
+  <ul>
+    <li>Monitor API and database availability and error rates</li>
+    <li>On confirmed personal data breach: notify affected B2B customers without undue delay</li>
+    <li>Contain, investigate, remediate, and document per <a href="/dpa.html">DPA §7</a></li>
+  </ul>
+
+  <h2>8. Customer responsibilities</h2>
+  <ul>
+    <li>Obtain recording consent and internal policy approval</li>
+    <li>Manage user access within their organization</li>
+    <li>Configure retention preferences where available</li>
+    <li>Review AI outputs before acting on them in live deals</li>
+  </ul>
+
+  <h2>9. Roadmap (not yet implemented)</h2>
+  <p>Items commonly requested in enterprise reviews — disclose honestly:</p>
+  <ul>
+    <li>SOC 2 Type II — not yet obtained</li>
+    <li>Single sign-on (SAML/OIDC) — planned</li>
+    <li>Formal penetration test report — planned before enterprise scale</li>
+    <li>CRM native integrations (Salesforce/HubSpot) — Phase 2</li>
+  </ul>
+
+  <h2>10. Document index</h2>
+  <table class="legal-table">
+    <tr><th>ID</th><th>Document</th><th>Audience</th></tr>
+    <tr><td>ToS-001</td><td><a href="/terms.html">Terms of Service</a></td><td>All users</td></tr>
+    <tr><td>PP-001</td><td><a href="/privacy.html">Privacy Policy</a></td><td>All users, DPOs</td></tr>
+    <tr><td>DPA-001</td><td><a href="/dpa.html">Data Processing Addendum</a></td><td>B2B / enterprise</td></tr>
+    <tr><td>SEC-001</td><td>This Security Overview</td><td>InfoSec, procurement</td></tr>
+    <tr><td>SEC-002</td><td><a href="/security-battlecard.html">Security Battlecard</a></td><td>Sales meetings</td></tr>
+  </table>
+
+  <p class="note">
+    This overview is accurate to the current codebase. Have legal and security counsel review before
+    submitting to regulated customers or RFPs that require formal certifications.
+  </p>
+</body>
+</html>

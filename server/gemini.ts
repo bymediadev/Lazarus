@@ -284,8 +284,8 @@ function trajectoryDirection(t: CanonicalTrajectory): string {
   return "negative";
 }
 
-/** Layer 3 — project frozen derivation read-only; no math here */
-function applyCanonicalScoring(result: EnterpriseAnalysis, transcript = ""): EnterpriseAnalysis {
+/** Layer 3 — project frozen derivation read-only; scoring runs once after grounding */
+function applyCanonicalScoring(result: EnterpriseAnalysis, transcript: string): EnterpriseAnalysis {
   const rawForces: ScoringForce[] = result.causal_forces.map((f) => ({
     factor: f.factor,
     type: f.type,
@@ -750,7 +750,9 @@ function normalizeOutput(raw: Record<string, unknown>): EnterpriseAnalysis {
     throw new Error("Gemini returned an invalid analysis structure.");
   }
 
-  return applyCanonicalScoring(result);
+  // Scoring deferred to applyGroundingFilter — needs grounded forces + transcript
+  // for dialogue stall signals (computeDialogueStallSignals).
+  return result;
 }
 
 export type AnalysisResponse = EnterpriseAnalysis & {

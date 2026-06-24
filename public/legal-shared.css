@@ -1,0 +1,106 @@
+/* Lazarus Trust Pack — shared styles (Privacy, Terms, DPA, Security) */
+:root {
+  --legal-navy: #000521;
+  --legal-accent: #2a5a8a;
+  --legal-teal: #3dd6c6;
+  --legal-green: #3da832;
+  --legal-muted: #555;
+  --legal-bg-note: #f0f4f8;
+  --legal-bg-critical: #f5f9f5;
+}
+
+* { box-sizing: border-box; }
+
+body {
+  font-family: system-ui, -apple-system, sans-serif;
+  max-width: 720px;
+  margin: 0 auto;
+  padding: 0 1rem 3rem;
+  line-height: 1.65;
+  color: #1a1a1a;
+  font-size: 15px;
+}
+
+body.wide { max-width: 8.5in; }
+
+.legal-header {
+  border-bottom: 2px solid var(--legal-navy);
+  padding: 1.25rem 0 1rem;
+  margin-bottom: 1.5rem;
+}
+
+.legal-header img { height: 36px; margin-bottom: 0.5rem; }
+
+.legal-meta {
+  font-size: 0.85rem;
+  color: var(--legal-muted);
+  margin: 0.25rem 0 0;
+}
+
+.legal-nav {
+  font-size: 0.85rem;
+  margin-bottom: 1.25rem;
+  padding: 0.65rem 0;
+  border-bottom: 1px solid #ddd;
+}
+
+.legal-nav a {
+  color: var(--legal-accent);
+  text-decoration: none;
+  margin-right: 1rem;
+}
+
+.legal-nav a:hover { text-decoration: underline; }
+
+h1 { font-size: 1.6rem; color: var(--legal-navy); margin: 0 0 0.5rem; }
+h2 { font-size: 1.05rem; margin-top: 1.75rem; color: var(--legal-navy); }
+h3 { font-size: 0.95rem; margin-top: 1.25rem; }
+
+table.legal-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 0.75rem 0;
+  font-size: 0.9rem;
+}
+
+table.legal-table th,
+table.legal-table td {
+  border: 1px solid #ccc;
+  padding: 0.5rem 0.65rem;
+  text-align: left;
+  vertical-align: top;
+}
+
+table.legal-table th {
+  background: #f4f6fa;
+  width: 32%;
+  font-weight: 600;
+}
+
+.note {
+  background: var(--legal-bg-note);
+  padding: 1rem 1.1rem;
+  border-radius: 6px;
+  font-size: 0.88rem;
+  border-left: 4px solid var(--legal-accent);
+  margin-top: 2rem;
+}
+
+.critical {
+  background: var(--legal-bg-critical);
+  padding: 1rem 1.1rem;
+  border-radius: 6px;
+  border-left: 4px solid var(--legal-green);
+  margin: 1rem 0;
+}
+
+.doc-ref {
+  font-size: 0.8rem;
+  color: var(--legal-muted);
+  font-family: ui-monospace, monospace;
+}
+
+@media print {
+  .no-print { display: none !important; }
+  body { padding: 0; max-width: none; }
+}

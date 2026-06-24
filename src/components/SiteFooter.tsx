@@ -13,10 +13,12 @@ export default function SiteFooter() {
           <a href="/dpa.html" target="_blank" rel="noopener noreferrer">
             Data Processing Addendum
           </a>
+          <a href="/security-overview.html" target="_blank" rel="noopener noreferrer">
+            Security Overview
+          </a>
           <a href="/security-battlecard.html" target="_blank" rel="noopener noreferrer">
             Security Battlecard
           </a>
-          <a href="#enterprise-trust">Security</a>
         </nav>
         <span className="site-footer-copy">
           © {new Date().getFullYear()} Lazarus. Encrypted at rest · TLS 1.3 in transit · RLS

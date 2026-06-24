@@ -4,48 +4,124 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Privacy Policy — Lazarus</title>
-  <style>
-    body { font-family: system-ui, sans-serif; max-width: 720px; margin: 2rem auto; padding: 0 1rem; line-height: 1.6; color: #222; }
-    h1 { font-size: 1.5rem; } h2 { font-size: 1.1rem; margin-top: 1.5rem; }
-    .note { background: #f5f5f5; padding: 1rem; border-radius: 6px; font-size: 0.9rem; }
-  </style>
+  <link rel="stylesheet" href="/legal-shared.css" />
 </head>
 <body>
-  <h1>Privacy Policy</h1>
-  <p><strong>Last updated:</strong> June 2026 · <strong>Entity:</strong> Lazarus (update with legal entity name)</p>
+  <div class="legal-nav no-print">
+    <a href="/">App</a>
+    <a href="/terms.html">Terms</a>
+    <a href="/dpa.html">DPA</a>
+    <a href="/security-overview.html">Security Overview</a>
+    <a href="/security-battlecard.html">Battlecard</a>
+  </div>
 
-  <h2>What we collect</h2>
+  <header class="legal-header">
+    <img src="/logo.png" alt="Lazarus" />
+    <h1>Privacy Policy</h1>
+    <p class="legal-meta">
+      <strong>Version:</strong> 1.0 · June 2026<br />
+      <strong>Controller / Provider:</strong> Lazarus (&ldquo;we,&rdquo; &ldquo;us&rdquo;) — [Legal entity name, Ontario, Canada]<br />
+      <strong>Contact:</strong> [privacy@yourdomain.com]
+    </p>
+    <p class="doc-ref">Trust Pack: PP-001 · Companion docs: Terms (ToS-001), DPA (DPA-001), Security Overview (SEC-001)</p>
+  </header>
+
+  <h2>1. Who this applies to</h2>
+  <p>
+    This Privacy Policy describes how Lazarus collects and uses information when you use our B2B deal
+    recovery and call analysis platform. If you use Lazarus on behalf of a company, your organization
+    is responsible for the business content you upload; we process it as described here and in any
+    executed <a href="/dpa.html">Data Processing Addendum (DPA)</a>.
+  </p>
+
+  <h2>2. Information we collect</h2>
+  <table class="legal-table">
+    <tr><th>Category</th><th>Examples</th><th>Purpose</th></tr>
+    <tr><td>Account data</td><td>Name, email, organization</td><td>Authentication, support, billing</td></tr>
+    <tr><td>Customer content</td><td>Call recordings, transcripts, deal notes</td><td>Analysis and storage of autopsy outputs</td></tr>
+    <tr><td>Deal metadata</td><td>Client name, deal value, scores, rescue feedback</td><td>Reporting and product functionality</td></tr>
+    <tr><td>Technical logs</td><td>IP address, browser, API timestamps</td><td>Security, abuse prevention, uptime</td></tr>
+  </table>
+
+  <h2>3. Ownership of your content</h2>
+  <p>
+    You retain ownership of recordings, transcripts, and related business content. We receive a limited
+    license to process that content solely to provide the service, as stated in our
+    <a href="/terms.html">Terms of Service</a>. We do <strong>not</strong> sell customer content or use
+    it to train public AI models.
+  </p>
+
+  <h2>4. Recording consent (critical)</h2>
+  <div class="critical">
+    <p>
+      <strong>You are responsible</strong> for having legal authority to upload and analyze call
+      recordings and transcripts. Lazarus does not record calls on your behalf and does not verify
+      consent for you.
+    </p>
+    <p>You must comply with applicable law, including:</p>
+    <ul>
+      <li>PIPEDA and Canadian provincial recording rules</li>
+      <li>U.S. federal and state wiretap / all-party consent laws</li>
+      <li>Employment policies and customer or vendor contracts</li>
+    </ul>
+    <p>See <a href="/terms.html">Terms of Service §2</a> for the full customer warranty.</p>
+  </div>
+
+  <h2>5. How we process and protect data</h2>
+  <p>Security controls are summarized in our <a href="/security-overview.html">Security Overview (SEC-001)</a>. At a high level:</p>
   <ul>
-    <li>Account information (name, email) when you sign up</li>
-    <li>Call recordings and transcripts you upload for analysis</li>
-    <li>Deal metadata (client name, deal value, analysis outputs)</li>
-    <li>Technical logs (IP, browser type) for security and uptime</li>
+    <li><strong>In transit:</strong> TLS 1.3</li>
+    <li><strong>At rest:</strong> AES-256 (Supabase infrastructure)</li>
+    <li><strong>Tenant isolation:</strong> Row-Level Security (RLS) on customer data tables</li>
+    <li><strong>AI processing:</strong> Third-party APIs (Google Gemini, optional AssemblyAI) configured for zero retention / no model training on your content</li>
+    <li><strong>Secrets:</strong> Service credentials stored server-side only — never in the browser</li>
   </ul>
 
-  <h2>How we process data</h2>
+  <h2>6. Retention and deletion</h2>
+  <table class="legal-table">
+    <tr><th>Data type</th><th>Default retention</th></tr>
+    <tr><td>Raw audio uploads</td><td>Processed in memory; not persisted by default</td></tr>
+    <tr><td>Transcript text</td><td>Configurable; default automatic purge/null after <strong>30 days</strong></td></tr>
+    <tr><td>Analysis outputs (JSON, scores)</td><td>Retained for audit unless deleted by customer or on termination</td></tr>
+    <tr><td>Rescue feedback (anonymous metadata)</td><td>Retained without transcript text for product improvement</td></tr>
+    <tr><td>Account data</td><td>Until account deletion + reasonable backup window</td></tr>
+  </table>
+  <p>Deletion requests: [privacy@yourdomain.com]. Upon contract termination, see <a href="/dpa.html">DPA § Deletion</a>.</p>
+
+  <h2>7. Sub-processors</h2>
+  <table class="legal-table">
+    <tr><th>Provider</th><th>Function</th><th>Location</th></tr>
+    <tr><td>Supabase</td><td>Database hosting, authentication</td><td>North America (default)</td></tr>
+    <tr><td>Google (Gemini API)</td><td>LLM extraction (Layer 1 only; scoring is server-side)</td><td>United States</td></tr>
+    <tr><td>AssemblyAI</td><td>Optional audio transcription</td><td>United States</td></tr>
+  </table>
+  <p>Material sub-processor changes will be communicated per the DPA.</p>
+
+  <h2>8. Your privacy rights</h2>
   <p>
-    Uploads are transmitted over TLS 1.3 and stored encrypted at rest (AES-256 via Supabase).
-    Analysis uses third-party AI APIs configured for zero retention / no model training on your content.
-    Results are stored in your tenant-isolated database (Row-Level Security).
+    Depending on jurisdiction: access, correction, deletion, portability, and objection to processing.
+    <strong>Canada (PIPEDA):</strong> contact us with questions or complaints.
+    <strong>California (CCPA/CPRA):</strong> we do not sell personal information.
+    <strong>EU/UK (GDPR):</strong> rights apply where relevant; B2B customers may rely on the DPA.
   </p>
 
-  <h2>Retention &amp; deletion</h2>
+  <h2>9. International transfers</h2>
   <p>
-    Raw audio is processed in memory and not persisted by default. Transcripts and analysis outputs
-    are retained per your workspace settings. Recommended default: automatic deletion of raw transcript
-    text after <strong>30 days</strong>. You may request deletion at any time via support.
+    Primary hosting is <strong>North America</strong>. Cross-border processing may occur through
+    sub-processors listed above. Alternative regions may be agreed in writing for enterprise customers.
   </p>
 
-  <h2>Your rights (GDPR / CCPA)</h2>
+  <h2>10. Changes</h2>
   <p>
-    You may access, export, correct, or delete personal data. EU residents may lodge complaints with
-    their supervisory authority. California residents may opt out of sale/sharing (we do not sell data).
+    We may update this policy. The &ldquo;Version&rdquo; date above will change. Material updates will be
+    posted here; continued use after the effective date constitutes notice.
   </p>
 
-  <h2>Sub-processors</h2>
-  <p>Supabase (database), Google Gemini (analysis), AssemblyAI (optional transcription).</p>
-
-  <p class="note">Template only — have legal counsel review before production use.</p>
-  <p><a href="/">← Back to Lazarus</a></p>
+  <p class="note">
+    <strong>Startup disclosure:</strong> Suitable for early launch and pilot customers. Before annual
+    contracts, regulated industries, or large-scale call processing, have legal counsel review this
+    policy together with the <a href="/terms.html">Terms</a>, <a href="/dpa.html">DPA</a>, and
+    <a href="/security-overview.html">Security Overview</a>.
+  </p>
 </body>
 </html>

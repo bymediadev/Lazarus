@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import AnalysisReport from "./components/AnalysisReport";
+import PipelineLeakCalculator from "./components/PipelineLeakCalculator";
 import EnterpriseTrust, { HeroTrustBanner } from "./components/EnterpriseTrust";
 import SiteFooter from "./components/SiteFooter";
 import { API_BASE, apiTargetLabel, runPostMortem } from "./lib/api";
@@ -7,6 +8,8 @@ import { normalizeResult, PostMortemResult } from "./types";
 
 const ACCEPTED_EXT = [".mp3", ".wav", ".mp4", ".m4a", ".webm", ".mpeg", ".mpga"];
 const ACCEPT_ATTR = ".mp3,.wav,.mp4,.m4a,.webm,audio/*,video/mp4,video/webm";
+
+type InputTab = "calculator" | "audio" | "transcript";
 
 function getExtension(name: string): string {
   const dot = name.lastIndexOf(".");
@@ -26,6 +29,7 @@ function formatFileSize(bytes: number): string {
 }
 
 export default function App() {
+  const [activeTab, setActiveTab] = useState<InputTab>("transcript");
   const [file, setFile] = useState<File | null>(null);
   const [dealValue, setDealValue] = useState("52000");
   const [transcript, setTranscript] = useState("");
@@ -71,6 +75,7 @@ export default function App() {
     }
     setError(null);
     setFile(f);
+    setActiveTab("audio");
   }, []);
 
   const onDragEnter = useCallback((e: React.DragEvent) => {
@@ -140,10 +145,17 @@ export default function App() {
     }
   };
 
+  const tabs: { id: InputTab; label: string; dot?: boolean }[] = [
+    { id: "calculator", label: "Pipeline Calculator" },
+    { id: "audio", label: "Audio Upload", dot: hasAudio },
+    { id: "transcript", label: "Transcript", dot: hasTranscript },
+  ];
+
   return (
     <div className="app">
       <header className="header">
         <div className="header-brand">
+          <img src="/logo.png" alt="Lazarus Deal Resuscitation" className="header-logo" />
           <h1>Lazarus</h1>
           <span className="tag">Deal Rescue Console</span>
         </div>
@@ -161,120 +173,156 @@ export default function App() {
         <HeroTrustBanner />
 
         <div className="workspace">
-        <section className="panel panel-left">
-          <div className="panel-label">Input Log</div>
+          <section className="panel panel-left">
+            <div className="panel-label">Input Console</div>
 
-          {(hasAudio || hasTranscript) && (
-            <div className="input-badges">
-              {hasAudio && <span className="input-badge input-badge-audio">Recording loaded</span>}
-              {hasTranscript && (
-                <span className="input-badge input-badge-text">Transcript attached</span>
-              )}
-              {hasDualInput && (
-                <span className="input-badge input-badge-merge">Dual-source merge enabled</span>
-              )}
-            </div>
-          )}
-
-          <div className={`dropzone ${dragOver ? "drag-over" : ""} ${file ? "has-file" : ""}`}>
-            <input
-              id="recording-upload"
-              className="dropzone-file-input"
-              type="file"
-              accept={ACCEPT_ATTR}
-              onDragEnter={onDragEnter}
-              onDragOver={onDragOver}
-              onDragLeave={onDragLeave}
-              onDrop={onDrop}
-              onChange={(e) => {
-                handleFile(e.target.files?.[0]);
-                e.target.value = "";
-              }}
-            />
-            <div className="dropzone-content">
-              <span className="dropzone-icon">{file ? "✓" : "⬡"}</span>
-              <span className="dropzone-text">
-                {file
-                  ? "Recording loaded — ready for analysis"
-                  : "Drop Call Recording (.mp3/.wav/.mp4)"}
-              </span>
-              {file && (
-                <>
-                  <span className="dropzone-filename">{file.name}</span>
-                  <span className="dropzone-meta">{formatFileSize(file.size)}</span>
-                </>
-              )}
-              {!file && <span className="dropzone-hint">Click or drag a file here</span>}
-            </div>
-          </div>
-
-          {file && (
-            <button type="button" className="file-clear-btn" onClick={() => setFile(null)}>
-              Remove recording
-            </button>
-          )}
-
-          <div className="input-group">
-            <label htmlFor="deal-value">Estimated Deal Value ($)</label>
-            <input
-              id="deal-value"
-              type="number"
-              min="0"
-              value={dealValue}
-              onChange={(e) => setDealValue(e.target.value)}
-              placeholder="52000"
-            />
-          </div>
-
-          <div className="or-divider">— PLUS OPTIONAL TRANSCRIPT / CONTEXT —</div>
-
-          <div className="input-group">
-            <label htmlFor="transcript">
-              Call Transcript &amp; Notes
-              <span className="label-hint">
-                Outcome is inferred from the conversation — do not label deal status yourself.
-              </span>
-            </label>
-            <textarea
-              id="transcript"
-              value={transcript}
-              onChange={(e) => setTranscript(e.target.value)}
-              placeholder="Paste call transcript, email thread, or meeting notes..."
-            />
-          </div>
-
-          <button className="run-button" onClick={handleRun} disabled={loading}>
-            {loading ? "Running Analysis..." : "Run Deal Analysis"}
-          </button>
-
-          {warnings.length > 0 && (
-            <div className="warning-banner">
-              {warnings.map((w, i) => (
-                <p key={i}>{w}</p>
+            <div className="console-tabs" role="tablist" aria-label="Input modes">
+              {tabs.map((tab) => (
+                <button
+                  key={tab.id}
+                  type="button"
+                  role="tab"
+                  aria-selected={activeTab === tab.id}
+                  className={`console-tab${activeTab === tab.id ? " console-tab-active" : ""}`}
+                  onClick={() => setActiveTab(tab.id)}
+                >
+                  {tab.label}
+                  {tab.dot && <span className="console-tab-dot" aria-label="Has content" />}
+                </button>
               ))}
             </div>
-          )}
 
-          {error && <div className="error-banner">{error}</div>}
-        </section>
+            <div className="console-tab-panel" role="tabpanel">
+              {activeTab === "calculator" && <PipelineLeakCalculator embedded />}
 
-        <section className="panel panel-right">
-          <div className="panel-label">Revenue Intelligence Output</div>
+              {activeTab === "audio" && (
+                <div className="console-tab-audio">
+                  <p className="console-tab-hint">
+                    Upload a call recording. Lazarus transcribes via AssemblyAI, then runs the
+                    deterministic autopsy engine.
+                  </p>
+                  <div
+                    className={`dropzone dropzone-tab ${dragOver ? "drag-over" : ""} ${file ? "has-file" : ""}`}
+                  >
+                    <input
+                      id="recording-upload"
+                      className="dropzone-file-input"
+                      type="file"
+                      accept={ACCEPT_ATTR}
+                      onDragEnter={onDragEnter}
+                      onDragOver={onDragOver}
+                      onDragLeave={onDragLeave}
+                      onDrop={onDrop}
+                      onChange={(e) => {
+                        handleFile(e.target.files?.[0]);
+                        e.target.value = "";
+                      }}
+                    />
+                    <div className="dropzone-content">
+                      <span className="dropzone-icon">{file ? "✓" : "⬡"}</span>
+                      <span className="dropzone-text">
+                        {file
+                          ? "Recording loaded — ready for analysis"
+                          : "Drop Call Recording (.mp3 / .wav / .mp4)"}
+                      </span>
+                      {file && (
+                        <>
+                          <span className="dropzone-filename">{file.name}</span>
+                          <span className="dropzone-meta">{formatFileSize(file.size)}</span>
+                        </>
+                      )}
+                      {!file && (
+                        <span className="dropzone-hint">Click or drag a file here</span>
+                      )}
+                    </div>
+                  </div>
+                  {file && (
+                    <button type="button" className="file-clear-btn" onClick={() => setFile(null)}>
+                      Remove recording
+                    </button>
+                  )}
+                </div>
+              )}
 
-          {loading ? (
-            <div className="loading-overlay">
-              <div className="spinner" />
-              <span>{loadingMessage}</span>
+              {activeTab === "transcript" && (
+                <div className="console-tab-transcript">
+                  <p className="console-tab-hint">
+                    Paste the call transcript or meeting notes. Outcome is inferred from dialogue —
+                    do not label deal status yourself.
+                  </p>
+                  <div className="input-group">
+                    <label htmlFor="deal-value">Estimated Deal Value ($)</label>
+                    <input
+                      id="deal-value"
+                      type="number"
+                      min="0"
+                      value={dealValue}
+                      onChange={(e) => setDealValue(e.target.value)}
+                      placeholder="52000"
+                    />
+                  </div>
+                  <div className="input-group input-group-grow">
+                    <label htmlFor="transcript">Call Transcript &amp; Notes</label>
+                    <textarea
+                      id="transcript"
+                      className="transcript-textarea"
+                      value={transcript}
+                      onChange={(e) => setTranscript(e.target.value)}
+                      placeholder="Paste call transcript, email thread, or meeting notes..."
+                    />
+                  </div>
+                </div>
+              )}
             </div>
-          ) : result ? (
-            <AnalysisReport result={result} sources={result.sources} />
-          ) : (
-            <div className="empty-state">
-              <span>AWAITING INPUT</span>
-              <span>Drop a recording, paste a transcript, or use both</span>
-            </div>
-          )}
-        </section>
+
+            {(hasAudio || hasTranscript) && (
+              <div className="input-badges">
+                {hasAudio && (
+                  <span className="input-badge input-badge-audio">Recording loaded</span>
+                )}
+                {hasTranscript && (
+                  <span className="input-badge input-badge-text">Transcript attached</span>
+                )}
+                {hasDualInput && (
+                  <span className="input-badge input-badge-merge">Dual-source merge enabled</span>
+                )}
+              </div>
+            )}
+
+            {activeTab !== "calculator" && (
+              <button className="run-button" onClick={handleRun} disabled={loading}>
+                {loading ? "Running Analysis..." : "Run Deal Analysis"}
+              </button>
+            )}
+
+            {warnings.length > 0 && (
+              <div className="warning-banner">
+                {warnings.map((w, i) => (
+                  <p key={i}>{w}</p>
+                ))}
+              </div>
+            )}
+
+            {error && <div className="error-banner">{error}</div>}
+          </section>
+
+          <section className="panel panel-right">
+            <div className="panel-label">Revenue Intelligence Output</div>
+
+            {loading ? (
+              <div className="loading-overlay">
+                <div className="spinner" />
+                <span>{loadingMessage}</span>
+              </div>
+            ) : result ? (
+              <AnalysisReport result={result} sources={result.sources} />
+            ) : (
+              <div className="empty-state">
+                <span>AWAITING INPUT</span>
+                <span>Use Audio or Transcript tabs, then run analysis</span>
+              </div>
+            )}
+          </section>
         </div>
 
         <EnterpriseTrust />
