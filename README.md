@@ -43,12 +43,27 @@ Apply migrations in order in SQL Editor:
 
 Server saves use `SUPABASE_SERVICE_ROLE_KEY` (never expose to frontend).
 
+## Trust Pack (v1.1)
+
+Customer-facing legal and security docs live in `public/` and are linked from the app footer:
+
+| ID | File | Purpose |
+|----|------|---------|
+| ToS-001 | `public/terms.html` | Terms of Service |
+| PP-001 | `public/privacy.html` | Privacy Policy |
+| DPA-001 | `public/dpa.html` | Data Processing Addendum |
+| SEC-001 | `public/security-overview.html` | Security Overview (InfoSec) |
+| SEC-002 | `public/security-battlecard.html` | Sales battlecard |
+
+**Before production:** replace placeholders (`[Legal entity name]`, `[privacy@yourdomain.com]`, `[yourdomain.com]`) in all five files.
+
 ## Production checklist
 
+- [ ] Replace Trust Pack placeholders (entity name, contact emails, domain)
 - [ ] Set `LAZARUS_API_KEY` and pass `X-Api-Key` header from clients
 - [ ] Set `FRONTEND_ORIGIN` to your real domain
 - [ ] Replace `PURGE_CRON_SECRET` and schedule purge cron
-- [ ] Legal review: `public/privacy.html`, `terms.html`, `dpa.html`
+- [ ] Legal counsel review of Trust Pack v1.1
 - [ ] Enable Supabase PITR + EU region if GDPR required
 - [ ] Wire Supabase Auth + `user_id` on saves for RLS
 

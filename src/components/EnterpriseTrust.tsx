@@ -1,29 +1,29 @@
 const TRUST_PILLARS = [
   {
     title: "Zero Model Training",
-    body: "Your data belongs to you. Lazarus uses zero-data-retention API configurations. Recordings, transcripts, and analysis outputs are never used to train public AI models.",
+    body: "Your data belongs to you. Lazarus uses zero-data-retention API configurations. Transcripts sent to extraction APIs and analysis outputs are never used to train public AI models.",
   },
   {
-    title: "Bank-Grade Encryption",
-    body: "All audio files and text transcripts are encrypted in transit via TLS 1.3. Data at rest is protected by AES-256 through Supabase infrastructure.",
+    title: "Encryption & Minimal Retention",
+    body: "All uploads are encrypted in transit via TLS 1.3. Raw audio is processed in memory and not persisted. Transcripts and analysis JSON stored in Supabase use AES-256 at rest when persistence is enabled.",
   },
   {
-    title: "Complete Access Control",
-    body: "Strict Row-Level Security (RLS) on every database table ensures your team's pipeline metrics and customer conversations are invisible outside your organization.",
+    title: "Tenant Isolation (RLS)",
+    body: "PostgreSQL Row-Level Security is enabled on customer tables. When Supabase Auth is configured, each user sees only their own post-mortems. Service role credentials never ship to the browser.",
   },
 ];
 
 export function HeroTrustBanner() {
   return (
     <section className="hero-trust">
-      <p className="hero-trust-eyebrow">Enterprise Revenue Intelligence</p>
+      <p className="hero-trust-eyebrow">Deal Recovery Intelligence · v1</p>
       <h2 className="hero-trust-headline">
         Secure deal autopsies for stalled pipeline — without compromising customer privacy.
       </h2>
       <p className="hero-trust-body">
-        Lazarus uses compliance-hardened AI to analyze call recordings and transcripts. Built with
-        enterprise-grade encryption and zero-model-training guarantees, it delivers actionable
-        resuscitation plans to recover at-risk revenue.
+        Lazarus analyzes call recordings and transcripts you upload. A private API runs extraction and
+        deterministic scoring — human-led, AI-assisted. Built for sales leaders who need the
+        <em> why</em> behind a stalled deal, not another autonomous sales agent.
       </p>
       <ul className="hero-trust-bullets">
         <li>
@@ -35,10 +35,19 @@ export function HeroTrustBanner() {
           Map bottlenecks, and rescue scripts from actual call text.
         </li>
         <li>
-          <strong>The guardrail:</strong> Encrypted storage, tenant-isolated database access, and
-          strict data privacy protocols for enterprise buyers.
+          <strong>The guardrail:</strong> TLS in transit, optional encrypted persistence, RLS tenant
+          isolation, and a published Trust Pack (Privacy, Terms, DPA, Security Overview).
         </li>
       </ul>
+      <p className="hero-trust-legal">
+        <a href="/security-overview.html" target="_blank" rel="noopener noreferrer">Security Overview</a>
+        {" · "}
+        <a href="/privacy.html" target="_blank" rel="noopener noreferrer">Privacy</a>
+        {" · "}
+        <a href="/terms.html" target="_blank" rel="noopener noreferrer">Terms</a>
+        {" · "}
+        <a href="/dpa.html" target="_blank" rel="noopener noreferrer">DPA</a>
+      </p>
     </section>
   );
 }
@@ -73,13 +82,20 @@ export default function EnterpriseTrust() {
         <div className="trust-meta-item">
           <span className="trust-meta-key">Recording consent</span>
           <span className="trust-meta-val">
-            Customer is responsible for legal right to upload call recordings (see Terms of Service)
+            You must have legal right to upload call content — Lazarus does not record calls (
+            <a href="/terms.html" target="_blank" rel="noopener noreferrer">Terms §2</a>)
           </span>
         </div>
         <div className="trust-meta-item">
-          <span className="trust-meta-key">B2B compliance</span>
+          <span className="trust-meta-key">Trust Pack</span>
           <span className="trust-meta-val">
-            Data Processing Addendum (DPA) available for GDPR / CCPA enterprise customers
+            <a href="/security-overview.html" target="_blank" rel="noopener noreferrer">SEC-001</a>
+            {" · "}
+            <a href="/privacy.html" target="_blank" rel="noopener noreferrer">PP-001</a>
+            {" · "}
+            <a href="/dpa.html" target="_blank" rel="noopener noreferrer">DPA-001</a>
+            {" · "}
+            <a href="/terms.html" target="_blank" rel="noopener noreferrer">ToS-001</a>
           </span>
         </div>
       </div>

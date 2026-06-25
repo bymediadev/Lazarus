@@ -19,7 +19,7 @@
     <img src="/logo.png" alt="Lazarus" />
     <h1>Data Processing Addendum (DPA)</h1>
     <p class="legal-meta">
-      <strong>Version:</strong> 1.0 · June 2026<br />
+      <strong>Version:</strong> 1.1 · June 2026 · Aligned to Lazarus v1<br />
       <strong>Processor:</strong> Lazarus — [Legal entity name, Ontario, Canada]<br />
       <strong>Contact:</strong> [privacy@yourdomain.com]
     </p>
@@ -28,7 +28,7 @@
 
   <p>
     This DPA forms part of the agreement between <strong>Customer</strong> (Controller) and
-    <strong>Lazarus</strong> (Processor) for B2B use of the Lazarus platform. It supplements the
+    <strong>Lazarus</strong> (Processor) for B2B use of the Lazarus deal autopsy service. It supplements the
     <a href="/terms.html">Terms of Service</a> and <a href="/privacy.html">Privacy Policy</a>.
   </p>
 
@@ -36,7 +36,7 @@
   <table class="legal-table">
     <tr><th>Customer</th><td>Data Controller for personal data in uploaded recordings, transcripts, and related content</td></tr>
     <tr><th>Lazarus</th><td>Data Processor — processes personal data only on Customer&rsquo;s documented instructions</td></tr>
-    <tr><th>Scope</th><td>Transcription, AI-assisted extraction, deterministic scoring, storage of analysis outputs, rescue feedback metadata</td></tr>
+    <tr><th>Scope</th><td>Per-deal transcription (when audio uploaded), AI-assisted extraction, deterministic scoring, storage of analysis outputs, rescue feedback metadata — not CRM-wide continuous monitoring</td></tr>
   </table>
 
   <h2>2. Customer instructions &amp; recording consent</h2>
@@ -81,7 +81,7 @@
     <tr><th>Sub-processor</th><th>Purpose</th><th>Data processed</th></tr>
     <tr><td>Supabase Inc.</td><td>Database, auth, storage</td><td>Account data, transcripts, analysis JSON</td></tr>
     <tr><td>Google LLC (Gemini API)</td><td>LLM text extraction</td><td>Transcript text (ephemeral API call)</td></tr>
-    <tr><td>AssemblyAI</td><td>Speech-to-text (optional)</td><td>Audio content (if Customer enables)</td></tr>
+    <tr><td>AssemblyAI</td><td>Speech-to-text when Customer uploads audio</td><td>Audio content (ephemeral API call; not stored by Lazarus)</td></tr>
   </table>
   <p>
     Lazarus will notify Customer of intended changes to sub-processors. Customer may object on reasonable

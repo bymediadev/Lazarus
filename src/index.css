@@ -100,6 +100,21 @@ body {
   font-weight: 600;
 }
 
+.hero-trust-legal {
+  margin: 0.75rem 0 1rem;
+  font-size: 0.75rem;
+  color: var(--muted);
+}
+
+.hero-trust-legal a {
+  color: var(--emerald);
+  text-decoration: none;
+}
+
+.hero-trust-legal a:hover {
+  text-decoration: underline;
+}
+
 .pipeline-leak-calc {
   padding: 1.25rem 1.5rem 1.5rem;
   border-bottom: 1px solid var(--panel-border);
@@ -904,6 +919,23 @@ body {
 .run-button:disabled {
   opacity: 0.45;
   cursor: not-allowed;
+}
+
+.upload-consent {
+  margin-top: 0.65rem;
+  font-size: 0.7rem;
+  line-height: 1.45;
+  color: var(--muted);
+  text-align: center;
+}
+
+.upload-consent a {
+  color: var(--emerald);
+  text-decoration: none;
+}
+
+.upload-consent a:hover {
+  text-decoration: underline;
 }
 
 .btn-primary {

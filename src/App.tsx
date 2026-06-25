@@ -290,9 +290,17 @@ export default function App() {
             )}
 
             {activeTab !== "calculator" && (
-              <button className="run-button" onClick={handleRun} disabled={loading}>
-                {loading ? "Running Analysis..." : "Run Deal Analysis"}
-              </button>
+              <>
+                <button className="run-button" onClick={handleRun} disabled={loading}>
+                  {loading ? "Running Analysis..." : "Run Deal Analysis"}
+                </button>
+                <p className="upload-consent">
+                  By running analysis, you confirm you have the legal right to upload this content.{" "}
+                  <a href="/terms.html" target="_blank" rel="noopener noreferrer">Terms</a>
+                  {" · "}
+                  <a href="/privacy.html" target="_blank" rel="noopener noreferrer">Privacy</a>
+                </p>
+              </>
             )}
 
             {warnings.length > 0 && (
@@ -307,7 +315,7 @@ export default function App() {
           </section>
 
           <section className="panel panel-right">
-            <div className="panel-label">Revenue Intelligence Output</div>
+            <div className="panel-label">Deal Autopsy Output</div>
 
             {loading ? (
               <div className="loading-overlay">

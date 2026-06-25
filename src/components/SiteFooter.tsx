@@ -2,7 +2,7 @@ export default function SiteFooter() {
   return (
     <footer className="site-footer">
       <div className="site-footer-inner">
-        <span className="site-footer-brand">Lazarus · Deterministic Deal Intelligence</span>
+        <span className="site-footer-brand">Lazarus · Deal Recovery Intelligence · Trust Pack v1.1</span>
         <nav className="site-footer-nav" aria-label="Legal">
           <a href="/privacy.html" target="_blank" rel="noopener noreferrer">
             Privacy Policy
@@ -21,8 +21,8 @@ export default function SiteFooter() {
           </a>
         </nav>
         <span className="site-footer-copy">
-          © {new Date().getFullYear()} Lazarus. Encrypted at rest · TLS 1.3 in transit · RLS
-          tenant isolation.
+          © {new Date().getFullYear()} Lazarus. TLS 1.3 in transit · AES-256 at rest (Supabase) ·
+          audio processed in memory · RLS on stored data.
         </span>
       </div>
     </footer>

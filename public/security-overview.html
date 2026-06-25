@@ -19,7 +19,7 @@
     <img src="/logo.png" alt="Lazarus" />
     <h1>Security Overview</h1>
     <p class="legal-meta">
-      <strong>Version:</strong> 1.0 · June 2026<br />
+      <strong>Version:</strong> 1.1 · June 2026 · Aligned to Lazarus v1 (deal autopsy engine)<br />
       <strong>Provider:</strong> Lazarus — [Legal entity name, Ontario, Canada]<br />
       <strong>Contact:</strong> [security@yourdomain.com]
     </p>
@@ -31,21 +31,50 @@
     It describes the <strong>current</strong> Lazarus architecture — not a certification claim.
   </p>
 
-  <h2>1. Product summary</h2>
+  <h2>1. Product summary (v1 — shipped)</h2>
   <p>
-    Lazarus is a B2B deal recovery platform. Customers upload sales call recordings and/or transcripts.
-    A private API server runs AI extraction (Layer 1), deterministic scoring (Layer 2), and stores
-    results in a tenant-isolated database. The web UI is display-only — scoring logic never runs in the browser.
+    Lazarus v1 is a <strong>deterministic deal autopsy engine</strong> for stalled B2B pipeline.
+    Customers upload a sales call recording and/or transcript. A private API server transcribes audio
+    (optional AssemblyAI), runs AI-assisted extraction (Layer 1), deterministic scoring (Layer 2),
+    and returns a deal autopsy report with evidence quotes, People Map, Deal Risk Index (DRI), and
+    recovery recommendations. Humans decide; Lazarus does not send outreach or close deals autonomously.
+  </p>
+  <table class="legal-table">
+    <tr><th>Included in v1</th><th>Not in v1 (roadmap)</th></tr>
+    <tr>
+      <td>Per-deal autopsy from audio/transcript upload</td>
+      <td>CRM sync (Salesforce, HubSpot)</td>
+    </tr>
+    <tr>
+      <td>Grounding audit + deterministic DRI / viability / trajectory</td>
+      <td>Org-wide executive dashboard across full pipeline</td>
+    </tr>
+    <tr>
+      <td>Rescue script and stakeholder force map</td>
+      <td>White-label partner console / multi-client branding</td>
+    </tr>
+    <tr>
+      <td>Pipeline Leak Calculator (manual inputs; no CRM)</td>
+      <td>Autonomous AI SDR or automated outreach</td>
+    </tr>
+    <tr>
+      <td>Optional save to Supabase + rescue outcome metadata</td>
+      <td>SOC 2 Type II certification</td>
+    </tr>
+  </table>
+  <p>
+    The web console is <strong>display-only</strong> — scoring logic never runs in the browser.
+    See <a href="/terms.html">Terms §1</a> and <a href="/privacy.html">Privacy §2</a>.
   </p>
 
   <h2>2. Architecture</h2>
   <table class="legal-table">
     <tr><th>Component</th><th>Role</th><th>Data access</th></tr>
-    <tr><td>Web console</td><td>Upload UI, report display</td><td>Anon/authenticated Supabase key only; RLS enforced</td></tr>
+    <tr><td>Web console</td><td>Upload UI, report display</td><td>No database credentials; calls private API only</td></tr>
     <tr><td>API server</td><td>Transcription, Gemini extract, scoring, persistence</td><td>Service role (server-side only)</td></tr>
-    <tr><td>Supabase</td><td>PostgreSQL + auth</td><td>RLS on all tenant tables</td></tr>
+    <tr><td>Supabase</td><td>PostgreSQL + auth (when enabled)</td><td>RLS on tenant tables; service role for API writes</td></tr>
     <tr><td>Google Gemini</td><td>Text extraction API</td><td>Transcript sent per request; zero-training config</td></tr>
-    <tr><td>AssemblyAI</td><td>Optional STT</td><td>Audio sent if Customer uploads recordings</td></tr>
+    <tr><td>AssemblyAI</td><td>Speech-to-text when Customer uploads audio</td><td>Audio buffer sent per request; not stored by Lazarus</td></tr>
   </table>
 
   <h2>3. Data classification</h2>
@@ -62,7 +91,7 @@
     <tr><th>Control</th><th>Implementation</th></tr>
     <tr><td>Encryption in transit</td><td>TLS 1.3 (HTTPS) for all client and API traffic</td></tr>
     <tr><td>Encryption at rest</td><td>AES-256 via Supabase / cloud infrastructure</td></tr>
-    <tr><td>Tenant isolation</td><td>PostgreSQL Row-Level Security — <code>auth.uid() = user_id</code></td></tr>
+    <tr><td>Tenant isolation</td><td>PostgreSQL RLS on <code>call_post_mortems</code> and <code>rescue_outcomes</code>; per-user rows when Supabase Auth + <code>user_id</code> are enabled</td></tr>
     <tr><td>Privileged access</td><td>Service role bypasses RLS server-side only; RPC functions locked to service role</td></tr>
     <tr><td>Browser exposure</td><td>Service role and Gemini keys never shipped to client</td></tr>
     <tr><td>AI data use</td><td>APIs configured for zero retention / no public model training</td></tr>
@@ -97,12 +126,15 @@
   </ul>
 
   <h2>9. Roadmap (not yet implemented)</h2>
-  <p>Items commonly requested in enterprise reviews — disclose honestly:</p>
+  <p>Commonly requested — disclosed honestly in security reviews:</p>
   <ul>
     <li>SOC 2 Type II — not yet obtained</li>
-    <li>Single sign-on (SAML/OIDC) — planned</li>
-    <li>Formal penetration test report — planned before enterprise scale</li>
-    <li>CRM native integrations (Salesforce/HubSpot) — Phase 2</li>
+    <li>Supabase Auth end-to-end (browser login + <code>user_id</code> on every save)</li>
+    <li>Single sign-on (SAML/OIDC)</li>
+    <li>Formal penetration test report</li>
+    <li>CRM native integrations (Salesforce / HubSpot)</li>
+    <li>White-label partner dashboard and custom domains</li>
+    <li>Continuous stall detection from CRM activity and email (not call-only)</li>
   </ul>
 
   <h2>10. Document index</h2>
