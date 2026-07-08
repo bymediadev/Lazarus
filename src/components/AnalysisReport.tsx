@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { saveRescueOutcome } from "../lib/api";
+import ConciseDiagnostic from "./ConciseDiagnostic";
 import {
   CausalForce,
   ForceCoupling,
@@ -16,7 +17,7 @@ import {
 
 interface Props {
   result: PostMortemResult;
-  sources?: { audio: boolean; manual: boolean };
+  sources?: { audio: boolean; manual: boolean; email?: boolean; field?: boolean };
 }
 
 function CrmField({ label, value }: { label: string; value?: string }) {
@@ -137,6 +138,11 @@ export default function AnalysisReport({ result: raw, sources }: Props) {
 
   return (
     <div className="cards">
+      <ConciseDiagnostic result={r} />
+
+      <details className="full-analysis-toggle">
+        <summary>Full deterministic analysis (expand)</summary>
+        <div className="full-analysis-body">
       {pi && (
         <div className={`dri-banner ${driClass}`}>
           <span className="dri-label">Deal Risk Index</span>
@@ -180,9 +186,13 @@ export default function AnalysisReport({ result: raw, sources }: Props) {
 
       {sources && (
         <div className="sources-bar">
-          {sources.audio && <span>Audio transcribed</span>}
-          {sources.manual && <span>Manual notes merged</span>}
-          {sources.audio && sources.manual && <span className="sources-merged">Combined analysis</span>}
+          {sources.audio && <span>Call audio transcribed</span>}
+          {sources.field && <span>Field capture merged</span>}
+          {sources.manual && <span>Call notes merged</span>}
+          {sources.email && <span>Email thread merged</span>}
+          {[sources.audio, sources.field, sources.manual, sources.email].filter(Boolean).length >= 2 && (
+            <span className="sources-merged">Cross-channel stitched</span>
+          )}
         </div>
       )}
 
@@ -651,6 +661,8 @@ export default function AnalysisReport({ result: raw, sources }: Props) {
           </div>
         </article>
       )}
+        </div>
+      </details>
     </div>
   );
 }

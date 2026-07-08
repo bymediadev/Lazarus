@@ -319,7 +319,8 @@ export interface PostMortemResult {
   rescue_triage_plan?: RescueTriagePlan;
   crm_intelligence?: CrmIntelligence;
   proprietary_indices?: ProprietaryIndices;
-  sources?: { audio: boolean; manual: boolean };
+  sources?: { audio: boolean; manual: boolean; email?: boolean; field?: boolean };
+  processed_at?: string;
   id?: string | null;
   warnings?: string[];
   weighted_cause_structure?: WeightedCauseStructure;

@@ -109,9 +109,13 @@ function requireApiKey(req: express.Request, res: express.Response, next: expres
 
 app.post("/api/post-mortem", requireApiKey, upload.single("recording"), async (req, res) => {
   try {
+    const processedAt = new Date().toISOString();
     const dealValue = parseFloat(String(req.body.deal_value)) || 0;
     const manualRaw = normalizeTextField(req.body.transcript);
     const manualTranscript = normalizeManualTranscript(manualRaw);
+    const emailRaw = normalizeTextField(req.body.email_thread);
+    const emailThread = normalizeManualTranscript(emailRaw);
+    const isFieldCapture = ["1", "true", true].includes(req.body.field_capture as string | boolean);
     const strippedPriorAnalysis = manualRaw.trim().length - manualTranscript.length > 80;
     let audioTranscript = "";
     let audioMeta: { durationSeconds?: number; speakerCount?: number } | undefined;
@@ -128,12 +132,18 @@ app.post("/api/post-mortem", requireApiKey, upload.single("recording"), async (r
     const { text: rawTranscript, sources } = buildAnalysisTranscript({
       audioTranscript,
       manualTranscript,
+      emailThread,
+      fieldCaptureAudio: isFieldCapture && !!audioTranscript,
       audioMeta,
+      audioCapturedAt: audioTranscript ? processedAt : undefined,
+      callCapturedAt: manualTranscript ? processedAt : undefined,
+      emailCapturedAt: emailThread ? processedAt : undefined,
+      fieldCapturedAt: isFieldCapture && audioTranscript ? processedAt : undefined,
     });
 
     if (!rawTranscript.trim()) {
       res.status(400).json({
-        error: "Provide a recording, a transcript, or both.",
+        error: "Provide a recording, call transcript, email thread, or any combination.",
       });
       return;
     }
@@ -149,7 +159,7 @@ app.post("/api/post-mortem", requireApiKey, upload.single("recording"), async (r
       diagnosis: result.diagnosis,
       actionPlan: result.action_plan.join("\n"),
       transcriptText: rawTranscript,
-      analysisJson: JSON.stringify(result),
+      analysisJson: JSON.stringify({ ...result, processed_at: processedAt }),
     });
 
     const warnings: string[] = [];
@@ -172,6 +182,7 @@ app.post("/api/post-mortem", requireApiKey, upload.single("recording"), async (r
       ...result,
       id: savedId,
       sources,
+      processed_at: processedAt,
       audio_meta: audioMeta ?? null,
       warnings,
     });

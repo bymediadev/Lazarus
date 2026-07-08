@@ -14,15 +14,18 @@ export function apiTargetLabel(): string {
 
 export interface PostMortemResponse extends PostMortemResult {
   id?: string | null;
-  sources?: { audio: boolean; manual: boolean };
+  sources?: { audio: boolean; manual: boolean; email?: boolean; field?: boolean };
   warnings?: string[];
   grounding_audit?: GroundingAudit;
+  processed_at?: string;
 }
 
 export interface PostMortemPayload {
   file?: File | null;
   transcript?: string;
+  emailThread?: string;
   dealValue: string;
+  fieldCapture?: boolean;
 }
 
 export async function runPostMortem(payload: PostMortemPayload): Promise<PostMortemResponse> {
@@ -37,7 +40,16 @@ export async function runPostMortem(payload: PostMortemPayload): Promise<PostMor
     formData.append("transcript", manual);
   }
 
+  const email = payload.emailThread?.trim();
+  if (email) {
+    formData.append("email_thread", email);
+  }
+
   formData.append("deal_value", payload.dealValue || "0");
+
+  if (payload.fieldCapture) {
+    formData.append("field_capture", "1");
+  }
 
   const url = `${API_BASE}/api/post-mortem`;
   const res = await fetch(url, {

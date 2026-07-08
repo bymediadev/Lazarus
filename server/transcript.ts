@@ -1,13 +1,8 @@
-import { enrichManualTranscript } from "./enrich.js";
+import { stitchContext, type StitchedContext, type TranscriptSources } from "./utils/contextStitcher.js";
 
-export interface TranscriptSources {
-  audio: boolean;
-  manual: boolean;
-}
+export type { TranscriptSources, StitchedContext };
 
-export interface BuiltTranscript {
-  text: string;
-  sources: TranscriptSources;
+export interface BuiltTranscript extends StitchedContext {
   audioMeta?: {
     durationSeconds?: number;
     speakerCount?: number;
@@ -17,35 +12,29 @@ export interface BuiltTranscript {
 export function buildAnalysisTranscript(options: {
   audioTranscript?: string;
   manualTranscript?: string;
+  emailThread?: string;
+  fieldTranscript?: string;
+  fieldCaptureAudio?: boolean;
   audioMeta?: { durationSeconds?: number; speakerCount?: number };
+  audioCapturedAt?: string;
+  callCapturedAt?: string;
+  emailCapturedAt?: string;
+  fieldCapturedAt?: string;
 }): BuiltTranscript {
-  const audio = options.audioTranscript?.trim() ?? "";
-  const manual = enrichManualTranscript(options.manualTranscript ?? "");
+  const stitched = stitchContext({
+    audioTranscript: options.audioTranscript,
+    callTranscript: options.manualTranscript,
+    emailThread: options.emailThread,
+    fieldTranscript: options.fieldTranscript,
+    fieldCaptureAudio: options.fieldCaptureAudio,
+    audioCapturedAt: options.audioCapturedAt,
+    callCapturedAt: options.callCapturedAt,
+    emailCapturedAt: options.emailCapturedAt,
+    fieldCapturedAt: options.fieldCapturedAt,
+  });
 
-  if (audio && manual) {
-    return {
-      text: [
-        audio,
-        "",
-        "=== SUPPLEMENTAL NOTES / MANUAL TRANSCRIPT ===",
-        manual,
-      ].join("\n"),
-      sources: { audio: true, manual: true },
-      audioMeta: options.audioMeta,
-    };
-  }
-
-  if (audio) {
-    return {
-      text: audio,
-      sources: { audio: true, manual: false },
-      audioMeta: options.audioMeta,
-    };
-  }
-
-  if (manual) {
-    return { text: manual, sources: { audio: false, manual: true } };
-  }
-
-  return { text: "", sources: { audio: false, manual: false } };
+  return {
+    ...stitched,
+    audioMeta: options.audioMeta,
+  };
 }
