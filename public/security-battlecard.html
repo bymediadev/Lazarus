@@ -6,11 +6,18 @@
   <title>Security Battlecard — Lazarus</title>
   <link rel="stylesheet" href="/legal-shared.css" />
   <style>
-    body.wide { font-size: 11pt; line-height: 1.45; padding: 1.25in 1in; }
+    body.wide { font-size: 11pt; line-height: 1.5; padding: 1.25in 1in; }
     h2 { font-size: 10pt; text-transform: uppercase; letter-spacing: 0.1em; border-bottom: 2px solid #2a5a8a; padding-bottom: 0.25rem; }
     .win { background: #f0faf4; padding: 0.75rem; border-left: 4px solid #3da832; margin: 0.75rem 0; font-size: 10pt; }
     .vs { background: #f4f6fa; padding: 0.75rem; border-left: 4px solid #2a5a8a; margin: 0.75rem 0; font-size: 10pt; }
-    .footer { margin-top: 2rem; font-size: 9pt; color: #666; }
+    .objection { background: #fff8f0; padding: 0.75rem; border-left: 4px solid #c47a20; margin: 0.75rem 0; font-size: 10pt; }
+    .objection strong { display: block; margin-bottom: 0.35rem; color: #8a4a10; }
+    .footer { margin-top: 2rem; font-size: 9pt; color: #666; page-break-inside: avoid; }
+    .note { font-size: 9.5pt; color: #555; margin: 0.75rem 0; padding: 0.65rem 0.75rem; background: #f8f8f8; border-left: 3px solid #2a5a8a; }
+    @media print {
+      body.wide { padding-bottom: 1.5in; }
+      .legal-table tr { page-break-inside: avoid; }
+    }
   </style>
 </head>
 <body class="wide">
@@ -18,66 +25,265 @@
 
   <div class="legal-nav no-print">
     <a href="/">App</a>
-    <a href="/security-overview.html">Security Overview</a>
-    <a href="/privacy.html">Privacy</a>
-    <a href="/dpa.html">DPA</a>
-    <a href="/terms.html">Terms</a>
+    <a href="/api/trust-pack/privacy">Privacy Policy</a>
+    <a href="/api/trust-pack/terms">Terms of Service</a>
+    <a href="/api/trust-pack/dpa">Data Processing Addendum</a>
+    <a href="/api/trust-pack/security-overview">Security Overview</a>
+    <a href="/api/trust-pack/battlecard">Security Battlecard</a>
   </div>
 
   <header class="legal-header">
     <img src="/logo.png" alt="Lazarus" />
-    <h1>Security Battlecard</h1>
-    <p class="legal-meta">SEC-002 · Sales enablement · v1.1 · June 2026 · Companion to SEC-001</p>
+    <h1>Security &amp; Sales Battlecard</h1>
+    <p class="legal-meta">SEC-002 · Sales enablement · v1.7 · July 2026 · Companion to SEC-001</p>
   </header>
 
-  <h2>Positioning</h2>
+  <h2>What is Lazarus? (say this first)</h2>
   <div class="win">
-    <strong>Lazarus v1 is a deal autopsy engine for stalled pipeline</strong> — deterministic scoring on
-    uploaded calls, not a rep note-taker or CRM. Customer data is not used to train public AI models.
+    <strong>Lazarus is the layer on top — not another note-taker.</strong>
+    You already have Gong, Chorus, Otter, or something else that records calls and writes summaries.
+    That is fine. Keep it.
+    Lazarus takes what you already captured — a recording, a transcript, emails, CRM notes — and answers the hard question:
+    <em>Is this deal still winnable? Who is blocking it? What do we do next?</em>
+    It gives you a risk score, who matters in the deal, and clear next steps.
+    A person still runs the deal. Lazarus does not record your calls and does not close deals for you.
+    Your data is not used to train public AI models.
   </div>
   <div class="vs">
-    <strong>Not Gong/Chorus/ChatGPT.</strong> Lazarus autopsies one stalled deal and outputs a rescue script in ~60 seconds.<br />
-    <strong>Buyer:</strong> VP Sales / Sales Manager — triage tool for recoverable vs dead deals.
+    <strong>Three layers — don&rsquo;t buy the same thing twice.</strong><br />
+    <strong>Layer 1 — Capture:</strong> Gong, Chorus, Otter, your phone. Saves the call. Makes a transcript.<br />
+    <strong>Layer 2 — Judgment:</strong> Lazarus. Scores the deal, maps the people, spots what changed, links today to past notes.<br />
+    <strong>Layer 3 — Action:</strong> Your rep and manager. Run the call. Move the deal.<br />
+    Lazarus is Layer 2. We are not asking you to rip out Layer 1.
+  </div>
+  <p><em>One-liner:</em> &ldquo;Keep your note-taker. Add Lazarus on top. We tell you if the deal is still alive — and why.&rdquo;</p>
+
+  <h2>Why not just buy another note-taker?</h2>
+  <div class="vs">
+    <strong>Note-takers answer: &ldquo;What was said?&rdquo; Lazarus answers: &ldquo;What does it mean for the deal?&rdquo;</strong>
+    Another recorder gives you more summaries, more libraries, and more rep coaching clips.
+    It does not tell your VP which deals are lying on the forecast.
+    It does not tie Month 5 back to Month 2 when the same blocker shows up under a new name.
+    You do not need two tools that both save calls. You need one tool that judges the deal.
+  </div>
+  <table class="legal-table">
+    <tr><th>What you need</th><th>Another note-taker</th><th>Lazarus (on top)</th></tr>
+    <tr><td>Save the call</td><td>✅ Yes</td><td>Not our job — use what you have</td></tr>
+    <tr><td>Deal risk score you can defend</td><td>❌ No</td><td>✅ Yes — same inputs, same score</td></tr>
+    <tr><td>Who can kill the deal</td><td>Sometimes, in a summary</td><td>✅ Yes — People Map with real quotes</td></tr>
+    <tr><td>6-month deal memory</td><td>Search old calls</td><td>✅ Links today to past CRM notes and objections</td></tr>
+    <tr><td>Works with Gong / Chorus / email</td><td>Locked to their platform</td><td>✅ Upload from anywhere — we stitch it together</td></tr>
+  </table>
+  <p><em>One-liner:</em> &ldquo;Gong is the tape recorder. Lazarus is the deal doctor. You need both — but only one judges whether the patient lives.&rdquo;</p>
+
+  <h2>Why not just use ChatGPT?</h2>
+  <div class="vs">
+    <strong>ChatGPT is good at writing. It is bad at being your scorecard.</strong>
+    Paste the same call twice and you may get two different answers.
+    It can make up quotes or people who were never on the call.
+    That is fine for brainstorming. It is not fine for a forecast meeting.
+  </div>
+  <table class="legal-table">
+    <tr><th>What you need</th><th>ChatGPT alone</th><th>Lazarus</th></tr>
+    <tr><td>Same score every time</td><td>No — answers change</td><td>Yes — math-based Deal Risk Score</td></tr>
+    <tr><td>Real quotes from the call</td><td>Often made up</td><td>Checked against the transcript</td></tr>
+    <tr><td>Remember a 6-month deal</td><td>Forgets; no CRM timeline</td><td>Pulls in past deal notes (180+ days)</td></tr>
+    <tr><td>Safe for work / legal</td><td>Paste into a consumer app</td><td>Encrypted, contracts, data controls</td></tr>
+  </table>
+  <p><strong>How we use AI:</strong> Step 1 — AI reads the messy text and pulls out names, quotes, and objections. Step 2 — our server runs fixed rules to score the deal. AI reads. Code scores. You lead.</p>
+  <p><em>One-liner:</em> &ldquo;Don&rsquo;t paste Gong into ChatGPT. Drop it in Lazarus — we read it, score it, and remember the full deal.&rdquo;</p>
+
+  <h2>Big objections (Lucy · Jordan · Monika · James)</h2>
+  <p>Tested on a real 186-day deal example. Use these lines in sales, security, and rep-adoption calls.</p>
+
+  <div class="objection">
+    <strong>Lucy — &ldquo;You delete data after 30 days. Our deals take 6+ months.&rdquo;</strong>
+    We delete raw recordings on your schedule (30 days by default).
+    We keep the important deal facts: risk score, key people, blockers, and outcomes.
+    We can also load past CRM notes so we never judge one call by itself.
+    <br /><br />
+    <em>One-liner:</em> &ldquo;We don&rsquo;t keep every recording forever. We remember what mattered while the deal is open.&rdquo;
   </div>
 
-  <h2>Security at a glance</h2>
+  <div class="objection">
+    <strong>Jordan — &ldquo;AI coaching is generic. My reps won&rsquo;t listen.&rdquo;</strong>
+    We don&rsquo;t give pep talks or sales theory.
+    We show what changed in the deal — slow replies, missing decision-makers, budget gaps — using the buyer&rsquo;s own words.
+    The risk score comes from fixed rules on our server, not a chatbot essay.
+    <br /><br />
+    <em>One-liner:</em> &ldquo;No pep talks. Just what the buyer said — and a score your manager can trust.&rdquo;
+  </div>
+
+  <div class="objection">
+    <strong>Monika — &ldquo;A live tip is useless without deal history.&rdquo;</strong>
+    Every run can include past CRM notes plus today&rsquo;s call.
+    Lazarus links today&rsquo;s objection to older ones — same blocker, new person, new date.
+    Calls, emails, and field notes all roll into one timeline.
+    <br /><br />
+    <em>One-liner:</em> &ldquo;Today&rsquo;s call is never judged alone — we link it to what happened months ago.&rdquo;
+  </div>
+
+  <div class="objection">
+    <strong>James — &ldquo;My reps already have Gong. Why would they open Lazarus?&rdquo;</strong>
+    Gong tells a rep <em>how they talked</em> — talk ratio, keywords, coaching clips. Lazarus tells them
+    <em>whether the deal is still winnable and what to do next</em> — using the buyer&rsquo;s own words, not a scorecard on rep performance.
+    <br /><br />
+    <strong>What a rep gets from Lazarus that Gong does not give:</strong>
+    <ul>
+      <li><strong>Deal verdict, not call review</strong> — recoverable, stalled, or dead — with a risk score they can bring to their manager</li>
+      <li><strong>Who can kill the deal</strong> — champion, blocker, missing VP — with quoted evidence from the call</li>
+      <li><strong>What changed</strong> — slow replies, budget gaps, admin gatekeeping — not generic &ldquo;ask better discovery questions&rdquo;</li>
+      <li><strong>What to do in the next 30 days</strong> — specific rescue steps and CRM-ready notes to paste, not another training video</li>
+      <li><strong>Full deal story</strong> — call + email + field notes stitched together, plus links to old objections when history is loaded</li>
+    </ul>
+    Reps do not need another recorder. They need to walk out of a call knowing the real blocker — before optimism writes a fake forecast.
+    <br /><br />
+    <em>One-liner:</em> &ldquo;Gong coaches the call. Lazarus judges the deal. Your rep gets the blocker, the people map, and the next move — in one brief.&rdquo;
+  </div>
+
   <table class="legal-table">
-    <tr><th>Zero model training</th><td>Gemini API — zero retention configuration; no public model training on customer content</td></tr>
-    <tr><th>Encryption</th><td>TLS 1.3 in transit · AES-256 at rest (Supabase) · raw audio processed in memory only</td></tr>
-    <tr><th>Tenant isolation</th><td>PostgreSQL RLS — per-user rows when Supabase Auth is enabled; service role server-side only</td></tr>
-    <tr><th>Retention</th><td>Default 30-day purge of raw transcript text; analysis metadata retained</td></tr>
-    <tr><th>Recording consent</th><td>Customer warrants legal right to upload (Terms §2) — Lazarus does not record calls</td></tr>
-    <tr><th>Legal pack</th><td><a href="/privacy.html">Privacy</a> · <a href="/terms.html">Terms</a> · <a href="/dpa.html">DPA</a> · <a href="/security-overview.html">Security Overview</a></td></tr>
+    <tr><th>Worry</th><th>Our answer</th><th>Ready?</th></tr>
+    <tr><td>Long deals (Lucy)</td><td>Past notes + deal facts kept after recording purge</td><td>✅ Yes (API)</td></tr>
+    <tr><td>Real buyer words (Jordan)</td><td>What changed + math-based risk score</td><td>✅ Yes</td></tr>
+    <tr><td>Deal memory (Monika)</td><td>Today linked to past objections</td><td>✅ Yes (API) · timeline screen coming</td></tr>
+    <tr><td>Rep value vs Gong (James)</td><td>Deal verdict + People Map + 30-day rescue steps — not talk-ratio coaching</td><td>✅ Yes</td></tr>
   </table>
 
-  <h2>Architecture (InfoSec talking points)</h2>
   <table class="legal-table">
-    <tr><th>UI</th><td>Display only — no scoring logic in browser</td></tr>
-    <tr><th>API server</th><td>Grounding audit + deterministic DRI compiler (proprietary math)</td></tr>
-    <tr><th>Database</th><td>Supabase RLS; service role server-side only</td></tr>
-    <tr><th>Anti-hallucination</th><td>Verbatim evidence required; template bleed blocked server-side</td></tr>
+    <tr><th>Rep question</th><th>Gong / note-taker</th><th>Lazarus</th></tr>
+    <tr><td>&ldquo;Did I run a good call?&rdquo;</td><td>✅ Talk tracks, coaching, keywords</td><td>Not our focus</td></tr>
+    <tr><td>&ldquo;Is this deal still alive?&rdquo;</td><td>❌ No clear verdict</td><td>✅ Risk score + trajectory</td></tr>
+    <tr><td>&ldquo;Who is blocking me?&rdquo;</td><td>Sometimes in a summary</td><td>✅ People Map with quotes</td></tr>
+    <tr><td>&ldquo;What do I do tomorrow?&rdquo;</td><td>Generic coaching tips</td><td>✅ Rescue steps + CRM paste block</td></tr>
+    <tr><td>&ldquo;Did we hear this objection before?&rdquo;</td><td>Search old calls manually</td><td>✅ Historical link when CRM context loaded</td></tr>
   </table>
 
-  <h2>Demo proof points</h2>
+  <h2>Where does the information come from?</h2>
+  <div class="vs">
+    <strong>Lazarus only analyzes what you give it.</strong> We do not pull from your CRM, Zoom, or email
+    inbox automatically today. Every score traces back to customer-supplied content plus optional past deal
+    notes you paste or send via API.
+  </div>
+  <table class="legal-table">
+    <tr><th>Source</th><th>What it is</th><th>Who provides it</th></tr>
+    <tr><td>Call recording</td><td>Audio file (.mp3, .wav, .mp4, etc.)</td><td>Customer upload (export from Zoom, Gong, Meet, Teams, or phone)</td></tr>
+    <tr><td>Call transcript</td><td>Pasted or typed meeting text</td><td>Customer upload</td></tr>
+    <tr><td>Email thread</td><td>Forwarded chain or CRM email export</td><td>Customer upload</td></tr>
+    <tr><td>Field capture</td><td>Short in-person audio note</td><td>Customer records in browser (offline-capable)</td></tr>
+    <tr><td>Historical CRM context</td><td>Past objections, veto-holders, dated notes (JSON)</td><td>Customer / API input — optional</td></tr>
+    <tr><td>Deal value</td><td>Estimated pipeline amount</td><td>Customer enters in UI</td></tr>
+  </table>
+  <p><strong>What we do not use as sources today:</strong> live Zoom/Meet bot recordings, Salesforce/HubSpot auto-sync, public web scraping, or training data from other customers.</p>
+  <p><em>One-liner:</em> &ldquo;You bring the file. We score the deal. No secret CRM pipe behind your back.&rdquo;</p>
+
+  <h2>What systems does Lazarus use?</h2>
+  <table class="legal-table">
+    <tr><th>System</th><th>Role</th><th>What data touches it</th></tr>
+    <tr><td>Lazarus API server</td><td>Orchestration, grounding audit, scoring, optional save</td><td>All uploaded content during analysis only</td></tr>
+    <tr><td>Web console (browser)</td><td>Upload UI and report display</td><td>Files in transit to API — no scoring in browser</td></tr>
+    <tr><td>Google Gemini API</td><td>Layer 1 — reads text, extracts names, quotes, objections</td><td>Transcript / stitched text per request (ephemeral)</td></tr>
+    <tr><td>AssemblyAI</td><td>Speech-to-text when audio is uploaded</td><td>Audio buffer per request (optional; paste transcript to skip)</td></tr>
+    <tr><td>Supabase (PostgreSQL)</td><td>Optional persistence, auth, row-level security</td><td>Analysis JSON, transcript text if save enabled — not raw audio</td></tr>
+  </table>
+  <p>API keys and database admin credentials stay on the server. They are never shipped to the browser.</p>
+  <p><em>One-liner:</em> &ldquo;Gemini reads. Our server scores. Your keys never hit the browser.&rdquo;</p>
+
+  <h2>How is the deal scored?</h2>
+  <div class="win">
+    <strong>Two steps — AI reads, code scores.</strong> The Deal Risk Score is math on our server, not a chatbot guess.
+    Same inputs produce the same score every time.
+  </div>
+  <table class="legal-table">
+    <tr><th>Step</th><th>What happens</th><th>Runs where</th></tr>
+    <tr><td>1 — Extract</td><td>AI pulls forces, people, quotes, and objections from the text you uploaded</td><td>Google Gemini API (Layer 1)</td></tr>
+    <tr><td>2 — Ground</td><td>Server checks every quote and stakeholder claim against the source transcript; strips invented content</td><td>Lazarus API (<code>grounding.ts</code>)</td></tr>
+    <tr><td>3 — Score</td><td>Fixed rules compute viability, trajectory, and Deal Risk Index (DRI) from grounded forces</td><td>Lazarus API (<code>scoring.ts</code>) — deterministic</td></tr>
+    <tr><td>4 — Report</td><td>People Map, friction changes, historical links, and recovery steps shown in UI</td><td>Browser (display only)</td></tr>
+  </table>
+  <p><strong>Deal Risk Index (plain English):</strong> A 0–100 score from deal viability, buyer pressure, lock-in, missing decision-makers, and stall signals. The formula is shown in every report.</p>
+  <p><strong>Not used for scoring:</strong> sales playbooks, ChatGPT coaching, or training on your data. Only verified claims feed the score.</p>
+
+  <h2>What happens if grounding fails?</h2>
+  <div class="vs">
+    <strong>We strip the lie — then we score what&rsquo;s left.</strong>
+    If the AI invents a quote, person, or template phrase that is not in your upload, the server removes it
+    <em>before</em> the Deal Risk Score is calculated. The run still completes; it does not silently fail.
+  </div>
+  <table class="legal-table">
+    <tr><th>What the user sees</th><th>Where</th></tr>
+    <tr><td>Amber <strong>warning banner</strong> at the top of the report: &ldquo;Some claims could not be verified against the call text and were removed or corrected.&rdquo;</td><td>Deal Score &amp; Recovery Brief panel</td></tr>
+    <tr><td>Additional warning in the warnings list: &ldquo;Transcript grounding check failed — ungrounded claims were stripped. Verify evidence quotes.&rdquo;</td><td>Intake panel (below Run Analysis)</td></tr>
+    <tr><td>Blocked template terms listed when detected (e.g. invented budget figures, boilerplate enterprise phrases)</td><td>Inside the warning banner</td></tr>
+    <tr><td>Deal Risk Score and People Map built only from <strong>grounded</strong> forces and stakeholders</td><td>Report body — evidence quotes trace to your upload</td></tr>
+  </table>
+  <p><em>One-liner:</em> &ldquo;If we can&rsquo;t prove it from your transcript, it doesn&rsquo;t score — and we tell you we removed it.&rdquo;</p>
+
+  <h2>Policies, legal docs &amp; third-party resources</h2>
+  <p>Use these in security review. Lazarus legal terms govern the customer relationship; sub-processor policies govern API providers.</p>
+  <table class="legal-table">
+    <tr><th>Resource</th><th>ID / link</th><th>Covers</th></tr>
+    <tr><td>Privacy Policy</td><td><a href="/api/trust-pack/privacy">PP-001</a></td><td>What we collect, retention, rights (PIPEDA, CCPA, GDPR references)</td></tr>
+    <tr><td>Terms of Service</td><td><a href="/api/trust-pack/terms">ToS-001</a></td><td>Customer warranty on upload rights, acceptable use</td></tr>
+    <tr><td>Data Processing Addendum</td><td><a href="/api/trust-pack/dpa">DPA-001</a></td><td>B2B processing roles, breach notice, deletion</td></tr>
+    <tr><td>Security Overview</td><td><a href="/api/trust-pack/security-overview">SEC-001</a></td><td>Full architecture, controls, sub-processors, roadmap</td></tr>
+    <tr><td>Security Battlecard</td><td><a href="/api/trust-pack/battlecard">SEC-002</a></td><td>Sales + InfoSec talk track (this document)</td></tr>
+    <tr><td>Google Gemini API Terms</td><td><a href="https://ai.google.dev/gemini-api/terms" rel="noopener noreferrer">ai.google.dev/gemini-api/terms</a></td><td>Google API use for text extraction</td></tr>
+    <tr><td>Google Privacy Policy</td><td><a href="https://policies.google.com/privacy" rel="noopener noreferrer">policies.google.com/privacy</a></td><td>Google corporate privacy (API provider)</td></tr>
+    <tr><td>AssemblyAI Privacy</td><td><a href="https://www.assemblyai.com/legal/privacy-policy" rel="noopener noreferrer">assemblyai.com/legal/privacy-policy</a></td><td>Transcription sub-processor (when audio uploaded)</td></tr>
+    <tr><td>Supabase Privacy</td><td><a href="https://supabase.com/privacy" rel="noopener noreferrer">supabase.com/privacy</a></td><td>Database hosting sub-processor</td></tr>
+    <tr><td>Supabase Security</td><td><a href="https://supabase.com/security" rel="noopener noreferrer">supabase.com/security</a></td><td>Encryption and SOC 2 status of hosting provider</td></tr>
+  </table>
+  <p class="note"><strong>Startup disclosure:</strong> Lazarus is not SOC 2 certified today. Supabase (hosting) maintains its own certifications. Have counsel review the Trust Pack before large enterprise or regulated-industry contracts.</p>
+  <p><em>One-liner:</em> &ldquo;Our legal pack plus each vendor&rsquo;s public policy — nothing hidden in the fine print.&rdquo;</p>
+
+  <h2>Security (simple version)</h2>
+  <table class="legal-table">
+    <tr><th>Topic</th><th>What we do</th></tr>
+    <tr><td>AI training</td><td>Your content is not used to train public AI models</td></tr>
+    <tr><td>Encryption</td><td>Locked in transit and at rest; audio is not saved to disk</td></tr>
+    <tr><td>Who sees your data</td><td>Each customer only sees their own rows in the database</td></tr>
+    <tr><td>How long we keep stuff</td><td>Raw transcript text: 30-day purge (you can change this). Deal scores and reports: kept for the deal</td></tr>
+    <tr><td>Recording calls</td><td>We don&rsquo;t record calls. You upload what you already have the right to use (see Terms)</td></tr>
+    <tr><td>Legal docs</td><td><a href="/api/trust-pack/privacy">Privacy Policy</a> · <a href="/api/trust-pack/terms">Terms of Service</a> · <a href="/api/trust-pack/dpa">Data Processing Addendum</a> · <a href="/api/trust-pack/security-overview">Security Overview</a> · <a href="/api/trust-pack/battlecard">Security Battlecard</a></td></tr>
+  </table>
+
+  <h2>How it is built (for IT / security)</h2>
+  <table class="legal-table">
+    <tr><th>Part</th><th>What it does</th></tr>
+    <tr><th>Browser</th><td>Shows results only — no scoring in the browser</td></tr>
+    <tr><th>Server</th><td>Reads text, checks quotes, runs the risk score</td></tr>
+    <tr><th>Database</th><td>Stored data is locked per customer; admin keys stay on the server</td></tr>
+    <tr><th>Fake quotes</th><td>Server blocks claims that are not in the transcript</td></tr>
+  </table>
+
+  <h2>What to show in a demo</h2>
   <ul>
-    <li><strong>Velocity deal</strong> — pre-approved budget → VALIDATED / VELOCITY</li>
-    <li><strong>Audit stall</strong> — federal freeze → DEFERRED (locked), kingmakers surfaced</li>
-    <li><strong>People Map</strong> — absent VPs and hidden detractors with quoted evidence</li>
-    <li><strong>DRI</strong> — proprietary Deal Risk Index (not LLM prose)</li>
+    <li><strong>6-month deal</strong> — old DPA blocker shows up again; risk score 89</li>
+    <li><strong>Fast deal</strong> — budget already approved; deal marked as moving</li>
+    <li><strong>Frozen deal</strong> — buyer paused for audit; key decision-makers named</li>
+    <li><strong>People map</strong> — who helps, who blocks, with real quotes</li>
+    <li><strong>Past vs today</strong> — today&rsquo;s words linked to old CRM notes</li>
   </ul>
 
-  <h2>Objection handlers</h2>
+  <h2>Quick answers to pushback</h2>
   <table class="legal-table">
-    <tr><th>&ldquo;Reps won&rsquo;t upload&rdquo;</th><td>Manager drops the recording — not rep hygiene software</td></tr>
-    <tr><th>&ldquo;We have Gong&rdquo;</th><td>Gong records. Lazarus autopsies and tells you if the deal is recoverable</td></tr>
-    <tr><th>&ldquo;AI hallucinates&rdquo;</th><td>Server-side grounding strips invented claims; scores are deterministic</td></tr>
-    <tr><th>&ldquo;Data privacy&rdquo;</th><td>RLS + encryption + DPA + 30-day transcript purge + zero-training policy · audio not stored</td></tr>
-    <tr><th>&ldquo;SOC 2?&rdquo;</th><td>Not yet — honest roadmap in Security Overview §9; suitable for pilot / mid-market B2B today</td></tr>
+    <tr><th>They say&hellip;</th><th>You say&hellip;</th></tr>
+    <tr><th>&ldquo;Reps won&rsquo;t upload.&rdquo;</th><td>The manager uploads. Export from Gong or drop a file. This is triage, not rep homework.</td></tr>
+    <tr><th>&ldquo;We already have Gong / Chorus.&rdquo;</th><td>Great — keep it. Gong saves the call. Lazarus judges the deal. We sit on top, not instead.</td></tr>
+    <tr><th>&ldquo;My reps won&rsquo;t use another tool (James).&rdquo;</th><td>They don&rsquo;t have to record twice. Manager drops the file; rep gets the deal brief — blocker, people, next 30 days.</td></tr>
+    <tr><th>&ldquo;We need another note-taker?&rdquo;</th><td>No. You need a judgment layer. One recorder is enough. Lazarus reads what you already have.</td></tr>
+    <tr><th>&ldquo;Why not ChatGPT?&rdquo;</th><td>ChatGPT writes. We score with rules you can repeat and defend — on top of your existing stack.</td></tr>
+    <tr><th>&ldquo;AI makes things up.&rdquo;</th><td>We check quotes against the transcript. Fakes get stripped, you get a warning banner, then we score what&rsquo;s left.</td></tr>
+    <tr><th>&ldquo;You purge data — how do you remember?&rdquo;</th><td>Recordings go away. Deal scores, people, and blockers stay for the life of the deal.</td></tr>
+    <tr><th>&ldquo;Where did this score come from?&rdquo;</th><td>Your upload → Gemini extracts → server grounds quotes → <code>scoring.ts</code> computes DRI. Formula shown in report.</td></tr>
+    <tr><th>&ldquo;What systems touch our data?&rdquo;</th><td>Lazarus API, Gemini (extract), AssemblyAI (if audio), Supabase (if save). Full table in this battlecard + SEC-001.</td></tr>
+    <tr><th>&ldquo;Is our data safe?&rdquo;</th><td>Encryption, contracts, purge options, no public AI training, audio not stored.</td></tr>
+    <tr><th>&ldquo;SOC 2?&rdquo;</th><td>Not yet. See Security Overview for the roadmap. Good fit for pilot and mid-market today.</td></tr>
   </table>
 
   <p class="footer">
-    Lazarus Trust Pack v1.1 · Full detail: <a href="/security-overview.html">SEC-001</a> ·
-    Counsel review recommended before enterprise signature · [yourdomain.com]
+    Lazarus Trust Pack v1.7 · Full detail: <a href="/api/trust-pack/security-overview">SEC-001 Security Overview</a> ·
+    Have legal review before big enterprise deals · Contact: [security@yourdomain.com] · [yourdomain.com]
   </p>
 </body>
 </html>

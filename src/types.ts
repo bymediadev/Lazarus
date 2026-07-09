@@ -15,6 +15,51 @@ export type CausalForceType =
   | "Timing"
   | "Behavioral";
 
+export interface TranscriptSources {
+  audio: boolean;
+  manual: boolean;
+  email: boolean;
+  field: boolean;
+}
+
+export interface LiveDealTriage {
+  root_issue: string;
+  core_blocker: string;
+  department_friction_index: number;
+}
+
+export type HistoricalConflictType = "confirms" | "contradicts" | "resurfaces" | "new";
+
+export interface HistoricalContextMatch {
+  reference_date: string;
+  live_dialogue_evidence: string;
+  historical_event: string;
+  conflict_type: HistoricalConflictType;
+}
+
+export interface FrictionDeltaSignal {
+  detected: boolean;
+  evidence: string;
+}
+
+export interface StakeholderDispersionDelta extends FrictionDeltaSignal {
+  unmapped_names: string[];
+}
+
+export interface FrictionDeltas {
+  administrative_gatekeeping: FrictionDeltaSignal;
+  stakeholder_dispersion: StakeholderDispersionDelta;
+  budget_scoping_gap: FrictionDeltaSignal;
+}
+
+export type { VetoHolderRef, HistoricalCrmContextEntry } from "../shared/deepContextTypes";
+
+export interface LiveTranscriptTurn {
+  speaker: string;
+  timestamp: string;
+  dialogue: string;
+}
+
 export type ForceRole = "parent" | "child" | "derivative" | "independent";
 
 export type BlockerClassification =
@@ -319,7 +364,11 @@ export interface PostMortemResult {
   rescue_triage_plan?: RescueTriagePlan;
   crm_intelligence?: CrmIntelligence;
   proprietary_indices?: ProprietaryIndices;
-  sources?: { audio: boolean; manual: boolean; email?: boolean; field?: boolean };
+  live_deal_triage?: LiveDealTriage;
+  historical_context_match?: HistoricalContextMatch[];
+  friction_deltas?: FrictionDeltas;
+  immediate_remediation?: string[];
+  sources?: TranscriptSources;
   processed_at?: string;
   id?: string | null;
   warnings?: string[];

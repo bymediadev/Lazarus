@@ -1,0 +1,44 @@
+{
+  "deal": {
+    "deal_id": "4829103756",
+    "dealname": "Acme Corp — Enterprise Platform",
+    "dealstage": "contractsent",
+    "days_in_pipeline": 142,
+    "timeline": [
+      {
+        "date": "2025-11-18",
+        "stage": "appointmentscheduled",
+        "body": "Champion requested Security review before pilot",
+        "veto_holders": ["Dave — VP Infrastructure"]
+      },
+      {
+        "date": "2026-01-22",
+        "stage": "qualifiedtobuy",
+        "objections": [
+          "DPA language stalled prior vendor for two months",
+          "Internal tooling budget capped at $40K"
+        ],
+        "veto_holders": [
+          {
+            "veto_holder_id": "sarah-chen-risk-compliance",
+            "display_name": "Sarah Chen — Risk & Compliance"
+          }
+        ]
+      },
+      {
+        "date": "2026-04-03",
+        "stage": "decisionmakerboughtin",
+        "objections": [
+          "Send SOC 2 and proposal async — no live meeting until Legal reviews"
+        ],
+        "veto_holders": [
+          {
+            "veto_holder_id": "sarah-chen-risk-compliance",
+            "display_name": "Sarah Chen — Risk & Compliance"
+          },
+          { "veto_holder_id": "procurement-unnamed", "display_name": "Procurement — unnamed" }
+        ]
+      }
+    ]
+  }
+}

@@ -6,6 +6,7 @@ import {
   ForceCoupling,
   normalizeResult,
   PostMortemResult,
+  TranscriptSources,
   statusTagClass,
   trajectoryTagClass,
   viabilityTagClass,
@@ -17,7 +18,7 @@ import {
 
 interface Props {
   result: PostMortemResult;
-  sources?: { audio: boolean; manual: boolean; email?: boolean; field?: boolean };
+  sources?: TranscriptSources;
 }
 
 function CrmField({ label, value }: { label: string; value?: string }) {

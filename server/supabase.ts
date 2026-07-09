@@ -16,6 +16,8 @@ export interface SavePostMortemInput {
   actionPlan: string;
   transcriptText?: string;
   analysisJson?: string;
+  ingestMetadata?: Record<string, unknown>;
+  dealMemorySummary?: Record<string, unknown>;
 }
 
 export async function savePostMortem(input: SavePostMortemInput): Promise<string | null> {
@@ -41,6 +43,12 @@ export async function savePostMortem(input: SavePostMortemInput): Promise<string
   if (input.analysisJson) {
     row.analysis_json = input.analysisJson;
   }
+  if (input.ingestMetadata) {
+    row.ingest_metadata = input.ingestMetadata;
+  }
+  if (input.dealMemorySummary) {
+    row.deal_memory_summary = input.dealMemorySummary;
+  }
 
   const { data, error } = await supabase
     .from("call_post_mortems")
@@ -57,6 +65,20 @@ export async function savePostMortem(input: SavePostMortemInput): Promise<string
 }
 
 /** Null out transcript_text older than retention window. Keeps analysis_json for audit. */
+async function insertPurgeAuditLog(
+  supabase: ReturnType<typeof createClient>,
+  rowsAffected: number,
+  retentionDays: number
+): Promise<void> {
+  const { error } = await supabase.from("purge_audit_log").insert({
+    rows_affected: rowsAffected,
+    retention_days: retentionDays,
+  });
+  if (error) {
+    console.warn("Purge audit log insert failed:", error.message);
+  }
+}
+
 export async function purgeExpiredTranscripts(retentionDays?: number): Promise<{
   purged: number;
   retentionDays: number;
@@ -74,11 +96,27 @@ export async function purgeExpiredTranscripts(retentionDays?: number): Promise<{
     throw new Error("DATA_RETENTION_DAYS must be a positive integer");
   }
 
+  const supabase = createClient(url, key);
+
+  const { data: rpcCount, error: rpcError } = await supabase.rpc("purge_expired_transcripts", {
+    retention_days: days,
+  });
+
+  if (!rpcError && typeof rpcCount === "number") {
+    await insertPurgeAuditLog(supabase, rpcCount, days);
+    return { purged: rpcCount, retentionDays: days };
+  }
+
+  if (rpcError) {
+    console.warn(
+      "purge_expired_transcripts RPC failed, falling back to direct UPDATE:",
+      rpcError.message
+    );
+  }
+
   const cutoff = new Date();
   cutoff.setDate(cutoff.getDate() - days);
   const cutoffIso = cutoff.toISOString();
-
-  const supabase = createClient(url, key);
 
   const { data, error } = await supabase
     .from("call_post_mortems")
@@ -91,7 +129,9 @@ export async function purgeExpiredTranscripts(retentionDays?: number): Promise<{
     throw new Error(`Purge failed: ${error.message}`);
   }
 
-  return { purged: data?.length ?? 0, retentionDays: days };
+  const purged = data?.length ?? 0;
+  await insertPurgeAuditLog(supabase, purged, days);
+  return { purged, retentionDays: days };
 }
 
 export interface SaveRescueOutcomeInput {

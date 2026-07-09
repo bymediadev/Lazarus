@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState, useLayoutEffect } from "react";
 import {
   assembleSessionBlob,
   clearSessionChunks,
@@ -59,6 +59,14 @@ export default function FieldRecorder({ onRecordingReady, onClear, hasRecording 
     [offline, onRecordingReady]
   );
 
+  // Keep a ref to the latest finalizeRecording so recorder.onstop — which closes over
+  // a version captured at startCapture time — always calls the current implementation
+  // and never holds a stale prop snapshot.
+  const finalizeRecordingRef = useRef(finalizeRecording);
+  useLayoutEffect(() => {
+    finalizeRecordingRef.current = finalizeRecording;
+  });
+
   const startCapture = async () => {
     setError(null);
     try {
@@ -103,7 +111,9 @@ export default function FieldRecorder({ onRecordingReady, onClear, hasRecording 
           timerRef.current = null;
         }
         if (sessionIdRef.current) {
-          await finalizeRecording(sessionIdRef.current);
+          // Use the ref so we always call the latest finalizeRecording even if
+          // props changed between startCapture and onstop firing.
+          await finalizeRecordingRef.current(sessionIdRef.current);
         }
       };
 

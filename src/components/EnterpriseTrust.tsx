@@ -1,52 +1,54 @@
+import TrustPackLink from "./TrustPackLink";
+import { TRUST_PACK_NAV } from "../lib/trustPack";
+
 const TRUST_PILLARS = [
   {
-    title: "Zero Model Training",
-    body: "Your data belongs to you. Lazarus uses zero-data-retention API configurations. Transcripts sent to extraction APIs and analysis outputs are never used to train public AI models.",
+    title: "Your data stays yours",
+    body: "Customer content is not used to train public AI models. APIs run with zero-retention settings where available.",
   },
   {
-    title: "Encryption & Minimal Retention",
-    body: "All uploads are encrypted in transit via TLS 1.3. Raw audio is processed in memory and not persisted. Transcripts and analysis JSON stored in Supabase use AES-256 at rest when persistence is enabled.",
+    title: "Locked down by default",
+    body: "TLS in transit. AES-256 at rest when stored. Raw audio is processed in memory — not saved to disk.",
   },
   {
-    title: "Tenant Isolation (RLS)",
-    body: "PostgreSQL Row-Level Security is enabled on customer tables. When Supabase Auth is configured, each user sees only their own post-mortems. Service role credentials never ship to the browser.",
+    title: "Each customer walled off",
+    body: "Database row-level security so teams only see their own deals. Admin keys never ship to the browser.",
   },
 ];
 
 export function HeroTrustBanner() {
   return (
     <section className="hero-trust">
-      <p className="hero-trust-eyebrow">Deal Recovery Intelligence · v1</p>
+      <p className="hero-trust-eyebrow">Deal judgment layer · v1</p>
       <h2 className="hero-trust-headline">
-        Secure deal autopsies for stalled pipeline — without compromising customer privacy.
+        Keep Zoom or Gong. Add Lazarus on top. Know if the deal is still winnable — and why.
       </h2>
       <p className="hero-trust-body">
-        Lazarus analyzes call recordings and transcripts you upload. A private API runs extraction and
-        deterministic scoring — human-led, AI-assisted. Built for sales leaders who need the
-        <em> why</em> behind a stalled deal, not another autonomous sales agent.
+        Lazarus is not another note-taker. You already record calls somewhere. We read what the buyer
+        said — from a file, a transcript, email, or field notes — and score the deal with fixed rules
+        you can defend in a forecast meeting. A person still runs the deal.
       </p>
       <ul className="hero-trust-bullets">
         <li>
-          <strong>The problem:</strong> Deals stall, but sharing raw recordings with generic AI
-          tools creates compliance risk.
+          <strong>The problem:</strong> Recordings pile up. ChatGPT gives advice you cannot repeat.
+          Nobody knows which deals are actually dead.
         </li>
         <li>
-          <strong>The solution:</strong> An isolated diagnostic console that maps forces, People
-          Map bottlenecks, and rescue scripts from actual call text.
+          <strong>The solution:</strong> One place to score risk, map blockers, and stitch call +
+          email + field into one story.
         </li>
         <li>
-          <strong>The guardrail:</strong> TLS in transit, optional encrypted persistence, RLS tenant
-          isolation, and a published Trust Pack (Privacy, Terms, DPA, Security Overview).
+          <strong>The guardrail:</strong> Published Trust Pack, encryption, purge options, and no
+          public model training on your content.
         </li>
       </ul>
       <p className="hero-trust-legal">
-        <a href="/security-overview.html" target="_blank" rel="noopener noreferrer">Security Overview</a>
-        {" · "}
-        <a href="/privacy.html" target="_blank" rel="noopener noreferrer">Privacy</a>
-        {" · "}
-        <a href="/terms.html" target="_blank" rel="noopener noreferrer">Terms</a>
-        {" · "}
-        <a href="/dpa.html" target="_blank" rel="noopener noreferrer">DPA</a>
+        {TRUST_PACK_NAV.map(({ slug, label }, i) => (
+          <span key={slug}>
+            {i > 0 && " · "}
+            <TrustPackLink slug={slug}>{label}</TrustPackLink>
+          </span>
+        ))}
       </p>
     </section>
   );
@@ -59,8 +61,8 @@ export default function EnterpriseTrust() {
         <span className="enterprise-trust-label">Enterprise Trust &amp; Privacy</span>
         <h2>Built for legal review before your first upload</h2>
         <p>
-          Proactively disarm InfoSec objections. Lazarus separates the UI shell from the
-          deterministic scoring compiler — your sensitive data never trains public models.
+          Lazarus judges the deal on our server — not in the browser, not in a chatbot essay. Your
+          sensitive data never trains public models. Full legal pack linked below.
         </p>
       </div>
       <div className="trust-grid">
@@ -75,27 +77,27 @@ export default function EnterpriseTrust() {
         <div className="trust-meta-item">
           <span className="trust-meta-key">Data retention</span>
           <span className="trust-meta-val">
-            Raw audio processed in memory; transcript retention configurable (default 30-day purge
-            policy recommended)
+            Raw transcript text: configurable purge (30-day default). Deal scores and reports: kept
+            for the life of the deal.
           </span>
         </div>
         <div className="trust-meta-item">
           <span className="trust-meta-key">Recording consent</span>
           <span className="trust-meta-val">
-            You must have legal right to upload call content — Lazarus does not record calls (
-            <a href="/terms.html" target="_blank" rel="noopener noreferrer">Terms §2</a>)
+            Lazarus does not join or record your meetings. You upload what you already have the right
+            to use (
+            <TrustPackLink slug="terms">Terms of Service §2</TrustPackLink>).
           </span>
         </div>
         <div className="trust-meta-item">
           <span className="trust-meta-key">Trust Pack</span>
           <span className="trust-meta-val">
-            <a href="/security-overview.html" target="_blank" rel="noopener noreferrer">SEC-001</a>
-            {" · "}
-            <a href="/privacy.html" target="_blank" rel="noopener noreferrer">PP-001</a>
-            {" · "}
-            <a href="/dpa.html" target="_blank" rel="noopener noreferrer">DPA-001</a>
-            {" · "}
-            <a href="/terms.html" target="_blank" rel="noopener noreferrer">ToS-001</a>
+            {TRUST_PACK_NAV.map(({ slug, label }, i) => (
+              <span key={slug}>
+                {i > 0 && " · "}
+                <TrustPackLink slug={slug}>{label}</TrustPackLink>
+              </span>
+            ))}
           </span>
         </div>
       </div>

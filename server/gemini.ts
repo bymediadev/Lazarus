@@ -1,7 +1,14 @@
 import { GoogleGenerativeAI } from "@google/generative-ai";
-import { readFileSync } from "fs";
+import { readFileSync, existsSync } from "fs";
 import { dirname, join } from "path";
 import { fileURLToPath } from "url";
+import {
+  type DeepContextInput,
+  type DeepContextOutput,
+  buildDeepContextMessageBlock,
+  mergeImmediateRemediation,
+  normalizeDeepContextOutput,
+} from "./deepContext.js";
 import {
   auditTranscriptGrounding,
   buildGroundingRetryMessage,
@@ -209,6 +216,10 @@ export interface EnterpriseAnalysis {
   pipeline_entry_validity: PipelineEntryValidity;
   rescue_triage_plan: RescueTriagePlan;
   crm_intelligence: CrmIntelligence;
+  live_deal_triage?: DeepContextOutput["live_deal_triage"];
+  historical_context_match?: DeepContextOutput["historical_context_match"];
+  friction_deltas?: DeepContextOutput["friction_deltas"];
+  immediate_remediation?: string[];
 }
 
 const FALLBACK_MODELS = [
@@ -229,7 +240,14 @@ const VALID_STATUSES: EnterpriseDealStatus[] = [
 ];
 
 function loadSystemPrompt(): string {
-  return readFileSync(join(__dirname, "../prompts/final_prompt_v2.txt"), "utf-8");
+  const corePath = join(__dirname, "../prompts/final_prompt_v2.txt");
+  const enginePath = join(__dirname, "../prompts/lazarus_engine_prompt.md");
+  const core = readFileSync(corePath, "utf-8");
+  if (existsSync(enginePath)) {
+    const engine = readFileSync(enginePath, "utf-8");
+    return `${engine}\n\n---\n\n${core}`;
+  }
+  return core;
 }
 
 function modelCandidates(): string[] {
@@ -744,7 +762,10 @@ function normalizeOutput(raw: Record<string, unknown>): EnterpriseAnalysis {
         crmRaw?.recommended_next_action ?? crmRaw?.next_best_action ?? ""
       ),
     },
+    ...normalizeDeepContextOutput(raw),
   };
+
+  mergeImmediateRemediation(rescue_triage_plan, result.immediate_remediation);
 
   if (!result.executive_summary || causal_forces.length === 0) {
     throw new Error("Gemini returned an invalid analysis structure.");
@@ -785,16 +806,29 @@ function toApiResponse(result: EnterpriseAnalysis): AnalysisResponse {
   };
 }
 
-function buildExtractionMessage(transcript: string, dealValue: number): string {
-  return `${buildTranscriptConstraints(transcript, dealValue)}
+function buildExtractionMessage(
+  transcript: string,
+  dealValue: number,
+  deepContext?: DeepContextInput
+): string {
+  const hasHistory = (deepContext?.historicalCrmContext?.length ?? 0) > 0;
+  return `${buildTranscriptConstraints(transcript, dealValue)}${buildDeepContextMessageBlock(deepContext ?? {})}
 
 Build the People Map (every persona + persona_type) and causal forces with verbatim evidence.
 Structural parent forces must quote the buyer/prospect — not the rep's pitch.
 Do NOT output viability_state, buyer_state, deal_trajectory, or resolution_cycles — server computes scores.
+${hasHistory ? "Cross-reference live dialogue with HISTORICAL CRM CONTEXT. Populate historical_context_match with dated evidence links." : ""}
+Evaluate friction_deltas (administrative gatekeeping, stakeholder dispersion, budget scoping gap) from live dialogue.
+Populate live_deal_triage and immediate_remediation (0-7 day actions).
 Merge duplicate root causes. Max 6 forces, max 3 triggers.
 
 TRANSCRIPT:
 ${transcript}`;
+}
+
+export interface AnalyzeTranscriptOptions {
+  dealValue: number;
+  deepContext?: DeepContextInput;
 }
 
 async function generateWithModel(
@@ -890,15 +924,22 @@ function applyGroundingFilter(
 
 export async function analyzeTranscript(
   transcript: string,
-  dealValue: number
+  dealValueOrOptions: number | AnalyzeTranscriptOptions
 ): Promise<AnalysisResponse> {
+  const options: AnalyzeTranscriptOptions =
+    typeof dealValueOrOptions === "number"
+      ? { dealValue: dealValueOrOptions }
+      : dealValueOrOptions;
+  const dealValue = options.dealValue;
+  const deepContext = options.deepContext;
+
   const apiKey = process.env.GEMINI_API_KEY;
   if (!apiKey) {
     throw new Error("GEMINI_API_KEY is not set. Add it to your .env file.");
   }
 
   const systemPrompt = loadSystemPrompt();
-  let userMessage = buildExtractionMessage(transcript, dealValue);
+  let userMessage = buildExtractionMessage(transcript, dealValue, deepContext);
 
   let analysis = await extractWithModels(apiKey, systemPrompt, userMessage);
   let audit = auditTranscriptGrounding({
@@ -912,7 +953,7 @@ export async function analyzeTranscript(
 
   if (!audit.pass) {
     console.warn("Grounding audit failed — retrying with correction prompt", audit);
-    userMessage = buildGroundingRetryMessage(transcript, dealValue, audit);
+    userMessage = buildGroundingRetryMessage(transcript, dealValue, audit, deepContext);
     analysis = await extractWithModels(apiKey, systemPrompt, userMessage);
     audit = auditTranscriptGrounding({
       transcript,

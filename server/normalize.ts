@@ -87,3 +87,23 @@ export function normalizeManualTranscript(text: string): string {
 
   return t;
 }
+
+/**
+ * Light normalization for pasted email threads.
+ * Unlike normalizeManualTranscript, this deliberately does NOT:
+ * - Strip Lazarus output markers (false positives: real emails reference these terms)
+ * - Reformat speaker turns (email threads have different structural patterns)
+ * - Run formatDenseTranscript (email bodies are legitimately dense single-block text)
+ */
+export function normalizeEmailThread(text: string): string {
+  let t = text.trim();
+  if (!t) return "";
+
+  // Normalise line endings only
+  t = t.replace(/\r\n/g, "\n").replace(/\r/g, "\n");
+
+  // Collapse runs of 4+ blank lines (keep up to 3 to preserve email separation)
+  t = t.replace(/\n{4,}/g, "\n\n\n");
+
+  return t;
+}

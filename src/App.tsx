@@ -1,8 +1,14 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import AnalysisReport from "./components/AnalysisReport";
+import DealProfilePanel, { parseHistoricalCrmJson } from "./components/DealProfilePanel";
+import MeetingCompanion from "./components/MeetingCompanion";
 import FieldRecorder from "./components/FieldRecorder";
+import CaptureStack from "./components/CaptureStack";
 import EnterpriseTrust, { HeroTrustBanner } from "./components/EnterpriseTrust";
 import SiteFooter from "./components/SiteFooter";
+import TrustPackLink from "./components/TrustPackLink";
+import TrustPackModal from "./components/TrustPackModal";
+import { TRUST_PACK_NAV, TRUST_PACK_OPEN_EVENT, type TrustPackSlug } from "./lib/trustPack";
 import { API_BASE, apiTargetLabel, runPostMortem } from "./lib/api";
 import {
   listPendingAnalyses,
@@ -11,12 +17,14 @@ import {
   assembleSessionBlob,
   clearSessionChunks,
 } from "./lib/offlineRecording";
-import { normalizeResult, PostMortemResult } from "./types";
+import { normalizeResult, PostMortemResult, type HistoricalCrmContextEntry, type LiveTranscriptTurn } from "./types";
+import type { LiveObjection } from "./lib/liveObjections";
+import { setLinkedPlatform } from "./lib/meetingPlatforms";
 
 const ACCEPTED_EXT = [".mp3", ".wav", ".mp4", ".m4a", ".webm", ".mpeg", ".mpga"];
 const ACCEPT_ATTR = ".mp3,.wav,.mp4,.m4a,.webm,audio/*,video/mp4,video/webm";
 
-type InputTab = "call" | "email" | "field";
+type InputTab = "call" | "email" | "field" | "live";
 
 function getExtension(name: string): string {
   const dot = name.lastIndexOf(".");
@@ -41,6 +49,14 @@ export default function App() {
   const [recordingSource, setRecordingSource] = useState<"upload" | "field" | null>(null);
   const [fieldSessionId, setFieldSessionId] = useState<string | null>(null);
   const [dealValue, setDealValue] = useState("52000");
+  const [accountId, setAccountId] = useState("");
+  const [salesCycleDays, setSalesCycleDays] = useState("");
+  const [historicalCrmJson, setHistoricalCrmJson] = useState("");
+  const [historicalParseError, setHistoricalParseError] = useState<string | null>(null);
+  const [liveTranscriptPayload, setLiveTranscriptPayload] = useState<LiveTranscriptTurn[]>([]);
+  const [liveSessionObjections, setLiveSessionObjections] = useState<
+    { text: string; status: string; source: string }[]
+  >([]);
   const [callTranscript, setCallTranscript] = useState("");
   const [emailThread, setEmailThread] = useState("");
   const [result, setResult] = useState<PostMortemResult | null>(null);
@@ -50,6 +66,7 @@ export default function App() {
   const [warnings, setWarnings] = useState<string[]>([]);
   const [apiOnline, setApiOnline] = useState<boolean | null>(null);
   const [syncNotice, setSyncNotice] = useState<string | null>(null);
+  const [trustPack, setTrustPack] = useState<TrustPackSlug | null>(null);
 
   const hasAudio = !!file;
   const hasCallTranscript = callTranscript.trim().length > 0;
@@ -79,6 +96,11 @@ export default function App() {
       emailThread: string;
       dealValue: string;
       fieldCapture?: boolean;
+      accountId?: string;
+      salesCycleDays?: number;
+      historicalCrmContext?: HistoricalCrmContextEntry[] | null;
+      liveTranscriptPayload?: LiveTranscriptTurn[];
+      liveSessionObjections?: { text: string; status: string; source: string }[];
     }) => {
       const data = await runPostMortem({
         file: payload.file,
@@ -86,6 +108,11 @@ export default function App() {
         emailThread: payload.emailThread,
         dealValue: payload.dealValue,
         fieldCapture: payload.fieldCapture,
+        accountId: payload.accountId,
+        salesCycleDays: payload.salesCycleDays,
+        historicalCrmContext: payload.historicalCrmContext ?? undefined,
+        liveTranscriptPayload: payload.liveTranscriptPayload,
+        liveSessionObjections: payload.liveSessionObjections,
       });
       setResult(normalizeResult({ ...data, sources: data.sources, processed_at: data.processed_at }));
       setWarnings(data.warnings ?? []);
@@ -99,6 +126,7 @@ export default function App() {
     if (!pending.length) return;
 
     setSyncNotice(`Syncing ${pending.length} offline capture(s)...`);
+    let failures = 0;
     for (const entry of pending) {
       try {
         let file: File | null = null;
@@ -120,10 +148,17 @@ export default function App() {
         }
         await removePendingAnalysis(entry.id);
       } catch {
-        break;
+        failures++;
+        continue;
       }
     }
-    setSyncNotice(null);
+    if (failures > 0) {
+      setSyncNotice(
+        `${pending.length - failures} of ${pending.length} synced — ${failures} failed and will retry when online.`
+      );
+    } else {
+      setSyncNotice(null);
+    }
   }, [apiOnline, runAnalysis]);
 
   useEffect(() => {
@@ -138,12 +173,27 @@ export default function App() {
   }, []);
 
   useEffect(() => {
+    const onOpen = (e: Event) => {
+      setTrustPack((e as CustomEvent<TrustPackSlug>).detail);
+    };
+    window.addEventListener(TRUST_PACK_OPEN_EVENT, onOpen);
+    return () => window.removeEventListener(TRUST_PACK_OPEN_EVENT, onOpen);
+  }, []);
+
+  useEffect(() => {
     const onOnline = () => {
       drainPendingQueue();
     };
     window.addEventListener("online", onOnline);
     return () => window.removeEventListener("online", onOnline);
   }, [drainPendingQueue]);
+
+  const handleFieldRecordingReady = useCallback((f: File, sessionId: string) => {
+    setFile(f);
+    setFieldSessionId(sessionId);
+    setRecordingSource("field");
+    setError(null);
+  }, []);
 
   const handleFile = useCallback((f: File | undefined) => {
     if (!f) return;
@@ -192,6 +242,16 @@ export default function App() {
       return;
     }
 
+    const historicalCrmContext = parseHistoricalCrmJson(historicalCrmJson);
+    if (historicalCrmJson.trim() && historicalCrmContext === null) {
+      setError("Historical CRM context must be valid JSON array.");
+      return;
+    }
+
+    const cycleDaysRaw = parseInt(salesCycleDays, 10);
+    const salesCycleDaysNum =
+      Number.isFinite(cycleDaysRaw) && cycleDaysRaw > 0 ? cycleDaysRaw : undefined;
+
     const offline = !navigator.onLine || apiOnline === false;
 
     if (offline) {
@@ -203,7 +263,13 @@ export default function App() {
         emailThread,
         recordingSessionId: fieldSessionId ?? undefined,
       });
-      setSyncNotice("Offline — analysis queued. Will auto-sync when connection restores.");
+      // Clear all input state so the user cannot double-submit and badges reset
+      setFile(null);
+      setCallTranscript("");
+      setEmailThread("");
+      setFieldSessionId(null);
+      setRecordingSource(null);
+      setSyncNotice("Analysis queued — will auto-sync when connection restores.");
       return;
     }
 
@@ -218,6 +284,11 @@ export default function App() {
         emailThread,
         dealValue,
         fieldCapture: recordingSource === "field",
+        accountId: accountId.trim() || undefined,
+        salesCycleDays: salesCycleDaysNum,
+        historicalCrmContext,
+        liveTranscriptPayload: liveTranscriptPayload.length ? liveTranscriptPayload : undefined,
+        liveSessionObjections: liveSessionObjections.length ? liveSessionObjections : undefined,
       });
       if (fieldSessionId) {
         await clearSessionChunks(fieldSessionId);
@@ -240,9 +311,43 @@ export default function App() {
 
   const tabs: { id: InputTab; label: string; dot?: boolean }[] = [
     { id: "call", label: "Call Auto-Autopsy", dot: hasCallInput },
+    { id: "live", label: "Live Meeting", dot: false },
     { id: "email", label: "Email Thread", dot: hasEmail },
     { id: "field", label: "🎙️ Field Capture", dot: hasFieldRecording },
   ];
+
+  const handleLiveSessionEnd = useCallback(
+    (
+      turns: LiveTranscriptTurn[],
+      formattedTranscript: string,
+      objections: LiveObjection[]
+    ) => {
+      if (!turns.length && !formattedTranscript.trim()) return;
+
+      if (turns.length) {
+        setLiveTranscriptPayload(turns);
+      }
+      if (objections.length) {
+        setLiveSessionObjections(
+          objections.map((o) => ({
+            text: o.text,
+            status: o.status,
+            source: o.source,
+          }))
+        );
+      }
+
+      const text = formattedTranscript.trim();
+      if (text) {
+        setCallTranscript((prev) =>
+          prev.trim() ? `${prev}\n\n--- LIVE SESSION ---\n${text}` : text
+        );
+      }
+      setActiveTab("call");
+      setError(null);
+    },
+    []
+  );
 
   return (
     <div className="app">
@@ -250,7 +355,7 @@ export default function App() {
         <div className="header-brand">
           <img src="/logo.png" alt="Lazarus Deal Resuscitation" className="header-logo" />
           <h1>Lazarus</h1>
-          <span className="tag">Deal Rescue Console</span>
+          <span className="tag">Deal Judgment Layer</span>
         </div>
         <span className="header-status">
           {headerStatus}
@@ -264,10 +369,26 @@ export default function App() {
 
       <div className="app-main">
         <HeroTrustBanner />
+        <CaptureStack
+          onOpenLiveTab={(platform) => {
+            if (platform) setLinkedPlatform(platform);
+            setActiveTab("live");
+          }}
+        />
 
         <div className="workspace">
           <section className="panel panel-left intake-viewport">
-            <div className="panel-label">Master Intake Console</div>
+            <div className="panel-label">Deal Intake — upload or paste from any recorder</div>
+
+            <DealProfilePanel
+              accountId={accountId}
+              salesCycleDays={salesCycleDays}
+              historicalJson={historicalCrmJson}
+              onAccountIdChange={setAccountId}
+              onSalesCycleDaysChange={setSalesCycleDays}
+              onHistoricalJsonChange={setHistoricalCrmJson}
+              onParseError={setHistoricalParseError}
+            />
 
             <div className="console-tabs" role="tablist" aria-label="Input modes">
               {tabs.map((tab) => (
@@ -289,8 +410,8 @@ export default function App() {
               {activeTab === "call" && (
                 <div className="console-tab-audio">
                   <p className="console-tab-hint">
-                    Upload call audio or paste a transcript. Stitches with Email Thread and Field
-                    Capture before analysis.
+                    Drop a recording or paste a transcript from Zoom, Meet, Teams, Gong, or anywhere
+                    else. Stitches with Email Thread and Field Capture before analysis.
                   </p>
                   <div
                     className={`dropzone dropzone-tab ${dragOver ? "drag-over" : ""} ${file && recordingSource === "upload" ? "has-file" : ""}`}
@@ -383,15 +504,18 @@ export default function App() {
                 </div>
               )}
 
+              {activeTab === "live" && (
+                <MeetingCompanion
+                  dealValue={dealValue}
+                  apiOnline={apiOnline}
+                  onEndSession={handleLiveSessionEnd}
+                />
+              )}
+
               {activeTab === "field" && (
                 <FieldRecorder
                   hasRecording={hasFieldRecording}
-                  onRecordingReady={(f, sessionId) => {
-                    setFile(f);
-                    setFieldSessionId(sessionId);
-                    setRecordingSource("field");
-                    setError(null);
-                  }}
+                  onRecordingReady={handleFieldRecordingReady}
                   onClear={() => {
                     if (recordingSource === "field") {
                       if (fieldSessionId) clearSessionChunks(fieldSessionId);
@@ -421,6 +545,16 @@ export default function App() {
                 {channelCount >= 2 && (
                   <span className="input-badge input-badge-merge">Cross-channel stitch ready</span>
                 )}
+                {liveTranscriptPayload.length > 0 && (
+                  <span className="input-badge input-badge-text">
+                    Live session ({liveTranscriptPayload.length} turns)
+                  </span>
+                )}
+                {liveSessionObjections.length > 0 && (
+                  <span className="input-badge input-badge-email">
+                    {liveSessionObjections.length} live objection(s)
+                  </span>
+                )}
               </div>
             )}
 
@@ -432,14 +566,19 @@ export default function App() {
                 🛡️
               </span>
               <span className="privacy-trust-text">
-                Hardened Privacy Sandbox Active // Automated 30-Day Server Purge Enforced
+                Privacy sandbox active · 30-day transcript purge · deal scores retained for the cycle
               </span>
             </div>
             <p className="upload-consent">
               By running analysis, you confirm you have the legal right to upload this content.{" "}
-              <a href="/terms.html" target="_blank" rel="noopener noreferrer">Terms</a>
-              {" · "}
-              <a href="/privacy.html" target="_blank" rel="noopener noreferrer">Privacy</a>
+              {TRUST_PACK_NAV.filter((l) => l.slug === "terms" || l.slug === "privacy").map(
+                ({ slug, label }, i) => (
+                  <span key={slug}>
+                    {i > 0 && " · "}
+                    <TrustPackLink slug={slug}>{label}</TrustPackLink>
+                  </span>
+                )
+              )}
             </p>
 
             {syncNotice && <div className="warning-banner"><p>{syncNotice}</p></div>}
@@ -453,10 +592,13 @@ export default function App() {
             )}
 
             {error && <div className="error-banner">{error}</div>}
+            {historicalParseError && !error && (
+              <div className="error-banner">{historicalParseError}</div>
+            )}
           </section>
 
           <section className="panel panel-right">
-            <div className="panel-label">Deal Autopsy Output</div>
+            <div className="panel-label">Deal Score &amp; Recovery Brief</div>
 
             {loading ? (
               <div className="loading-overlay">
@@ -468,7 +610,7 @@ export default function App() {
             ) : (
               <div className="empty-state">
                 <span>AWAITING INPUT</span>
-                <span>Use any intake tab — context stitches automatically on run</span>
+                <span>Drop a call, email, or field note to score the deal</span>
               </div>
             )}
           </section>
@@ -478,6 +620,8 @@ export default function App() {
       </div>
 
       <SiteFooter />
+
+      {trustPack && <TrustPackModal slug={trustPack} onClose={() => setTrustPack(null)} />}
     </div>
   );
 }

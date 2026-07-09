@@ -144,9 +144,118 @@ export default function ConciseDiagnostic({ result }: Props) {
   if (ninety.length) timeline.push({ phase: "90 Days", items: ninety });
 
   const hasPlan = timeline.some((t) => t.items.length > 0);
+  const triage = result.live_deal_triage;
+  const historyMatches = result.historical_context_match ?? [];
+  const friction = result.friction_deltas;
+  const immediate = result.immediate_remediation ?? [];
 
   return (
     <div className="concise-diagnostic">
+      {triage && (triage.root_issue || triage.core_blocker) && (
+        <article className="card card-amber concise-card">
+          <h2 className="card-title">Live Deal Triage</h2>
+          <div className="card-body">
+            {triage.root_issue && (
+              <p>
+                <strong>Root issue:</strong> {triage.root_issue}
+              </p>
+            )}
+            {triage.core_blocker && (
+              <p>
+                <strong>Core blocker:</strong> {triage.core_blocker}
+              </p>
+            )}
+            {triage.department_friction_index > 0 && (
+              <p className="meta-line">
+                Department friction index: {triage.department_friction_index}
+              </p>
+            )}
+          </div>
+        </article>
+      )}
+
+      {historyMatches.length > 0 && (
+        <article className="card card-neutral concise-card">
+          <h2 className="card-title">Historical Context Match</h2>
+          <div className="card-body">
+            <ul className="stall-collision-list">
+              {historyMatches.map((match, i) => (
+                <li key={i}>
+                  <strong>{match.reference_date}</strong> · {match.conflict_type}
+                  <br />
+                  <span className="stall-evidence">"{match.live_dialogue_evidence}"</span>
+                  {match.historical_event && (
+                    <>
+                      <br />
+                      <span className="meta-line">Prior: {match.historical_event}</span>
+                    </>
+                  )}
+                </li>
+              ))}
+            </ul>
+          </div>
+        </article>
+      )}
+
+      {friction && (
+        <article className="card card-neutral concise-card">
+          <h2 className="card-title">Friction Deltas</h2>
+          <div className="card-body">
+            <ul className="stall-collision-list">
+              {friction.administrative_gatekeeping.detected && (
+                <li>
+                  <strong>Administrative gatekeeping</strong>
+                  {friction.administrative_gatekeeping.evidence && (
+                    <span className="stall-evidence">
+                      {" "}
+                      — "{friction.administrative_gatekeeping.evidence}"
+                    </span>
+                  )}
+                </li>
+              )}
+              {friction.stakeholder_dispersion.detected && (
+                <li>
+                  <strong>Stakeholder dispersion</strong>
+                  {friction.stakeholder_dispersion.unmapped_names.length > 0 && (
+                    <span> ({friction.stakeholder_dispersion.unmapped_names.join(", ")})</span>
+                  )}
+                  {friction.stakeholder_dispersion.evidence && (
+                    <span className="stall-evidence">
+                      {" "}
+                      — "{friction.stakeholder_dispersion.evidence}"
+                    </span>
+                  )}
+                </li>
+              )}
+              {friction.budget_scoping_gap.detected && (
+                <li>
+                  <strong>Budget scoping gap</strong>
+                  {friction.budget_scoping_gap.evidence && (
+                    <span className="stall-evidence">
+                      {" "}
+                      — "{friction.budget_scoping_gap.evidence}"
+                    </span>
+                  )}
+                </li>
+              )}
+            </ul>
+          </div>
+        </article>
+      )}
+
+      {immediate.length > 0 && (
+        <article className="card card-emerald concise-card">
+          <h2 className="card-title">Immediate Remediation (0–7 Days)</h2>
+          <div className="card-body">
+            <ol className="timeline-actions">
+              {immediate.map((item, i) => (
+                <li key={i}>{item}</li>
+              ))}
+            </ol>
+          </div>
+        </article>
+      )}
+
       <article className="card card-red concise-card">
         <h2 className="card-title">The Stall Point &amp; Invisible Veto-Holder</h2>
         <div className="card-body">

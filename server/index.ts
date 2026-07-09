@@ -8,13 +8,28 @@ import { fileURLToPath } from "url";
 
 import { transcribeAudio } from "./assemblyai.js";
 import { analyzeTranscript } from "./gemini.js";
+import {
+  formatLiveTranscriptPayload,
+  parseDeepContextFromBody,
+  buildIngestMetadata,
+  buildDealMemorySummary,
+  detectRecurringVetoHolders,
+} from "./deepContext.js";
 import { savePostMortem, purgeExpiredTranscripts, saveRescueOutcome } from "./supabase.js";
 import { buildAnalysisTranscript } from "./transcript.js";
 import { stripOutcomeMetadata } from "./sanitize.js";
-import { normalizeManualTranscript } from "./normalize.js";
+import { normalizeEmailThread, normalizeManualTranscript } from "./normalize.js";
+import { scanLiveObjections as scanLiveObjectionsServer } from "./liveObjections.js";
+import { registerTrustPackRoutes, trustPackSlugFromPath } from "./trustPack.js";
+import {
+  mapHubSpotDealToDeepContext,
+  verifyHubSpotWebhookSecret,
+  type HubSpotWebhookPayload,
+} from "./integrations/hubspot.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const distPath = path.join(__dirname, "../dist");
+const publicPath = path.join(__dirname, "../public");
 
 const app = express();
 const upload = multer({
@@ -111,10 +126,14 @@ app.post("/api/post-mortem", requireApiKey, upload.single("recording"), async (r
   try {
     const processedAt = new Date().toISOString();
     const dealValue = parseFloat(String(req.body.deal_value)) || 0;
+    const deepContext = parseDeepContextFromBody(req.body as Record<string, unknown>);
     const manualRaw = normalizeTextField(req.body.transcript);
-    const manualTranscript = normalizeManualTranscript(manualRaw);
+    const livePayloadText = deepContext.liveTranscriptPayload?.length
+      ? formatLiveTranscriptPayload(deepContext.liveTranscriptPayload)
+      : "";
+    const manualTranscript = normalizeManualTranscript(manualRaw || livePayloadText);
     const emailRaw = normalizeTextField(req.body.email_thread);
-    const emailThread = normalizeManualTranscript(emailRaw);
+    const emailThread = normalizeEmailThread(emailRaw);
     const isFieldCapture = ["1", "true", true].includes(req.body.field_capture as string | boolean);
     const strippedPriorAnalysis = manualRaw.trim().length - manualTranscript.length > 80;
     let audioTranscript = "";
@@ -149,7 +168,16 @@ app.post("/api/post-mortem", requireApiKey, upload.single("recording"), async (r
     }
 
     const transcript = stripOutcomeMetadata(rawTranscript);
-    const result = await analyzeTranscript(transcript, dealValue);
+    const result = await analyzeTranscript(transcript, { dealValue, deepContext });
+
+    const recurringVetoHolders = deepContext.historicalCrmContext?.length
+      ? detectRecurringVetoHolders(deepContext.historicalCrmContext)
+      : [];
+    const ingestMetadata = buildIngestMetadata(deepContext);
+    const dealMemorySummary = buildDealMemorySummary(
+      result as unknown as Record<string, unknown>,
+      recurringVetoHolders
+    );
 
     const savedId = await savePostMortem({
       clientName: result.client_name,
@@ -160,6 +188,8 @@ app.post("/api/post-mortem", requireApiKey, upload.single("recording"), async (r
       actionPlan: result.action_plan.join("\n"),
       transcriptText: rawTranscript,
       analysisJson: JSON.stringify({ ...result, processed_at: processedAt }),
+      ...(ingestMetadata ? { ingestMetadata: ingestMetadata as Record<string, unknown> } : {}),
+      dealMemorySummary: dealMemorySummary as Record<string, unknown>,
     });
 
     const warnings: string[] = [];
@@ -191,6 +221,51 @@ app.post("/api/post-mortem", requireApiKey, upload.single("recording"), async (r
     const raw = err instanceof Error ? err.message : "Post-mortem failed.";
     const friendly = formatApiError(raw);
     res.status(500).json({ error: friendly });
+  }
+});
+
+/** HubSpot deal webhook → deep-context fields (ingest helper; not full CRM sync). */
+app.post("/api/webhooks/hubspot", async (req, res) => {
+  const expectedSecret = (process.env.HUBSPOT_WEBHOOK_SECRET ?? "").trim();
+  const providedSecret =
+    (req.headers["x-hubspot-signature"] as string | undefined) ??
+    (req.headers["x-webhook-secret"] as string | undefined);
+
+  if (!verifyHubSpotWebhookSecret(providedSecret, expectedSecret || undefined)) {
+    res.status(401).json({ error: "Unauthorized — invalid HubSpot webhook secret" });
+    return;
+  }
+
+  try {
+    const mapped = mapHubSpotDealToDeepContext(req.body as HubSpotWebhookPayload);
+    if (!mapped) {
+      res.status(400).json({ error: "No deal payload found — expected deal or deals[]" });
+      return;
+    }
+    res.json({ ok: true, mapped });
+  } catch (err) {
+    console.error("HubSpot webhook error:", err);
+    res.status(500).json({
+      error: err instanceof Error ? err.message : "HubSpot webhook mapping failed",
+    });
+  }
+});
+
+app.post("/api/live/objections", requireApiKey, async (req, res) => {
+  try {
+    const full_transcript = String(req.body?.full_transcript ?? "");
+    const existing_objections = Array.isArray(req.body?.existing_objections)
+      ? req.body.existing_objections
+      : [];
+    const result = await scanLiveObjectionsServer({
+      full_transcript,
+      existing_objections,
+    });
+    res.json(result);
+  } catch (err) {
+    console.error("Live objection scan error:", err);
+    const raw = err instanceof Error ? err.message : "Live scan failed.";
+    res.status(500).json({ error: formatApiError(raw) });
   }
 });
 
@@ -271,11 +346,26 @@ app.post("/api/admin/purge-retention", async (req, res) => {
   }
 });
 
+registerTrustPackRoutes(app, publicPath);
+
+/** Public assets (logo, legal-shared.css). Trust-pack HTML only via /api/trust-pack/:slug. */
+app.use(express.static(publicPath, { index: false }));
+
 if (process.env.NODE_ENV === "production" || existsSync(distPath)) {
   app.use(express.static(distPath));
   app.get("*", (req, res, next) => {
     if (req.path.startsWith("/api")) {
       next();
+      return;
+    }
+    const legacySlug = trustPackSlugFromPath(req.path);
+    if (legacySlug && /\.html$/i.test(req.path)) {
+      res.redirect(301, `/api/trust-pack/${legacySlug}`);
+      return;
+    }
+    const trustFile = path.join(publicPath, req.path.replace(/^\//, ""));
+    if (/\.css$/i.test(req.path) && existsSync(trustFile)) {
+      res.sendFile(trustFile);
       return;
     }
     res.sendFile(path.join(distPath, "index.html"));

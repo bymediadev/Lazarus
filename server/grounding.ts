@@ -3,6 +3,11 @@
  * Every force evidence quote must be traceable to the source transcript.
  */
 
+import {
+  type DeepContextInput,
+  buildDeepContextMessageBlock,
+} from "./deepContext.js";
+
 export interface StakeholderSignal {
   name: string;
   role: string;
@@ -381,7 +386,8 @@ export function scrubInventedSummary(summary: string, transcript: string): strin
 export function buildGroundingRetryMessage(
   transcript: string,
   dealValue: number,
-  audit: GroundingAudit
+  audit: GroundingAudit,
+  deepContext?: DeepContextInput
 ): string {
   const failures = [
     ...audit.ungrounded_forces.map(
@@ -395,7 +401,7 @@ export function buildGroundingRetryMessage(
     ...audit.ungrounded_stakeholders.map((s) => `UNGROUNDED STAKEHOLDER "${s.name}"`),
   ];
 
-  return `${buildTranscriptConstraints(transcript, dealValue)}
+  return `${buildTranscriptConstraints(transcript, dealValue)}${buildDeepContextMessageBlock(deepContext ?? {})}
 
 YOUR PRIOR OUTPUT FAILED TRANSCRIPT GROUNDING. Re-extract from scratch.
 

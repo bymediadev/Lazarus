@@ -129,7 +129,26 @@ Classify enablers and constraints correctly — the server cannot fix inverted p
     "structural_constraint_type": "",
     "reactivation_probability": "0-100",
     "recommended_next_action": ""
-  }
+  },
+  "live_deal_triage": {
+    "root_issue": "",
+    "core_blocker": "",
+    "department_friction_index": 0
+  },
+  "historical_context_match": [
+    {
+      "reference_date": "YYYY-MM-DD",
+      "live_dialogue_evidence": "",
+      "historical_event": "",
+      "conflict_type": "confirms | contradicts | resurfaces | new"
+    }
+  ],
+  "friction_deltas": {
+    "administrative_gatekeeping": { "detected": false, "evidence": "" },
+    "stakeholder_dispersion": { "detected": false, "evidence": "", "unmapped_names": [] },
+    "budget_scoping_gap": { "detected": false, "evidence": "" }
+  },
+  "immediate_remediation": ["01 [Immediate]: ...", "02 [Next Action]: ..."]
 }
 
 FORBIDDEN OUTPUT: viability_state, deal_trajectory, buyer_state, resolution_cycles, force_dependency_graph

@@ -52,6 +52,10 @@ const EMAIL_SPLIT =
 const MONTH_NAMES =
   "jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec";
 
+function pad2(value: string): string {
+  return String(parseInt(value, 10)).padStart(2, "0");
+}
+
 function parseSortKey(text: string, fallback: number): number {
   const samples = text.slice(0, 400);
 
@@ -64,7 +68,7 @@ function parseSortKey(text: string, fallback: number): number {
   const us = samples.match(/\b(\d{1,2})\/(\d{1,2})\/(\d{2,4})\b/);
   if (us) {
     const year = us[3].length === 2 ? 2000 + parseInt(us[3], 10) : parseInt(us[3], 10);
-    const t = Date.parse(`${year}-${us[1]}-${us[2]}`);
+    const t = Date.parse(`${year}-${pad2(us[1])}-${pad2(us[2])}`);
     if (!Number.isNaN(t)) return t;
   }
 

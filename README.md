@@ -19,7 +19,7 @@ Windows: always use `npm run dev` (includes `node --use-system-ca` for Gemini TL
 | `npm run dev` | Full stack (API + UI) |
 | `npm run test` | Scoring + grounding regression + env check |
 | `npm run purge:retention` | Null transcript_text older than DATA_RETENTION_DAYS |
-| `npm run cleanup:ports` | Kill stale Node processes on 3001 / 5173-5176 (Windows) |
+| `npm run test:stress-deep-context` | Extended deep-context POST against local API |
 
 ## Architecture
 
@@ -40,20 +40,37 @@ Apply migrations in order in SQL Editor:
 3. `004_retention_purge.sql`
 4. `005_lockdown_security_definer_rpc.sql`
 5. `006_rescue_outcomes.sql`
+6. `007_purge_audit_log.sql`
+7. `008_ingest_metadata.sql` — `ingest_metadata` + `deal_memory_summary` on `call_post_mortems`
 
 Server saves use `SUPABASE_SERVICE_ROLE_KEY` (never expose to frontend).
 
-## Trust Pack (v1.1)
+### Scheduled retention purge (GitHub Actions)
 
-Customer-facing legal and security docs live in `public/` and are linked from the app footer:
+Workflow: `.github/workflows/purge-retention.yml` (daily 03:00 UTC).
 
-| ID | File | Purpose |
-|----|------|---------|
-| ToS-001 | `public/terms.html` | Terms of Service |
-| PP-001 | `public/privacy.html` | Privacy Policy |
-| DPA-001 | `public/dpa.html` | Data Processing Addendum |
-| SEC-001 | `public/security-overview.html` | Security Overview (InfoSec) |
-| SEC-002 | `public/security-battlecard.html` | Sales battlecard |
+Repository secrets:
+
+| Secret | Value |
+|--------|-------|
+| `LAZARUS_API_URL` | Production API base URL (e.g. `https://your-app.railway.app`) |
+| `PURGE_CRON_SECRET` | Same value as `PURGE_CRON_SECRET` on the API server |
+
+The workflow POSTs to `/api/admin/purge-retention` with header `x-cron-secret`.
+
+## Trust Pack (v1.4)
+
+Customer-facing legal and security docs. **Canonical URLs** (use in contracts, footers, and sales):
+
+| ID | Label | URL |
+|----|-------|-----|
+| PP-001 | Privacy Policy | `/api/trust-pack/privacy` |
+| ToS-001 | Terms of Service | `/api/trust-pack/terms` |
+| DPA-001 | Data Processing Addendum | `/api/trust-pack/dpa` |
+| SEC-001 | Security Overview | `/api/trust-pack/security-overview` |
+| SEC-002 | Security Battlecard | `/api/trust-pack/battlecard` |
+
+Source files live in `public/`. Legacy paths such as `/privacy.html` **301-redirect** to the canonical URL above.
 
 **Before production:** replace placeholders (`[Legal entity name]`, `[privacy@yourdomain.com]`, `[yourdomain.com]`) in all five files.
 
@@ -62,10 +79,20 @@ Customer-facing legal and security docs live in `public/` and are linked from th
 - [ ] Replace Trust Pack placeholders (entity name, contact emails, domain)
 - [ ] Set `LAZARUS_API_KEY` and pass `X-Api-Key` header from clients
 - [ ] Set `FRONTEND_ORIGIN` to your real domain
-- [ ] Replace `PURGE_CRON_SECRET` and schedule purge cron
+- [ ] Replace `PURGE_CRON_SECRET`, set GitHub secrets (`LAZARUS_API_URL`, `PURGE_CRON_SECRET`), and enable purge cron workflow
 - [ ] Legal counsel review of Trust Pack v1.1
 - [ ] Enable Supabase PITR + EU region if GDPR required
 - [ ] Wire Supabase Auth + `user_id` on saves for RLS
+
+## Integrations
+
+### HubSpot (webhook ingest — foundation only)
+
+`POST /api/webhooks/hubspot` maps a HubSpot deal snapshot (workflow webhook payload) into Lazarus deep-context fields: `account_id`, `sales_cycle_days` (from `days_in_pipeline`, capped at 180), and `historical_crm_context`. This is an **ingest helper** for manual or workflow-driven pushes — not a bidirectional CRM sync product claim yet. Full OAuth and deal API polling are not implemented.
+
+Optional env: `HUBSPOT_WEBHOOK_SECRET` — when set, requests must include matching `X-HubSpot-Signature` or `X-Webhook-Secret`.
+
+Test: `node --use-system-ca scripts/test-hubspot-webhook.mjs` (requires dev server).
 
 ## Demo fixtures
 

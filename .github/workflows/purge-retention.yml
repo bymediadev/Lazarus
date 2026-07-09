@@ -1,0 +1,16 @@
+name: Purge retention
+
+on:
+  schedule:
+    # Daily at 03:00 UTC
+    - cron: "0 3 * * *"
+  workflow_dispatch:
+
+jobs:
+  purge:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Purge expired transcripts
+        run: |
+          curl -sf -X POST "${{ secrets.LAZARUS_API_URL }}/api/admin/purge-retention" \
+            -H "x-cron-secret: ${{ secrets.PURGE_CRON_SECRET }}"

@@ -32,6 +32,9 @@ function nextActionDate(result: PostMortemResult): string {
 }
 
 function thirtyDayPriority(result: PostMortemResult): string {
+  if (result.immediate_remediation?.length) {
+    return result.immediate_remediation.slice(0, 2).map((item, i) => `${i + 1}. ${item}`).join("\n");
+  }
   const items = result.rescue_triage_plan?.immediate_0_30_days ?? [];
   if (!items.length) return result.crm_intelligence?.recommended_next_action ?? "Re-engage champion";
   return items.slice(0, 2).map((item, i) => `${i + 1}. ${item}`).join("\n");
@@ -41,8 +44,13 @@ function thirtyDayPriority(result: PostMortemResult): string {
 export function formatCompressedCrmNotes(result: PostMortemResult): string {
   const client = result.client_name?.trim() || "Unknown account";
   const status = result.deal_classification?.status ?? result.deal_status ?? "STALLED";
-  const rootIssue = result.executive_summary?.trim() || result.diagnosis?.trim() || "Stalled sequence — see blocker";
-  const blocker = coreBlocker(result);
+  const rootIssue =
+    result.live_deal_triage?.root_issue?.trim() ||
+    result.executive_summary?.trim() ||
+    result.diagnosis?.trim() ||
+    "Stalled sequence — see blocker";
+  const blocker =
+    result.live_deal_triage?.core_blocker?.trim() || coreBlocker(result);
   const veto = invisibleVetoHolder(result);
   const nextDate = nextActionDate(result);
   const priority = thirtyDayPriority(result);
