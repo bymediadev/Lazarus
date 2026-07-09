@@ -53,7 +53,7 @@ Repository secrets:
 
 | Secret | Value |
 |--------|-------|
-| `LAZARUS_API_URL` | Production API base URL (e.g. `https://your-app.railway.app`) |
+| `LAZARUS_API_URL` | Production API base URL (e.g. `https://your-app.onrender.com`) |
 | `PURGE_CRON_SECRET` | Same value as `PURGE_CRON_SECRET` on the API server |
 
 The workflow POSTs to `/api/admin/purge-retention` with header `x-cron-secret`.
@@ -73,6 +73,21 @@ Customer-facing legal and security docs. **Canonical URLs** (use in contracts, f
 Source files live in `public/`. Legacy paths such as `/privacy.html` **301-redirect** to the canonical URL above.
 
 **Before production:** replace placeholders (`[Legal entity name]`, `[privacy@yourdomain.com]`, `[yourdomain.com]`) in all five files.
+
+## Deploy on Render
+
+Single **Web Service** (monolith): `npm run build` → `dist/`, `npm start` → Express serves `/api/*` + static UI.
+
+| Setting | Value |
+|---------|-------|
+| Build | `npm install && npm run build` |
+| Start | `npm start` |
+| Health check | `/api/health` |
+| Blueprint | `render.yaml` in repo root (optional one-click) |
+
+**Env vars on Render** (copy from local `.env`): `GEMINI_API_KEY`, `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, `PURGE_CRON_SECRET`, `DATA_RETENTION_DAYS`, `NODE_ENV=production`. After first deploy, set `FRONTEND_ORIGIN` to your `https://*.onrender.com` URL (comma-separate `http://localhost:5173` for local dev). Do **not** set `VITE_API_URL` on Render — UI uses same-origin `/api`. Skip `LAZARUS_API_KEY` until clients send `X-Api-Key`.
+
+Free tier spins down after ~15 min idle; hit `/api/health` before demos.
 
 ## Production checklist
 

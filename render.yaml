@@ -1,0 +1,30 @@
+# Lazarus — Render Blueprint (monolith: Vite UI + Express API)
+# Manual deploy: New Web Service → build `npm install && npm run build`, start `npm start`, health `/api/health`
+services:
+  - type: web
+    name: lazarus
+    runtime: node
+    plan: free
+    buildCommand: npm install && npm run build
+    startCommand: npm start
+    healthCheckPath: /api/health
+    envVars:
+      - key: NODE_VERSION
+        value: "20"
+      - key: NODE_ENV
+        value: production
+      - key: DATA_RETENTION_DAYS
+        value: "30"
+      # Render injects PORT — do not set it. Leave VITE_API_URL unset (same-origin /api).
+      - key: GEMINI_API_KEY
+        sync: false
+      - key: FRONTEND_ORIGIN
+        sync: false
+      - key: ASSEMBLYAI_API_KEY
+        sync: false
+      - key: SUPABASE_URL
+        sync: false
+      - key: SUPABASE_SERVICE_ROLE_KEY
+        sync: false
+      - key: PURGE_CRON_SECRET
+        sync: false
