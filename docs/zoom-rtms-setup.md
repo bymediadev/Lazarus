@@ -65,6 +65,11 @@ Copy the **Secret Token** → `ZOOM_WEBHOOK_SECRET_TOKEN`
 | `ZOOM_WEBHOOK_SECRET_TOKEN` | Webhook secret token |
 | `ZOOM_REDIRECT_URI` | `https://lazarus-4uxi.onrender.com/api/integrations/zoom/callback` |
 | `PUBLIC_API_URL` | `https://lazarus-4uxi.onrender.com` |
+| `FRONTEND_ORIGIN` | `https://lazarus-4uxi.onrender.com,http://localhost:5173` (**production URL first**) |
+
+After Zoom authorize, Lazarus redirects to `PUBLIC_API_URL` (or the first `https://` entry in `FRONTEND_ORIGIN`). If you land on `localhost:5173`, those env vars are missing or wrong on Render.
+
+OAuth `state` is HMAC-signed (not stored in memory), so Render free-tier sleep/restart no longer causes `?zoom=error&reason=invalid_state`.
 
 Redeploy after saving.
 
