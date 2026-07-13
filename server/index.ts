@@ -60,6 +60,33 @@ app.use(
   })
 );
 
+/**
+ * Zoom Apps require these OWASP Secure Headers on text/html Home URL responses.
+ * Meta tags are not enough — they must be HTTP response headers.
+ * @see https://developers.zoom.us/docs/zoom-apps/security/owasp/
+ */
+app.use((_req, res, next) => {
+  res.setHeader("Strict-Transport-Security", "max-age=31536000; includeSubDomains");
+  res.setHeader("X-Content-Type-Options", "nosniff");
+  res.setHeader("Referrer-Policy", "strict-origin-when-cross-origin");
+  res.setHeader(
+    "Content-Security-Policy",
+    [
+      "default-src 'self'",
+      "script-src 'self' 'unsafe-inline' https://appssdk.zoom.us https://*.zoom.us",
+      "style-src 'self' 'unsafe-inline'",
+      "img-src 'self' data: https:",
+      "font-src 'self' data:",
+      "connect-src 'self' https: wss:",
+      "frame-src 'self' https://*.zoom.us",
+      "object-src 'none'",
+      "base-uri 'self'",
+      "form-action 'self' https://zoom.us https://*.zoom.us",
+    ].join("; ")
+  );
+  next();
+});
+
 registerZoomWebhook(app);
 
 app.use(express.json());

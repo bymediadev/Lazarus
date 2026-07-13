@@ -19,7 +19,13 @@ On **Windows local dev**, RTMS native SDK does not run — use mic + paste fallb
 1. Go to [Zoom Marketplace](https://marketplace.zoom.us/) → **Develop** → **Build App**
 2. Choose **General App**
 3. Enable **Realtime Media Streams (RTMS)**
-4. Add **OAuth redirect URL**:
+4. Set **Home URL** (required by Zoom Apps):
+   ```
+   https://lazarus-4uxi.onrender.com/
+   ```
+   Lazarus serves OWASP Secure Headers on HTML responses (`Strict-Transport-Security`, `X-Content-Type-Options`, `Content-Security-Policy`, `Referrer-Policy`). Redeploy after that code is on `main`, or Zoom will reject the Home URL.
+5. Add **Domain Allow List** entry: `lazarus-4uxi.onrender.com`
+6. Add **OAuth redirect URL**:
    ```
    https://lazarus-4uxi.onrender.com/api/integrations/zoom/callback
    ```
