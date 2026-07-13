@@ -85,16 +85,20 @@ Single **Web Service** (monolith): `npm run build` → `dist/`, `npm start` → 
 | Health check | `/api/health` |
 | Blueprint | `render.yaml` in repo root (optional one-click) |
 
-**Env vars on Render** (copy from local `.env`): `GEMINI_API_KEY`, `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, `PURGE_CRON_SECRET`, `DATA_RETENTION_DAYS`, `NODE_ENV=production`. After first deploy, set `FRONTEND_ORIGIN` to your `https://*.onrender.com` URL (comma-separate `http://localhost:5173` for local dev). Do **not** set `VITE_API_URL` on Render — UI uses same-origin `/api`. Skip `LAZARUS_API_KEY` until clients send `X-Api-Key`.
+**Env vars on Render** (copy from local `.env`): `GEMINI_API_KEY`, `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, `PURGE_CRON_SECRET`, `DATA_RETENTION_DAYS`, `NODE_ENV=production`. After first deploy, set `FRONTEND_ORIGIN` to your `https://*.onrender.com` URL (comma-separate `http://localhost:5173` for local dev). Set `LAZARUS_API_KEY` and `VITE_LAZARUS_API_KEY` to the **same** random string (UI sends `X-Api-Key`; Vite bakes the client value in at build time). Do **not** set `VITE_API_URL` on Render — UI uses same-origin `/api`.
 
 Free tier spins down after ~15 min idle; hit `/api/health` before demos.
 
+## Merge policy
+
+Merge to `main` only when CI is green (`.github/workflows/test.yml` runs `npm test` + `npm run build` on every push and PR). Build experiments on `feature/*` branches first. After each Cursor session, append a note to `docs/session-log.md`.
+
 ## Production checklist
 
-- [ ] Replace Trust Pack placeholders (entity name, contact emails, domain)
-- [ ] Set `LAZARUS_API_KEY` and pass `X-Api-Key` header from clients
+- [x] Replace Trust Pack placeholders (entity name, contact emails, domain)
+- [x] Set `LAZARUS_API_KEY` and pass `X-Api-Key` header from clients
 - [ ] Set `FRONTEND_ORIGIN` to your real domain
-- [ ] Replace `PURGE_CRON_SECRET`, set GitHub secrets (`LAZARUS_API_URL`, `PURGE_CRON_SECRET`), and enable purge cron workflow
+- [x] Replace `PURGE_CRON_SECRET`, set GitHub secrets (`LAZARUS_API_URL`, `PURGE_CRON_SECRET`), and enable purge cron workflow
 - [ ] Legal counsel review of Trust Pack v1.1
 - [ ] Enable Supabase PITR + EU region if GDPR required
 - [ ] Wire Supabase Auth + `user_id` on saves for RLS

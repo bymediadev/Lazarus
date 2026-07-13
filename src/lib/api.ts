@@ -3,6 +3,15 @@ import { GroundingAudit, HistoricalCrmContextEntry, LiveTranscriptTurn, PostMort
 /** Empty = same-origin / Vite proxy to localhost:3001. Set to Railway URL for remote API. */
 export const API_BASE = (import.meta.env.VITE_API_URL ?? "").replace(/\/$/, "");
 
+/** Sent as X-Api-Key when VITE_LAZARUS_API_KEY is set (must match server LAZARUS_API_KEY). */
+export function apiAuthHeaders(json = false): Record<string, string> {
+  const headers: Record<string, string> = {};
+  const key = (import.meta.env.VITE_LAZARUS_API_KEY ?? "").trim();
+  if (key) headers["X-Api-Key"] = key;
+  if (json) headers["Content-Type"] = "application/json";
+  return headers;
+}
+
 export function apiTargetLabel(): string {
   if (!API_BASE) return "local API (localhost:3001)";
   try {
@@ -79,6 +88,7 @@ export async function runPostMortem(payload: PostMortemPayload): Promise<PostMor
   const url = `${API_BASE}/api/post-mortem`;
   const res = await fetch(url, {
     method: "POST",
+    headers: apiAuthHeaders(),
     body: formData,
   });
 
@@ -126,7 +136,7 @@ export async function saveRescueOutcome(
 ): Promise<{ ok: boolean; id?: string }> {
   const res = await fetch(`${API_BASE}/api/post-mortem/${postMortemId}/rescue-outcome`, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: apiAuthHeaders(true),
     body: JSON.stringify(body),
   });
   const data = (await res.json()) as { ok?: boolean; id?: string; error?: string };

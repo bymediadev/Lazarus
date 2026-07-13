@@ -1,4 +1,4 @@
-import { API_BASE } from "./api";
+import { API_BASE, apiAuthHeaders } from "./api";
 
 export type LiveObjectionStatus = "open" | "answered" | "dismissed";
 
@@ -40,7 +40,7 @@ export async function scanLiveObjections(
 ): Promise<LiveObjectionScanResult> {
   const res = await fetch(`${API_BASE}/api/live/objections`, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: apiAuthHeaders(true),
     body: JSON.stringify({
       full_transcript: fullTranscript,
       existing_objections: existing.map((o) => ({

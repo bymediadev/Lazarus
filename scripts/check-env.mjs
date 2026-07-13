@@ -1,5 +1,14 @@
-import { readFileSync } from "fs";
+import { existsSync, readFileSync } from "fs";
 import "dotenv/config";
+
+if (!existsSync(".env")) {
+  if (process.env.CI || process.env.GITHUB_ACTIONS) {
+    console.log("No .env in CI — skipping local env check");
+    process.exit(0);
+  }
+  console.error("Missing .env — copy .env.example to .env and add your keys");
+  process.exit(1);
+}
 
 const raw = readFileSync(".env", "utf8");
 const geminiLines = raw.split(/\r?\n/).filter((l) => /^\s*GEMINI_API_KEY\s*=/.test(l));

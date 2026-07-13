@@ -28,3 +28,7 @@ services:
         sync: false
       - key: PURGE_CRON_SECRET
         sync: false
+      - key: LAZARUS_API_KEY
+        sync: false
+      - key: VITE_LAZARUS_API_KEY
+        sync: false
