@@ -84,6 +84,26 @@ async function handleZoomWebhook(req: Request, res: Response, rawBody: string): 
   res.json({ ok: true });
 }
 
+function resolveFrontendOrigin(): string {
+  const fromEnv = (process.env.FRONTEND_ORIGIN ?? "")
+    .split(",")
+    .map((o) => o.trim())
+    .filter(Boolean);
+
+  const httpsPublic = fromEnv.find(
+    (o) => o.startsWith("https://") && !/localhost|127\.0\.0\.1/i.test(o)
+  );
+  if (httpsPublic) return httpsPublic.replace(/\/$/, "");
+
+  const publicApi = (process.env.PUBLIC_API_URL ?? "").trim().replace(/\/$/, "");
+  if (publicApi.startsWith("https://")) return publicApi;
+
+  const anyNonLocal = fromEnv.find((o) => !/localhost|127\.0\.0\.1/i.test(o));
+  if (anyNonLocal) return anyNonLocal.replace(/\/$/, "");
+
+  return (fromEnv[0] ?? "http://localhost:5173").replace(/\/$/, "");
+}
+
 export function registerZoomRoutes(app: Express): void {
   app.get("/api/integrations/zoom/status", (_req, res) => {
     const cfg = getZoomConfig();
@@ -117,9 +137,7 @@ export function registerZoomRoutes(app: Express): void {
   app.get("/api/integrations/zoom/callback", async (req, res) => {
     const code = String(req.query.code ?? "");
     const state = String(req.query.state ?? "");
-    const frontendOrigin =
-      (process.env.FRONTEND_ORIGIN ?? "http://localhost:5173").split(",")[0]?.trim() ??
-      "http://localhost:5173";
+    const frontendOrigin = resolveFrontendOrigin();
 
     if (!code || !consumeOAuthState(state)) {
       res.redirect(`${frontendOrigin}/?zoom=error&reason=invalid_state`);
