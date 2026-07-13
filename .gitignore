@@ -2,6 +2,7 @@ node_modules
 dist
 .env
 *.local
+.data
 windows-extra-cas.pem
 npm-install.log
 

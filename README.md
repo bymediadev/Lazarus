@@ -113,6 +113,16 @@ Optional env: `HUBSPOT_WEBHOOK_SECRET` — when set, requests must include match
 
 Test: `node --use-system-ca scripts/test-hubspot-webhook.mjs` (requires dev server).
 
+### Zoom RTMS (live meeting transcripts)
+
+OAuth + RTMS webhook ingest for **live Zoom transcripts** during the Meeting Companion session. See **`docs/zoom-rtms-setup.md`** for Zoom Marketplace app setup, env vars, and troubleshooting.
+
+- Connect: `/api/integrations/zoom/connect`
+- Webhook: `POST /api/webhooks/zoom` (`meeting.rtms_started`, `meeting.rtms_stopped`)
+- Live stream: SSE `/api/integrations/zoom/live-transcript/stream?sessionId=…`
+
+Meet and Teams RTMS integrations follow after the Zoom pilot.
+
 ## Demo fixtures
 
 - `fixtures/sarah_mark_transcript.txt` — authority gap (recoverable)

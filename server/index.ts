@@ -26,6 +26,8 @@ import {
   verifyHubSpotWebhookSecret,
   type HubSpotWebhookPayload,
 } from "./integrations/hubspot.js";
+import { registerZoomRoutes, registerZoomWebhook } from "./integrations/zoom/routes.js";
+import { isZoomConfigured } from "./integrations/zoom/config.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const distPath = path.join(__dirname, "../dist");
@@ -57,6 +59,9 @@ app.use(
     },
   })
 );
+
+registerZoomWebhook(app);
+
 app.use(express.json());
 
 app.get("/api/health", (_req, res) => {
@@ -68,6 +73,7 @@ app.get("/api/health", (_req, res) => {
     gemini_key_format_valid: geminiKeyValid,
     assemblyai: !!process.env.ASSEMBLYAI_API_KEY,
     supabase: !!process.env.SUPABASE_URL,
+    zoom: isZoomConfigured(),
   });
 });
 
@@ -346,6 +352,7 @@ app.post("/api/admin/purge-retention", async (req, res) => {
   }
 });
 
+registerZoomRoutes(app);
 registerTrustPackRoutes(app, publicPath);
 
 /** Public assets (logo, legal-shared.css). Trust-pack HTML only via /api/trust-pack/:slug. */

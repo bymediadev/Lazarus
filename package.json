@@ -20,6 +20,9 @@
     "purge:retention": "node --use-system-ca -r ./server/preload-ca.cjs ./node_modules/tsx/dist/cli.mjs server/purge-retention.ts",
     "cleanup:ports": "node scripts/cleanup-ports.mjs"
   },
+  "optionalDependencies": {
+    "@zoom/rtms": "^1.1.0"
+  },
   "dependencies": {
     "@google/generative-ai": "^0.24.0",
     "@supabase/supabase-js": "^2.49.1",

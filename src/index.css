@@ -277,6 +277,33 @@ body {
   line-height: 1.45;
 }
 
+.meeting-zoom-connect {
+  margin: 0.75rem 0 1rem;
+  padding: 0.75rem 1rem;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: rgba(0, 0, 0, 0.15);
+}
+
+.meeting-zoom-connected,
+.meeting-zoom-disconnected {
+  font-size: 0.75rem;
+  margin: 0 0 0.5rem;
+  color: var(--muted);
+  line-height: 1.45;
+}
+
+.meeting-zoom-connect-btn {
+  display: inline-block;
+  text-decoration: none;
+  margin-top: 0.25rem;
+}
+
+.meeting-zoom-rtms-pill {
+  background: rgba(46, 160, 67, 0.2);
+  color: var(--emerald);
+}
+
 .meeting-start-btn {
   width: 100%;
 }

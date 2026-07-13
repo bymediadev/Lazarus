@@ -32,3 +32,17 @@ services:
         sync: false
       - key: VITE_LAZARUS_API_KEY
         sync: false
+      - key: ZOOM_CLIENT_ID
+        sync: false
+      - key: ZOOM_CLIENT_SECRET
+        sync: false
+      - key: ZM_RTMS_CLIENT
+        sync: false
+      - key: ZM_RTMS_SECRET
+        sync: false
+      - key: ZOOM_WEBHOOK_SECRET_TOKEN
+        sync: false
+      - key: ZOOM_REDIRECT_URI
+        sync: false
+      - key: PUBLIC_API_URL
+        sync: false

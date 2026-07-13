@@ -4,6 +4,18 @@ Two-sentence handoff notes for each build session. Append newest entries at the 
 
 ---
 
+## 2026-07-13 — Zoom RTMS live meeting integration (Phase 1)
+
+**Built:** Zoom OAuth connect, RTMS webhook handler, SSE live transcript stream into Meeting Companion, Connect Zoom UI.
+
+**Files:** `server/integrations/zoom/*`, `src/lib/zoomIntegration.ts`, `MeetingCompanion.tsx`, `docs/zoom-rtms-setup.md`
+
+**Verified:** `npm test` + `npm run build` pass.
+
+**Mess / later:** Meet + Teams after Zoom pilot; RTMS SDK only runs on Linux (Render) — Windows uses mic/paste fallback.
+
+---
+
 ## 2026-07-13 — Production hardening (self-serve checklist)
 
 **Built:** API key auth wired in frontend (`X-Api-Key` header), GitHub Actions test workflow, session log, npm audit fix, merge policy in README.

@@ -12,6 +12,13 @@ import {
   setLinkedPlatform,
   type MeetingPlatformId,
 } from "../lib/meetingPlatforms";
+import {
+  fetchZoomStatus,
+  startZoomLiveSession,
+  subscribeZoomTranscriptStream,
+  zoomConnectUrl,
+  type ZoomIntegrationStatus,
+} from "../lib/zoomIntegration";
 import type { LiveTranscriptTurn } from "../types";
 
 interface Props {
@@ -84,11 +91,15 @@ export default function MeetingCompanion({ dealValue, apiOnline, onEndSession }:
   const [scanning, setScanning] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [panelMinimized, setPanelMinimized] = useState(false);
+  const [zoomStatus, setZoomStatus] = useState<ZoomIntegrationStatus | null>(null);
+  const [zoomStreamActive, setZoomStreamActive] = useState(false);
 
   const recognitionRef = useRef<InstanceType<SpeechRecognitionCtor> | null>(null);
   const sessionStartRef = useRef<number | null>(null);
   const turnsRef = useRef(turns);
   const objectionsRef = useRef(objections);
+  const zoomUnsubRef = useRef<(() => void) | null>(null);
+  const zoomSessionIdRef = useRef<string | null>(null);
 
   const transcript = formatTurns(turns);
 
@@ -99,6 +110,26 @@ export default function MeetingCompanion({ dealValue, apiOnline, onEndSession }:
   useEffect(() => {
     objectionsRef.current = objections;
   }, [objections]);
+
+  useEffect(() => {
+    if (platform !== "zoom") return;
+    const params = new URLSearchParams(window.location.search);
+    if (params.get("zoom") === "connected") {
+      params.delete("zoom");
+      const next = params.toString();
+      window.history.replaceState({}, "", next ? `?${next}` : window.location.pathname);
+    }
+    void fetchZoomStatus()
+      .then(setZoomStatus)
+      .catch(() => setZoomStatus(null));
+  }, [platform]);
+
+  useEffect(() => {
+    return () => {
+      zoomUnsubRef.current?.();
+      zoomUnsubRef.current = null;
+    };
+  }, []);
 
   const appendTurn = useCallback((speaker: string, dialogue: string) => {
     const text = dialogue.trim();
@@ -173,7 +204,7 @@ export default function MeetingCompanion({ dealValue, apiOnline, onEndSession }:
     setListening(false);
   }, []);
 
-  const startSession = () => {
+  const startSession = async () => {
     if (!platform) {
       setError("Link Zoom, Meet, or Teams first.");
       return;
@@ -184,11 +215,34 @@ export default function MeetingCompanion({ dealValue, apiOnline, onEndSession }:
     sessionStartRef.current = Date.now();
     setError(null);
     setPanelMinimized(false);
+    setZoomStreamActive(false);
+    zoomUnsubRef.current?.();
+    zoomUnsubRef.current = null;
+
+    if (platform === "zoom" && zoomStatus?.connected) {
+      try {
+        const { sessionId } = await startZoomLiveSession();
+        zoomSessionIdRef.current = sessionId;
+        zoomUnsubRef.current = subscribeZoomTranscriptStream(
+          sessionId,
+          (chunk) => appendTurn(chunk.speaker, chunk.dialogue),
+          (msg) => setError(msg)
+        );
+        setZoomStreamActive(true);
+      } catch (e) {
+        setError(e instanceof Error ? e.message : "Zoom live session failed — using mic fallback.");
+      }
+    }
+
     startListening();
   };
 
   const endSession = () => {
     stopListening();
+    zoomUnsubRef.current?.();
+    zoomUnsubRef.current = null;
+    zoomSessionIdRef.current = null;
+    setZoomStreamActive(false);
     setPhase("idle");
     sessionStartRef.current = null;
     const formatted = formatTurns(turns);
@@ -257,6 +311,28 @@ export default function MeetingCompanion({ dealValue, apiOnline, onEndSession }:
         </p>
       )}
 
+      {platform === "zoom" && (
+        <div className="meeting-zoom-connect">
+          {zoomStatus?.connected ? (
+            <p className="meeting-zoom-connected">
+              Zoom connected{zoomStatus.account_email ? ` · ${zoomStatus.account_email}` : ""}.
+              {zoomStatus.rtms_supported
+                ? " Start a session, join your meeting, and RTMS transcripts will stream in."
+                : " RTMS runs on Render (Linux) — local dev uses mic/paste until deployed."}
+            </p>
+          ) : (
+            <>
+              <p className="meeting-zoom-disconnected">
+                Connect Zoom for live meeting transcripts (RTMS). Mic + paste works without OAuth.
+              </p>
+              <a className="btn-primary meeting-zoom-connect-btn" href={zoomConnectUrl()}>
+                Connect Zoom
+              </a>
+            </>
+          )}
+        </div>
+      )}
+
       {phase === "idle" ? (
         <div className="meeting-session-idle">
           <button
@@ -274,6 +350,9 @@ export default function MeetingCompanion({ dealValue, apiOnline, onEndSession }:
       ) : (
         <div className="meeting-session-controls">
           <span className="meeting-live-pill">● LIVE · {platform?.toUpperCase()}</span>
+          {platform === "zoom" && zoomStreamActive && (
+            <span className="meeting-live-pill meeting-zoom-rtms-pill">RTMS stream</span>
+          )}
           <button type="button" className="file-clear-btn" onClick={() => void runScan()} disabled={scanning}>
             {scanning ? "Scanning…" : "Scan now"}
           </button>

@@ -10,17 +10,18 @@ export const MEETING_PLATFORMS: MeetingPlatform[] = [
   {
     id: "zoom",
     label: "Zoom",
-    connectNote: "Live companion runs beside your Zoom window. One-click OAuth ingest is on the roadmap.",
+    connectNote:
+      "Connect Zoom for live RTMS transcripts during calls. Without OAuth, mic + paste still works.",
   },
   {
     id: "meet",
     label: "Google Meet",
-    connectNote: "Keep Meet open — float the Lazarus panel in the corner. Workspace connect coming next.",
+    connectNote: "Meet RTMS coming after Zoom pilot. Use mic + paste for live notes today.",
   },
   {
     id: "teams",
     label: "Microsoft Teams",
-    connectNote: "Works alongside Teams desktop or web. Graph API auto-ingest is on the roadmap.",
+    connectNote: "Teams Graph ingest coming after Zoom pilot. Use mic + paste for live notes today.",
   },
 ];
 
