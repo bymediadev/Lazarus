@@ -79,9 +79,9 @@ export default function CaptureStack({ onOpenLiveTab }: CaptureStackProps) {
           </span>
         </div>
         <p className="capture-stack-note">
-          <strong>Today:</strong> use the <strong>Live Meeting</strong> tab — float the objection panel in the
-          corner during Zoom, Meet, or Teams (mic + paste).{" "}
-          <strong>Next:</strong> one-click platform OAuth so recordings land automatically.
+          <strong>Today:</strong> Connect Zoom, Google Meet, or Teams — all feed the same live Recovery Brief
+          (platform stream or mic + paste).{" "}
+          <strong>Next:</strong> Meet captions + Teams Graph transcript pull; then Gong/Otter import.
         </p>
       </div>
     </section>

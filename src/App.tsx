@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import AnalysisReport from "./components/AnalysisReport";
 import DealProfilePanel, { parseHistoricalCrmJson } from "./components/DealProfilePanel";
 import MeetingCompanion from "./components/MeetingCompanion";
+import LiveTriageBrief from "./components/LiveTriageBrief";
 import FieldRecorder from "./components/FieldRecorder";
 import CaptureStack from "./components/CaptureStack";
 import EnterpriseTrust, { HeroTrustBanner } from "./components/EnterpriseTrust";
@@ -19,6 +20,8 @@ import {
 } from "./lib/offlineRecording";
 import { normalizeResult, PostMortemResult, type HistoricalCrmContextEntry, type LiveTranscriptTurn } from "./types";
 import type { LiveObjection } from "./lib/liveObjections";
+import { fetchLiveTriage, type LiveTriageResult } from "./lib/liveTriage";
+import type { MeetingPlatformId } from "./lib/meetingPlatforms";
 import { setLinkedPlatform } from "./lib/meetingPlatforms";
 
 const ACCEPTED_EXT = [".mp3", ".wav", ".mp4", ".m4a", ".webm", ".mpeg", ".mpga"];
@@ -57,6 +60,13 @@ export default function App() {
   const [liveSessionObjections, setLiveSessionObjections] = useState<
     { text: string; status: string; source: string }[]
   >([]);
+  const [liveSessionActive, setLiveSessionActive] = useState(false);
+  const [liveSessionPlatform, setLiveSessionPlatform] = useState<MeetingPlatformId | null>(null);
+  const [liveSessionTurns, setLiveSessionTurns] = useState<LiveTranscriptTurn[]>([]);
+  const [liveSessionLiveObjections, setLiveSessionLiveObjections] = useState<LiveObjection[]>([]);
+  const [liveTriage, setLiveTriage] = useState<LiveTriageResult | null>(null);
+  const [liveTriageLoading, setLiveTriageLoading] = useState(false);
+  const [liveTriageError, setLiveTriageError] = useState<string | null>(null);
   const [callTranscript, setCallTranscript] = useState("");
   const [emailThread, setEmailThread] = useState("");
   const [result, setResult] = useState<PostMortemResult | null>(null);
@@ -311,10 +321,63 @@ export default function App() {
 
   const tabs: { id: InputTab; label: string; dot?: boolean }[] = [
     { id: "call", label: "Call Auto-Autopsy", dot: hasCallInput },
-    { id: "live", label: "Live Meeting", dot: false },
+    { id: "live", label: "Live Meeting", dot: liveSessionActive },
     { id: "email", label: "Email Thread", dot: hasEmail },
     { id: "field", label: "🎙️ Field Capture", dot: hasFieldRecording },
   ];
+
+  const handleLiveSessionUpdate = useCallback(
+    (snapshot: {
+      active: boolean;
+      platform: MeetingPlatformId | null;
+      turns: LiveTranscriptTurn[];
+      objections: LiveObjection[];
+    }) => {
+      setLiveSessionActive(snapshot.active);
+      setLiveSessionPlatform(snapshot.platform);
+      setLiveSessionTurns(snapshot.turns);
+      setLiveSessionLiveObjections(snapshot.objections);
+      if (!snapshot.active) {
+        setLiveTriage(null);
+        setLiveTriageError(null);
+      }
+    },
+    []
+  );
+
+  const refreshLiveTriage = useCallback(async () => {
+    const transcript = liveSessionTurns
+      .map((t) => {
+        const ts = t.timestamp ? `[${t.timestamp}] ` : "";
+        return `${ts}${t.speaker}: ${t.dialogue}`;
+      })
+      .join("\n")
+      .trim();
+    if (!transcript || apiOnline === false) return;
+    setLiveTriageLoading(true);
+    setLiveTriageError(null);
+    try {
+      const next = await fetchLiveTriage({
+        transcript,
+        platform: liveSessionPlatform,
+        dealValue,
+        objections: liveSessionLiveObjections,
+      });
+      setLiveTriage(next);
+    } catch (e) {
+      setLiveTriageError(e instanceof Error ? e.message : "Live triage failed");
+    } finally {
+      setLiveTriageLoading(false);
+    }
+  }, [liveSessionTurns, liveSessionPlatform, liveSessionLiveObjections, dealValue, apiOnline]);
+
+  useEffect(() => {
+    if (!liveSessionActive || liveSessionTurns.length < 2 || apiOnline === false) return;
+    const id = window.setInterval(() => {
+      void refreshLiveTriage();
+    }, 28000);
+    return () => window.clearInterval(id);
+  }, [liveSessionActive, liveSessionTurns.length, apiOnline, refreshLiveTriage]);
 
   const handleLiveSessionEnd = useCallback(
     (
@@ -508,6 +571,7 @@ export default function App() {
                 <MeetingCompanion
                   dealValue={dealValue}
                   apiOnline={apiOnline}
+                  onLiveUpdate={handleLiveSessionUpdate}
                   onEndSession={handleLiveSessionEnd}
                 />
               )}
@@ -605,13 +669,30 @@ export default function App() {
                 <div className="spinner" />
                 <span>{loadingMessage}</span>
               </div>
+            ) : liveSessionActive ? (
+              <LiveTriageBrief
+                active={liveSessionActive}
+                platform={liveSessionPlatform}
+                turns={liveSessionTurns}
+                objections={liveSessionLiveObjections}
+                triage={liveTriage}
+                triageLoading={liveTriageLoading}
+                triageError={liveTriageError}
+                onRefresh={() => void refreshLiveTriage()}
+              />
             ) : result ? (
               <AnalysisReport result={result} sources={result.sources} />
             ) : (
-              <div className="empty-state">
-                <span>AWAITING INPUT</span>
-                <span>Drop a call, email, or field note to score the deal</span>
-              </div>
+              <LiveTriageBrief
+                active={false}
+                platform={null}
+                turns={[]}
+                objections={[]}
+                triage={null}
+                triageLoading={false}
+                triageError={null}
+                onRefresh={() => undefined}
+              />
             )}
           </section>
         </div>

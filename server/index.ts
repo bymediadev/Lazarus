@@ -20,6 +20,7 @@ import { buildAnalysisTranscript } from "./transcript.js";
 import { stripOutcomeMetadata } from "./sanitize.js";
 import { normalizeEmailThread, normalizeManualTranscript } from "./normalize.js";
 import { scanLiveObjections as scanLiveObjectionsServer } from "./liveObjections.js";
+import { runLiveTriage } from "./liveTriage.js";
 import { registerTrustPackRoutes, trustPackSlugFromPath } from "./trustPack.js";
 import {
   mapHubSpotDealToDeepContext,
@@ -28,6 +29,10 @@ import {
 } from "./integrations/hubspot.js";
 import { registerZoomRoutes, registerZoomWebhook } from "./integrations/zoom/routes.js";
 import { isZoomConfigured } from "./integrations/zoom/config.js";
+import { registerGoogleMeetRoutes } from "./integrations/google/routes.js";
+import { isGoogleMeetConfigured } from "./integrations/google/config.js";
+import { registerTeamsRoutes } from "./integrations/teams/routes.js";
+import { isTeamsConfigured } from "./integrations/teams/config.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const distPath = path.join(__dirname, "../dist");
@@ -101,6 +106,8 @@ app.get("/api/health", (_req, res) => {
     assemblyai: !!process.env.ASSEMBLYAI_API_KEY,
     supabase: !!process.env.SUPABASE_URL,
     zoom: isZoomConfigured(),
+    google_meet: isGoogleMeetConfigured(),
+    teams: isTeamsConfigured(),
   });
 });
 
@@ -302,6 +309,27 @@ app.post("/api/live/objections", requireApiKey, async (req, res) => {
   }
 });
 
+app.post("/api/live/triage", requireApiKey, async (req, res) => {
+  try {
+    const result = await runLiveTriage({
+      full_transcript: String(req.body?.full_transcript ?? ""),
+      platform: String(req.body?.platform ?? "live"),
+      deal_value:
+      Number.isFinite(Number(req.body?.deal_value)) && Number(req.body?.deal_value) > 0
+        ? Number(req.body.deal_value)
+        : undefined,
+      open_objections: Array.isArray(req.body?.open_objections)
+        ? req.body.open_objections.map(String)
+        : [],
+    });
+    res.json(result);
+  } catch (err) {
+    console.error("Live triage error:", err);
+    const raw = err instanceof Error ? err.message : "Live triage failed.";
+    res.status(500).json({ error: formatApiError(raw) });
+  }
+});
+
 /** Record rescue loop outcome — anonymous metadata only, no transcript. */
 app.post("/api/post-mortem/:id/rescue-outcome", requireApiKey, async (req, res) => {
   const outcome = String(req.body?.outcome ?? "").trim() as
@@ -380,6 +408,8 @@ app.post("/api/admin/purge-retention", async (req, res) => {
 });
 
 registerZoomRoutes(app);
+registerGoogleMeetRoutes(app);
+registerTeamsRoutes(app);
 registerTrustPackRoutes(app, publicPath);
 
 /** Public assets (logo, legal-shared.css). Trust-pack HTML only via /api/trust-pack/:slug. */

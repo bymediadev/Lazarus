@@ -277,7 +277,8 @@ body {
   line-height: 1.45;
 }
 
-.meeting-zoom-connect {
+.meeting-zoom-connect,
+.meeting-platform-connect {
   margin: 0.75rem 0 1rem;
   padding: 0.75rem 1rem;
   border: 1px solid var(--border);
@@ -286,14 +287,17 @@ body {
 }
 
 .meeting-zoom-connected,
-.meeting-zoom-disconnected {
+.meeting-zoom-disconnected,
+.meeting-platform-connected,
+.meeting-platform-disconnected {
   font-size: 0.75rem;
   margin: 0 0 0.5rem;
   color: var(--muted);
   line-height: 1.45;
 }
 
-.meeting-zoom-connect-btn {
+.meeting-zoom-connect-btn,
+.meeting-platform-connect-btn {
   display: inline-block;
   text-decoration: none;
   margin-top: 0.25rem;
@@ -302,6 +306,141 @@ body {
 .meeting-zoom-rtms-pill {
   background: rgba(46, 160, 67, 0.2);
   color: var(--emerald);
+}
+
+.live-triage-brief {
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+  padding: 0.25rem 0 1rem;
+}
+
+.live-triage-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 0.75rem;
+}
+
+.live-triage-eyebrow {
+  margin: 0;
+  font-size: 0.65rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.live-triage-title {
+  margin: 0.15rem 0 0;
+  font-size: 1.05rem;
+  font-weight: 600;
+}
+
+.live-triage-live-dot {
+  font-family: var(--mono);
+  font-size: 0.62rem;
+  color: var(--crimson);
+  letter-spacing: 0.08em;
+  animation: pulse-rec 1.2s ease-in-out infinite;
+}
+
+.live-triage-sub {
+  margin: 0;
+  font-size: 0.78rem;
+  color: var(--muted);
+  line-height: 1.45;
+}
+
+.live-triage-stats {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.5rem;
+}
+
+.live-triage-stat {
+  padding: 0.55rem 0.65rem;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: rgba(0, 0, 0, 0.12);
+}
+
+.live-triage-stat-label {
+  display: block;
+  font-size: 0.62rem;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  margin-bottom: 0.2rem;
+}
+
+.live-triage-stat strong {
+  font-size: 0.95rem;
+}
+
+.live-triage-tier-hot {
+  color: var(--crimson);
+}
+
+.live-triage-tier-warm {
+  color: var(--amber);
+}
+
+.live-triage-tier-cool {
+  color: var(--emerald);
+}
+
+.live-triage-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.65rem;
+}
+
+.live-triage-stamp {
+  font-size: 0.7rem;
+  color: var(--muted);
+}
+
+.live-triage-headline {
+  margin: 0;
+  font-size: 0.92rem;
+  line-height: 1.45;
+}
+
+.live-triage-waiting {
+  margin: 0;
+  font-size: 0.8rem;
+  color: var(--muted);
+}
+
+.live-triage-section h3 {
+  margin: 0 0 0.35rem;
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--muted);
+}
+
+.live-triage-section ul {
+  margin: 0;
+  padding-left: 1.1rem;
+  font-size: 0.82rem;
+  line-height: 1.45;
+}
+
+.live-triage-transcript summary {
+  cursor: pointer;
+  font-size: 0.75rem;
+  color: var(--muted);
+}
+
+.live-triage-transcript pre {
+  margin: 0.5rem 0 0;
+  max-height: 180px;
+  overflow: auto;
+  font-size: 0.7rem;
+  white-space: pre-wrap;
+  color: var(--muted);
 }
 
 .meeting-start-btn {

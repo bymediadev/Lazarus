@@ -46,3 +46,17 @@ services:
         sync: false
       - key: PUBLIC_API_URL
         sync: false
+      - key: GOOGLE_CLIENT_ID
+        sync: false
+      - key: GOOGLE_CLIENT_SECRET
+        sync: false
+      - key: GOOGLE_REDIRECT_URI
+        sync: false
+      - key: TEAMS_CLIENT_ID
+        sync: false
+      - key: TEAMS_CLIENT_SECRET
+        sync: false
+      - key: TEAMS_TENANT_ID
+        sync: false
+      - key: TEAMS_REDIRECT_URI
+        sync: false

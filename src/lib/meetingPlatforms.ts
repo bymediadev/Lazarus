@@ -11,17 +11,19 @@ export const MEETING_PLATFORMS: MeetingPlatform[] = [
     id: "zoom",
     label: "Zoom",
     connectNote:
-      "Connect Zoom for live RTMS transcripts during calls. Without OAuth, mic + paste still works.",
+      "Connect Zoom for RTMS live transcripts. Mic + paste also feeds the live Recovery Brief.",
   },
   {
     id: "meet",
     label: "Google Meet",
-    connectNote: "Meet RTMS coming after Zoom pilot. Use mic + paste for live notes today.",
+    connectNote:
+      "Connect Google for Meet/Workspace. Live caption ingest next — mic + paste feeds the same Recovery Brief today.",
   },
   {
     id: "teams",
     label: "Microsoft Teams",
-    connectNote: "Teams Graph ingest coming after Zoom pilot. Use mic + paste for live notes today.",
+    connectNote:
+      "Connect Teams via Microsoft Entra ID. Graph transcript pull next — mic + paste feeds the same Recovery Brief today.",
   },
 ];
 

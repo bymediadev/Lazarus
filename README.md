@@ -78,6 +78,8 @@ Source files live in `public/`. Legacy paths such as `/privacy.html` **301-redir
 
 Single **Web Service** (monolith): `npm run build` → `dist/`, `npm start` → Express serves `/api/*` + static UI.
 
+Optional split: Lovable UI + Render API — follow **`docs/lovable-api-wiring.md`** (`VITE_API_URL`, `VITE_LAZARUS_API_KEY`, Trust Pack absolute URLs).
+
 | Setting | Value |
 |---------|-------|
 | Build | `npm install && npm run build` |
@@ -115,13 +117,17 @@ Test: `node --use-system-ca scripts/test-hubspot-webhook.mjs` (requires dev serv
 
 ### Zoom RTMS (live meeting transcripts)
 
-OAuth + RTMS webhook ingest for **live Zoom transcripts** during the Meeting Companion session. See **`docs/zoom-rtms-setup.md`** for Zoom Marketplace app setup, env vars, and troubleshooting.
+OAuth + RTMS webhook ingest for **live Zoom transcripts** during the Meeting Companion session. See **`docs/zoom-rtms-setup.md`**.
 
-- Connect: `/api/integrations/zoom/connect`
-- Webhook: `POST /api/webhooks/zoom` (`meeting.rtms_started`, `meeting.rtms_stopped`)
-- Live stream: SSE `/api/integrations/zoom/live-transcript/stream?sessionId=…`
+### Google Meet / Workspace
 
-Meet and Teams RTMS integrations follow after the Zoom pilot.
+OAuth Connect for Google Meet. Live caption auto-ingest is next; mic + paste feeds the shared live Recovery Brief today. See **`docs/google-meet-setup.md`**.
+
+### Microsoft Teams (Entra ID / Graph)
+
+OAuth Connect via Microsoft Entra ID. Graph online-meeting transcript pull is next; mic + paste feeds the shared live Recovery Brief today. See **`docs/teams-setup.md`**.
+
+Meet and Teams share the same Live Meeting → live triage → end-session autopsy pipe as Zoom.
 
 ## Demo fixtures
 

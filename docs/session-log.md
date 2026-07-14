@@ -4,6 +4,30 @@ Two-sentence handoff notes for each build session. Append newest entries at the 
 
 ---
 
+## 2026-07-14 — Google Meet + Microsoft Teams OAuth scaffolds
+
+**Built:** Connect Google Meet and Connect Teams (Entra/Graph) with status/callback/disconnect; shared live Recovery Brief pipe (mic/paste until auto-ingest).
+
+**Files:** `server/integrations/google/*`, `server/integrations/teams/*`, `oauthShared.ts`, MeetingCompanion UI, `docs/google-meet-setup.md`, `docs/teams-setup.md`
+
+**Verified:** `npm test` + `npm run build` pass
+
+**Mess / later:** Meet caption stream + Teams Graph transcript pull; Wednesday Gong/Otter import.
+
+---
+
+## 2026-07-13 — Live triage Recovery Brief (Zoom / Meet / Teams pipe)
+
+**Built:** In-call Recovery Brief panel that refreshes mid-session from rolling transcript; shared across Zoom, Meet, and Teams (RTMS or mic/paste).
+
+**Files:** `server/liveTriage.ts`, `src/components/LiveTriageBrief.tsx`, `src/lib/liveTriage.ts`, `App.tsx`, `MeetingCompanion.tsx`
+
+**Verified:** `npm test` + `npm run build`
+
+**Mess / later:** Meet Workspace + Teams Graph OAuth still scaffold-only; Zoom RTMS remains Linux/Render for auto stream.
+
+---
+
 ## 2026-07-13 — Zoom RTMS live meeting integration (Phase 1)
 
 **Built:** Zoom OAuth connect, RTMS webhook handler, SSE live transcript stream into Meeting Companion, Connect Zoom UI.

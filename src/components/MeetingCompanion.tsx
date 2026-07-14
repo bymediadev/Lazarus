@@ -19,11 +19,23 @@ import {
   zoomConnectUrl,
   type ZoomIntegrationStatus,
 } from "../lib/zoomIntegration";
+import {
+  fetchGoogleMeetStatus,
+  googleMeetConnectUrl,
+  type GoogleMeetStatus,
+} from "../lib/googleMeetIntegration";
+import { fetchTeamsStatus, teamsConnectUrl, type TeamsStatus } from "../lib/teamsIntegration";
 import type { LiveTranscriptTurn } from "../types";
 
 interface Props {
   dealValue: string;
   apiOnline: boolean | null;
+  onLiveUpdate?: (snapshot: {
+    active: boolean;
+    platform: MeetingPlatformId | null;
+    turns: LiveTranscriptTurn[];
+    objections: LiveObjection[];
+  }) => void;
   onEndSession: (
     turns: LiveTranscriptTurn[],
     formattedTranscript: string,
@@ -79,7 +91,12 @@ function parseNoteLine(line: string): { speaker: string; dialogue: string } {
   return { speaker: "Note", dialogue: line };
 }
 
-export default function MeetingCompanion({ dealValue, apiOnline, onEndSession }: Props) {
+export default function MeetingCompanion({
+  dealValue,
+  apiOnline,
+  onLiveUpdate,
+  onEndSession,
+}: Props) {
   const [platform, setPlatform] = useState<MeetingPlatformId | null>(() => getLinkedPlatform());
   const [phase, setPhase] = useState<SessionPhase>("idle");
   const [turns, setTurns] = useState<LiveTranscriptTurn[]>([]);
@@ -92,6 +109,8 @@ export default function MeetingCompanion({ dealValue, apiOnline, onEndSession }:
   const [error, setError] = useState<string | null>(null);
   const [panelMinimized, setPanelMinimized] = useState(false);
   const [zoomStatus, setZoomStatus] = useState<ZoomIntegrationStatus | null>(null);
+  const [googleStatus, setGoogleStatus] = useState<GoogleMeetStatus | null>(null);
+  const [teamsStatus, setTeamsStatus] = useState<TeamsStatus | null>(null);
   const [zoomStreamActive, setZoomStreamActive] = useState(false);
 
   const recognitionRef = useRef<InstanceType<SpeechRecognitionCtor> | null>(null);
@@ -112,16 +131,50 @@ export default function MeetingCompanion({ dealValue, apiOnline, onEndSession }:
   }, [objections]);
 
   useEffect(() => {
-    if (platform !== "zoom") return;
-    const params = new URLSearchParams(window.location.search);
-    if (params.get("zoom") === "connected") {
-      params.delete("zoom");
-      const next = params.toString();
-      window.history.replaceState({}, "", next ? `?${next}` : window.location.pathname);
+    onLiveUpdate?.({
+      active: phase === "live",
+      platform,
+      turns,
+      objections,
+    });
+  }, [phase, platform, turns, objections, onLiveUpdate]);
+
+  useEffect(() => {
+    if (platform === "zoom") {
+      const params = new URLSearchParams(window.location.search);
+      if (params.get("zoom") === "connected") {
+        params.delete("zoom");
+        const next = params.toString();
+        window.history.replaceState({}, "", next ? `?${next}` : window.location.pathname);
+      }
+      void fetchZoomStatus()
+        .then(setZoomStatus)
+        .catch(() => setZoomStatus(null));
+      return;
     }
-    void fetchZoomStatus()
-      .then(setZoomStatus)
-      .catch(() => setZoomStatus(null));
+    if (platform === "meet") {
+      const params = new URLSearchParams(window.location.search);
+      if (params.get("google") === "connected") {
+        params.delete("google");
+        const next = params.toString();
+        window.history.replaceState({}, "", next ? `?${next}` : window.location.pathname);
+      }
+      void fetchGoogleMeetStatus()
+        .then(setGoogleStatus)
+        .catch(() => setGoogleStatus(null));
+      return;
+    }
+    if (platform === "teams") {
+      const params = new URLSearchParams(window.location.search);
+      if (params.get("teams") === "connected") {
+        params.delete("teams");
+        const next = params.toString();
+        window.history.replaceState({}, "", next ? `?${next}` : window.location.pathname);
+      }
+      void fetchTeamsStatus()
+        .then(setTeamsStatus)
+        .catch(() => setTeamsStatus(null));
+    }
   }, [platform]);
 
   useEffect(() => {
@@ -246,6 +299,12 @@ export default function MeetingCompanion({ dealValue, apiOnline, onEndSession }:
     setPhase("idle");
     sessionStartRef.current = null;
     const formatted = formatTurns(turns);
+    onLiveUpdate?.({
+      active: false,
+      platform,
+      turns,
+      objections,
+    });
     onEndSession(turns, formatted, objections);
   };
 
@@ -312,9 +371,9 @@ export default function MeetingCompanion({ dealValue, apiOnline, onEndSession }:
       )}
 
       {platform === "zoom" && (
-        <div className="meeting-zoom-connect">
+        <div className="meeting-platform-connect">
           {zoomStatus?.connected ? (
-            <p className="meeting-zoom-connected">
+            <p className="meeting-platform-connected">
               Zoom connected{zoomStatus.account_email ? ` · ${zoomStatus.account_email}` : ""}.
               {zoomStatus.rtms_supported
                 ? " Start a session, join your meeting, and RTMS transcripts will stream in."
@@ -322,11 +381,58 @@ export default function MeetingCompanion({ dealValue, apiOnline, onEndSession }:
             </p>
           ) : (
             <>
-              <p className="meeting-zoom-disconnected">
+              <p className="meeting-platform-disconnected">
                 Connect Zoom for live meeting transcripts (RTMS). Mic + paste works without OAuth.
               </p>
-              <a className="btn-primary meeting-zoom-connect-btn" href={zoomConnectUrl()}>
+              <a className="btn-primary meeting-platform-connect-btn" href={zoomConnectUrl()}>
                 Connect Zoom
+              </a>
+            </>
+          )}
+        </div>
+      )}
+
+      {platform === "meet" && (
+        <div className="meeting-platform-connect">
+          {googleStatus?.connected ? (
+            <p className="meeting-platform-connected">
+              Google connected
+              {googleStatus.account_email ? ` · ${googleStatus.account_email}` : ""}. Mic + paste
+              feeds the live Recovery Brief today; Meet caption ingest comes next.
+            </p>
+          ) : (
+            <>
+              <p className="meeting-platform-disconnected">
+                Connect Google for Meet/Workspace. Until auto-ingest ships, start a live session and
+                use mic + paste beside Meet — same Recovery Brief pipe.
+              </p>
+              <a
+                className="btn-primary meeting-platform-connect-btn"
+                href={googleMeetConnectUrl()}
+              >
+                Connect Google Meet
+              </a>
+            </>
+          )}
+        </div>
+      )}
+
+      {platform === "teams" && (
+        <div className="meeting-platform-connect">
+          {teamsStatus?.connected ? (
+            <p className="meeting-platform-connected">
+              Teams connected
+              {teamsStatus.account_email ? ` · ${teamsStatus.account_email}` : ""}. Mic + paste feeds
+              the live Recovery Brief today; Graph transcript pull comes next.
+            </p>
+          ) : (
+            <>
+              <p className="meeting-platform-disconnected">
+                Connect Microsoft Teams (Entra ID). Until Graph transcript pull ships, start a live
+                session and use mic + paste beside Teams — same Recovery Brief pipe.
+              </p>
+              <a className="btn-primary meeting-platform-connect-btn" href={teamsConnectUrl()}>
+                Connect Microsoft Teams
               </a>
             </>
           )}
