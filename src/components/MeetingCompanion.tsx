@@ -108,6 +108,8 @@ export default function MeetingCompanion({
   const [scanning, setScanning] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [panelMinimized, setPanelMinimized] = useState(false);
+  const [justConnected, setJustConnected] = useState(false);
+  const [oauthError, setOauthError] = useState<string | null>(null);
   const [zoomStatus, setZoomStatus] = useState<ZoomIntegrationStatus | null>(null);
   const [googleStatus, setGoogleStatus] = useState<GoogleMeetStatus | null>(null);
   const [teamsStatus, setTeamsStatus] = useState<TeamsStatus | null>(null);
@@ -140,41 +142,54 @@ export default function MeetingCompanion({
   }, [phase, platform, turns, objections, onLiveUpdate]);
 
   useEffect(() => {
-    if (platform === "zoom") {
-      const params = new URLSearchParams(window.location.search);
-      if (params.get("zoom") === "connected") {
-        params.delete("zoom");
-        const next = params.toString();
-        window.history.replaceState({}, "", next ? `?${next}` : window.location.pathname);
-      }
+    const params = new URLSearchParams(window.location.search);
+    const zoom = params.get("zoom");
+    const google = params.get("google");
+    const teams = params.get("teams");
+
+    if (zoom === "connected" || google === "connected" || teams === "connected") {
+      setJustConnected(true);
+      setOauthError(null);
+    }
+    if (zoom === "error") {
+      setOauthError(
+        params.get("reason") === "invalid_state"
+          ? "Zoom connection expired — click Connect Zoom and try again."
+          : "Zoom connection failed — try Connect Zoom again."
+      );
+    }
+    if (google === "error" || teams === "error") {
+      setOauthError("Connection failed — try again from the button below.");
+    }
+
+    if (zoom || google || teams) {
+      ["zoom", "google", "teams", "reason"].forEach((k) => params.delete(k));
+      const next = params.toString();
+      window.history.replaceState({}, "", next ? `?${next}` : window.location.pathname);
+    }
+
+    if (platform === "zoom" || zoom) {
       void fetchZoomStatus()
         .then(setZoomStatus)
         .catch(() => setZoomStatus(null));
-      return;
     }
-    if (platform === "meet") {
-      const params = new URLSearchParams(window.location.search);
-      if (params.get("google") === "connected") {
-        params.delete("google");
-        const next = params.toString();
-        window.history.replaceState({}, "", next ? `?${next}` : window.location.pathname);
-      }
+    if (platform === "meet" || google) {
       void fetchGoogleMeetStatus()
         .then(setGoogleStatus)
         .catch(() => setGoogleStatus(null));
-      return;
     }
-    if (platform === "teams") {
-      const params = new URLSearchParams(window.location.search);
-      if (params.get("teams") === "connected") {
-        params.delete("teams");
-        const next = params.toString();
-        window.history.replaceState({}, "", next ? `?${next}` : window.location.pathname);
-      }
+    if (platform === "teams" || teams) {
       void fetchTeamsStatus()
         .then(setTeamsStatus)
         .catch(() => setTeamsStatus(null));
     }
+  }, [platform]);
+
+  /** Default to Zoom so testers can hit Start without an extra click. */
+  useEffect(() => {
+    if (platform) return;
+    setPlatform("zoom");
+    setLinkedPlatform("zoom");
   }, [platform]);
 
   useEffect(() => {
@@ -191,10 +206,7 @@ export default function MeetingCompanion({
       sessionStartRef.current != null
         ? formatElapsed(Date.now() - sessionStartRef.current)
         : new Date().toISOString();
-    setTurns((prev) => [
-      ...prev,
-      { speaker, timestamp: elapsed, dialogue: text },
-    ]);
+    setTurns((prev) => [...prev, { speaker, timestamp: elapsed, dialogue: text }]);
   }, []);
 
   const runScan = useCallback(async () => {
@@ -231,12 +243,11 @@ export default function MeetingCompanion({
     rec.interimResults = true;
     rec.lang = "en-US";
     rec.onresult = (event) => {
-      let chunk = "";
-      for (let i = 0; i < event.results.length; i++) {
-        chunk += event.results[i].transcript;
-      }
-      if (chunk.trim()) {
-        appendTurn("Rep", chunk.trim());
+      for (let i = event.resultIndex; i < event.results.length; i++) {
+        const result = event.results[i];
+        if (!result?.isFinal) continue;
+        const piece = String(result[0]?.transcript ?? "").trim();
+        if (piece) appendTurn("Rep", piece);
       }
     };
     rec.onerror = (e) => {
@@ -259,7 +270,7 @@ export default function MeetingCompanion({
 
   const startSession = async () => {
     if (!platform) {
-      setError("Link Zoom, Meet, or Teams first.");
+      setError("Pick Zoom, Meet, or Teams first.");
       return;
     }
     setPhase("live");
@@ -342,13 +353,40 @@ export default function MeetingCompanion({
 
   return (
     <div className="meeting-companion">
-      <p className="console-tab-hint">
-        Float the live panel in the corner during Zoom, Meet, or Teams. Track objections as they
-        land — check them off or let Lazarus auto-clear when the buyer answers. End the session for
-        a full post-call score on the same deal.
-      </p>
+      <ol className="meeting-steps" aria-label="Live meeting steps">
+        <li className={platform ? "meeting-step-done" : "meeting-step-current"}>
+          <span className="meeting-step-num">1</span>
+          <div>
+            <strong>Pick the call platform</strong>
+            <span>Where are you testing? Zoom is fine for a first run.</span>
+          </div>
+        </li>
+        <li className={phase === "live" ? "meeting-step-done" : "meeting-step-current"}>
+          <span className="meeting-step-num">2</span>
+          <div>
+            <strong>Start live session</strong>
+            <span>
+              Mic turns on. Paste buyer lines as you hear them. No Zoom account required for this
+              step.
+            </span>
+          </div>
+        </li>
+        <li className={phase === "live" ? "meeting-step-current" : ""}>
+          <span className="meeting-step-num">3</span>
+          <div>
+            <strong>End &amp; analyze</strong>
+            <span>Stops capture and opens Call Auto-Autopsy with this session loaded.</span>
+          </div>
+        </li>
+      </ol>
 
-      <div className="meeting-platform-row">
+      {(justConnected || oauthError) && (
+        <div className={`meeting-banner${oauthError ? " meeting-banner-error" : " meeting-banner-ok"}`}>
+          {oauthError ?? "Connected. Click Start live session below — then join your meeting."}
+        </div>
+      )}
+
+      <div className="meeting-platform-row" role="group" aria-label="Call platform">
         {MEETING_PLATFORMS.map((p) => (
           <button
             key={p.id}
@@ -357,87 +395,15 @@ export default function MeetingCompanion({
             onClick={() => {
               setPlatform(p.id);
               setLinkedPlatform(p.id);
+              setJustConnected(false);
+              setOauthError(null);
             }}
           >
             {p.label}
-            {platform === p.id && <span className="meeting-platform-linked">Linked</span>}
+            {platform === p.id && <span className="meeting-platform-linked">Selected</span>}
           </button>
         ))}
       </div>
-      {platform && (
-        <p className="meeting-platform-note">
-          {MEETING_PLATFORMS.find((p) => p.id === platform)?.connectNote}
-        </p>
-      )}
-
-      {platform === "zoom" && (
-        <div className="meeting-platform-connect">
-          {zoomStatus?.connected ? (
-            <p className="meeting-platform-connected">
-              Zoom connected{zoomStatus.account_email ? ` · ${zoomStatus.account_email}` : ""}.
-              {zoomStatus.rtms_supported
-                ? " Start a session, join your meeting, and RTMS transcripts will stream in."
-                : " RTMS runs on Render (Linux) — local dev uses mic/paste until deployed."}
-            </p>
-          ) : (
-            <>
-              <p className="meeting-platform-disconnected">
-                Connect Zoom for live meeting transcripts (RTMS). Mic + paste works without OAuth.
-              </p>
-              <a className="btn-primary meeting-platform-connect-btn" href={zoomConnectUrl()}>
-                Connect Zoom
-              </a>
-            </>
-          )}
-        </div>
-      )}
-
-      {platform === "meet" && (
-        <div className="meeting-platform-connect">
-          {googleStatus?.connected ? (
-            <p className="meeting-platform-connected">
-              Google connected
-              {googleStatus.account_email ? ` · ${googleStatus.account_email}` : ""}. Mic + paste
-              feeds the live Recovery Brief today; Meet caption ingest comes next.
-            </p>
-          ) : (
-            <>
-              <p className="meeting-platform-disconnected">
-                Connect Google for Meet/Workspace. Until auto-ingest ships, start a live session and
-                use mic + paste beside Meet — same Recovery Brief pipe.
-              </p>
-              <a
-                className="btn-primary meeting-platform-connect-btn"
-                href={googleMeetConnectUrl()}
-              >
-                Connect Google Meet
-              </a>
-            </>
-          )}
-        </div>
-      )}
-
-      {platform === "teams" && (
-        <div className="meeting-platform-connect">
-          {teamsStatus?.connected ? (
-            <p className="meeting-platform-connected">
-              Teams connected
-              {teamsStatus.account_email ? ` · ${teamsStatus.account_email}` : ""}. Mic + paste feeds
-              the live Recovery Brief today; Graph transcript pull comes next.
-            </p>
-          ) : (
-            <>
-              <p className="meeting-platform-disconnected">
-                Connect Microsoft Teams (Entra ID). Until Graph transcript pull ships, start a live
-                session and use mic + paste beside Teams — same Recovery Brief pipe.
-              </p>
-              <a className="btn-primary meeting-platform-connect-btn" href={teamsConnectUrl()}>
-                Connect Microsoft Teams
-              </a>
-            </>
-          )}
-        </div>
-      )}
 
       {phase === "idle" ? (
         <div className="meeting-session-idle">
@@ -445,35 +411,141 @@ export default function MeetingCompanion({
             type="button"
             className="btn-primary meeting-start-btn"
             disabled={!platform || apiOnline === false}
-            onClick={startSession}
+            onClick={() => {
+              setJustConnected(false);
+              void startSession();
+            }}
           >
             Start live session
           </button>
+          <p className="meeting-session-hint">
+            Join your Zoom / Meet / Teams call in another window. Use mic + paste here during the
+            call.
+          </p>
           {apiOnline === false && (
-            <p className="meeting-session-warn">API offline — start the server to scan objections live.</p>
+            <p className="meeting-session-warn">
+              API offline — run <code>npm run dev</code> first.
+            </p>
           )}
         </div>
       ) : (
         <div className="meeting-session-controls">
           <span className="meeting-live-pill">● LIVE · {platform?.toUpperCase()}</span>
           {platform === "zoom" && zoomStreamActive && (
-            <span className="meeting-live-pill meeting-zoom-rtms-pill">RTMS stream</span>
+            <span className="meeting-live-pill meeting-zoom-rtms-pill">Auto transcript</span>
           )}
-          <button type="button" className="file-clear-btn" onClick={() => void runScan()} disabled={scanning}>
+          {listening && <span className="meeting-live-pill">Mic on</span>}
+          <button
+            type="button"
+            className="file-clear-btn"
+            onClick={() => void runScan()}
+            disabled={scanning}
+          >
             {scanning ? "Scanning…" : "Scan now"}
           </button>
           <label className="meeting-auto-scan">
-            <input type="checkbox" checked={autoScan} onChange={(e) => setAutoScan(e.target.checked)} />
-            Auto-scan every 22s
+            <input
+              type="checkbox"
+              checked={autoScan}
+              onChange={(e) => setAutoScan(e.target.checked)}
+            />
+            Auto-scan
           </label>
           <button type="button" className="field-capture-stop meeting-end-btn" onClick={endSession}>
-            End &amp; run post-call analysis
+            End &amp; run analysis
           </button>
         </div>
       )}
 
+      {platform === "zoom" && phase === "idle" && (
+        <details className="meeting-optional">
+          <summary>Optional — Connect Zoom for automatic transcripts</summary>
+          <div className="meeting-platform-connect">
+            {zoomStatus?.connected ? (
+              <p className="meeting-platform-connected">
+                Zoom connected{zoomStatus.account_email ? ` · ${zoomStatus.account_email}` : ""}.
+                After you Start, join the Zoom meeting — transcripts stream if RTMS is set up on the
+                server (Render). Otherwise mic + paste still works.
+              </p>
+            ) : (
+              <>
+                <p className="meeting-platform-disconnected">
+                  Skip this unless you want auto-ingest. For a full product test, mic + paste is
+                  enough.
+                </p>
+                {zoomStatus?.configured !== false && (
+                  <a className="btn-primary meeting-platform-connect-btn" href={zoomConnectUrl()}>
+                    Connect Zoom
+                  </a>
+                )}
+                {zoomStatus && !zoomStatus.configured && (
+                  <p className="meeting-session-warn">
+                    Zoom OAuth not configured on the server yet — use mic + paste.
+                  </p>
+                )}
+              </>
+            )}
+          </div>
+        </details>
+      )}
+
+      {platform === "meet" && phase === "idle" && (
+        <details className="meeting-optional">
+          <summary>Optional — Connect Google Meet</summary>
+          <div className="meeting-platform-connect">
+            {googleStatus?.connected ? (
+              <p className="meeting-platform-connected">
+                Google connected
+                {googleStatus.account_email ? ` · ${googleStatus.account_email}` : ""}. Use mic +
+                paste for live capture today.
+              </p>
+            ) : (
+              <>
+                <p className="meeting-platform-disconnected">
+                  Optional. Mic + paste works without connecting.
+                </p>
+                <a
+                  className="btn-primary meeting-platform-connect-btn"
+                  href={googleMeetConnectUrl()}
+                >
+                  Connect Google Meet
+                </a>
+              </>
+            )}
+          </div>
+        </details>
+      )}
+
+      {platform === "teams" && phase === "idle" && (
+        <details className="meeting-optional">
+          <summary>Optional — Connect Microsoft Teams</summary>
+          <div className="meeting-platform-connect">
+            {teamsStatus?.connected ? (
+              <p className="meeting-platform-connected">
+                Teams connected
+                {teamsStatus.account_email ? ` · ${teamsStatus.account_email}` : ""}. Use mic + paste
+                for live capture today.
+              </p>
+            ) : (
+              <>
+                <p className="meeting-platform-disconnected">
+                  Optional. Mic + paste works without connecting.
+                </p>
+                <a className="btn-primary meeting-platform-connect-btn" href={teamsConnectUrl()}>
+                  Connect Microsoft Teams
+                </a>
+              </>
+            )}
+          </div>
+        </details>
+      )}
+
       <div className="input-group">
-        <label htmlFor="live-note">Live notes (paste buyer lines as you hear them)</label>
+        <label htmlFor="live-note">
+          {phase === "live"
+            ? "Paste or type what you hear (Enter to add)"
+            : "Live notes (unlocks after Start)"}
+        </label>
         <div className="meeting-note-row">
           <input
             id="live-note"
@@ -481,7 +553,7 @@ export default function MeetingCompanion({
             value={noteInput}
             onChange={(e) => setNoteInput(e.target.value)}
             onKeyDown={(e) => e.key === "Enter" && addNote()}
-            placeholder="e.g. Buyer: We need DPA before procurement…"
+            placeholder="Buyer: We need DPA before procurement…"
             disabled={phase !== "live"}
           />
           <button type="button" className="btn-primary" onClick={addNote} disabled={phase !== "live"}>
@@ -491,7 +563,7 @@ export default function MeetingCompanion({
       </div>
 
       <div className="input-group">
-        <label htmlFor="manual-objection">Add objection manually</label>
+        <label htmlFor="manual-objection">Track an objection</label>
         <div className="meeting-note-row">
           <input
             id="manual-objection"
@@ -508,7 +580,7 @@ export default function MeetingCompanion({
       </div>
 
       {transcript && (
-        <details className="meeting-transcript-preview">
+        <details className="meeting-transcript-preview" open={phase === "live"}>
           <summary>Live transcript ({turns.length} turns)</summary>
           <pre>{transcript.slice(-2000)}</pre>
         </details>
@@ -538,17 +610,21 @@ export default function MeetingCompanion({
           {!panelMinimized && (
             <div className="live-objection-panel-body">
               {listening && (
-                <p className="live-objection-listening">Mic capture on — speak or paste notes</p>
+                <p className="live-objection-listening">Mic on — speak or paste notes below</p>
               )}
               {open.length === 0 && answered.length === 0 && (
-                <p className="live-objection-empty">No objections yet. They will appear as the call unfolds.</p>
+                <p className="live-objection-empty">
+                  No objections yet. Paste a buyer concern or wait for auto-scan.
+                </p>
               )}
               <ul className="live-objection-list">
                 {open.map((o) => (
                   <li key={o.id} className="live-objection-item live-objection-open">
                     <div className="live-objection-text">
                       <strong>{o.text}</strong>
-                      {o.evidence && <span className="live-objection-evidence">&ldquo;{o.evidence}&rdquo;</span>}
+                      {o.evidence && (
+                        <span className="live-objection-evidence">&ldquo;{o.evidence}&rdquo;</span>
+                      )}
                     </div>
                     <div className="live-objection-actions">
                       <button type="button" onClick={() => markAnswered(o.id)} title="Mark answered">

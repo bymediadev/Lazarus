@@ -79,9 +79,9 @@ export default function CaptureStack({ onOpenLiveTab }: CaptureStackProps) {
           </span>
         </div>
         <p className="capture-stack-note">
-          <strong>Today:</strong> Connect Zoom, Google Meet, or Teams — all feed the same live Recovery Brief
-          (platform stream or mic + paste).{" "}
-          <strong>Next:</strong> Meet captions + Teams Graph transcript pull; then Gong/Otter import.
+          <strong>Fastest test:</strong> Call Auto-Autopsy → paste a transcript → Analyze.{" "}
+          <strong>Live call:</strong> Live Meeting → pick Zoom → Start → mic/paste → End &amp; analyze.{" "}
+          Connecting Zoom is optional.
         </p>
       </div>
     </section>

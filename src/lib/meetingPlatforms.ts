@@ -10,20 +10,17 @@ export const MEETING_PLATFORMS: MeetingPlatform[] = [
   {
     id: "zoom",
     label: "Zoom",
-    connectNote:
-      "Connect Zoom for RTMS live transcripts. Mic + paste also feeds the live Recovery Brief.",
+    connectNote: "Start a session, then speak or paste. Connect Zoom only if you want automatic transcripts.",
   },
   {
     id: "meet",
     label: "Google Meet",
-    connectNote:
-      "Connect Google for Meet/Workspace. Live caption ingest next — mic + paste feeds the same Recovery Brief today.",
+    connectNote: "Start a session, then speak or paste beside Meet. Connect Google is optional for this test.",
   },
   {
     id: "teams",
     label: "Microsoft Teams",
-    connectNote:
-      "Connect Teams via Microsoft Entra ID. Graph transcript pull next — mic + paste feeds the same Recovery Brief today.",
+    connectNote: "Start a session, then speak or paste beside Teams. Connect Teams is optional for this test.",
   },
 ];
 

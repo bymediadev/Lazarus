@@ -135,8 +135,8 @@ export default function LiveTriageBrief({
       ) : (
         <p className="live-triage-waiting">
           {turns.length === 0
-            ? "Waiting for dialogue — speak, paste buyer lines, or wait for Zoom RTMS."
-            : "Click Refresh live triage (or wait for auto-refresh) to populate the brief."}
+            ? "No dialogue yet. Click Start live session, then paste a buyer line (e.g. Buyer: Legal needs a DPA) — Zoom RTMS does not fill the brief by itself until a Lazarus session is live."
+            : "Dialogue received — click Refresh live triage (or wait a few seconds) to populate risk and blockers."}
         </p>
       )}
 

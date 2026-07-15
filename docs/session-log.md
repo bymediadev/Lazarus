@@ -4,6 +4,30 @@ Two-sentence handoff notes for each build session. Append newest entries at the 
 
 ---
 
+## 2026-07-15 — Easy e2e live path (skip Marketplace)
+
+**Built:** Simplified Live Meeting to numbered steps; Zoom Connect collapsed as optional; OAuth return opens Live tab; `docs/e2e-live-meeting.md` as primary test guide; Marketplace docs parked.
+
+**Files:** `MeetingCompanion.tsx`, `CaptureStack.tsx`, `App.tsx`, `meetingPlatforms.ts`, `index.css`, `docs/e2e-live-meeting.md`, zoom docs, README
+
+**Verified:** file edits only — run `npm run dev` and Path B from e2e doc for smoke test
+
+**Mess / later:** Multi-tenant Zoom tokens when real company pilots share one Render instance.
+
+---
+
+## 2026-07-15 — Zoom Marketplace listing readiness
+
+**Built:** Marketplace submission package (listing copy, TDD draft, checklist); OAuth HMAC state + scopes; `app_deauthorized` revoke/clear for Marketplace compliance.
+
+**Files:** `docs/zoom-marketplace-listing.md`, `server/integrations/zoom/{oauth,routes,tokens}.ts`, README + zoom-rtms-setup links
+
+**Verified:** lint clean on zoom integration files
+
+**Mess / later:** Submit parked — prefer e2e simplicity; crop logo to 160×160 only if listing resumes.
+
+---
+
 ## 2026-07-14 — Google Meet + Microsoft Teams OAuth scaffolds
 
 **Built:** Connect Google Meet and Connect Teams (Entra/Graph) with status/callback/disconnect; shared live Recovery Brief pipe (mic/paste until auto-ingest).

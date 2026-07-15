@@ -1,6 +1,7 @@
-# Zoom RTMS live transcripts — setup guide
+# Zoom RTMS live transcripts — optional setup
 
-Lazarus uses **Zoom Realtime Media Streams (RTMS)** to pull **live diarized transcripts** into the Meeting Companion during calls. Meet and Teams follow after the Zoom pilot.
+Most tests should use **mic + paste** — see [`e2e-live-meeting.md`](./e2e-live-meeting.md).  
+This guide is only if you want **automatic Zoom transcripts** via RTMS (private developer app, not Marketplace).
 
 ## Architecture
 
@@ -10,21 +11,20 @@ Zoom meeting → RTMS webhook → Lazarus API → SSE stream → Meeting Compani
                               Live objection scan (Gemini)
 ```
 
-On **Windows local dev**, RTMS native SDK does not run — use mic + paste fallback. Full live Zoom transcripts work on **Render (Linux)**.
+On **Windows local dev**, RTMS native SDK does not run — use mic + paste. Full live Zoom transcripts work on **Render (Linux)**.
 
 ---
 
-## 1. Create a Zoom app
+## 1. Create a Zoom developer app (private)
 
 1. Go to [Zoom Marketplace](https://marketplace.zoom.us/) → **Develop** → **Build App**
-2. Choose **General App**
+2. Choose **General App** (keep it unpublished)
 3. Enable **Realtime Media Streams (RTMS)**
-4. Set **Home URL** (required by Zoom Apps):
+4. Set **Home URL**:
    ```
    https://lazarus-4uxi.onrender.com/
    ```
-   Lazarus serves OWASP Secure Headers on HTML responses (`Strict-Transport-Security`, `X-Content-Type-Options`, `Content-Security-Policy`, `Referrer-Policy`). Redeploy after that code is on `main`, or Zoom will reject the Home URL.
-5. Add **Domain Allow List** entry: `lazarus-4uxi.onrender.com`
+5. Add **Domain Allow List**: `lazarus-4uxi.onrender.com`
 6. Add **OAuth redirect URL**:
    ```
    https://lazarus-4uxi.onrender.com/api/integrations/zoom/callback
@@ -67,8 +67,6 @@ Copy the **Secret Token** → `ZOOM_WEBHOOK_SECRET_TOKEN`
 | `PUBLIC_API_URL` | `https://lazarus-4uxi.onrender.com` |
 | `FRONTEND_ORIGIN` | `https://lazarus-4uxi.onrender.com,http://localhost:5173` (**production URL first**) |
 
-After Zoom authorize, Lazarus redirects to `PUBLIC_API_URL` (or the first `https://` entry in `FRONTEND_ORIGIN`). If you land on `localhost:5173`, those env vars are missing or wrong on Render.
-
 OAuth `state` is HMAC-signed (not stored in memory), so Render free-tier sleep/restart no longer causes `?zoom=error&reason=invalid_state`.
 
 Redeploy after saving.
@@ -79,14 +77,16 @@ Same keys with localhost redirect URI if testing OAuth locally.
 
 ---
 
-## 3. User flow
+## 3. User flow (with RTMS)
 
-1. Open Lazarus → **Live Meeting** tab → select **Zoom**
-2. Click **Connect Zoom** → authorize in Zoom
-3. Click **Start live session**
-4. Join your Zoom meeting (enable live transcription in Zoom if prompted)
-5. RTMS transcripts stream into the panel; objections auto-scan every 22s
-6. **End & run post-call analysis** → full deal autopsy
+1. Open Lazarus → **Live Meeting** → Zoom
+2. Expand **Optional — Connect Zoom** → authorize
+3. Click **Start live session** (before or as you join the meeting)
+4. Join the Zoom meeting
+5. RTMS transcripts stream if configured; otherwise mic/paste still works
+6. **End & run analysis** → Call Auto-Autopsy
+
+For the simple no-OAuth path, use [`e2e-live-meeting.md`](./e2e-live-meeting.md).
 
 ---
 
@@ -106,11 +106,3 @@ Zoom RTMS requires **Developer Pack credits** on your Zoom account. See [Zoom RT
 | No transcripts on Render | Verify webhook URL + `meeting.rtms_started` subscription |
 | Webhook validation fails | Check `ZOOM_WEBHOOK_SECRET_TOKEN` matches Zoom dashboard |
 | Unauthorized on live session | Set matching `LAZARUS_API_KEY` / `VITE_LAZARUS_API_KEY` |
-
----
-
-## Next: Google Meet & Teams
-
-After Zoom pilot validation:
-- **Meet** — Google Workspace Meet API / live captions (TBD)
-- **Teams** — Microsoft Graph online meeting transcripts (TBD)

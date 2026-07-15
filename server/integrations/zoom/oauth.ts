@@ -1,8 +1,9 @@
 import { getZoomConfig, ZOOM_OAUTH_SCOPES } from "./config.js";
-import { loadZoomTokens, saveZoomTokens, type ZoomTokenRecord } from "./tokens.js";
+import { clearZoomTokens, loadZoomTokens, saveZoomTokens, type ZoomTokenRecord } from "./tokens.js";
 
 const ZOOM_AUTH_URL = "https://zoom.us/oauth/authorize";
 const ZOOM_TOKEN_URL = "https://zoom.us/oauth/token";
+const ZOOM_REVOKE_URL = "https://zoom.us/oauth/revoke";
 const ZOOM_USER_URL = "https://api.zoom.us/v2/users/me";
 
 interface ZoomTokenResponse {
@@ -25,6 +26,7 @@ export function buildZoomAuthorizeUrl(state: string): string {
     client_id: cfg.clientId,
     redirect_uri: cfg.redirectUri,
     state,
+    scope: ZOOM_OAUTH_SCOPES,
   });
   return `${ZOOM_AUTH_URL}?${params.toString()}`;
 }
@@ -54,13 +56,21 @@ export async function exchangeZoomCode(code: string): Promise<ZoomTokenRecord> {
   }
 
   let account_email: string | undefined;
+  let zoom_user_id: string | undefined;
+  let zoom_account_id: string | undefined;
   try {
     const userRes = await fetch(ZOOM_USER_URL, {
       headers: { Authorization: `Bearer ${data.access_token}` },
     });
     if (userRes.ok) {
-      const user = (await userRes.json()) as { email?: string };
+      const user = (await userRes.json()) as {
+        email?: string;
+        id?: string;
+        account_id?: string;
+      };
       account_email = user.email;
+      zoom_user_id = user.id;
+      zoom_account_id = user.account_id;
     }
   } catch {
     /* optional */
@@ -71,10 +81,37 @@ export async function exchangeZoomCode(code: string): Promise<ZoomTokenRecord> {
     refresh_token: data.refresh_token,
     expires_at: new Date(Date.now() + data.expires_in * 1000).toISOString(),
     account_email,
+    zoom_user_id,
+    zoom_account_id,
     connected_at: new Date().toISOString(),
   };
   saveZoomTokens(record);
   return record;
+}
+
+/** Revoke stored tokens at Zoom, then clear local storage (Marketplace deauth). */
+export async function revokeAndClearZoomTokens(): Promise<void> {
+  const cfg = getZoomConfig();
+  const stored = loadZoomTokens();
+  if (cfg && stored?.access_token) {
+    try {
+      const body = new URLSearchParams({ token: stored.access_token });
+      const res = await fetch(ZOOM_REVOKE_URL, {
+        method: "POST",
+        headers: {
+          Authorization: basicAuthHeader(cfg.clientId, cfg.clientSecret),
+          "Content-Type": "application/x-www-form-urlencoded",
+        },
+        body,
+      });
+      if (!res.ok) {
+        console.warn("[zoom-oauth] revoke returned", res.status);
+      }
+    } catch (err) {
+      console.warn("[zoom-oauth] revoke failed:", err instanceof Error ? err.message : err);
+    }
+  }
+  clearZoomTokens();
 }
 
 export async function getValidZoomAccessToken(): Promise<string | null> {

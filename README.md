@@ -117,7 +117,7 @@ Test: `node --use-system-ca scripts/test-hubspot-webhook.mjs` (requires dev serv
 
 ### Zoom RTMS (live meeting transcripts)
 
-OAuth + RTMS webhook ingest for **live Zoom transcripts** during the Meeting Companion session. See **`docs/zoom-rtms-setup.md`**.
+Optional OAuth + RTMS for **automatic Zoom transcripts**. Day-to-day testing: mic + paste — see **`docs/e2e-live-meeting.md`**. RTMS env setup: **`docs/zoom-rtms-setup.md`**. Marketplace listing is parked.
 
 ### Google Meet / Workspace
 

@@ -1,8 +1,12 @@
 import type { Express, Request, Response } from "express";
 import crypto from "crypto";
 import { getZoomConfig, isZoomConfigured } from "./config.js";
-import { buildZoomAuthorizeUrl, exchangeZoomCode } from "./oauth.js";
-import { clearZoomTokens, isZoomConnected, loadZoomTokens } from "./tokens.js";
+import {
+  buildZoomAuthorizeUrl,
+  exchangeZoomCode,
+  revokeAndClearZoomTokens,
+} from "./oauth.js";
+import { isZoomConnected, loadZoomTokens } from "./tokens.js";
 import {
   createZoomLiveSession,
   getLiveSession,
@@ -16,17 +20,44 @@ import {
   zoomWebhookValidationResponse,
 } from "./rtmsHub.js";
 
-const oauthStates = new Set<string>();
+const OAUTH_STATE_TTL_MS = 15 * 60 * 1000;
 
+function oauthStateSecret(): string {
+  const cfg = getZoomConfig();
+  return (
+    cfg?.clientSecret ||
+    process.env.ZOOM_CLIENT_SECRET ||
+    process.env.ZM_RTMS_SECRET ||
+    "zoom-oauth-state"
+  );
+}
+
+/** HMAC-signed state — survives Render free-tier sleep (no in-memory store). */
 function newOAuthState(): string {
-  const state = crypto.randomBytes(16).toString("hex");
-  oauthStates.add(state);
-  return state;
+  const nonce = crypto.randomBytes(16).toString("hex");
+  const ts = Date.now().toString(36);
+  const payload = `${nonce}.${ts}`;
+  const sig = crypto.createHmac("sha256", oauthStateSecret()).update(payload).digest("hex");
+  return `${payload}.${sig}`;
 }
 
 function consumeOAuthState(state: string | undefined): boolean {
-  if (!state || !oauthStates.has(state)) return false;
-  oauthStates.delete(state);
+  if (!state) return false;
+  const parts = state.split(".");
+  if (parts.length !== 3) return false;
+  const [nonce, ts, sig] = parts;
+  if (!nonce || !ts || !sig) return false;
+  const payload = `${nonce}.${ts}`;
+  const expected = crypto.createHmac("sha256", oauthStateSecret()).update(payload).digest("hex");
+  try {
+    if (!crypto.timingSafeEqual(Buffer.from(sig, "hex"), Buffer.from(expected, "hex"))) {
+      return false;
+    }
+  } catch {
+    return false;
+  }
+  const issuedAt = parseInt(ts, 36);
+  if (!Number.isFinite(issuedAt) || Date.now() - issuedAt > OAUTH_STATE_TTL_MS) return false;
   return true;
 }
 
@@ -79,9 +110,48 @@ async function handleZoomWebhook(req: Request, res: Response, rawBody: string): 
     await handleZoomRtmsStarted(payload);
   } else if (event === "meeting.rtms_stopped") {
     handleZoomRtmsStopped(payload);
+  } else if (event === "app_deauthorized") {
+    await handleZoomAppDeauthorized(payload, cfg?.clientId);
   }
 
   res.json({ ok: true });
+}
+
+/**
+ * Marketplace uninstall: revoke Zoom tokens and delete local OAuth data.
+ * @see https://developers.zoom.us/docs/integrations/oauth/#deauthorization
+ */
+async function handleZoomAppDeauthorized(
+  payload: Record<string, unknown>,
+  expectedClientId: string | undefined
+): Promise<void> {
+  const clientId = String(payload.client_id ?? "");
+  if (expectedClientId && clientId && clientId !== expectedClientId) {
+    console.warn("[zoom-oauth] deauth client_id mismatch — ignoring");
+    return;
+  }
+
+  const deauthUserId = String(payload.user_id ?? "");
+  const deauthAccountId = String(payload.account_id ?? "");
+  const stored = loadZoomTokens();
+
+  const matchesStored =
+    !stored ||
+    !deauthUserId ||
+    !stored.zoom_user_id ||
+    stored.zoom_user_id === deauthUserId ||
+    (!!deauthAccountId && stored.zoom_account_id === deauthAccountId);
+
+  if (!matchesStored) {
+    console.warn("[zoom-oauth] deauth for unrelated user — ignoring");
+    return;
+  }
+
+  console.log("[zoom-oauth] app_deauthorized — revoking tokens", {
+    user_id: deauthUserId || undefined,
+    account_id: deauthAccountId || undefined,
+  });
+  await revokeAndClearZoomTokens();
 }
 
 function resolveFrontendOrigin(): string {
@@ -154,8 +224,9 @@ export function registerZoomRoutes(app: Express): void {
   });
 
   app.post("/api/integrations/zoom/disconnect", (_req, res) => {
-    clearZoomTokens();
-    res.json({ ok: true });
+    void revokeAndClearZoomTokens().then(() => {
+      res.json({ ok: true });
+    });
   });
 
   app.post("/api/integrations/zoom/live-session/start", (_req, res) => {

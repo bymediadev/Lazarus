@@ -239,6 +239,115 @@ body {
   gap: 0.85rem;
 }
 
+.meeting-steps {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.55rem;
+}
+
+.meeting-steps li {
+  display: grid;
+  grid-template-columns: 1.6rem 1fr;
+  gap: 0.55rem;
+  align-items: start;
+  opacity: 0.55;
+}
+
+.meeting-steps li.meeting-step-current,
+.meeting-steps li.meeting-step-done {
+  opacity: 1;
+}
+
+.meeting-step-num {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.5rem;
+  height: 1.5rem;
+  border-radius: 999px;
+  border: 1px solid var(--panel-border);
+  font-family: var(--mono);
+  font-size: 0.65rem;
+  color: var(--muted);
+}
+
+.meeting-step-done .meeting-step-num {
+  border-color: var(--teal);
+  color: var(--teal);
+}
+
+.meeting-step-current .meeting-step-num {
+  border-color: var(--emerald);
+  color: var(--emerald);
+  box-shadow: 0 0 10px rgba(61, 214, 198, 0.25);
+}
+
+.meeting-steps strong {
+  display: block;
+  font-size: 0.8rem;
+  color: var(--text);
+}
+
+.meeting-steps span {
+  display: block;
+  font-size: 0.72rem;
+  color: var(--muted);
+  line-height: 1.4;
+  margin-top: 0.1rem;
+}
+
+.meeting-banner {
+  font-size: 0.78rem;
+  line-height: 1.4;
+  padding: 0.65rem 0.85rem;
+  border-radius: 6px;
+  border: 1px solid var(--panel-border);
+}
+
+.meeting-banner-ok {
+  border-color: rgba(61, 214, 198, 0.45);
+  background: rgba(61, 214, 198, 0.08);
+  color: var(--teal);
+}
+
+.meeting-banner-error {
+  border-color: rgba(220, 80, 80, 0.45);
+  background: rgba(220, 80, 80, 0.08);
+  color: #f0a0a0;
+}
+
+.meeting-optional {
+  border: 1px solid var(--panel-border);
+  border-radius: 8px;
+  padding: 0.35rem 0.75rem 0.55rem;
+  background: rgba(0, 0, 0, 0.12);
+}
+
+.meeting-optional summary {
+  cursor: pointer;
+  font-size: 0.72rem;
+  color: var(--muted);
+  padding: 0.35rem 0;
+  list-style-position: inside;
+}
+
+.meeting-optional .meeting-platform-connect {
+  margin: 0.35rem 0 0.25rem;
+  padding: 0.55rem 0 0;
+  border: none;
+  background: transparent;
+}
+
+.meeting-session-hint {
+  margin: 0.45rem 0 0;
+  font-size: 0.72rem;
+  color: var(--muted);
+  line-height: 1.4;
+}
+
 .meeting-platform-row {
   display: flex;
   flex-wrap: wrap;

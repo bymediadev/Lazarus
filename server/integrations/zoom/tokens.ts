@@ -7,6 +7,9 @@ export interface ZoomTokenRecord {
   refresh_token: string;
   expires_at: string;
   account_email?: string;
+  /** Zoom user id from /users/me — used to match Marketplace deauth events. */
+  zoom_user_id?: string;
+  zoom_account_id?: string;
   connected_at: string;
 }
 

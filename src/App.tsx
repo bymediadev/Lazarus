@@ -171,6 +171,20 @@ export default function App() {
     }
   }, [apiOnline, runAnalysis]);
 
+  /** OAuth return → open Live Meeting on the right platform. */
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const zoom = params.get("zoom");
+    const google = params.get("google");
+    const teams = params.get("teams");
+    if (!zoom && !google && !teams) return;
+
+    if (zoom) setLinkedPlatform("zoom");
+    else if (google) setLinkedPlatform("meet");
+    else if (teams) setLinkedPlatform("teams");
+    setActiveTab("live");
+  }, []);
+
   useEffect(() => {
     const check = () => {
       fetch(`${API_BASE}/api/health`)
@@ -353,7 +367,7 @@ export default function App() {
       })
       .join("\n")
       .trim();
-    if (!transcript || apiOnline === false) return;
+    if (transcript.length < 40 || apiOnline === false) return;
     setLiveTriageLoading(true);
     setLiveTriageError(null);
     try {
@@ -371,13 +385,23 @@ export default function App() {
     }
   }, [liveSessionTurns, liveSessionPlatform, liveSessionLiveObjections, dealValue, apiOnline]);
 
+  // First triage as soon as enough dialogue lands; then every ~25s while live.
   useEffect(() => {
-    if (!liveSessionActive || liveSessionTurns.length < 2 || apiOnline === false) return;
+    if (!liveSessionActive || apiOnline === false) return;
+    const textLen = liveSessionTurns.reduce((n, t) => n + t.dialogue.length, 0);
+    if (textLen < 40) return;
+
+    const first = window.setTimeout(() => {
+      void refreshLiveTriage();
+    }, 800);
     const id = window.setInterval(() => {
       void refreshLiveTriage();
-    }, 28000);
-    return () => window.clearInterval(id);
-  }, [liveSessionActive, liveSessionTurns.length, apiOnline, refreshLiveTriage]);
+    }, 25000);
+    return () => {
+      window.clearTimeout(first);
+      window.clearInterval(id);
+    };
+  }, [liveSessionActive, liveSessionTurns, apiOnline, refreshLiveTriage]);
 
   const handleLiveSessionEnd = useCallback(
     (
