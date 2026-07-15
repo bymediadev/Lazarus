@@ -78,7 +78,7 @@ Source files live in `public/`. Legacy paths such as `/privacy.html` **301-redir
 
 Single **Web Service** (monolith): `npm run build` → `dist/`, `npm start` → Express serves `/api/*` + static UI.
 
-Optional split: Lovable UI + Render API — follow **`docs/lovable-api-wiring.md`** (`VITE_API_URL`, `VITE_LAZARUS_API_KEY`, Trust Pack absolute URLs).
+Optional split: Lovable UI + Render API — wiring in **`docs/lovable-api-wiring.md`**; pilot UI prompt in **`docs/lovable-prompt.md`**.
 
 | Setting | Value |
 |---------|-------|

@@ -1,7 +1,8 @@
 # Lovable ↔ Lazarus Express API wiring
 
-Wire the Lovable **frontend** to the external Lazarus Express API on Render.  
-**Keep the current UI exactly as-is — only change API calls.**
+Wire the Lovable **frontend** to the external Lazarus Express API on Render.
+
+**Latest pilot UI prompt (Path A / Path B self-serve guide):** paste from **`docs/lovable-prompt.md`**.
 
 Production API base (default):
 
@@ -174,16 +175,11 @@ Example:
 
 ---
 
-## Out of scope for this Lovable pass
+## Out of scope for basic API wiring
 
-Do **not** re-implement in Lovable for this wiring task:
+For a wiring-only pass, do not re-implement Zoom RTMS, live triage, Gong, or scoring in Lovable.
 
-- Zoom / Meet / Teams RTMS
-- Live Meeting Companion / live triage
-- Gong / Otter ingest
-- Scoring / grounding / Gemini (lives on Express)
-
-Those stay on the Lazarus Render API. Lovable is the UI client only for this document.
+For the **pilot-ready UI pass**, follow **`docs/lovable-prompt.md`** instead (DemoTestGuide + Path A/B + simplified Live Meeting) — still no second analysis engine; Express remains the brain.
 
 ---
 

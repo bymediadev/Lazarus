@@ -5,7 +5,9 @@ import MeetingCompanion from "./components/MeetingCompanion";
 import LiveTriageBrief from "./components/LiveTriageBrief";
 import FieldRecorder from "./components/FieldRecorder";
 import CaptureStack from "./components/CaptureStack";
+import DemoTestGuide from "./components/DemoTestGuide";
 import EnterpriseTrust, { HeroTrustBanner } from "./components/EnterpriseTrust";
+import { DEMO_SAMPLE_TRANSCRIPT } from "./lib/demoSampleTranscript";
 import SiteFooter from "./components/SiteFooter";
 import TrustPackLink from "./components/TrustPackLink";
 import TrustPackModal from "./components/TrustPackModal";
@@ -77,6 +79,7 @@ export default function App() {
   const [apiOnline, setApiOnline] = useState<boolean | null>(null);
   const [syncNotice, setSyncNotice] = useState<string | null>(null);
   const [trustPack, setTrustPack] = useState<TrustPackSlug | null>(null);
+  const [liveEndedWithTurns, setLiveEndedWithTurns] = useState(false);
 
   const hasAudio = !!file;
   const hasCallTranscript = callTranscript.trim().length > 0;
@@ -413,6 +416,7 @@ export default function App() {
 
       if (turns.length) {
         setLiveTranscriptPayload(turns);
+        setLiveEndedWithTurns(true);
       }
       if (objections.length) {
         setLiveSessionObjections(
@@ -463,7 +467,7 @@ export default function App() {
           }}
         />
 
-        <div className="workspace">
+        <div className="workspace" id="workspace">
           <section className="panel panel-left intake-viewport">
             <div className="panel-label">Deal Intake — upload or paste from any recorder</div>
 
@@ -561,7 +565,16 @@ export default function App() {
                     />
                   </div>
                   <div className="input-group input-group-grow">
-                    <label htmlFor="call-transcript">Call Transcript</label>
+                    <div className="input-label-row">
+                      <label htmlFor="call-transcript">Call Transcript</label>
+                      <button
+                        type="button"
+                        className="load-sample-btn"
+                        onClick={() => setCallTranscript(DEMO_SAMPLE_TRANSCRIPT)}
+                      >
+                        Load sample
+                      </button>
+                    </div>
                     <textarea
                       id="call-transcript"
                       className="transcript-textarea"
@@ -646,9 +659,28 @@ export default function App() {
               </div>
             )}
 
-            <button className="run-button" onClick={handleRun} disabled={loading}>
-              {loading ? "Running Analysis..." : "Run Deal Analysis"}
+            <button
+              className="run-button"
+              onClick={handleRun}
+              disabled={loading || !hasAnyInput}
+              title={
+                !hasAnyInput
+                  ? "Paste a transcript, drop a recording, or add an email thread first"
+                  : undefined
+              }
+            >
+              {loading
+                ? "Running Analysis..."
+                : !hasAnyInput
+                  ? "Add a transcript or recording first"
+                  : "Run Deal Analysis"}
             </button>
+            {!hasAnyInput && !loading && (
+              <p className="run-button-hint">
+                Fastest path: click <strong>Load sample</strong> above the transcript box, then this
+                button turns green and runnable.
+              </p>
+            )}
             <div className="privacy-trust-banner" role="status">
               <span className="privacy-trust-icon" aria-hidden="true">
                 🛡️
@@ -720,6 +752,33 @@ export default function App() {
             )}
           </section>
         </div>
+
+        <DemoTestGuide
+          apiOnline={apiOnline}
+          activeTab={activeTab}
+          hasCallInput={hasCallInput}
+          hasResult={!!result}
+          loading={loading}
+          liveSessionActive={liveSessionActive}
+          liveTurnCount={liveSessionTurns.length}
+          liveEndedWithTurns={liveEndedWithTurns}
+          onGoCallTab={() => setActiveTab("call")}
+          onGoLiveTab={() => {
+            setLinkedPlatform("zoom");
+            setActiveTab("live");
+          }}
+          onLoadSampleTranscript={() => {
+            setCallTranscript(DEMO_SAMPLE_TRANSCRIPT);
+            setActiveTab("call");
+          }}
+          onRunAnalysis={() => {
+            setActiveTab("call");
+            void handleRun();
+          }}
+          onScrollToWorkspace={() => {
+            document.getElementById("workspace")?.scrollIntoView({ behavior: "smooth", block: "start" });
+          }}
+        />
 
         <EnterpriseTrust />
       </div>

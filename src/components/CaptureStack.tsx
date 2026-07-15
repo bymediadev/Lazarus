@@ -79,9 +79,9 @@ export default function CaptureStack({ onOpenLiveTab }: CaptureStackProps) {
           </span>
         </div>
         <p className="capture-stack-note">
-          <strong>Fastest test:</strong> Call Auto-Autopsy → paste a transcript → Analyze.{" "}
-          <strong>Live call:</strong> Live Meeting → pick Zoom → Start → mic/paste → End &amp; analyze.{" "}
-          Connecting Zoom is optional.
+          <strong>Fastest test:</strong> follow the self-serve guide below (Path A → Path B). Or: Call
+          Auto-Autopsy → paste a transcript → Analyze.{" "}
+          <a href="#demo-test-guide">Jump to step-by-step guide ↓</a>
         </p>
       </div>
     </section>

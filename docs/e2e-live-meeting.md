@@ -1,6 +1,8 @@
 # Easy end-to-end test (no Marketplace)
 
-Skip Zoom App Marketplace publishing. Use these two paths to prove Lazarus works for you and for a company testing.
+Skip Zoom App Marketplace publishing. On the product page, use the **self-serve guide** (`#demo-test-guide`) beside the Security Battlecard — Path A then Path B, steps turn green in order.
+
+You can also follow the manual paths below.
 
 ## Path A — Fastest (no Zoom account)
 
