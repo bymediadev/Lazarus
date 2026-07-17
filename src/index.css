@@ -2264,6 +2264,151 @@ body {
   font-style: italic;
 }
 
+.action-brief-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 1rem;
+}
+
+@media (min-width: 720px) {
+  .action-brief-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+.action-brief-label {
+  display: block;
+  font-family: var(--mono);
+  font-size: 0.62rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin-bottom: 0.35rem;
+}
+
+.meta-sep {
+  margin: 0 0.4rem;
+  color: var(--muted);
+}
+
+.supporting-actions {
+  margin-top: 0.85rem;
+}
+
+.buying-group-card.bg-aligned {
+  border-color: rgba(0, 230, 118, 0.35);
+}
+
+.buying-group-card.bg-partial {
+  border-color: rgba(255, 179, 0, 0.4);
+}
+
+.buying-group-card.bg-missing {
+  border-color: rgba(255, 107, 107, 0.4);
+}
+
+.buying-status-badge.bg-aligned {
+  color: var(--emerald);
+  border-color: rgba(0, 230, 118, 0.5);
+  background: rgba(0, 230, 118, 0.08);
+}
+
+.buying-status-badge.bg-partial {
+  color: var(--amber);
+  border-color: rgba(255, 179, 0, 0.5);
+  background: rgba(255, 179, 0, 0.08);
+}
+
+.buying-status-badge.bg-missing {
+  color: #ff6b6b;
+  border-color: rgba(255, 107, 107, 0.5);
+  background: rgba(255, 107, 107, 0.08);
+}
+
+.buying-role-list {
+  margin: 0.75rem 0 0;
+  padding-left: 1.1rem;
+  font-size: 0.85rem;
+  line-height: 1.55;
+}
+
+.buying-role-list li {
+  margin-bottom: 0.45rem;
+}
+
+.contract-pathway-card.pathway-gated {
+  border-color: rgba(255, 107, 107, 0.45);
+}
+
+.contract-pathway-card.pathway-ready {
+  border-color: rgba(0, 230, 118, 0.4);
+}
+
+.contract-pathway-card.pathway-tracking,
+.contract-pathway-card.pathway-thin {
+  border-color: rgba(255, 179, 0, 0.35);
+}
+
+.pathway-status-badge.pathway-gated,
+.concern-badge.concern-blocking {
+  color: #ff6b6b;
+  border-color: rgba(255, 107, 107, 0.5);
+  background: rgba(255, 107, 107, 0.08);
+}
+
+.pathway-status-badge.pathway-ready,
+.concern-badge.concern-addressed {
+  color: var(--emerald);
+  border-color: rgba(0, 230, 118, 0.5);
+  background: rgba(0, 230, 118, 0.08);
+}
+
+.pathway-status-badge.pathway-tracking,
+.pathway-status-badge.pathway-thin,
+.concern-badge.concern-open {
+  color: var(--amber);
+  border-color: rgba(255, 179, 0, 0.5);
+  background: rgba(255, 179, 0, 0.08);
+}
+
+.pathway-gate-banner {
+  margin: 0.65rem 0;
+  padding: 0.65rem 0.75rem;
+  border: 1px solid rgba(255, 107, 107, 0.4);
+  border-radius: 4px;
+  background: rgba(255, 107, 107, 0.08);
+  font-size: 0.88rem;
+  line-height: 1.45;
+  color: var(--text);
+}
+
+.pathway-stats {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  margin: 0.5rem 0 0.75rem;
+  font-family: var(--mono);
+  font-size: 0.68rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.pathway-meeting-list,
+.pathway-concern-list,
+.pathway-checklist {
+  margin: 0.5rem 0 0;
+  padding-left: 1.1rem;
+  font-size: 0.85rem;
+  line-height: 1.55;
+}
+
+.pathway-meeting-list li,
+.pathway-concern-list li,
+.pathway-checklist li {
+  margin-bottom: 0.45rem;
+}
+
 .invisible-veto-callout {
   margin-top: 1rem;
   padding: 0.75rem;

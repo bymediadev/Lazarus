@@ -319,6 +319,105 @@ export interface ProprietaryIndices {
   stakeholder_dispersion: StakeholderDispersionDetail;
 }
 
+export type BuyingGroupRole =
+  | "champion"
+  | "economic_buyer"
+  | "technical_veto"
+  | "procurement";
+
+export type BuyingGroupStatus = "ALIGNED" | "PARTIAL" | "MISSING";
+
+export interface BuyingGroupRolePresence {
+  role: BuyingGroupRole;
+  label: string;
+  present: boolean;
+  quiet: boolean;
+  holder: string | null;
+  evidence: string | null;
+  inferred: boolean;
+}
+
+export interface BuyingGroupAlignment {
+  status: BuyingGroupStatus;
+  summary: string;
+  expected_roles: BuyingGroupRole[];
+  present_roles: BuyingGroupRole[];
+  missing_roles: BuyingGroupRole[];
+  quiet_stakeholders: string[];
+  roles: BuyingGroupRolePresence[];
+  confidence: number;
+  evidence: string[];
+}
+
+export interface ActionContact {
+  name: string;
+  role_label: string;
+  why: string;
+}
+
+export interface StageAction {
+  title: string;
+  owner: "AE" | "Manager" | "SE" | "CS";
+  contact: ActionContact | null;
+  objective: string;
+  completion_signal: string;
+  stage_reason: string;
+}
+
+export interface LowFrictionBrief {
+  what_happened: string;
+  what_next: string;
+  who_to_contact: ActionContact | null;
+  crm_stage: string;
+  stage_bucket: string;
+  primary: StageAction;
+  supporting: StageAction[];
+  noise_cap_note: string;
+}
+
+export type ConcernStatus = "OPEN" | "ADDRESSED" | "BLOCKING";
+export type ContractGateStatus =
+  | "TRACKING"
+  | "GATED"
+  | "READY"
+  | "INSUFFICIENT_HISTORY";
+
+export interface PathwayMeeting {
+  date: string;
+  stage: string;
+  label: string;
+  objection_count: number;
+  veto_holders: string[];
+}
+
+export interface CycleConcern {
+  id: string;
+  text: string;
+  status: ConcernStatus;
+  source_meeting: string;
+  source_stage: string;
+  source_date: string;
+  owner_hint: string | null;
+  resolution_note: string | null;
+  inferred: boolean;
+}
+
+export interface ContractReadinessPathway {
+  gate_status: ContractGateStatus;
+  headline: string;
+  why_it_matters: string;
+  crm_stage: string;
+  stage_bucket: string;
+  meetings: PathwayMeeting[];
+  concerns: CycleConcern[];
+  open_count: number;
+  addressed_count: number;
+  blocking_count: number;
+  block_contract_send: boolean;
+  checklist: string[];
+  next_unified_step: string;
+}
+
 export interface StakeholderSignal {
   name: string;
   role: string;
@@ -368,6 +467,9 @@ export interface PostMortemResult {
   historical_context_match?: HistoricalContextMatch[];
   friction_deltas?: FrictionDeltas;
   immediate_remediation?: string[];
+  buying_group_alignment?: BuyingGroupAlignment;
+  action_brief?: LowFrictionBrief;
+  contract_readiness?: ContractReadinessPathway;
   sources?: TranscriptSources;
   processed_at?: string;
   id?: string | null;

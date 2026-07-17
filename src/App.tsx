@@ -56,6 +56,7 @@ export default function App() {
   const [dealValue, setDealValue] = useState("52000");
   const [accountId, setAccountId] = useState("");
   const [salesCycleDays, setSalesCycleDays] = useState("");
+  const [dealStage, setDealStage] = useState("");
   const [historicalCrmJson, setHistoricalCrmJson] = useState("");
   const [historicalParseError, setHistoricalParseError] = useState<string | null>(null);
   const [liveTranscriptPayload, setLiveTranscriptPayload] = useState<LiveTranscriptTurn[]>([]);
@@ -111,6 +112,7 @@ export default function App() {
       fieldCapture?: boolean;
       accountId?: string;
       salesCycleDays?: number;
+      dealStage?: string;
       historicalCrmContext?: HistoricalCrmContextEntry[] | null;
       liveTranscriptPayload?: LiveTranscriptTurn[];
       liveSessionObjections?: { text: string; status: string; source: string }[];
@@ -123,6 +125,7 @@ export default function App() {
         fieldCapture: payload.fieldCapture,
         accountId: payload.accountId,
         salesCycleDays: payload.salesCycleDays,
+        dealStage: payload.dealStage,
         historicalCrmContext: payload.historicalCrmContext ?? undefined,
         liveTranscriptPayload: payload.liveTranscriptPayload,
         liveSessionObjections: payload.liveSessionObjections,
@@ -313,6 +316,7 @@ export default function App() {
         fieldCapture: recordingSource === "field",
         accountId: accountId.trim() || undefined,
         salesCycleDays: salesCycleDaysNum,
+        dealStage: dealStage.trim() || undefined,
         historicalCrmContext,
         liveTranscriptPayload: liveTranscriptPayload.length ? liveTranscriptPayload : undefined,
         liveSessionObjections: liveSessionObjections.length ? liveSessionObjections : undefined,
@@ -450,11 +454,7 @@ export default function App() {
         </div>
         <span className="header-status">
           {headerStatus}
-          {apiOnline === false &&
-            (API_BASE
-              ? ` · API OFFLINE (${apiTargetLabel()})`
-              : " · API OFFLINE — run npm run dev")}
-          {apiOnline === true && API_BASE && ` · API: ${apiTargetLabel()}`}
+          {apiOnline === false && " · Temporarily unavailable — try again in a moment"}
         </span>
       </header>
 
@@ -474,9 +474,11 @@ export default function App() {
             <DealProfilePanel
               accountId={accountId}
               salesCycleDays={salesCycleDays}
+              dealStage={dealStage}
               historicalJson={historicalCrmJson}
               onAccountIdChange={setAccountId}
               onSalesCycleDaysChange={setSalesCycleDays}
+              onDealStageChange={setDealStage}
               onHistoricalJsonChange={setHistoricalCrmJson}
               onParseError={setHistoricalParseError}
             />
@@ -754,7 +756,6 @@ export default function App() {
         </div>
 
         <DemoTestGuide
-          apiOnline={apiOnline}
           activeTab={activeTab}
           hasCallInput={hasCallInput}
           hasResult={!!result}

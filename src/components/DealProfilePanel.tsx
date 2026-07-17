@@ -5,9 +5,11 @@ import { demoDeepContext } from "../lib/demoDeepContext";
 interface Props {
   accountId: string;
   salesCycleDays: string;
+  dealStage: string;
   historicalJson: string;
   onAccountIdChange: (value: string) => void;
   onSalesCycleDaysChange: (value: string) => void;
+  onDealStageChange: (value: string) => void;
   onHistoricalJsonChange: (value: string) => void;
   onParseError: (message: string | null) => void;
 }
@@ -48,15 +50,18 @@ export function parseHistoricalCrmJson(raw: string): HistoricalCrmContextEntry[]
 export default function DealProfilePanel({
   accountId,
   salesCycleDays,
+  dealStage,
   historicalJson,
   onAccountIdChange,
   onSalesCycleDaysChange,
+  onDealStageChange,
   onHistoricalJsonChange,
   onParseError,
 }: Props) {
   const loadDemoHistory = () => {
     onAccountIdChange(demoDeepContext.account_id);
     onSalesCycleDaysChange(String(demoDeepContext.sales_cycle_days));
+    onDealStageChange("contractsent");
     onHistoricalJsonChange(JSON.stringify(demoDeepContext.historical_crm_context, null, 2));
     onParseError(null);
   };
@@ -75,8 +80,9 @@ export default function DealProfilePanel({
     <details className="deal-profile-panel">
       <summary>Deal profile (optional — historical CRM context)</summary>
       <p className="console-tab-hint">
-        Account ID and prior-stage objections help Lazarus cross-reference live dialogue with deal
-        history. Paste a JSON array or load the demo fixture.
+        Account ID, CRM stage, and prior-meeting objections help Lazarus stitch a pre-contract
+        pathway — every logged concern must be met before a unified contract goes out. Paste a JSON
+        array or load the demo fixture.
       </p>
       <div className="input-group">
         <label htmlFor="account-id">Account ID</label>
@@ -97,6 +103,16 @@ export default function DealProfilePanel({
           value={salesCycleDays}
           onChange={(e) => onSalesCycleDaysChange(e.target.value)}
           placeholder="186"
+        />
+      </div>
+      <div className="input-group">
+        <label htmlFor="deal-stage">CRM deal stage (optional)</label>
+        <input
+          id="deal-stage"
+          type="text"
+          value={dealStage}
+          onChange={(e) => onDealStageChange(e.target.value)}
+          placeholder="e.g. appointmentscheduled, presentationscheduled, contractsent"
         />
       </div>
       <div className="input-group">

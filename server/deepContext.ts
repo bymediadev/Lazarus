@@ -21,6 +21,8 @@ export interface LiveSessionObjection {
 export interface DeepContextInput {
   accountId?: string;
   salesCycleDays?: number;
+  /** Optional HubSpot/Salesforce dealstage for stage-aligned actions. */
+  dealStage?: string;
   historicalCrmContext?: HistoricalCrmContextEntry[];
   liveTranscriptPayload?: LiveTranscriptTurn[];
   liveSessionObjections?: LiveSessionObjection[];
@@ -277,9 +279,13 @@ export function parseDeepContextFromBody(body: Record<string, unknown>): DeepCon
     historicalCrmContext = filterHistoricalBySalesCycle(historicalCrmContext, salesCycleDays);
   }
 
+  const dealStage =
+    String(body.deal_stage ?? body.dealstage ?? "").trim() || undefined;
+
   return {
     accountId,
     salesCycleDays,
+    dealStage,
     historicalCrmContext,
     liveTranscriptPayload: parseLiveTranscriptPayload(body.live_transcript_payload),
     liveSessionObjections: parseLiveSessionObjections(body.live_session_objections),
@@ -412,6 +418,7 @@ export function buildDeepContextMessageBlock(ctx: DeepContextInput): string {
 
   if (ctx.accountId) parts.push(`Account ID: ${ctx.accountId}`);
   if (ctx.salesCycleDays) parts.push(`Sales cycle length: ${ctx.salesCycleDays} days`);
+  if (ctx.dealStage) parts.push(`CRM deal stage: ${ctx.dealStage}`);
 
   if (ctx.historicalCrmContext?.length) {
     parts.push(

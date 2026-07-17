@@ -35,7 +35,7 @@
   <header class="legal-header">
     <img src="/logo.png" alt="Lazarus" />
     <h1>Security &amp; Sales Battlecard</h1>
-    <p class="legal-meta">SEC-002 · Sales enablement · v1.7 · July 2026 · Companion to SEC-001</p>
+    <p class="legal-meta">SEC-002 · Sales enablement · v1.8 · July 2026 · Companion to SEC-001</p>
   </header>
 
   <h2>What is Lazarus? (say this first)</h2>
@@ -93,8 +93,8 @@
   <p><strong>How we use AI:</strong> Step 1 — AI reads the messy text and pulls out names, quotes, and objections. Step 2 — our server runs fixed rules to score the deal. AI reads. Code scores. You lead.</p>
   <p><em>One-liner:</em> &ldquo;Don&rsquo;t paste Gong into ChatGPT. Drop it in Lazarus — we read it, score it, and remember the full deal.&rdquo;</p>
 
-  <h2>Big objections (Lucy · Jordan · Monika · James)</h2>
-  <p>Tested on a real 186-day deal example. Use these lines in sales, security, and rep-adoption calls.</p>
+  <h2>Big objections (Lucy · Jordan · Monika · James · Liam)</h2>
+  <p>Tested on a real 186-day deal example plus field feedback from Liam (buying-group inference, stage-aligned actions, low-noise briefs). Use these lines in sales, security, and rep-adoption calls.</p>
 
   <div class="objection">
     <strong>Lucy — &ldquo;You delete data after 30 days. Our deals take 6+ months.&rdquo;</strong>
@@ -141,20 +141,59 @@
     <em>One-liner:</em> &ldquo;Gong coaches the call. Lazarus judges the deal. Your rep gets the blocker, the people map, and the next move — in one brief.&rdquo;
   </div>
 
+  <div class="objection">
+    <strong>Liam — &ldquo;Another CI tool will just add noise to my reps&rsquo; queues.&rdquo;</strong>
+    Expensive conversation-intelligence tools often sit unused because they dump signals without telling the rep what to do.
+    Lazarus is built to <em>remove</em> cognitive load: every Recovery Brief answers three things only —
+    <strong>what happened</strong>, <strong>what to do next</strong>, and <strong>exactly who to contact</strong>.
+    Actions are capped (1 primary + 2 supporting) and aligned to the CRM stage — not a longer task list.
+    <br /><br />
+    <em>One-liner:</em> &ldquo;We don&rsquo;t fill the queue. We clear the next move.&rdquo;
+  </div>
+
+  <div class="objection">
+    <strong>Liam — &ldquo;Detecting what was said isn&rsquo;t enough — deals die on what&rsquo;s missing.&rdquo;</strong>
+    Note-takers surface spoken objections. Lazarus also <em>infers missing signals</em>: quiet stakeholders,
+    absent economic buyers, and incomplete buying-group alignment before contract stage.
+    If the buying map is incomplete for the CRM stage, we flag it as an inferred risk — even when nobody said
+    &ldquo;we don&rsquo;t have alignment&rdquo; on the call.
+    <br /><br />
+    <em>One-liner:</em> &ldquo;We score the silence — missing buying-group roles, not just the quotes.&rdquo;
+  </div>
+
+  <div class="objection">
+    <strong>Liam — &ldquo;If it isn&rsquo;t tied to pipeline stage, my team won&rsquo;t act.&rdquo;</strong>
+    The same transcript at discovery vs. contractsent should not produce the same homework.
+    Lazarus maps meeting signals to CRM stage and recommends the stage-correct next contact —
+    e.g. book the technical veto in evaluation; do not advance paper without procurement in negotiation.
+    HubSpot sandbox read/write is how we validate that loop before heavy CRM rollout.
+    <br /><br />
+    <strong>Pre-contract pathway:</strong> when a deal spans multiple meetings, Lazarus stitches every
+    logged objection into one gate. Contract send stays blocked until each concern is addressed —
+    so you send <em>one unified contract</em>, not a round of redlines that reopen old fights.
+    <br /><br />
+    <em>One-liner:</em> &ldquo;Stage-aligned next step, named contact, clear every cycle objection before paper — then they move.&rdquo;
+  </div>
+
   <table class="legal-table">
     <tr><th>Worry</th><th>Our answer</th><th>Ready?</th></tr>
     <tr><td>Long deals (Lucy)</td><td>Past notes + deal facts kept after recording purge</td><td>✅ Yes (API)</td></tr>
     <tr><td>Real buyer words (Jordan)</td><td>What changed + math-based risk score</td><td>✅ Yes</td></tr>
     <tr><td>Deal memory (Monika)</td><td>Today linked to past objections</td><td>✅ Yes (API) · timeline screen coming</td></tr>
     <tr><td>Rep value vs Gong (James)</td><td>Deal verdict + People Map + 30-day rescue steps — not talk-ratio coaching</td><td>✅ Yes</td></tr>
+    <tr><td>Queue noise (Liam)</td><td>What happened / what next / who — noise-capped actions</td><td>✅ Yes</td></tr>
+    <tr><td>Missing buying group (Liam)</td><td>Inferred quiet roles + stage-gated alignment</td><td>✅ Yes</td></tr>
+    <tr><td>Stage alignment (Liam)</td><td>CRM-stage conditioned primary action + HubSpot sandbox path</td><td>✅ Yes (brief) · sandbox write next</td></tr>
+    <tr><td>Unified contract (Liam)</td><td>Multi-meeting pathway gates send until every objection is met</td><td>✅ Yes (demo with Load demo history)</td></tr>
   </table>
 
   <table class="legal-table">
     <tr><th>Rep question</th><th>Gong / note-taker</th><th>Lazarus</th></tr>
     <tr><td>&ldquo;Did I run a good call?&rdquo;</td><td>✅ Talk tracks, coaching, keywords</td><td>Not our focus</td></tr>
     <tr><td>&ldquo;Is this deal still alive?&rdquo;</td><td>❌ No clear verdict</td><td>✅ Risk score + trajectory</td></tr>
-    <tr><td>&ldquo;Who is blocking me?&rdquo;</td><td>Sometimes in a summary</td><td>✅ People Map with quotes</td></tr>
-    <tr><td>&ldquo;What do I do tomorrow?&rdquo;</td><td>Generic coaching tips</td><td>✅ Rescue steps + CRM paste block</td></tr>
+    <tr><td>&ldquo;Who is blocking me?&rdquo;</td><td>Sometimes in a summary</td><td>✅ People Map + inferred quiet roles</td></tr>
+    <tr><td>&ldquo;Is the buying group complete for this stage?&rdquo;</td><td>❌ Rarely inferred</td><td>✅ Buying-group alignment status</td></tr>
+    <tr><td>&ldquo;What do I do tomorrow?&rdquo;</td><td>Generic coaching tips</td><td>✅ Stage-aligned next step + named contact</td></tr>
     <tr><td>&ldquo;Did we hear this objection before?&rdquo;</td><td>Search old calls manually</td><td>✅ Historical link when CRM context loaded</td></tr>
   </table>
 
@@ -271,6 +310,10 @@
     <tr><th>&ldquo;Reps won&rsquo;t upload.&rdquo;</th><td>The manager uploads. Export from Gong or drop a file. This is triage, not rep homework.</td></tr>
     <tr><th>&ldquo;We already have Gong / Chorus.&rdquo;</th><td>Great — keep it. Gong saves the call. Lazarus judges the deal. We sit on top, not instead.</td></tr>
     <tr><th>&ldquo;My reps won&rsquo;t use another tool (James).&rdquo;</th><td>They don&rsquo;t have to record twice. Manager drops the file; rep gets the deal brief — blocker, people, next 30 days.</td></tr>
+    <tr><th>&ldquo;This will just add more tasks (Liam).&rdquo;</th><td>Noise-capped: what happened, what next, who to contact — 1 primary + 2 supporting max.</td></tr>
+    <tr><th>&ldquo;You only hear what was said (Liam).&rdquo;</th><td>We also infer missing buying-group roles and quiet stakeholders before contract stage.</td></tr>
+    <tr><th>&ldquo;Actions ignore pipeline stage (Liam).&rdquo;</th><td>Next moves are conditioned on CRM stage; HubSpot sandbox validates read/write before rollout.</td></tr>
+    <tr><th>&ldquo;We keep editing the contract (Liam).&rdquo;</th><td>Pre-contract pathway: clear every meeting objection first, then send one unified paper.</td></tr>
     <tr><th>&ldquo;We need another note-taker?&rdquo;</th><td>No. You need a judgment layer. One recorder is enough. Lazarus reads what you already have.</td></tr>
     <tr><th>&ldquo;Why not ChatGPT?&rdquo;</th><td>ChatGPT writes. We score with rules you can repeat and defend — on top of your existing stack.</td></tr>
     <tr><th>&ldquo;AI makes things up.&rdquo;</th><td>We check quotes against the transcript. Fakes get stripped, you get a warning banner, then we score what&rsquo;s left.</td></tr>
@@ -282,7 +325,7 @@
   </table>
 
   <p class="footer">
-    Lazarus Trust Pack v1.7 · Full detail: <a href="/api/trust-pack/security-overview">SEC-001 Security Overview</a> ·
+    Lazarus Trust Pack v1.8 · Full detail: <a href="/api/trust-pack/security-overview">SEC-001 Security Overview</a> ·
     Have legal review before big enterprise deals · Contact: security@lazarusrevenue.com · lazarusrevenue.com
   </p>
 </body>

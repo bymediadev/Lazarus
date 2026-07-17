@@ -154,6 +154,9 @@ export default function AnalysisReport({ result: raw, sources }: Props) {
             <span>Stall signals {pi.dialogue_stall_score}</span>
             <span>Dept friction {pi.multi_department_friction}</span>
             {pi.authority_gap_flag && <span className="dri-flag">Authority gap</span>}
+            {r.buying_group_alignment && (
+              <span className="dri-flag">Buying group: {r.buying_group_alignment.status}</span>
+            )}
           </div>
         </div>
       )}

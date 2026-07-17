@@ -30,6 +30,19 @@ import {
   type ProprietaryIndices,
   type ScoringForce,
 } from "./scoring.js";
+import {
+  computeBuyingGroupAlignment,
+  type BuyingGroupAlignment,
+} from "./buyingGroup.js";
+import {
+  buildLowFrictionBrief,
+  resolveDealStage,
+  type LowFrictionBrief,
+} from "./stageActions.js";
+import {
+  buildContractReadinessPathway,
+  type ContractReadinessPathway,
+} from "./contractPathway.js";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
@@ -220,6 +233,12 @@ export interface EnterpriseAnalysis {
   historical_context_match?: DeepContextOutput["historical_context_match"];
   friction_deltas?: DeepContextOutput["friction_deltas"];
   immediate_remediation?: string[];
+  /** Inferred buying-group completeness (missing / quiet roles). */
+  buying_group_alignment?: BuyingGroupAlignment;
+  /** Low-noise stage-aligned brief: what happened / next / who. */
+  action_brief?: LowFrictionBrief;
+  /** Multi-meeting objection pathway — gate contract until concerns are met. */
+  contract_readiness?: ContractReadinessPathway;
 }
 
 const FALLBACK_MODELS = [
@@ -973,9 +992,86 @@ export async function analyzeTranscript(
     analysis = applyGroundingFilter(analysis, transcript);
   }
 
+  analysis = attachJudgmentBrief(analysis, deepContext);
+
   return {
     ...toApiResponse(analysis),
     grounding_audit: audit,
+  };
+}
+
+/** Productize Liam feedback: inferred buying-group gaps + stage-aligned next moves. */
+function attachJudgmentBrief(
+  analysis: EnterpriseAnalysis,
+  deepContext?: DeepContextInput
+): EnterpriseAnalysis {
+  const dealStage = resolveDealStage({
+    dealStage: deepContext?.dealStage,
+    historicalStages: (deepContext?.historicalCrmContext ?? [])
+      .map((e) => e.stage)
+      .filter(Boolean),
+    pipelineStageHint: analysis.pipeline_entry_validity?.stage_should_have_changed,
+  });
+
+  const buying_group_alignment = computeBuyingGroupAlignment(analysis.stakeholders, {
+    dealStage,
+    signalsMissed: analysis.pipeline_entry_validity?.signals_missed,
+  });
+
+  const action_brief = buildLowFrictionBrief({
+    dealStage,
+    executiveSummary: analysis.executive_summary,
+    coreBlocker: analysis.live_deal_triage?.core_blocker,
+    rootIssue: analysis.live_deal_triage?.root_issue,
+    recommendedNext: analysis.crm_intelligence?.recommended_next_action,
+    immediateRemediation: analysis.immediate_remediation,
+    buyingGroup: buying_group_alignment,
+    stakeholders: analysis.stakeholders,
+  });
+
+  const contract_readiness = buildContractReadinessPathway({
+    dealStage,
+    historicalCrmContext: deepContext?.historicalCrmContext,
+    liveSessionObjections: deepContext?.liveSessionObjections,
+    buyingGroup: buying_group_alignment,
+    signalsMissed: analysis.pipeline_entry_validity?.signals_missed,
+    coreBlocker: analysis.live_deal_triage?.core_blocker,
+    executiveSummary: analysis.executive_summary,
+    immediateRemediation: analysis.immediate_remediation,
+    historicalMatches: analysis.historical_context_match,
+  });
+
+  // When gated, prefer closing open concerns over a generic stage action
+  const gatedNext =
+    contract_readiness.block_contract_send
+      ? contract_readiness.next_unified_step
+      : null;
+
+  return {
+    ...analysis,
+    buying_group_alignment,
+    action_brief: gatedNext
+      ? {
+          ...action_brief,
+          what_next: gatedNext,
+          primary: {
+            ...action_brief.primary,
+            title: "Clear open cycle concerns before sending contract",
+            objective: gatedNext,
+            completion_signal: "Contract readiness shows READY — zero open/blocking concerns",
+            stage_reason:
+              "Unified contract pathway: every meeting objection must be met before paper goes out",
+          },
+        }
+      : action_brief,
+    contract_readiness,
+    crm_intelligence: {
+      ...analysis.crm_intelligence,
+      recommended_next_action:
+        gatedNext ||
+        analysis.crm_intelligence.recommended_next_action?.trim() ||
+        action_brief.primary.objective,
+    },
   };
 }
 

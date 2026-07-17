@@ -3,7 +3,11 @@ import {
   deriveProprietaryIndices,
   computeDialogueStallSignals,
 } from "../server/scoring.ts";
+import { computeBuyingGroupAlignment } from "../server/buyingGroup.ts";
+import { buildLowFrictionBrief, normalizePipelineStage } from "../server/stageActions.ts";
+import { buildContractReadinessPathway } from "../server/contractPathway.ts";
 import { readFileSync } from "fs";
+import { demoDeepContext } from "../src/lib/demoDeepContext.ts";
 
 // Transcript 1 — velocity / closed-won (pre-approved budget must NOT crush viability)
 const velocityForces = [
@@ -201,5 +205,148 @@ if (stall.deferral_phrase_count < 2) {
   failed = true;
 }
 
+// --- Buying-group alignment + stage-aligned brief (Liam feedback) ---
+const bgDiscovery = computeBuyingGroupAlignment(sarahMarkStakeholders, {
+  dealStage: "appointmentscheduled",
+});
+const bgContract = computeBuyingGroupAlignment(sarahMarkStakeholders, {
+  dealStage: "contractsent",
+});
+
+console.log("\n=== Buying-group / stage actions ===");
+console.log("  discovery status:", bgDiscovery.status, "missing:", bgDiscovery.missing_roles.join(","));
+console.log("  contract status:", bgContract.status, "missing:", bgContract.missing_roles.join(","));
+
+if (!bgDiscovery.missing_roles.includes("economic_buyer") && !bgDiscovery.quiet_stakeholders.length) {
+  // Dave is technical_veto quiet; economic buyer may also be missing
+  console.error("FAIL: Sarah/Mark should surface quiet stakeholders or missing economic buyer");
+  failed = true;
+}
+if (!bgDiscovery.quiet_stakeholders.includes("Dave")) {
+  console.error("FAIL: Dave should be listed as quiet stakeholder");
+  failed = true;
+}
+if (!bgContract.expected_roles.includes("procurement")) {
+  console.error("FAIL: contractsent stage should expect procurement role");
+  failed = true;
+}
+if (bgDiscovery.status === "ALIGNED") {
+  console.error("FAIL: Sarah/Mark discovery buying group should not be ALIGNED");
+  failed = true;
+}
+
+const briefNeg = buildLowFrictionBrief({
+  dealStage: "contractsent",
+  executiveSummary: "Deal stalled without Dave on the technical gate",
+  coreBlocker: "Absent VP Infrastructure",
+  buyingGroup: bgContract,
+  stakeholders: sarahMarkStakeholders,
+  immediateRemediation: [
+    "01 [Immediate]: Book Dave for architecture review",
+    "02 [Next Action]: Draft phased pilot for Mark",
+    "03 [Noise]: Ignore this third item in primary path",
+  ],
+});
+
+console.log("  brief stage:", briefNeg.crm_stage, briefNeg.stage_bucket);
+console.log("  primary:", briefNeg.primary.title);
+console.log("  who:", briefNeg.who_to_contact?.name);
+
+if (briefNeg.stage_bucket !== "negotiation") {
+  console.error("FAIL: contractsent should map to negotiation bucket, got", briefNeg.stage_bucket);
+  failed = true;
+}
+if (!briefNeg.who_to_contact?.name) {
+  console.error("FAIL: brief should name who to contact");
+  failed = true;
+}
+if (briefNeg.who_to_contact?.name !== "Dave") {
+  console.error(
+    "FAIL: contractsent Sarah/Mark brief should prioritize Dave (technical veto), got",
+    briefNeg.who_to_contact?.name
+  );
+  failed = true;
+}
+if (briefNeg.supporting.length > 2) {
+  console.error("FAIL: supporting actions must be noise-capped at 2, got", briefNeg.supporting.length);
+  failed = true;
+}
+if (!/what happened|what next|who/i.test(`${briefNeg.what_happened} ${briefNeg.what_next}`)) {
+  // soft check — fields must be non-empty
+}
+if (!briefNeg.what_happened || !briefNeg.what_next) {
+  console.error("FAIL: brief must include what_happened and what_next");
+  failed = true;
+}
+
+const disc = normalizePipelineStage("qualifiedtobuy");
+const nego = normalizePipelineStage("contractsent");
+if (nego.bucket !== "negotiation") {
+  console.error("FAIL: normalizePipelineStage(contractsent) expected negotiation");
+  failed = true;
+}
+if (disc.bucket === "negotiation") {
+  console.error("FAIL: qualifiedtobuy should not be negotiation");
+  failed = true;
+}
+
+const pathwayGated = buildContractReadinessPathway({
+  dealStage: "contractsent",
+  historicalCrmContext: demoDeepContext.historical_crm_context.map((e) => ({
+    date: e.date,
+    stage: e.stage,
+    past_identified_veto_holders: e.past_identified_veto_holders.map((v) => ({ ...v })),
+    past_logged_objections: [...e.past_logged_objections],
+  })),
+  buyingGroup: bgContract,
+  coreBlocker: "Absent VP Infrastructure",
+});
+
+console.log("\n=== Pre-contract pathway ===");
+console.log("  gate:", pathwayGated.gate_status, "block:", pathwayGated.block_contract_send);
+console.log(
+  "  open/blocking:",
+  pathwayGated.open_count + pathwayGated.blocking_count,
+  "addressed:",
+  pathwayGated.addressed_count,
+  "meetings:",
+  pathwayGated.meetings.length
+);
+
+if (pathwayGated.gate_status !== "GATED") {
+  console.error("FAIL: demo history + contractsent should GATED pathway, got", pathwayGated.gate_status);
+  failed = true;
+}
+if (!pathwayGated.block_contract_send) {
+  console.error("FAIL: GATED pathway must block_contract_send");
+  failed = true;
+}
+if (pathwayGated.meetings.length < 3) {
+  console.error("FAIL: pathway should track multiple meetings, got", pathwayGated.meetings.length);
+  failed = true;
+}
+if (pathwayGated.concerns.length < 3) {
+  console.error("FAIL: pathway should surface multiple cycle concerns, got", pathwayGated.concerns.length);
+  failed = true;
+}
+if (!/unified contract|do not send|open concern/i.test(pathwayGated.next_unified_step + pathwayGated.headline)) {
+  console.error("FAIL: pathway messaging should reference unified contract / open concerns");
+  failed = true;
+}
+
+const pathwayEarly = buildContractReadinessPathway({
+  dealStage: "appointmentscheduled",
+  historicalCrmContext: demoDeepContext.historical_crm_context.map((e) => ({
+    date: e.date,
+    stage: e.stage,
+    past_identified_veto_holders: e.past_identified_veto_holders.map((v) => ({ ...v })),
+    past_logged_objections: [...e.past_logged_objections],
+  })),
+});
+if (pathwayEarly.gate_status !== "TRACKING") {
+  console.error("FAIL: early stage with open concerns should TRACKING, got", pathwayEarly.gate_status);
+  failed = true;
+}
+
 if (failed) process.exit(1);
-console.log("\nSCORING + DRI REGRESSION OK");
+console.log("\nSCORING + DRI + BUYING-GROUP + PATHWAY REGRESSION OK");

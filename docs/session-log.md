@@ -4,6 +4,58 @@ Two-sentence handoff notes for each build session. Append newest entries at the 
 
 ---
 
+## 2026-07-17 — Lovable parity prompt + upload (Liam layer)
+
+**Built:** Rewrote `docs/lovable-prompt.md` + `docs/lovable-api-wiring.md` for Deal Profile stage, action_brief, buying-group, pre-contract pathway; refreshed Lovable project knowledge; sent sync + shape-align follow-up to `lazarusdealrescue`.
+
+**Verified:** Render `/api/health` ok; Lovable agent completed UI edits (`da9984aa…`); `VITE_API_URL` must be set manually in Lovable Project Settings (tool cannot write `VITE_*`).
+
+**Mess / later:** User sets `VITE_API_URL=https://lazarus-4uxi.onrender.com` in Lovable secrets → republish → smoke Path A + contractsent demo.
+
+---
+
+**Built:** Contract readiness pathway stitches objections across CRM meetings + this call; gates contractsent until concerns are met (unified paper). Shown in Recovery Brief + CRM notes + battlecard.
+
+**Files:** `server/contractPathway.ts`, `server/gemini.ts`, `ConciseDiagnostic.tsx`, `crmNotes.ts`, `DealProfilePanel.tsx`, `security-battlecard.html`, scoring regression
+
+**Verified:** `npm run test:scoring`
+
+**Mess / later:** Manual “mark concern addressed” UI; HubSpot write-back of pathway status.
+
+---
+
+## 2026-07-16 — Liam feedback: buying-group + battlecard objections
+
+**Built:** First-class buying-group alignment + stage-aligned low-noise action brief (what happened / next / who); deal_stage on intake; Liam objections on Security Battlecard v1.8.
+
+**Files:** `server/buyingGroup.ts`, `server/stageActions.ts`, `server/gemini.ts`, `server/deepContext.ts`, `ConciseDiagnostic.tsx`, `crmNotes.ts`, `DealProfilePanel.tsx`, `App.tsx`, `security-battlecard.html`, scoring regression
+
+**Verified:** `npm run test:scoring`
+
+**Mess / later:** HubSpot sandbox OAuth read/write still deferred until post-call validation.
+
+---
+
+## 2026-07-16 — Lovable parity prompt refreshed
+
+**Built:** Rewrote `docs/lovable-prompt.md` to match current local UI (Path A×3 / Path B×4, hero lines, hidden API plumbing, Load sample + Run empty-state, localStorage unlock, no login).
+
+**Verified:** Prompt cross-checked against DemoTestGuide, HeroTrustBanner, App header/Run button, CaptureStack.
+
+**Mess / later:** Paste Prompt into Lovable (`lazarusdealrescue`) and smoke Path A on publish URL.
+
+---
+
+## 2026-07-15 — Path A→3 / Path B→4; hide API plumbing
+
+**Built:** Cut DemoTestGuide to 3 + 4 value steps; removed server/API from guide + header; hero lines locked to stalled-deal + CRM contrast; Live Meeting warn de-plumbed.
+
+**Verified:** Guide props no longer take `apiOnline`; docs/e2e + lovable-prompt step counts match.
+
+**Mess / later:** Demo to Jordan Thursday; James for 3 week-long stalled-deal testers.
+
+---
+
 ## 2026-07-15 — Lovable vs local UI parity kickoff
 
 **Built:** Confirmed Lovable still old Rescue Console; rewrote `docs/lovable-prompt.md` as parity sync; uploaded + `send_message` to Lovable (`umsg_01kxjnm6hgf1sajjpqfng0s6g8`); refreshed project knowledge.

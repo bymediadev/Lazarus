@@ -424,7 +424,7 @@ export default function MeetingCompanion({
           </p>
           {apiOnline === false && (
             <p className="meeting-session-warn">
-              API offline — run <code>npm run dev</code> first.
+              Live analysis is temporarily unavailable — try again in a moment.
             </p>
           )}
         </div>

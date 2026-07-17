@@ -37,6 +37,7 @@ export interface PostMortemPayload {
   fieldCapture?: boolean;
   accountId?: string;
   salesCycleDays?: number;
+  dealStage?: string;
   historicalCrmContext?: HistoricalCrmContextEntry[];
   liveTranscriptPayload?: LiveTranscriptTurn[];
   liveSessionObjections?: { text: string; status: string; source: string }[];
@@ -71,6 +72,10 @@ export async function runPostMortem(payload: PostMortemPayload): Promise<PostMor
 
   if (payload.salesCycleDays != null && payload.salesCycleDays > 0) {
     formData.append("sales_cycle_days", String(payload.salesCycleDays));
+  }
+
+  if (payload.dealStage?.trim()) {
+    formData.append("deal_stage", payload.dealStage.trim());
   }
 
   if (payload.historicalCrmContext?.length) {

@@ -108,6 +108,25 @@ function formatActionItems(plan: RescueTriagePlan): string {
     .join("\n\n");
 }
 
+function buyingGroupTone(status: string): string {
+  if (status === "ALIGNED") return "bg-aligned";
+  if (status === "PARTIAL") return "bg-partial";
+  return "bg-missing";
+}
+
+function pathwayTone(status: string): string {
+  if (status === "READY") return "pathway-ready";
+  if (status === "GATED") return "pathway-gated";
+  if (status === "INSUFFICIENT_HISTORY") return "pathway-thin";
+  return "pathway-tracking";
+}
+
+function concernTone(status: string): string {
+  if (status === "ADDRESSED") return "concern-addressed";
+  if (status === "BLOCKING") return "concern-blocking";
+  return "concern-open";
+}
+
 export default function ConciseDiagnostic({ result }: Props) {
   const [copiedActions, setCopiedActions] = useState(false);
   const [copiedCrm, setCopiedCrm] = useState(false);
@@ -119,9 +138,26 @@ export default function ConciseDiagnostic({ result }: Props) {
     near_term_30_90_days: [],
     long_term_90_plus_days: [],
   };
+  const brief = result.action_brief;
+  const buyingGroup = result.buying_group_alignment;
+  const pathway = result.contract_readiness;
 
   const copyActionItems = async () => {
-    await navigator.clipboard.writeText(formatActionItems(plan));
+    const text = brief
+      ? [
+          `What happened: ${brief.what_happened}`,
+          `What next: ${brief.what_next}`,
+          brief.who_to_contact
+            ? `Who: ${brief.who_to_contact.name} (${brief.who_to_contact.role_label})`
+            : null,
+          "",
+          `Primary: ${brief.primary.title}`,
+          ...brief.supporting.map((a, i) => `Supporting ${i + 1}: ${a.title}`),
+        ]
+          .filter(Boolean)
+          .join("\n")
+      : formatActionItems(plan);
+    await navigator.clipboard.writeText(text);
     setCopiedActions(true);
     setTimeout(() => setCopiedActions(false), 2000);
   };
@@ -143,7 +179,7 @@ export default function ConciseDiagnostic({ result }: Props) {
   if (sixty.length) timeline.push({ phase: "60 Days", items: sixty });
   if (ninety.length) timeline.push({ phase: "90 Days", items: ninety });
 
-  const hasPlan = timeline.some((t) => t.items.length > 0);
+  const hasPlan = timeline.some((t) => t.items.length > 0) || !!brief;
   const triage = result.live_deal_triage;
   const historyMatches = result.historical_context_match ?? [];
   const friction = result.friction_deltas;
@@ -151,6 +187,168 @@ export default function ConciseDiagnostic({ result }: Props) {
 
   return (
     <div className="concise-diagnostic">
+      {brief && (
+        <article className="card card-emerald concise-card action-brief-card">
+          <h2 className="card-title">What happened · What next · Who to contact</h2>
+          <div className="card-body">
+            <p className="meta-line">
+              CRM stage: <strong>{brief.crm_stage}</strong>
+              <span className="meta-sep">·</span>
+              {brief.noise_cap_note}
+            </p>
+            <div className="action-brief-grid">
+              <div>
+                <span className="action-brief-label">What happened</span>
+                <p className="stall-headline">{brief.what_happened}</p>
+              </div>
+              <div>
+                <span className="action-brief-label">What to do next</span>
+                <p className="stall-headline">{brief.what_next}</p>
+                <p className="meta-line">{brief.primary.stage_reason}</p>
+              </div>
+              <div>
+                <span className="action-brief-label">Who to contact</span>
+                {brief.who_to_contact ? (
+                  <p className="stall-headline">
+                    <strong>{brief.who_to_contact.name}</strong>
+                    {" · "}
+                    {brief.who_to_contact.role_label}
+                    <br />
+                    <span className="stall-evidence">{brief.who_to_contact.why}</span>
+                  </p>
+                ) : (
+                  <p className="meta-line">No single contact inferred — confirm buying group below.</p>
+                )}
+              </div>
+            </div>
+            {brief.supporting.length > 0 && (
+              <ol className="timeline-actions supporting-actions">
+                {brief.supporting.map((a, i) => (
+                  <li key={i}>
+                    <strong>{a.title}</strong>
+                    {a.completion_signal && (
+                      <span className="meta-line"> — done when: {a.completion_signal}</span>
+                    )}
+                  </li>
+                ))}
+              </ol>
+            )}
+          </div>
+        </article>
+      )}
+
+      {pathway && (
+        <article className={`card concise-card contract-pathway-card ${pathwayTone(pathway.gate_status)}`}>
+          <h2 className="card-title">Pre-contract pathway (multi-meeting)</h2>
+          <div className="card-body">
+            <p className="stall-headline">
+              <span className={`persona-badge pathway-status-badge ${pathwayTone(pathway.gate_status)}`}>
+                {pathway.gate_status}
+              </span>{" "}
+              {pathway.headline}
+            </p>
+            <p className="meta-line">{pathway.why_it_matters}</p>
+            {pathway.block_contract_send && (
+              <p className="pathway-gate-banner">
+                Do not send the contract yet — clear every open concern so one unified paper goes out.
+              </p>
+            )}
+            <div className="pathway-stats">
+              <span>{pathway.meetings.length} meetings tracked</span>
+              <span>{pathway.open_count + pathway.blocking_count} open</span>
+              <span>{pathway.addressed_count} addressed</span>
+            </div>
+            {pathway.meetings.length > 0 && (
+              <ol className="pathway-meeting-list">
+                {pathway.meetings.map((m, i) => (
+                  <li key={i}>
+                    <strong>{m.label}</strong>
+                    {m.objection_count > 0 && (
+                      <span className="meta-line"> — {m.objection_count} logged objection(s)</span>
+                    )}
+                    {m.veto_holders.length > 0 && (
+                      <span className="stall-evidence"> · {m.veto_holders.join(", ")}</span>
+                    )}
+                  </li>
+                ))}
+              </ol>
+            )}
+            {pathway.concerns.length > 0 && (
+              <ul className="pathway-concern-list">
+                {pathway.concerns.map((c) => (
+                  <li key={c.id} className={concernTone(c.status)}>
+                    <span className={`persona-badge concern-badge ${concernTone(c.status)}`}>
+                      {c.status}
+                    </span>{" "}
+                    <strong>{c.text}</strong>
+                    <br />
+                    <span className="meta-line">
+                      {c.source_meeting}
+                      {c.owner_hint ? ` · Owner: ${c.owner_hint}` : ""}
+                      {c.inferred ? " · inferred" : ""}
+                    </span>
+                    {c.resolution_note && (
+                      <>
+                        <br />
+                        <span className="stall-evidence">{c.resolution_note}</span>
+                      </>
+                    )}
+                  </li>
+                ))}
+              </ul>
+            )}
+            <p className="stall-headline" style={{ marginTop: "0.75rem" }}>
+              {pathway.next_unified_step}
+            </p>
+            <ul className="pathway-checklist">
+              {pathway.checklist.map((item, i) => (
+                <li key={i}>{item}</li>
+              ))}
+            </ul>
+          </div>
+        </article>
+      )}
+
+      {buyingGroup && (
+        <article className={`card concise-card buying-group-card ${buyingGroupTone(buyingGroup.status)}`}>
+          <h2 className="card-title">Buying-group alignment (inferred)</h2>
+          <div className="card-body">
+            <p className="stall-headline">
+              <span className={`persona-badge buying-status-badge ${buyingGroupTone(buyingGroup.status)}`}>
+                {buyingGroup.status}
+              </span>{" "}
+              {buyingGroup.summary}
+            </p>
+            <p className="meta-line">Confidence {buyingGroup.confidence} · Quiet stakeholders inferred even if never quoted</p>
+            <ul className="buying-role-list">
+              {buyingGroup.roles.map((role) => (
+                <li key={role.role}>
+                  <strong>{role.label}</strong>
+                  {role.present && !role.quiet && role.holder && (
+                    <span> — {role.holder} present</span>
+                  )}
+                  {role.quiet && role.holder && (
+                    <span className="stall-evidence"> — {role.holder} quiet / absent</span>
+                  )}
+                  {!role.present && <span className="stall-evidence"> — missing (inferred)</span>}
+                  {role.evidence && (
+                    <>
+                      <br />
+                      <span className="stall-evidence">"{role.evidence.replace(/^"|"$/g, "")}"</span>
+                    </>
+                  )}
+                </li>
+              ))}
+            </ul>
+            {buyingGroup.quiet_stakeholders.length > 0 && (
+              <p className="meta-line">
+                Quiet: {buyingGroup.quiet_stakeholders.join(", ")}
+              </p>
+            )}
+          </div>
+        </article>
+      )}
+
       {triage && (triage.root_issue || triage.core_blocker) && (
         <article className="card card-amber concise-card">
           <h2 className="card-title">Live Deal Triage</h2>
@@ -243,7 +441,7 @@ export default function ConciseDiagnostic({ result }: Props) {
         </article>
       )}
 
-      {immediate.length > 0 && (
+      {immediate.length > 0 && !brief && (
         <article className="card card-emerald concise-card">
           <h2 className="card-title">Immediate Remediation (0–7 Days)</h2>
           <div className="card-body">
@@ -342,15 +540,15 @@ export default function ConciseDiagnostic({ result }: Props) {
         <h2 className="card-title">One-Click CRM Portability</h2>
         <div className="card-body">
           <p className="meta-line">
-            Condensed markdown for HubSpot or Salesforce — Root Issue, Core Blocker, and Next Action
-            Date in one paste.
+            Condensed markdown for HubSpot or Salesforce — what happened, who to contact, and the
+            next stage-aligned move in one paste.
           </p>
           <button
             type="button"
             className={`copy-button crm-copy-btn ${copiedCrm ? "copied" : ""}`}
             onClick={copyCrmNotes}
           >
-            {copiedCrm ? "Copied!" : "📋 Copy Compressed CRM Notes"}
+            {copiedCrm ? "Copied!" : "Copy Compressed CRM Notes"}
           </button>
         </div>
       </article>

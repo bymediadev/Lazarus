@@ -21,21 +21,22 @@ export function HeroTrustBanner() {
     <section className="hero-trust">
       <p className="hero-trust-eyebrow">Deal judgment layer · v1</p>
       <h2 className="hero-trust-headline">
-        Keep Zoom or Gong. Add Lazarus on top. Know if the deal is still winnable — and why.
+        Lazarus shows you what the buyer is doing inside a stalled deal right now, so you know which
+        opportunities are actually recoverable.
       </h2>
       <p className="hero-trust-body">
-        Lazarus is not another note-taker. You already record calls somewhere. We read what the buyer
-        said — from a file, a transcript, email, or field notes — and score the deal with fixed rules
-        you can defend in a forecast meeting. A person still runs the deal.
+        CRMs tell you what happened; Lazarus tells you what to do next. Paste a transcript or speak
+        on a live call — get a Recovery Brief you can defend in a forecast meeting. A person still
+        runs the deal.
       </p>
       <ul className="hero-trust-bullets">
         <li>
-          <strong>The problem:</strong> Recordings pile up. ChatGPT gives advice you cannot repeat.
-          Nobody knows which deals are actually dead.
+          <strong>The problem:</strong> You can see stalls in the CRM, but not why momentum died or
+          which deals are still winnable.
         </li>
         <li>
-          <strong>The solution:</strong> One place to score risk, map blockers, and stitch call +
-          email + field into one story.
+          <strong>The solution:</strong> Paste or speak → score risk, map blockers, and get the next
+          action in one Recovery Brief.
         </li>
         <li>
           <strong>The guardrail:</strong> Published Trust Pack, encryption, purge options, and no

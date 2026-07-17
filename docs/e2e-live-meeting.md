@@ -1,6 +1,6 @@
 # Easy end-to-end test (no Marketplace)
 
-Skip Zoom App Marketplace publishing. On the product page, use the **self-serve guide** (`#demo-test-guide`) beside the Security Battlecard — Path A then Path B, steps turn green in order.
+Skip Zoom App Marketplace publishing. On the product page, use the **self-serve guide** (`#demo-test-guide`) beside the Security Battlecard — Path A (3 steps) then Path B (4 steps). Server/API status stays out of the visible flow.
 
 You can also follow the manual paths below.
 
@@ -8,11 +8,9 @@ You can also follow the manual paths below.
 
 Confirms judgment / autopsy without any integration.
 
-1. Run `npm run dev` (API + UI).
-2. Open the app → leave **Call Auto-Autopsy** selected.
-3. Paste a sample from `fixtures/sarah_mark_transcript.txt` (or any real stalled-call transcript).
-4. Click **Analyze**.
-5. You should see risk, root cause, and recovery actions.
+1. Paste a stalled-call transcript (or load the Sarah & Mark sample).
+2. Click **Run Deal Analysis**.
+3. Read the Recovery Brief (risk, root cause, next action).
 
 That’s a full product demo for value. No OAuth, no mic, no meeting.
 
@@ -24,12 +22,10 @@ Confirms live capture → Recovery Brief → post-call autopsy.
 
 | Step | Where | What |
 |------|--------|------|
-| 1 | Browser | Chrome or Edge (mic captions). |
-| 2 | Terminal | `npm run dev` — wait until API health is green in the header. |
-| 3 | Lazarus → **Live Meeting** | Zoom is pre-selected. |
-| 4 | Click **Start live session** | Mic turns on. Join your real Zoom/Meet/Teams call in another window. |
-| 5 | During the call | Speak (mic) and/or paste lines like `Buyer: we need a DPA first`. Watch the Recovery Brief update. |
-| 6 | Click **End & run analysis** | Session loads into Call Auto-Autopsy — run Analyze if it doesn’t start. |
+| 1 | Lazarus → **Live Meeting** | Zoom / Meet / Teams — same mic + paste flow. Prefer Chrome/Edge for captions. |
+| 2 | Click **Start live session** | Allow mic. Join your real call in another window. |
+| 3 | During the call | Speak and/or paste buyer lines. Watch the Recovery Brief update. |
+| 4 | Click **End & run analysis** | Confirm the brief still tells you what to do next. |
 
 **You do not need to Connect Zoom** for Path B. Connect is optional (collapsed under “Optional”) and only needed for automatic RTMS streaming on Render.
 

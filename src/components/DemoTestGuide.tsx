@@ -2,7 +2,6 @@ import { useEffect, useMemo, useState } from "react";
 import TrustPackLink from "./TrustPackLink";
 
 export interface DemoTestGuideProps {
-  apiOnline: boolean | null;
   activeTab: "call" | "email" | "field" | "live";
   hasCallInput: boolean;
   hasResult: boolean;
@@ -26,7 +25,7 @@ interface StepDef {
   done: boolean;
   actionLabel?: string;
   onAction?: () => void;
-  art: "server" | "tab" | "paste" | "run" | "brief" | "browser" | "live" | "mic" | "end";
+  art: "paste" | "run" | "brief" | "live" | "mic" | "end";
 }
 
 const PATH_A_DONE_KEY = "lazarus-demo-path-a-done";
@@ -39,23 +38,6 @@ function StepArt({ kind }: { kind: StepDef["art"] }) {
     "aria-hidden": true as const,
   };
   switch (kind) {
-    case "server":
-      return (
-        <svg {...common}>
-          <rect x="28" y="18" width="64" height="44" rx="4" fill="none" stroke="currentColor" strokeWidth="2" />
-          <circle cx="40" cy="40" r="3" fill="currentColor" />
-          <circle cx="52" cy="40" r="3" fill="currentColor" />
-          <path d="M64 40h20" stroke="currentColor" strokeWidth="2" />
-        </svg>
-      );
-    case "tab":
-      return (
-        <svg {...common}>
-          <rect x="16" y="22" width="88" height="42" rx="3" fill="none" stroke="currentColor" strokeWidth="2" />
-          <path d="M16 34h88" stroke="currentColor" strokeWidth="2" />
-          <rect x="24" y="24" width="28" height="10" rx="2" fill="currentColor" opacity="0.35" />
-        </svg>
-      );
     case "paste":
       return (
         <svg {...common}>
@@ -76,18 +58,6 @@ function StepArt({ kind }: { kind: StepDef["art"] }) {
           <rect x="20" y="16" width="80" height="50" rx="3" fill="none" stroke="currentColor" strokeWidth="2" />
           <path d="M30 30h40M30 42h54M30 54h32" stroke="currentColor" strokeWidth="2" />
           <circle cx="88" cy="30" r="6" fill="currentColor" />
-        </svg>
-      );
-    case "browser":
-      return (
-        <svg {...common}>
-          <rect x="18" y="16" width="84" height="50" rx="3" fill="none" stroke="currentColor" strokeWidth="2" />
-          <path d="M18 28h84" stroke="currentColor" strokeWidth="2" />
-          <circle cx="28" cy="22" r="2" fill="currentColor" />
-          <circle cx="36" cy="22" r="2" fill="currentColor" />
-          <text x="48" y="50" fontSize="10" fill="currentColor" fontFamily="monospace">
-            Chrome
-          </text>
         </svg>
       );
     case "live":
@@ -128,7 +98,6 @@ function statusFor(index: number, doneFlags: boolean[]): StepStatus {
 }
 
 export default function DemoTestGuide({
-  apiOnline,
   activeTab,
   hasCallInput,
   hasResult,
@@ -143,7 +112,6 @@ export default function DemoTestGuide({
   onScrollToWorkspace,
 }: DemoTestGuideProps) {
   const [pathAReviewed, setPathAReviewed] = useState(false);
-  const [pathBBrowserOk, setPathBBrowserOk] = useState(false);
   const [pathAStoredDone, setPathAStoredDone] = useState(false);
   const [pathBStoredDone, setPathBStoredDone] = useState(false);
 
@@ -156,25 +124,13 @@ export default function DemoTestGuide({
     }
   }, []);
 
-  useEffect(() => {
-    const chromeLike =
-      /Chrome|Edg|Chromium/i.test(navigator.userAgent) && !/OPR|Opera/i.test(navigator.userAgent);
-    if (chromeLike) setPathBBrowserOk(true);
-  }, []);
-
   const pathADones = useMemo(
-    () => [
-      apiOnline === true,
-      activeTab === "call",
-      hasCallInput,
-      hasResult && !loading,
-      pathAReviewed || (hasResult && !loading),
-    ],
-    [apiOnline, activeTab, hasCallInput, hasResult, loading, pathAReviewed]
+    () => [hasCallInput, hasResult && !loading, pathAReviewed || (hasResult && !loading)],
+    [hasCallInput, hasResult, loading, pathAReviewed]
   );
 
   useEffect(() => {
-    if (hasResult && !loading && pathADones.slice(0, 4).every(Boolean)) {
+    if (hasResult && !loading && pathADones.slice(0, 2).every(Boolean)) {
       setPathAReviewed(true);
     }
   }, [hasResult, loading, pathADones]);
@@ -194,16 +150,12 @@ export default function DemoTestGuide({
 
   const pathBDones = useMemo(
     () => [
-      pathBBrowserOk,
-      apiOnline === true,
       activeTab === "live" || liveSessionActive || liveEndedWithTurns,
       liveSessionActive || liveEndedWithTurns,
       liveTurnCount > 0 || liveEndedWithTurns,
       liveEndedWithTurns && hasResult && !loading,
     ],
     [
-      pathBBrowserOk,
-      apiOnline,
       activeTab,
       liveSessionActive,
       liveEndedWithTurns,
@@ -229,30 +181,9 @@ export default function DemoTestGuide({
   const pathASteps: StepDef[] = [
     {
       id: "a1",
-      title: "1 — Server on",
-      body: "Header should show API online. If offline, run npm run dev or wake your hosted URL.",
+      title: "1 — Paste (or load sample)",
+      body: "Open Call Auto-Autopsy and paste a stalled-call transcript — or load Sarah & Mark in one click.",
       done: pathADones[0],
-      actionLabel: apiOnline !== true ? "Scroll to workspace" : undefined,
-      onAction: onScrollToWorkspace,
-      art: "server",
-    },
-    {
-      id: "a2",
-      title: "2 — Open Call Auto-Autopsy",
-      body: "Click Call Auto-Autopsy in Deal Intake. That is where you paste a past call.",
-      done: pathADones[1],
-      actionLabel: "Go to Call Auto-Autopsy",
-      onAction: () => {
-        onGoCallTab();
-        onScrollToWorkspace();
-      },
-      art: "tab",
-    },
-    {
-      id: "a3",
-      title: "3 — Load a transcript",
-      body: "Paste your stalled call, or use our sample (Sarah & Mark). Turns green when text is attached.",
-      done: pathADones[2],
       actionLabel: "Load sample transcript",
       onAction: () => {
         onGoCallTab();
@@ -262,10 +193,10 @@ export default function DemoTestGuide({
       art: "paste",
     },
     {
-      id: "a4",
-      title: "4 — Run Deal Analysis",
+      id: "a2",
+      title: "2 — Run Deal Analysis",
       body: "Press Run Deal Analysis. Wait for the score and Recovery Brief on the right.",
-      done: pathADones[3],
+      done: pathADones[1],
       actionLabel: loading ? "Running…" : "Run Deal Analysis",
       onAction: () => {
         onGoCallTab();
@@ -275,10 +206,10 @@ export default function DemoTestGuide({
       art: "run",
     },
     {
-      id: "a5",
-      title: "5 — Read the brief",
-      body: "Check risk, blockers, and next action on the right. Completes when a brief exists — then Path B unlocks.",
-      done: pathADones[4],
+      id: "a3",
+      title: "3 — Read the Recovery Brief",
+      body: "Check risk, blockers, and next action. That unlocks Path B — a live call this week.",
+      done: pathADones[2],
       actionLabel: hasResult && !pathAReviewed ? "Mark brief reviewed" : undefined,
       onAction: () => setPathAReviewed(true),
       art: "brief",
@@ -288,25 +219,9 @@ export default function DemoTestGuide({
   const pathBSteps: StepDef[] = [
     {
       id: "b1",
-      title: "1 — Chrome or Edge",
-      body: "Live mic captions need Chrome or Edge. Safari/Firefox: paste notes only.",
+      title: "1 — Open Live Meeting",
+      body: "Select Live Meeting. Zoom/Meet/Teams work the same — mic + paste. Prefer Chrome or Edge for captions.",
       done: pathBDones[0],
-      actionLabel: "I am on Chrome or Edge",
-      onAction: () => setPathBBrowserOk(true),
-      art: "browser",
-    },
-    {
-      id: "b2",
-      title: "2 — Server still on",
-      body: "Same rule as Path A — API online in the header.",
-      done: pathBDones[1],
-      art: "server",
-    },
-    {
-      id: "b3",
-      title: "3 — Open Live Meeting",
-      body: "Select Live Meeting. Zoom is pre-selected. Skip Connect Zoom unless you want auto-transcripts later.",
-      done: pathBDones[2],
       actionLabel: "Go to Live Meeting",
       onAction: () => {
         onGoLiveTab();
@@ -315,10 +230,10 @@ export default function DemoTestGuide({
       art: "live",
     },
     {
-      id: "b4",
-      title: "4 — Start live session",
-      body: "Click Start live session. Allow the mic. Join your Zoom/Meet/Teams call in another window.",
-      done: pathBDones[3],
+      id: "b2",
+      title: "2 — Start live session",
+      body: "Click Start live session, allow the mic, and join your real call in another window.",
+      done: pathBDones[1],
       actionLabel: "Open Live Meeting",
       onAction: () => {
         onGoLiveTab();
@@ -327,10 +242,10 @@ export default function DemoTestGuide({
       art: "run",
     },
     {
-      id: "b5",
-      title: "5 — Capture dialogue",
-      body: "Speak or paste a buyer line, e.g. Buyer: Legal needs a DPA first. Watch the Recovery Brief update.",
-      done: pathBDones[4],
+      id: "b3",
+      title: "3 — Capture buyer dialogue",
+      body: "Speak or paste a buyer line (e.g. Buyer: Legal needs a DPA first). Watch the Recovery Brief update live.",
+      done: pathBDones[2],
       actionLabel: "Open Live Meeting",
       onAction: () => {
         onGoLiveTab();
@@ -339,10 +254,10 @@ export default function DemoTestGuide({
       art: "mic",
     },
     {
-      id: "b6",
-      title: "6 — End & analyze",
-      body: "Click End & run analysis, then Run Deal Analysis if needed. Green when a brief exists after your live session.",
-      done: pathBDones[5],
+      id: "b4",
+      title: "4 — End & get the brief",
+      body: "Click End & run analysis. Confirm the Recovery Brief still tells you what to do next.",
+      done: pathBDones[3],
       actionLabel: liveEndedWithTurns && !hasResult ? "Run Deal Analysis" : "Go to Call Auto-Autopsy",
       onAction: () => {
         onGoCallTab();
@@ -358,11 +273,10 @@ export default function DemoTestGuide({
       <div className="demo-guide-top">
         <div className="demo-guide-intro">
           <span className="demo-guide-label">Self-serve demo · step-by-step</span>
-          <h2 id="demo-guide-heading">Try Lazarus without calling us</h2>
+          <h2 id="demo-guide-heading">Paste or speak. Get the Recovery Brief.</h2>
           <p>
-            Finish Path A in order — each step turns green before the next unlocks. Path B then
-            unlocks for a live call this week. Security Battlecard sits beside this guide for IT /
-            legal.
+            Path A teaches the concept on a sample stalled call (3 steps). Path B unlocks after —
+            run a live Zoom, Meet, or Teams call and see analysis update in real time (4 steps).
           </p>
         </div>
         <aside className="demo-guide-trust-card">
@@ -378,24 +292,24 @@ export default function DemoTestGuide({
       <div className="demo-guide-paths">
         <PathColumn
           title="Path A — Past call (today)"
-          subtitle="Paste → score. Proves the judgment layer."
+          subtitle="Paste → analyze → brief. Proves the judgment layer."
           complete={pathAComplete}
           locked={false}
           steps={pathASteps}
         />
         <PathColumn
           title="Path B — Live call (this week)"
-          subtitle="Start → mic/paste → end → analyze. No Zoom Connect required."
+          subtitle="Start → capture → end → brief. No Zoom Connect required."
           complete={pathBComplete}
           locked={!pathAComplete}
-          lockReason="Finish all Path A steps first — then Path B unlocks."
+          lockReason="Finish Path A first — then Path B unlocks."
           steps={pathBSteps}
         />
       </div>
 
       <p className="demo-guide-footnote">
-        Sample load uses a short stall excerpt (authority gap). Optional Zoom Connect is under Live
-        Meeting → Optional. You do not need the Zoom Marketplace.
+        CRMs tell you what happened; Lazarus tells you what to do next. Optional Zoom Connect stays
+        under Live Meeting → Optional — you do not need the Marketplace.
       </p>
     </section>
   );
