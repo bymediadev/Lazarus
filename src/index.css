@@ -10,8 +10,10 @@
   --bg: #000521;
   --panel: #0a0f28;
   --panel-border: #1a2744;
-  --text: #ffffff;
-  --muted: #e2e8f0;
+  /* Readable hierarchy on dark: primary white, secondary slate (not washed-out gray) */
+  --text: #f8fafc;
+  --muted: #cbd5e1;
+  --label: #94a3b8;
   /* Brand navy — replaces former crimson/red accents */
   --crimson: #2a5a8a;
   --crimson-glow: rgba(42, 90, 138, 0.45);
@@ -37,6 +39,8 @@ body {
   font-family: var(--font);
   background: var(--bg);
   color: var(--text);
+  font-size: 16px;
+  line-height: 1.55;
   -webkit-font-smoothing: antialiased;
 }
 
@@ -90,7 +94,7 @@ body {
   display: grid;
   gap: 0.35rem;
   font-size: 0.78rem;
-  color: #e2e8f0;
+  color: var(--muted);
   max-width: 52rem;
   padding-bottom: 1rem;
 }
@@ -840,7 +844,7 @@ body {
   font-size: 0.72rem;
   font-family: var(--mono);
   margin-top: 0.25rem;
-  color: #e2e8f0;
+  color: var(--muted);
 }
 
 .leak-funnel-drop {
@@ -985,7 +989,7 @@ body {
 
 .trust-card p {
   font-size: 0.78rem;
-  color: #e2e8f0;
+  color: var(--muted);
   line-height: 1.55;
 }
 
@@ -1012,7 +1016,7 @@ body {
 }
 
 .trust-meta-val {
-  color: #e2e8f0;
+  color: var(--muted);
   line-height: 1.5;
 }
 
@@ -1811,31 +1815,36 @@ body {
 }
 
 .concise-card .card-title {
-  font-size: 0.95rem;
-  letter-spacing: 0.06em;
+  font-family: var(--font);
+  font-size: 1.05rem;
+  font-weight: 650;
+  letter-spacing: 0.01em;
+  text-transform: none;
 }
 
 .stall-headline {
-  font-size: 0.95rem;
-  line-height: 1.5;
-  margin: 0 0 0.75rem;
+  font-size: 1.05rem;
+  line-height: 1.65;
+  margin: 0 0 0.85rem;
   color: var(--text);
+  font-weight: 500;
 }
 
 .stall-collision-list {
   margin: 0;
-  padding-left: 1.1rem;
-  font-size: 0.85rem;
-  line-height: 1.55;
+  padding-left: 1.15rem;
+  font-size: 1rem;
+  line-height: 1.65;
 }
 
 .stall-collision-list li {
-  margin-bottom: 0.45rem;
+  margin-bottom: 0.65rem;
 }
 
 .stall-evidence {
   color: var(--muted);
-  font-size: 0.8rem;
+  font-size: 0.95rem;
+  line-height: 1.6;
 }
 
 .people-map-grid {
@@ -1895,11 +1904,12 @@ body {
   margin: 0;
   padding-left: 0;
   list-style: none;
-  font-size: 0.85rem;
+  font-size: 1rem;
+  line-height: 1.55;
 }
 
 .people-map-names li {
-  margin-bottom: 0.25rem;
+  margin-bottom: 0.35rem;
 }
 
 .people-role {
@@ -1908,9 +1918,10 @@ body {
 }
 
 .persona-hint {
-  font-size: 0.75rem;
+  font-size: 0.9rem;
   color: var(--muted);
-  font-style: italic;
+  font-style: normal;
+  line-height: 1.5;
 }
 
 .invisible-veto-callout {
@@ -2043,20 +2054,20 @@ body {
 
 .timeline-phase {
   display: block;
-  font-family: var(--mono);
-  font-size: 0.62rem;
+  font-family: var(--font);
+  font-size: 0.85rem;
   font-weight: 700;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
+  letter-spacing: 0.02em;
+  text-transform: none;
   color: var(--emerald);
-  margin-bottom: 0.35rem;
+  margin-bottom: 0.4rem;
 }
 
 .timeline-actions {
   margin: 0;
-  padding-left: 1.1rem;
-  font-size: 0.85rem;
-  line-height: 1.5;
+  padding-left: 1.15rem;
+  font-size: 1rem;
+  line-height: 1.65;
 }
 
 .copy-action-items {
@@ -2072,12 +2083,12 @@ body {
 
 .full-analysis-toggle > summary {
   cursor: pointer;
-  padding: 0.75rem 1rem;
-  font-family: var(--mono);
-  font-size: 0.65rem;
+  padding: 0.85rem 1rem;
+  font-family: var(--font);
+  font-size: 0.95rem;
   font-weight: 600;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
+  letter-spacing: 0.01em;
+  text-transform: none;
   color: var(--muted);
   list-style: none;
 }
@@ -2121,12 +2132,13 @@ body {
 }
 
 .card-title {
-  font-family: var(--mono);
-  font-size: 0.7rem;
-  font-weight: 700;
-  letter-spacing: 0.18em;
-  text-transform: uppercase;
+  font-family: var(--font);
+  font-size: 0.95rem;
+  font-weight: 650;
+  letter-spacing: 0.02em;
+  text-transform: none;
   margin-bottom: 0.85rem;
+  color: var(--text);
 }
 
 .card-red .card-title {
@@ -2440,7 +2452,7 @@ body {
 }
 
 .card-neutral .card-title {
-  color: var(--muted);
+  color: var(--text);
 }
 
 .blocker-list li::before {
@@ -2498,7 +2510,8 @@ body {
 
 .meta-line {
   margin-top: 0.75rem;
-  font-size: 0.85rem;
+  font-size: 0.95rem;
+  line-height: 1.6;
   color: var(--muted);
 }
 
@@ -2521,17 +2534,18 @@ body {
 }
 
 .crm-label {
-  font-family: var(--mono);
-  font-size: 0.55rem;
+  font-family: var(--font);
+  font-size: 0.75rem;
   font-weight: 600;
-  letter-spacing: 0.1em;
+  letter-spacing: 0.04em;
   text-transform: uppercase;
-  color: var(--muted);
+  color: var(--label);
 }
 
 .crm-value {
-  font-size: 0.88rem;
-  line-height: 1.45;
+  font-size: 1rem;
+  line-height: 1.55;
+  color: var(--text);
 }
 
 .card-emerald .card-title {
@@ -2543,27 +2557,31 @@ body {
 }
 
 .card-body {
-  font-size: 0.95rem;
+  font-size: 1rem;
   line-height: 1.65;
   color: var(--text);
 }
 
 .card-body p {
-  margin: 0;
+  margin: 0 0 0.65rem;
+}
+
+.card-body p:last-child {
+  margin-bottom: 0;
 }
 
 .restart-list {
   list-style: none;
   display: flex;
   flex-direction: column;
-  gap: 0.65rem;
+  gap: 0.75rem;
 }
 
 .restart-list li {
   position: relative;
   padding-left: 1.25rem;
-  font-size: 0.9rem;
-  line-height: 1.55;
+  font-size: 1rem;
+  line-height: 1.65;
 }
 
 .restart-list li::before {
@@ -2702,9 +2720,10 @@ body {
 }
 
 .force-factor {
-  font-size: 0.9rem;
-  line-height: 1.5;
+  font-size: 1rem;
+  line-height: 1.6;
   margin: 0 0 0.5rem;
+  color: var(--text);
 }
 
 .force-bar-track {
@@ -2730,11 +2749,18 @@ body {
 }
 
 .force-evidence {
-  font-size: 0.8rem;
+  font-size: 0.95rem;
   color: var(--muted);
-  font-style: italic;
+  font-style: normal;
   margin: 0;
-  line-height: 1.45;
+  line-height: 1.6;
+}
+
+.force-derived {
+  font-size: 0.9rem;
+  color: var(--label);
+  margin: 0 0 0.35rem;
+  line-height: 1.5;
 }
 
 .viability-header {
@@ -2786,12 +2812,6 @@ body {
   border: 1px solid var(--panel-border);
   padding: 0.1rem 0.35rem;
   border-radius: 2px;
-}
-
-.force-derived {
-  font-size: 0.75rem;
-  color: var(--amber);
-  margin: 0 0 0.35rem;
 }
 
 .coupling-group {
@@ -2891,12 +2911,12 @@ body {
   }
 }
 
-/* —— Deal header metrics, glossary, View Details —— */
+/* —— Deal header metrics & glossary —— */
 .deal-header-metrics {
   display: flex;
   flex-direction: column;
-  gap: 24px;
-  padding: 1rem 0 0.25rem;
+  gap: 1rem;
+  padding: 0.25rem 0 0.5rem;
 }
 
 .deal-header-metrics-top {
@@ -2907,16 +2927,11 @@ body {
 }
 
 .deal-header-metrics-title {
-  font-family: var(--mono);
-  font-size: 0.7rem;
-  font-weight: 700;
-  letter-spacing: 0.14em;
-  text-transform: uppercase;
+  font-family: var(--font);
+  font-size: 1.05rem;
+  font-weight: 650;
+  letter-spacing: 0.01em;
   color: var(--text);
-}
-
-.deal-header-dri {
-  margin-bottom: 0;
 }
 
 .deal-metric-grid {
@@ -2940,78 +2955,34 @@ body {
 .deal-metric-card {
   display: flex;
   flex-direction: column;
-  gap: 0.35rem;
-  padding: 1rem;
+  gap: 0.4rem;
+  padding: 1rem 1.1rem;
   border: 1px solid var(--panel-border);
   border-radius: 4px;
-  background: rgba(0, 0, 0, 0.2);
-  min-height: 5.5rem;
+  background: rgba(0, 0, 0, 0.22);
 }
 
 .deal-metric-label {
-  font-family: var(--mono);
-  font-size: 0.55rem;
+  font-family: var(--font);
+  font-size: 0.8rem;
   font-weight: 600;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-  color: var(--muted);
+  letter-spacing: 0.02em;
+  color: var(--label);
 }
 
 .deal-metric-value {
   font-family: var(--mono);
-  font-size: 1.5rem;
+  font-size: 1.75rem;
   font-weight: 700;
   color: var(--text);
   line-height: 1.1;
 }
 
-.deal-metric-details {
-  position: relative;
-  margin-top: auto;
-  padding-top: 0.35rem;
-}
-
-.view-details-hint {
-  font-family: var(--mono);
-  font-size: 0.55rem;
-  font-weight: 600;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
-  color: var(--teal);
-  opacity: 0.85;
-}
-
-.deal-metric-detail-text,
-.secondary-meta .meta-line,
-.secondary-meta .force-derived,
-.secondary-meta .force-evidence,
-.secondary-meta .stall-evidence {
-  display: none;
-  margin: 0.35rem 0 0;
-  font-size: 0.75rem;
-  line-height: 1.45;
+.deal-metric-detail-text {
+  margin: 0.15rem 0 0;
+  font-size: 0.9rem;
+  line-height: 1.5;
   color: var(--muted);
-}
-
-.deal-metric-card:hover .deal-metric-detail-text,
-.deal-metric-card:focus-within .deal-metric-detail-text,
-.secondary-meta:hover .meta-line,
-.secondary-meta:focus-within .meta-line,
-.secondary-meta:hover .force-derived,
-.secondary-meta:focus-within .force-derived,
-.secondary-meta:hover .force-evidence,
-.secondary-meta:focus-within .force-evidence,
-.secondary-meta:hover .stall-evidence,
-.secondary-meta:focus-within .stall-evidence {
-  display: block;
-}
-
-.secondary-meta {
-  margin-top: 0.5rem;
-}
-
-.secondary-meta:not(:hover):not(:focus-within) .view-details-hint {
-  display: inline-block;
 }
 
 .expanded-analysis {
@@ -3024,14 +2995,14 @@ body {
 }
 
 .metric-glossary-trigger {
-  width: 1.75rem;
-  height: 1.75rem;
+  width: 1.85rem;
+  height: 1.85rem;
   border-radius: 50%;
   border: 1px solid var(--panel-border);
   background: var(--panel);
   color: var(--text);
   font-family: var(--mono);
-  font-size: 0.75rem;
+  font-size: 0.8rem;
   font-weight: 700;
   font-style: italic;
   cursor: pointer;
@@ -3050,8 +3021,8 @@ body {
   position: absolute;
   right: 0;
   top: calc(100% + 0.5rem);
-  width: min(22rem, 85vw);
-  padding: 0.85rem 1rem;
+  width: min(24rem, 90vw);
+  padding: 1rem 1.1rem;
   background: var(--panel);
   border: 1px solid var(--panel-border);
   border-radius: 4px;
@@ -3063,8 +3034,8 @@ body {
   align-items: center;
   justify-content: space-between;
   gap: 0.5rem;
-  margin-bottom: 0.75rem;
-  font-size: 0.8rem;
+  margin-bottom: 0.85rem;
+  font-size: 1rem;
   color: var(--text);
 }
 
@@ -3072,10 +3043,8 @@ body {
   background: none;
   border: none;
   color: var(--muted);
-  font-family: var(--mono);
-  font-size: 0.6rem;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
+  font-family: var(--font);
+  font-size: 0.8rem;
   cursor: pointer;
 }
 
@@ -3084,48 +3053,66 @@ body {
 }
 
 .metric-glossary-panel {
-  padding: 1rem;
+  padding: 1rem 1.1rem;
   border: 1px solid var(--panel-border);
   border-radius: 4px;
   background: rgba(0, 0, 0, 0.15);
 }
 
+.metric-legend-intake {
+  margin-top: 1rem;
+}
+
+.metric-glossary-lede {
+  margin: 0 0 0.85rem;
+  font-size: 0.9rem;
+  line-height: 1.55;
+  color: var(--muted);
+}
+
 .metric-glossary-heading {
-  font-family: var(--mono);
-  font-size: 0.65rem;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-  margin-bottom: 0.75rem;
+  font-family: var(--font);
+  font-size: 0.95rem;
+  font-weight: 650;
+  margin-bottom: 0.35rem;
   color: var(--text);
 }
 
 .metric-glossary-list {
   display: flex;
   flex-direction: column;
-  gap: 0.85rem;
+  gap: 0.95rem;
   margin: 0;
 }
 
 .metric-glossary-item dt {
-  font-family: var(--mono);
-  font-size: 0.68rem;
+  font-family: var(--font);
+  font-size: 0.9rem;
   font-weight: 700;
-  letter-spacing: 0.04em;
   color: var(--teal);
-  margin-bottom: 0.25rem;
+  margin-bottom: 0.3rem;
 }
 
 .metric-glossary-item dd {
   margin: 0;
-  font-size: 0.78rem;
-  line-height: 1.5;
+  font-size: 0.9rem;
+  line-height: 1.55;
   color: var(--muted);
+}
+
+.metric-glossary-map {
+  display: block;
+  margin-top: 0.35rem;
+  font-size: 0.85rem;
+  line-height: 1.5;
+  color: var(--label);
+}
+
+.dri-label {
+  color: var(--label);
 }
 
 .dri-components {
   color: var(--muted);
-}
-
-.dri-label {
-  color: var(--muted);
+  font-size: 0.9rem;
 }

@@ -9,6 +9,7 @@ import EnterpriseTrust, { HeroTrustBanner } from "./components/EnterpriseTrust";
 import SiteFooter from "./components/SiteFooter";
 import TrustPackLink from "./components/TrustPackLink";
 import TrustPackModal from "./components/TrustPackModal";
+import MetricGlossary from "./components/MetricGlossary";
 import { TRUST_PACK_NAV, TRUST_PACK_OPEN_EVENT, type TrustPackSlug } from "./lib/trustPack";
 import { API_BASE, apiTargetLabel, runPostMortem } from "./lib/api";
 import {
@@ -585,6 +586,7 @@ export default function App() {
                     {demoTranscriptNotice && (
                       <p className="demo-transcript-notice">{demoTranscriptNotice}</p>
                     )}
+                    <MetricGlossary variant="panel" />
                   </div>
                 </div>
               )}

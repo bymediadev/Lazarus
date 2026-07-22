@@ -47,16 +47,10 @@ function ForceCard({ force }: { force: CausalForce }) {
         <div className="force-bar-fill" style={{ width: `${force.weight}%` }} />
       </div>
       {force.derived_from && force.derived_from.length > 0 && (
-        <div className="secondary-meta">
-          <span className="view-details-hint">View Details</span>
-          <p className="force-derived">Derived from: {force.derived_from.join(", ")}</p>
-        </div>
+        <p className="force-derived">Derived from: {force.derived_from.join(", ")}</p>
       )}
       {force.evidence && (
-        <div className="secondary-meta">
-          <span className="view-details-hint">View Details</span>
-          <p className="force-evidence">"{force.evidence.replace(/^"|"$/g, "")}"</p>
-        </div>
+        <p className="force-evidence">"{force.evidence.replace(/^"|"$/g, "")}"</p>
       )}
     </div>
   );
@@ -145,6 +139,8 @@ export default function AnalysisReport({ result: raw, sources }: Props) {
   return (
     <div className="cards">
       {pi && <DealHeaderMetrics indices={pi} />}
+
+      <ConciseDiagnostic result={r} />
 
       <details className="full-analysis-toggle expanded-analysis">
         <summary>Expanded Analysis</summary>
@@ -393,6 +389,9 @@ export default function AnalysisReport({ result: raw, sources }: Props) {
             <span className="viability-score">{vs.viability_score}/100</span>
           </div>
           <p className="equilibrium-derivation">{vs.equilibrium_derivation}</p>
+          <p className="meta-line" style={{ marginTop: "0.5rem" }}>
+            Frozen derivation — read-only across all sections
+          </p>
           {dc_comp && (
             <div className="derivation-grid">
               <div className="derivation-metric"><span>Intent</span><strong>{dc_comp.intent_strength}</strong></div>
@@ -401,12 +400,6 @@ export default function AnalysisReport({ result: raw, sources }: Props) {
               <div className="derivation-metric"><span>+ Timing</span><strong>{dc_comp.timing_accessibility}</strong></div>
             </div>
           )}
-          <div className="secondary-meta">
-            <span className="view-details-hint">View Details</span>
-            <p className="meta-line" style={{ marginTop: "0.5rem" }}>
-              Frozen derivation — read-only across all sections
-            </p>
-          </div>
         </div>
       </article>
 
@@ -658,8 +651,6 @@ export default function AnalysisReport({ result: raw, sources }: Props) {
       )}
         </div>
       </details>
-
-      <ConciseDiagnostic result={r} />
     </div>
   );
 }

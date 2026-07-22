@@ -1,28 +1,11 @@
 import { useEffect, useId, useRef, useState } from "react";
+import { METRIC_LEGEND } from "../lib/metricLegend";
 
-export const METRIC_GLOSSARY = [
-  {
-    id: "deal-risk-score",
-    term: "Deal Risk Score",
-    definition:
-      "A 1–100 macro-rating predicting the likelihood of a deal stalling out or dropping based on historically missed milestones.",
-  },
-  {
-    id: "dfi",
-    term: "Department Friction Index (DFI)",
-    definition:
-      "A gauge measuring the pushback, skepticism, or lack of alignment detected from specific internal departments (e.g., Legal, Security, IT).",
-  },
-  {
-    id: "dispersion",
-    term: "Dispersion",
-    definition:
-      "A metric calculating how fragmented the buyer's communication is. High dispersion means too many disconnected stakeholders; low dispersion means a unified decision-making front.",
-  },
-] as const;
+/** @deprecated Prefer METRIC_LEGEND — kept as alias for existing imports. */
+export const METRIC_GLOSSARY = METRIC_LEGEND;
 
 interface Props {
-  /** Compact floating control for the deal header; defaults to panel legend. */
+  /** Compact floating control for the deal header; panel = intake-side legend. */
   variant?: "icon" | "panel";
 }
 
@@ -49,18 +32,28 @@ export default function MetricGlossary({ variant = "icon" }: Props) {
     };
   }, [open]);
 
+  const list = (
+    <dl className="metric-glossary-list">
+      {METRIC_LEGEND.map((entry) => (
+        <div key={entry.id} className="metric-glossary-item">
+          <dt>{entry.term}</dt>
+          <dd>
+            {entry.definition}
+            <span className="metric-glossary-map">In the report: {entry.reportMapsTo}</span>
+          </dd>
+        </div>
+      ))}
+    </dl>
+  );
+
   if (variant === "panel") {
     return (
-      <aside className="metric-glossary-panel" aria-label="Metric glossary">
+      <aside className="metric-glossary-panel metric-legend-intake" aria-label="Metric legend">
         <h3 className="metric-glossary-heading">Metric legend</h3>
-        <dl className="metric-glossary-list">
-          {METRIC_GLOSSARY.map((entry) => (
-            <div key={entry.id} className="metric-glossary-item">
-              <dt>{entry.term}</dt>
-              <dd>{entry.definition}</dd>
-            </div>
-          ))}
-        </dl>
+        <p className="metric-glossary-lede">
+          Terms Lazarus scores from the transcript — and where they show up in the report.
+        </p>
+        {list}
       </aside>
     );
   }
@@ -86,14 +79,7 @@ export default function MetricGlossary({ variant = "icon" }: Props) {
               Close
             </button>
           </div>
-          <dl className="metric-glossary-list">
-            {METRIC_GLOSSARY.map((entry) => (
-              <div key={entry.id} className="metric-glossary-item">
-                <dt>{entry.term}</dt>
-                <dd>{entry.definition}</dd>
-              </div>
-            ))}
-          </dl>
+          {list}
         </div>
       )}
     </div>

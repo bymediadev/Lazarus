@@ -166,12 +166,9 @@ export default function ConciseDiagnostic({ result }: Props) {
               </p>
             )}
             {triage.department_friction_index > 0 && (
-              <div className="secondary-meta">
-                <span className="view-details-hint">View Details</span>
-                <p className="meta-line">
-                  Department friction index: {triage.department_friction_index}
-                </p>
-              </div>
+              <p className="meta-line">
+                Department friction index: {triage.department_friction_index}
+              </p>
             )}
           </div>
         </article>
@@ -188,10 +185,10 @@ export default function ConciseDiagnostic({ result }: Props) {
                   <br />
                   <span className="stall-evidence">"{match.live_dialogue_evidence}"</span>
                   {match.historical_event && (
-                    <div className="secondary-meta">
-                      <span className="view-details-hint">View Details</span>
+                    <>
+                      <br />
                       <span className="meta-line">Prior: {match.historical_event}</span>
-                    </div>
+                    </>
                   )}
                 </li>
               ))}
@@ -304,12 +301,9 @@ export default function ConciseDiagnostic({ result }: Props) {
             </div>
           )}
           {result.proprietary_indices && result.proprietary_indices.multi_department_friction > 0 && (
-            <div className="secondary-meta">
-              <span className="view-details-hint">View Details</span>
-              <p className="meta-line">
-                Dept friction index: {result.proprietary_indices.multi_department_friction}
-              </p>
-            </div>
+            <p className="meta-line">
+              Dept friction index: {result.proprietary_indices.multi_department_friction}
+            </p>
           )}
         </div>
       </article>
@@ -348,8 +342,8 @@ export default function ConciseDiagnostic({ result }: Props) {
         <h2 className="card-title">One-Click CRM Portability</h2>
         <div className="card-body">
           <p className="meta-line">
-            Condensed markdown for HubSpot or Salesforce — Root Issue, Core Blocker, and Next Action
-            Date in one paste.
+            Condensed markdown for HubSpot or Salesforce — Root Issue, Core Blocker, Next Action
+            Date, and the metric legend in one paste.
           </p>
           <button
             type="button"
