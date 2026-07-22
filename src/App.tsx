@@ -22,6 +22,7 @@ import { normalizeResult, PostMortemResult, type HistoricalCrmContextEntry, type
 import type { LiveObjection } from "./lib/liveObjections";
 import { fetchLiveTriage, type LiveTriageResult } from "./lib/liveTriage";
 import type { MeetingPlatformId } from "./lib/meetingPlatforms";
+import { loadDemoSalesTranscript } from "./lib/demoTranscript";
 import { setLinkedPlatform } from "./lib/meetingPlatforms";
 
 const ACCEPTED_EXT = [".mp3", ".wav", ".mp4", ".m4a", ".webm", ".mpeg", ".mpga"];
@@ -69,6 +70,8 @@ export default function App() {
   const [liveTriageError, setLiveTriageError] = useState<string | null>(null);
   const [callTranscript, setCallTranscript] = useState("");
   const [emailThread, setEmailThread] = useState("");
+  const [demoTranscriptLoading, setDemoTranscriptLoading] = useState(false);
+  const [demoTranscriptNotice, setDemoTranscriptNotice] = useState<string | null>(null);
   const [result, setResult] = useState<PostMortemResult | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -245,6 +248,30 @@ export default function App() {
     },
     [handleFile]
   );
+
+  const handleLoadDemoTranscript = async () => {
+    setDemoTranscriptLoading(true);
+    setDemoTranscriptNotice(null);
+    setError(null);
+    try {
+      const { text, source } = await loadDemoSalesTranscript();
+      setCallTranscript(text);
+      setActiveTab("call");
+      const sourceLabel =
+        source === "s3-primary"
+          ? "primary S3"
+          : source === "s3-fallback"
+            ? "fallback S3"
+            : source === "local"
+              ? "local demo asset"
+              : "embedded fail-safe";
+      setDemoTranscriptNotice(`Demo sales transcript loaded (${sourceLabel}).`);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to load demo sales transcript.");
+    } finally {
+      setDemoTranscriptLoading(false);
+    }
+  };
 
   const handleRun = async () => {
     if (!hasAnyInput) {
@@ -537,7 +564,17 @@ export default function App() {
                     />
                   </div>
                   <div className="input-group input-group-grow">
-                    <label htmlFor="call-transcript">Call Transcript</label>
+                    <div className="input-label-row">
+                      <label htmlFor="call-transcript">Call Transcript</label>
+                      <button
+                        type="button"
+                        className="btn-secondary btn-demo-transcript"
+                        onClick={handleLoadDemoTranscript}
+                        disabled={demoTranscriptLoading}
+                      >
+                        {demoTranscriptLoading ? "Loading demo…" : "Load demo transcript"}
+                      </button>
+                    </div>
                     <textarea
                       id="call-transcript"
                       className="transcript-textarea"
@@ -545,6 +582,9 @@ export default function App() {
                       onChange={(e) => setCallTranscript(e.target.value)}
                       placeholder="Paste call transcript or meeting notes..."
                     />
+                    {demoTranscriptNotice && (
+                      <p className="demo-transcript-notice">{demoTranscriptNotice}</p>
+                    )}
                   </div>
                 </div>
               )}

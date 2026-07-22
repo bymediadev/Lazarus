@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { saveRescueOutcome } from "../lib/api";
 import ConciseDiagnostic from "./ConciseDiagnostic";
+import DealHeaderMetrics from "./DealHeaderMetrics";
 import {
   CausalForce,
   ForceCoupling,
@@ -13,7 +14,6 @@ import {
   equilibriumTagClass,
   blockerTagClass,
   forceTypeClass,
-  driTagClass,
 } from "../types";
 
 interface Props {
@@ -47,10 +47,16 @@ function ForceCard({ force }: { force: CausalForce }) {
         <div className="force-bar-fill" style={{ width: `${force.weight}%` }} />
       </div>
       {force.derived_from && force.derived_from.length > 0 && (
-        <p className="force-derived">Derived from: {force.derived_from.join(", ")}</p>
+        <div className="secondary-meta">
+          <span className="view-details-hint">View Details</span>
+          <p className="force-derived">Derived from: {force.derived_from.join(", ")}</p>
+        </div>
       )}
       {force.evidence && (
-        <p className="force-evidence">"{force.evidence.replace(/^"|"$/g, "")}"</p>
+        <div className="secondary-meta">
+          <span className="view-details-hint">View Details</span>
+          <p className="force-evidence">"{force.evidence.replace(/^"|"$/g, "")}"</p>
+        </div>
       )}
     </div>
   );
@@ -113,7 +119,6 @@ export default function AnalysisReport({ result: raw, sources }: Props) {
   };
 
   const dc_comp = vs.derivation_components;
-  const driClass = driTagClass(pi?.risk_tier);
 
   const submitRescueOutcome = async () => {
     if (!raw.id || !pi) return;
@@ -139,25 +144,11 @@ export default function AnalysisReport({ result: raw, sources }: Props) {
 
   return (
     <div className="cards">
-      <ConciseDiagnostic result={r} />
+      {pi && <DealHeaderMetrics indices={pi} />}
 
-      <details className="full-analysis-toggle">
-        <summary>Full deterministic analysis (expand)</summary>
+      <details className="full-analysis-toggle expanded-analysis">
+        <summary>Expanded Analysis</summary>
         <div className="full-analysis-body">
-      {pi && (
-        <div className={`dri-banner ${driClass}`}>
-          <span className="dri-label">Deal Risk Index</span>
-          <span className="dri-score">{pi.deal_risk_index}</span>
-          <span className="dri-tier">{pi.risk_tier} RISK</span>
-          <div className="dri-components">
-            <span>Dispersion {pi.stakeholder_dispersion_index}</span>
-            <span>Stall signals {pi.dialogue_stall_score}</span>
-            <span>Dept friction {pi.multi_department_friction}</span>
-            {pi.authority_gap_flag && <span className="dri-flag">Authority gap</span>}
-          </div>
-        </div>
-      )}
-
       <div className={`deal-status-banner ${tagClass}`}>
         <span className="deal-status-mode">Deterministic Scoring Engine</span>
         <span className="deal-status-label">{dc.status}</span>
@@ -402,9 +393,6 @@ export default function AnalysisReport({ result: raw, sources }: Props) {
             <span className="viability-score">{vs.viability_score}/100</span>
           </div>
           <p className="equilibrium-derivation">{vs.equilibrium_derivation}</p>
-          <p className="meta-line" style={{ marginTop: "0.5rem" }}>
-            Frozen derivation — read-only across all sections
-          </p>
           {dc_comp && (
             <div className="derivation-grid">
               <div className="derivation-metric"><span>Intent</span><strong>{dc_comp.intent_strength}</strong></div>
@@ -413,6 +401,12 @@ export default function AnalysisReport({ result: raw, sources }: Props) {
               <div className="derivation-metric"><span>+ Timing</span><strong>{dc_comp.timing_accessibility}</strong></div>
             </div>
           )}
+          <div className="secondary-meta">
+            <span className="view-details-hint">View Details</span>
+            <p className="meta-line" style={{ marginTop: "0.5rem" }}>
+              Frozen derivation — read-only across all sections
+            </p>
+          </div>
         </div>
       </article>
 
@@ -664,6 +658,8 @@ export default function AnalysisReport({ result: raw, sources }: Props) {
       )}
         </div>
       </details>
+
+      <ConciseDiagnostic result={r} />
     </div>
   );
 }

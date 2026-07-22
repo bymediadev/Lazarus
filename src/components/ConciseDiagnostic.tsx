@@ -166,9 +166,12 @@ export default function ConciseDiagnostic({ result }: Props) {
               </p>
             )}
             {triage.department_friction_index > 0 && (
-              <p className="meta-line">
-                Department friction index: {triage.department_friction_index}
-              </p>
+              <div className="secondary-meta">
+                <span className="view-details-hint">View Details</span>
+                <p className="meta-line">
+                  Department friction index: {triage.department_friction_index}
+                </p>
+              </div>
             )}
           </div>
         </article>
@@ -185,10 +188,10 @@ export default function ConciseDiagnostic({ result }: Props) {
                   <br />
                   <span className="stall-evidence">"{match.live_dialogue_evidence}"</span>
                   {match.historical_event && (
-                    <>
-                      <br />
+                    <div className="secondary-meta">
+                      <span className="view-details-hint">View Details</span>
                       <span className="meta-line">Prior: {match.historical_event}</span>
-                    </>
+                    </div>
                   )}
                 </li>
               ))}
@@ -301,9 +304,12 @@ export default function ConciseDiagnostic({ result }: Props) {
             </div>
           )}
           {result.proprietary_indices && result.proprietary_indices.multi_department_friction > 0 && (
-            <p className="meta-line">
-              Dept friction index: {result.proprietary_indices.multi_department_friction}
-            </p>
+            <div className="secondary-meta">
+              <span className="view-details-hint">View Details</span>
+              <p className="meta-line">
+                Dept friction index: {result.proprietary_indices.multi_department_friction}
+              </p>
+            </div>
           )}
         </div>
       </article>
