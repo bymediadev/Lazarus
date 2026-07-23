@@ -501,7 +501,8 @@ export default function App() {
               {activeTab === "call" && (
                 <div className="console-tab-audio">
                   <p className="console-tab-hint">
-                    Drop a recording or paste a transcript from Zoom, Meet, Teams, Gong, or anywhere
+                    Drop a recording or paste a transcript from Meet, Teams, or anywhere you already
+                    meet — then add Lazarus on top.
                     else. Stitches with Email Thread and Field Capture before analysis.
                   </p>
                   <div

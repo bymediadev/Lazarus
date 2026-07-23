@@ -10,23 +10,21 @@ interface CaptureSource {
   status: SourceStatus;
 }
 
+/** Meeting platforms only — Lazarus sits on top; no CI/note-taker brand fight. */
 const CAPTURE_SOURCES: CaptureSource[] = [
-  { id: "zoom", label: "Zoom", status: "import" as const },
-  { id: "meet", label: "Google Meet", status: "import" as const },
-  { id: "teams", label: "Microsoft Teams", status: "import" as const },
-  { id: "gong", label: "Gong", status: "import" },
-  { id: "chorus", label: "Chorus", status: "import" },
-  { id: "otter", label: "Otter", status: "import" },
+  { id: "meet", label: "Google Meet", status: "import" },
+  { id: "teams", label: "Microsoft Teams", status: "import" },
+  { id: "zoom", label: "Zoom", status: "import" },
 ];
 
 export default function CaptureStack({ onOpenLiveTab }: CaptureStackProps) {
   return (
     <section className="capture-stack" aria-label="How Lazarus fits your stack">
-      <p className="capture-stack-eyebrow">Three layers — keep your recorder, add judgment</p>
+      <p className="capture-stack-eyebrow">Three layers — keep your meetings, add judgment</p>
       <ol className="capture-stack-layers">
         <li>
           <strong>Layer 1 — Capture</strong>
-          <span>Zoom, Meet, Teams, Gong, or your phone saves the call.</span>
+          <span>Meet, Teams, or whatever you already use to meet and save the call.</span>
         </li>
         <li>
           <strong>Layer 2 — Lazarus</strong>
@@ -75,13 +73,13 @@ export default function CaptureStack({ onOpenLiveTab }: CaptureStackProps) {
             );
           })}
           <span className="capture-source-chip capture-source-import" role="listitem">
-            File upload
+            File / transcript
           </span>
         </div>
         <p className="capture-stack-note">
-          <strong>Today:</strong> Connect Zoom, Google Meet, or Teams — all feed the same live Recovery Brief
-          (platform stream or mic + paste).{" "}
-          <strong>Next:</strong> Meet captions + Teams Graph transcript pull; then Gong/Otter import.
+          <strong>Today:</strong> Connect Google Meet, Microsoft Teams, or Zoom — same live Recovery
+          Brief (platform stream or mic + paste). Or drop a recording / paste a transcript.{" "}
+          <strong>Pitch:</strong> Keep your meeting tools. Lazarus is the judgment layer on top.
         </p>
       </div>
     </section>

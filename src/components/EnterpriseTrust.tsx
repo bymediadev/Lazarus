@@ -21,12 +21,13 @@ export function HeroTrustBanner() {
     <section className="hero-trust">
       <p className="hero-trust-eyebrow">Deal judgment layer · v1</p>
       <h2 className="hero-trust-headline">
-        Keep Zoom or Gong. Add Lazarus on top. Know if the deal is still winnable — and why.
+        Keep your meeting tools. Add Lazarus on top. Know if the deal is still winnable — and why.
       </h2>
       <p className="hero-trust-body">
-        Lazarus is not another note-taker. You already record calls somewhere. We read what the buyer
-        said — from a file, a transcript, email, or field notes — and score the deal with fixed rules
-        you can defend in a forecast meeting. A person still runs the deal.
+        Lazarus is not another recorder. You already meet on Google Meet, Microsoft Teams, or whatever
+        your team uses. We read what the buyer said — from a file, a transcript, email, or field notes —
+        and score the deal with fixed rules you can defend in a forecast meeting. A person still runs
+        the deal.
       </p>
       <ul className="hero-trust-bullets">
         <li>
