@@ -1396,6 +1396,89 @@ body {
   margin-bottom: 1rem;
 }
 
+.intake-how-to {
+  margin: 0 0 1.25rem;
+  padding: 1rem 1.1rem;
+  border: 1px solid var(--panel-border);
+  border-radius: 4px;
+  background: rgba(0, 0, 0, 0.22);
+}
+
+.intake-how-to-title {
+  font-family: var(--font);
+  font-size: 1rem;
+  font-weight: 650;
+  margin: 0 0 0.85rem;
+  color: var(--text);
+}
+
+.intake-how-to-steps {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+}
+
+.intake-how-to-steps > li {
+  display: grid;
+  grid-template-columns: 1.75rem 1fr;
+  gap: 0.75rem;
+  align-items: start;
+  opacity: 0.72;
+}
+
+.intake-how-to-steps > li.intake-step-active,
+.intake-how-to-steps > li.intake-step-done {
+  opacity: 1;
+}
+
+.intake-step-num {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.75rem;
+  height: 1.75rem;
+  border-radius: 50%;
+  border: 1px solid var(--panel-border);
+  font-family: var(--mono);
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: var(--muted);
+  background: var(--panel);
+}
+
+.intake-step-active .intake-step-num {
+  border-color: var(--teal);
+  color: var(--teal);
+}
+
+.intake-step-done .intake-step-num {
+  border-color: rgba(92, 219, 92, 0.55);
+  color: var(--emerald);
+  background: rgba(92, 219, 92, 0.08);
+}
+
+.intake-step-body strong {
+  display: block;
+  font-size: 0.95rem;
+  font-weight: 650;
+  color: var(--text);
+  margin-bottom: 0.25rem;
+}
+
+.intake-step-body p {
+  margin: 0;
+  font-size: 0.9rem;
+  line-height: 1.55;
+  color: var(--muted);
+}
+
+.intake-how-to-demo {
+  margin-top: 0.55rem;
+}
+
 .dropzone {
   position: relative;
   flex: 1;

@@ -10,6 +10,7 @@ import SiteFooter from "./components/SiteFooter";
 import TrustPackLink from "./components/TrustPackLink";
 import TrustPackModal from "./components/TrustPackModal";
 import MetricGlossary from "./components/MetricGlossary";
+import IntakeHowTo from "./components/IntakeHowTo";
 import { TRUST_PACK_NAV, TRUST_PACK_OPEN_EVENT, type TrustPackSlug } from "./lib/trustPack";
 import { API_BASE, apiTargetLabel, runPostMortem } from "./lib/api";
 import {
@@ -469,7 +470,15 @@ export default function App() {
 
         <div className="workspace">
           <section className="panel panel-left intake-viewport">
-            <div className="panel-label">Deal Intake — upload or paste from any recorder</div>
+            <div className="panel-label">Deal Intake — upload or paste from any meeting tool</div>
+
+            <IntakeHowTo
+              hasInput={hasAnyInput}
+              hasResult={!!result}
+              loading={loading}
+              demoLoading={demoTranscriptLoading}
+              onLoadDemo={handleLoadDemoTranscript}
+            />
 
             <DealProfilePanel
               accountId={accountId}
@@ -502,8 +511,8 @@ export default function App() {
                 <div className="console-tab-audio">
                   <p className="console-tab-hint">
                     Drop a recording or paste a transcript from Meet, Teams, or anywhere you already
-                    meet — then add Lazarus on top.
-                    else. Stitches with Email Thread and Field Capture before analysis.
+                    meet — then add Lazarus on top. Stitches with Email Thread and Field Capture
+                    before analysis.
                   </p>
                   <div
                     className={`dropzone dropzone-tab ${dragOver ? "drag-over" : ""} ${file && recordingSource === "upload" ? "has-file" : ""}`}
@@ -574,7 +583,7 @@ export default function App() {
                         onClick={handleLoadDemoTranscript}
                         disabled={demoTranscriptLoading}
                       >
-                        {demoTranscriptLoading ? "Loading demo…" : "Load demo transcript"}
+                        {demoTranscriptLoading ? "Loading demo…" : "Use sample demo transcript"}
                       </button>
                     </div>
                     <textarea
