@@ -339,12 +339,8 @@ export default function ConciseDiagnostic({ result }: Props) {
       </article>
 
       <article className="card card-neutral concise-card crm-portability-card">
-        <h2 className="card-title">One-Click CRM Portability</h2>
+        <h2 className="card-title">Copy to CRM</h2>
         <div className="card-body">
-          <p className="meta-line">
-            One paste for Apollo, HubSpot, or Salesforce: deal overview, recovery plan, and metric
-            scores.
-          </p>
           <button
             type="button"
             className={`copy-button crm-copy-btn ${copiedCrm ? "copied" : ""}`}

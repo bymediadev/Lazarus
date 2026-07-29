@@ -131,11 +131,7 @@ export default function EmailProviderControls({
     <div className="email-provider-controls" aria-label="Email providers">
       <div className="mailbox-query-hero">
         <span className="mailbox-query-kicker">Ask your mailbox</span>
-        <h3>Which deal thread should Lazarus investigate?</h3>
-        <p>
-          Try: “Pull up the Spec Kitty thread” or “Look through my email for Acme.” Lazarus expands
-          the full conversation, not just one message.
-        </p>
+        <h3>Find a deal thread</h3>
         <div className="mailbox-query-row">
           <input
             type="search"
@@ -173,7 +169,7 @@ export default function EmailProviderControls({
         </div>
         {!anyConnected && (
           <p className="mailbox-connect-prompt">
-            Connect Gmail or Outlook below, then ask for the deal thread you want attached.
+            Connect a mailbox to search full conversations.
           </p>
         )}
       </div>

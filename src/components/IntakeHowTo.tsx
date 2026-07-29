@@ -2,30 +2,31 @@ interface Props {
   hasInput: boolean;
   hasResult: boolean;
   loading: boolean;
+  sourceCount: number;
   demoLoading: boolean;
   onLoadDemo: () => void;
-  onFocusRun?: () => void;
 }
 
 export default function IntakeHowTo({
   hasInput,
   hasResult,
   loading,
+  sourceCount,
   demoLoading,
   onLoadDemo,
 }: Props) {
   const status = loading
-    ? "Analyzing every attached source…"
+    ? "Analyzing…"
     : hasResult
-      ? "Brief ready — review, then copy to CRM."
+      ? "Brief ready."
       : hasInput
-        ? "Evidence attached — add more or run analysis."
-        : "Add evidence, analyze once, then copy the brief to your CRM.";
+        ? `${sourceCount} source${sourceCount === 1 ? "" : "s"} ready.`
+        : "Add evidence to begin.";
 
   return (
     <aside className="intake-how-to" aria-label="How to run Lazarus">
       <div>
-        <h2 className="intake-how-to-title">One deal. One evidence package.</h2>
+        <h2 className="intake-how-to-title">Deal evidence</h2>
         <p className="intake-how-to-status">{status}</p>
       </div>
       {!hasInput && (
@@ -35,7 +36,7 @@ export default function IntakeHowTo({
           onClick={onLoadDemo}
           disabled={demoLoading}
         >
-          {demoLoading ? "Loading sample…" : "Use sample"}
+          {demoLoading ? "Loading…" : "Try sample"}
         </button>
       )}
     </aside>

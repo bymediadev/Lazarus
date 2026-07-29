@@ -1441,6 +1441,46 @@ body {
   min-height: 160px;
 }
 
+.dropzone-unified {
+  min-height: 150px;
+}
+
+.upload-attachment-list {
+  list-style: none;
+  margin: 0.75rem 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+}
+
+.upload-attachment-list li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.55rem 0.7rem;
+  border: 1px solid var(--panel-border);
+  border-radius: 4px;
+  background: rgba(0, 0, 0, 0.18);
+}
+
+.upload-attachment-list strong {
+  display: block;
+  font-family: var(--mono);
+  font-size: 0.62rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--teal);
+  margin-bottom: 0.15rem;
+}
+
+.upload-attachment-list span {
+  color: var(--muted);
+  font-size: 0.78rem;
+  word-break: break-all;
+}
+
 .dropzone-document {
   margin-top: 0.85rem;
   min-height: 120px;
@@ -1505,16 +1545,26 @@ body {
   margin-bottom: 1rem;
 }
 
+.report-panel-label {
+  margin-bottom: 0.4rem;
+}
+
+.panel-right .expanded-analysis {
+  margin-bottom: 0.75rem;
+  border-color: rgba(61, 214, 198, 0.45);
+  background: rgba(61, 214, 198, 0.05);
+}
+
 .intake-how-to {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 1rem;
-  margin: 0 0 1.25rem;
+  margin: 0 0 0.85rem;
   padding: 0.8rem 0.9rem;
-  border: 1px solid var(--panel-border);
+  border: 1px solid rgba(61, 214, 198, 0.35);
   border-radius: 4px;
-  background: rgba(0, 0, 0, 0.22);
+  background: rgba(10, 15, 40, 0.72);
 }
 
 .intake-how-to-title {
@@ -1598,6 +1648,17 @@ body {
   flex: 0 0 auto;
 }
 
+@media (max-width: 520px) {
+  .intake-how-to {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .intake-how-to-demo {
+    width: 100%;
+  }
+}
+
 .dropzone {
   position: relative;
   flex: 1;
@@ -1656,8 +1717,7 @@ body {
   font-weight: 600;
   letter-spacing: 0.08em;
   text-transform: uppercase;
-  color: var(--crimson);
-  animation: flash-alert 1.5s ease-in-out infinite;
+  color: var(--text);
 }
 
 .dropzone.has-file .dropzone-text {
@@ -2341,6 +2401,10 @@ body {
 }
 
 .full-analysis-toggle > summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
   cursor: pointer;
   padding: 0.85rem 1rem;
   font-family: var(--font);
@@ -2352,6 +2416,17 @@ body {
   list-style: none;
 }
 
+.full-analysis-toggle > summary::after {
+  content: "Click to expand  ▾";
+  flex: 0 0 auto;
+  font-family: var(--mono);
+  font-size: 0.6rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--teal);
+}
+
 .full-analysis-toggle > summary::-webkit-details-marker {
   display: none;
 }
@@ -2359,6 +2434,10 @@ body {
 .full-analysis-toggle[open] > summary {
   border-bottom: 1px solid var(--panel-border);
   color: var(--teal);
+}
+
+.full-analysis-toggle[open] > summary::after {
+  content: "Click to collapse  ▴";
 }
 
 .full-analysis-body {

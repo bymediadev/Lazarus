@@ -88,8 +88,7 @@ export default function DealProfilePanel({
     <details className="deal-profile-panel">
       <summary>HubSpot import + deal history (optional)</summary>
       <p className="console-tab-hint">
-        Account ID and prior-stage objections help Lazarus cross-reference live dialogue with deal
-        history. Paste a JSON array, load the demo fixture, or import notes from HubSpot.
+        Import HubSpot notes or add prior deal history.
       </p>
 
       <HubSpotDealControls
