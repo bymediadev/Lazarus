@@ -20,6 +20,7 @@ export interface TranscriptSources {
   manual: boolean;
   email: boolean;
   field: boolean;
+  document: boolean;
 }
 
 export interface LiveDealTriage {

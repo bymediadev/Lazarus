@@ -4,7 +4,8 @@ export type ContextChannel =
   | "call_audio"
   | "call_transcript"
   | "email_thread"
-  | "field_recording";
+  | "field_recording"
+  | "document";
 
 export interface ContextEntry {
   channel: ContextChannel;
@@ -18,6 +19,7 @@ export interface TranscriptSources {
   manual: boolean;
   email: boolean;
   field: boolean;
+  document: boolean;
 }
 
 export interface StitchedContext {
@@ -31,12 +33,14 @@ export interface StitchContextInput {
   callTranscript?: string;
   emailThread?: string;
   fieldTranscript?: string;
+  documentText?: string;
   /** When true, transcribed upload audio is tagged as field / in-person capture */
   fieldCaptureAudio?: boolean;
   audioCapturedAt?: string;
   callCapturedAt?: string;
   emailCapturedAt?: string;
   fieldCapturedAt?: string;
+  documentCapturedAt?: string;
 }
 
 const CHANNEL_LABELS: Record<ContextChannel, string> = {
@@ -44,6 +48,7 @@ const CHANNEL_LABELS: Record<ContextChannel, string> = {
   call_transcript: "CALL TRANSCRIPT / MEETING NOTES",
   email_thread: "STALLED EMAIL THREAD HISTORY",
   field_recording: "FIELD / IN-PERSON CAPTURE",
+  document: "UPLOADED DOCUMENT (PDF / DOCX)",
 };
 
 const EMAIL_SPLIT =
@@ -156,6 +161,7 @@ export function stitchContext(input: StitchContextInput): StitchedContext {
   if ((input.fieldTranscript ?? "").trim()) {
     pushChannel(entries, "field_recording", input.fieldTranscript ?? "", input.fieldCapturedAt, 3);
   }
+  pushChannel(entries, "document", input.documentText ?? "", input.documentCapturedAt, 4);
 
   entries.sort((a, b) => a.sortKey - b.sortKey);
 
@@ -177,6 +183,7 @@ export function stitchContext(input: StitchContextInput): StitchedContext {
   const manual = enrichManualTranscript(input.callTranscript ?? "").trim();
   const email = enrichManualTranscript(input.emailThread ?? "").trim();
   const fieldText = enrichManualTranscript(input.fieldTranscript ?? "").trim();
+  const document = enrichManualTranscript(input.documentText ?? "").trim();
   const fieldAudio = input.fieldCaptureAudio && !!audio;
 
   return {
@@ -187,6 +194,7 @@ export function stitchContext(input: StitchContextInput): StitchedContext {
       manual: !!manual,
       email: !!email,
       field: fieldAudio || !!fieldText,
+      document: !!document,
     },
   };
 }

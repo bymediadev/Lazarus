@@ -1,6 +1,7 @@
 import type { HistoricalCrmContextEntry } from "../types";
 import { normalizeVetoHolders } from "../../shared/deepContextTypes";
 import { demoDeepContext } from "../lib/demoDeepContext";
+import HubSpotDealControls, { type HubSpotImportPayload } from "./HubSpotDealControls";
 
 interface Props {
   accountId: string;
@@ -10,6 +11,8 @@ interface Props {
   onSalesCycleDaysChange: (value: string) => void;
   onHistoricalJsonChange: (value: string) => void;
   onParseError: (message: string | null) => void;
+  onHubSpotNotice?: (message: string) => void;
+  onHubSpotError?: (message: string) => void;
 }
 
 export function parseHistoricalCrmJson(raw: string): HistoricalCrmContextEntry[] | null {
@@ -53,6 +56,8 @@ export default function DealProfilePanel({
   onSalesCycleDaysChange,
   onHistoricalJsonChange,
   onParseError,
+  onHubSpotNotice,
+  onHubSpotError,
 }: Props) {
   const loadDemoHistory = () => {
     onAccountIdChange(demoDeepContext.account_id);
@@ -71,13 +76,30 @@ export default function DealProfilePanel({
     onParseError(parsed === null ? "Historical CRM JSON must be a valid array." : null);
   };
 
+  const handleHubSpotImport = (payload: HubSpotImportPayload, notice: string) => {
+    onAccountIdChange(payload.accountId);
+    onSalesCycleDaysChange(payload.salesCycleDays);
+    onHistoricalJsonChange(JSON.stringify(payload.historicalCrmContext, null, 2));
+    onParseError(null);
+    onHubSpotNotice?.(notice);
+  };
+
   return (
     <details className="deal-profile-panel">
-      <summary>Deal profile (optional — historical CRM context)</summary>
+      <summary>HubSpot import + deal history (optional)</summary>
       <p className="console-tab-hint">
         Account ID and prior-stage objections help Lazarus cross-reference live dialogue with deal
-        history. Paste a JSON array or load the demo fixture.
+        history. Paste a JSON array, load the demo fixture, or import notes from HubSpot.
       </p>
+
+      <HubSpotDealControls
+        onImport={handleHubSpotImport}
+        onError={(message) => {
+          if (onHubSpotError) onHubSpotError(message);
+          else onParseError(message);
+        }}
+      />
+
       <div className="input-group">
         <label htmlFor="account-id">Account ID</label>
         <input

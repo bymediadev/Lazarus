@@ -15,6 +15,7 @@ import {
   buildDealMemorySummary,
   detectRecurringVetoHolders,
 } from "./deepContext.js";
+import { extractDocumentText, DOCUMENT_MAX_BYTES } from "./documents.js";
 import { savePostMortem, purgeExpiredTranscripts, saveRescueOutcome } from "./supabase.js";
 import { buildAnalysisTranscript } from "./transcript.js";
 import { stripOutcomeMetadata } from "./sanitize.js";
@@ -33,6 +34,8 @@ import { registerGoogleMeetRoutes } from "./integrations/google/routes.js";
 import { isGoogleMeetConfigured } from "./integrations/google/config.js";
 import { registerTeamsRoutes } from "./integrations/teams/routes.js";
 import { isTeamsConfigured } from "./integrations/teams/config.js";
+import { registerHubSpotRoutes } from "./integrations/hubspot/routes.js";
+import { isHubSpotConfigured } from "./integrations/hubspot/config.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const distPath = path.join(__dirname, "../dist");
@@ -43,6 +46,18 @@ const upload = multer({
   storage: multer.memoryStorage(),
   limits: { fileSize: 100 * 1024 * 1024 },
 });
+const uploadFields = upload.fields([
+  { name: "recording", maxCount: 1 },
+  { name: "document", maxCount: 1 },
+]);
+
+function firstUploadedFile(
+  files: Express.Multer.File[] | { [fieldname: string]: Express.Multer.File[] } | undefined,
+  field: string
+): Express.Multer.File | undefined {
+  if (!files || Array.isArray(files)) return undefined;
+  return files[field]?.[0];
+}
 
 const allowedOrigins = (
   process.env.FRONTEND_ORIGIN ??
@@ -108,6 +123,7 @@ app.get("/api/health", (_req, res) => {
     zoom: isZoomConfigured(),
     google_meet: isGoogleMeetConfigured(),
     teams: isTeamsConfigured(),
+    hubspot: isHubSpotConfigured(),
   });
 });
 
@@ -162,7 +178,7 @@ function requireApiKey(req: express.Request, res: express.Response, next: expres
   next();
 }
 
-app.post("/api/post-mortem", requireApiKey, upload.single("recording"), async (req, res) => {
+app.post("/api/post-mortem", requireApiKey, uploadFields, async (req, res) => {
   try {
     const processedAt = new Date().toISOString();
     const dealValue = parseFloat(String(req.body.deal_value)) || 0;
@@ -171,16 +187,23 @@ app.post("/api/post-mortem", requireApiKey, upload.single("recording"), async (r
     const livePayloadText = deepContext.liveTranscriptPayload?.length
       ? formatLiveTranscriptPayload(deepContext.liveTranscriptPayload)
       : "";
-    const manualTranscript = normalizeManualTranscript(manualRaw || livePayloadText);
+    const combinedManualInput = [manualRaw, livePayloadText].filter((part) => part.trim()).join(
+      "\n\n--- LIVE SESSION TRANSCRIPT ---\n\n"
+    );
+    const manualTranscript = normalizeManualTranscript(combinedManualInput);
     const emailRaw = normalizeTextField(req.body.email_thread);
     const emailThread = normalizeEmailThread(emailRaw);
     const isFieldCapture = ["1", "true", true].includes(req.body.field_capture as string | boolean);
     const strippedPriorAnalysis = manualRaw.trim().length - manualTranscript.length > 80;
     let audioTranscript = "";
     let audioMeta: { durationSeconds?: number; speakerCount?: number } | undefined;
+    let documentText = "";
 
-    if (req.file) {
-      const transcription = await transcribeAudio(req.file.buffer, req.file.originalname);
+    const recording = firstUploadedFile(req.files, "recording");
+    const documentFile = firstUploadedFile(req.files, "document");
+
+    if (recording) {
+      const transcription = await transcribeAudio(recording.buffer, recording.originalname);
       audioTranscript = transcription.formatted;
       audioMeta = {
         durationSeconds: transcription.durationSeconds,
@@ -188,21 +211,45 @@ app.post("/api/post-mortem", requireApiKey, upload.single("recording"), async (r
       };
     }
 
+    if (documentFile) {
+      if (documentFile.size > DOCUMENT_MAX_BYTES) {
+        res.status(400).json({
+          error: `Document exceeds ${DOCUMENT_MAX_BYTES / (1024 * 1024)} MB limit.`,
+        });
+        return;
+      }
+      try {
+        const extracted = await extractDocumentText(
+          documentFile.buffer,
+          documentFile.originalname,
+          documentFile.mimetype
+        );
+        documentText = extracted.text;
+      } catch (docErr) {
+        const message = docErr instanceof Error ? docErr.message : "Document extraction failed.";
+        res.status(400).json({ error: message });
+        return;
+      }
+    }
+
     const { text: rawTranscript, sources } = buildAnalysisTranscript({
       audioTranscript,
       manualTranscript,
       emailThread,
+      documentText,
       fieldCaptureAudio: isFieldCapture && !!audioTranscript,
       audioMeta,
       audioCapturedAt: audioTranscript ? processedAt : undefined,
       callCapturedAt: manualTranscript ? processedAt : undefined,
       emailCapturedAt: emailThread ? processedAt : undefined,
       fieldCapturedAt: isFieldCapture && audioTranscript ? processedAt : undefined,
+      documentCapturedAt: documentText ? processedAt : undefined,
     });
 
     if (!rawTranscript.trim()) {
       res.status(400).json({
-        error: "Provide a recording, call transcript, email thread, or any combination.",
+        error:
+          "Add one or more evidence sources. Every recording, transcript, email thread, and document is analyzed together.",
       });
       return;
     }
@@ -410,6 +457,7 @@ app.post("/api/admin/purge-retention", async (req, res) => {
 registerZoomRoutes(app);
 registerGoogleMeetRoutes(app);
 registerTeamsRoutes(app);
+registerHubSpotRoutes(app);
 registerTrustPackRoutes(app, publicPath);
 
 /** Public assets (logo, legal-shared.css). Trust-pack HTML only via /api/trust-pack/:slug. */

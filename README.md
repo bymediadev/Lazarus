@@ -107,13 +107,13 @@ Merge to `main` only when CI is green (`.github/workflows/test.yml` runs `npm te
 
 ## Integrations
 
-### HubSpot (webhook ingest — foundation only)
+### HubSpot (read-only OAuth + webhook ingest)
 
-`POST /api/webhooks/hubspot` maps a HubSpot deal snapshot (workflow webhook payload) into Lazarus deep-context fields: `account_id`, `sales_cycle_days` (from `days_in_pipeline`, capped at 180), and `historical_crm_context`. This is an **ingest helper** for manual or workflow-driven pushes — not a bidirectional CRM sync product claim yet. Full OAuth and deal API polling are not implemented.
+**OAuth (Deal Profile):** Connect with scopes `oauth`, `crm.objects.deals.read`, `crm.objects.notes.read`. Search deals and import associated notes into `account_id`, `sales_cycle_days`, and `historical_crm_context`. Env: `HUBSPOT_CLIENT_ID`, `HUBSPOT_CLIENT_SECRET`, optional `HUBSPOT_REDIRECT_URI`. Tokens: `.data/hubspot-tokens.json`. Test: `npm run test:hubspot`.
 
-Optional env: `HUBSPOT_WEBHOOK_SECRET` — when set, requests must include matching `X-HubSpot-Signature` or `X-Webhook-Secret`.
+**Webhook ingest:** `POST /api/webhooks/hubspot` maps a HubSpot deal snapshot into the same deep-context fields. Optional `HUBSPOT_WEBHOOK_SECRET`. Test: `node --use-system-ca scripts/test-hubspot-webhook.mjs` (requires dev server).
 
-Test: `node --use-system-ca scripts/test-hubspot-webhook.mjs` (requires dev server).
+Not a bidirectional CRM sync product claim.
 
 ### Zoom RTMS (live meeting transcripts)
 

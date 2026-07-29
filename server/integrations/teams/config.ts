@@ -45,4 +45,5 @@ export const TEAMS_GRAPH_SCOPES = [
   "User.Read",
   "OnlineMeetings.Read",
   "OnlineMeetingTranscript.Read.All",
+  "Mail.Read",
 ].join(" ");
