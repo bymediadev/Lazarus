@@ -1545,10 +1545,17 @@ body {
   margin-bottom: 1rem;
 }
 
+.report-panel-label {
+  margin-bottom: 0.4rem;
+}
+
+.panel-right .expanded-analysis {
+  margin-bottom: 0.75rem;
+  border-color: rgba(61, 214, 198, 0.45);
+  background: rgba(61, 214, 198, 0.05);
+}
+
 .intake-how-to {
-  position: sticky;
-  top: -1px;
-  z-index: 20;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -1557,9 +1564,7 @@ body {
   padding: 0.8rem 0.9rem;
   border: 1px solid rgba(61, 214, 198, 0.35);
   border-radius: 4px;
-  background: rgba(10, 15, 40, 0.96);
-  box-shadow: 0 8px 22px rgba(0, 5, 33, 0.35);
-  backdrop-filter: blur(10px);
+  background: rgba(10, 15, 40, 0.72);
 }
 
 .intake-how-to-title {
@@ -1643,29 +1648,14 @@ body {
   flex: 0 0 auto;
 }
 
-.intake-how-to-actions {
-  display: flex;
-  align-items: center;
-  gap: 0.45rem;
-}
-
-.intake-quick-run {
-  white-space: nowrap;
-}
-
 @media (max-width: 520px) {
   .intake-how-to {
     align-items: flex-start;
     flex-direction: column;
   }
 
-  .intake-how-to-actions,
-  .intake-quick-run {
+  .intake-how-to-demo {
     width: 100%;
-  }
-
-  .intake-how-to-actions > button {
-    flex: 1;
   }
 }
 

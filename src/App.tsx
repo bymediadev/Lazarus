@@ -622,7 +622,6 @@ export default function App() {
               sourceCount={channelCount}
               demoLoading={demoTranscriptLoading}
               onLoadDemo={handleLoadDemoTranscript}
-              onRun={handleRun}
             />
 
             <DealProfilePanel
@@ -869,6 +868,10 @@ export default function App() {
               </div>
             )}
 
+            <button className="run-button" onClick={handleRun} disabled={loading}>
+              {loading ? "Analyzing…" : `Run Analysis${channelCount ? ` (${channelCount})` : ""}`}
+            </button>
+
             <p className="upload-consent">
               Only upload content you’re authorized to use.{" "}
               {TRUST_PACK_NAV.filter((l) => l.slug === "terms" || l.slug === "privacy").map(
@@ -898,7 +901,9 @@ export default function App() {
           </section>
 
           <section className="panel panel-right">
-            <div className="panel-label">Deal Score &amp; Recovery Brief</div>
+            <div className={`panel-label ${result ? "report-panel-label" : ""}`}>
+              Deal Score &amp; Recovery Brief
+            </div>
 
             {loading ? (
               <div className="loading-overlay">

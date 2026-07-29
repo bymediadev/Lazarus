@@ -5,7 +5,6 @@ interface Props {
   sourceCount: number;
   demoLoading: boolean;
   onLoadDemo: () => void;
-  onRun: () => void;
 }
 
 export default function IntakeHowTo({
@@ -15,7 +14,6 @@ export default function IntakeHowTo({
   sourceCount,
   demoLoading,
   onLoadDemo,
-  onRun,
 }: Props) {
   const status = loading
     ? "Analyzing…"
@@ -31,26 +29,16 @@ export default function IntakeHowTo({
         <h2 className="intake-how-to-title">Deal evidence</h2>
         <p className="intake-how-to-status">{status}</p>
       </div>
-      <div className="intake-how-to-actions">
-        {!hasInput && (
-          <button
-            type="button"
-            className="btn-secondary intake-how-to-demo"
-            onClick={onLoadDemo}
-            disabled={demoLoading}
-          >
-            {demoLoading ? "Loading…" : "Try sample"}
-          </button>
-        )}
+      {!hasInput && (
         <button
           type="button"
-          className="btn-primary intake-quick-run"
-          onClick={onRun}
-          disabled={!hasInput || loading}
+          className="btn-secondary intake-how-to-demo"
+          onClick={onLoadDemo}
+          disabled={demoLoading}
         >
-          {loading ? "Running…" : "Run analysis"}
+          {demoLoading ? "Loading…" : "Try sample"}
         </button>
-      </div>
+      )}
     </aside>
   );
 }
