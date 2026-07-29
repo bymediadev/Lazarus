@@ -50,7 +50,14 @@ type SpeechRecognitionCtor = new () => {
   continuous: boolean;
   interimResults: boolean;
   lang: string;
-  onresult: ((e: { results: { transcript?: string; [i: number]: { transcript: string } } }) => void) | null;
+  onresult:
+    | ((e: {
+        results: {
+          length: number;
+          [i: number]: { transcript: string };
+        };
+      }) => void)
+    | null;
   onerror: ((e: { error: string }) => void) | null;
   start: () => void;
   stop: () => void;

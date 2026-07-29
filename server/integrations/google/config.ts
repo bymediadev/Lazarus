@@ -29,4 +29,5 @@ export const GOOGLE_MEET_SCOPES = [
   "profile",
   "https://www.googleapis.com/auth/calendar.readonly",
   "https://www.googleapis.com/auth/meetings.space.readonly",
+  "https://www.googleapis.com/auth/gmail.readonly",
 ].join(" ");

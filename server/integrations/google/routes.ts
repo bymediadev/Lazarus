@@ -5,6 +5,11 @@ import {
   verifySignedOAuthState,
 } from "../oauthShared.js";
 import { getGoogleMeetConfig, isGoogleMeetConfigured } from "./config.js";
+import {
+  fetchGmailThreadsByQuery,
+  formatImportedEmailsAsThread,
+  fetchRecentGmailMessages,
+} from "./gmail.js";
 import { buildGoogleAuthorizeUrl, exchangeGoogleCode } from "./oauth.js";
 import { clearGoogleTokens, isGoogleConnected, loadGoogleTokens } from "./tokens.js";
 
@@ -17,8 +22,8 @@ export function registerGoogleMeetRoutes(app: Express): void {
       account_email: tokens?.account_email ?? null,
       connected_at: tokens?.connected_at ?? null,
       note: isGoogleMeetConfigured()
-        ? "Google connected for Meet/Workspace. Live captions auto-ingest comes next — mic/paste feeds live triage today."
-        : "Add GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET to enable Connect Google.",
+        ? "Google connected for Meet/Workspace and Gmail thread search. Ask for a company or deal — Lazarus expands matching threads into the evidence package."
+        : "Add GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET to enable Connect Google / Gmail.",
     });
   });
 
@@ -61,5 +66,76 @@ export function registerGoogleMeetRoutes(app: Express): void {
   app.post("/api/integrations/google/disconnect", (_req, res) => {
     clearGoogleTokens();
     res.json({ ok: true });
+  });
+
+  app.post("/api/integrations/google/import-emails", async (req, res) => {
+    if (!isGoogleConnected()) {
+      res.status(401).json({ error: "Google is not connected. Connect Gmail first." });
+      return;
+    }
+    try {
+      const limitRaw = Number(req.body?.limit ?? 10);
+      const limit = Number.isFinite(limitRaw) ? Math.min(Math.max(limitRaw, 1), 25) : 10;
+      const messages = await fetchRecentGmailMessages(limit);
+      const thread = formatImportedEmailsAsThread(messages);
+      res.json({
+        ok: true,
+        provider: "gmail",
+        count: messages.length,
+        thread,
+        messages: messages.map((m) => ({
+          id: m.id,
+          subject: m.subject,
+          from: m.from,
+          date: m.date,
+          snippet: m.snippet,
+        })),
+      });
+    } catch (err) {
+      console.error("[gmail-import] error:", err);
+      res.status(500).json({
+        error: err instanceof Error ? err.message : "Gmail import failed",
+      });
+    }
+  });
+
+  app.post("/api/integrations/google/search-emails", async (req, res) => {
+    if (!isGoogleConnected()) {
+      res.status(401).json({ error: "Google is not connected. Connect Gmail first." });
+      return;
+    }
+    const query = String(req.body?.query ?? "").trim();
+    if (query.length < 2) {
+      res.status(400).json({ error: "Enter a company, domain, person, or topic." });
+      return;
+    }
+    try {
+      const result = await fetchGmailThreadsByQuery(query, {
+        maxThreads: 5,
+        maxMessages: 40,
+      });
+      res.json({
+        ok: true,
+        provider: "gmail",
+        query,
+        gmail_query: result.gmailQuery,
+        thread_count: result.threadCount,
+        count: result.messages.length,
+        thread: formatImportedEmailsAsThread(result.messages),
+        messages: result.messages.map((m) => ({
+          id: m.id,
+          threadId: m.threadId,
+          subject: m.subject,
+          from: m.from,
+          date: m.date,
+          snippet: m.snippet,
+        })),
+      });
+    } catch (err) {
+      console.error("[gmail-search] error:", err);
+      res.status(500).json({
+        error: err instanceof Error ? err.message : "Gmail search failed",
+      });
+    }
   });
 }

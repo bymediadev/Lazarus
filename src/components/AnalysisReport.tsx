@@ -138,7 +138,7 @@ export default function AnalysisReport({ result: raw, sources }: Props) {
 
   return (
     <div className="cards">
-      {pi && <DealHeaderMetrics indices={pi} />}
+      {pi && <DealHeaderMetrics indices={pi} viabilityScore={vs.viability_score} />}
 
       <ConciseDiagnostic result={r} />
 
@@ -178,9 +178,10 @@ export default function AnalysisReport({ result: raw, sources }: Props) {
           {sources.field && <span>Field capture merged</span>}
           {sources.manual && <span>Call notes merged</span>}
           {sources.email && <span>Email thread merged</span>}
-          {[sources.audio, sources.field, sources.manual, sources.email].filter(Boolean).length >= 2 && (
-            <span className="sources-merged">Cross-channel stitched</span>
-          )}
+          {sources.document && <span>PDF/DOCX merged</span>}
+          {[sources.audio, sources.field, sources.manual, sources.email, sources.document].filter(
+            Boolean
+          ).length >= 2 && <span className="sources-merged">Cross-channel stitched</span>}
         </div>
       )}
 

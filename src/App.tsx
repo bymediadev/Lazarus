@@ -4,13 +4,12 @@ import DealProfilePanel, { parseHistoricalCrmJson } from "./components/DealProfi
 import MeetingCompanion from "./components/MeetingCompanion";
 import LiveTriageBrief from "./components/LiveTriageBrief";
 import FieldRecorder from "./components/FieldRecorder";
-import CaptureStack from "./components/CaptureStack";
-import EnterpriseTrust, { HeroTrustBanner } from "./components/EnterpriseTrust";
+import EnterpriseTrust from "./components/EnterpriseTrust";
 import SiteFooter from "./components/SiteFooter";
 import TrustPackLink from "./components/TrustPackLink";
 import TrustPackModal from "./components/TrustPackModal";
-import MetricGlossary from "./components/MetricGlossary";
 import IntakeHowTo from "./components/IntakeHowTo";
+import EmailProviderControls from "./components/EmailProviderControls";
 import { TRUST_PACK_NAV, TRUST_PACK_OPEN_EVENT, type TrustPackSlug } from "./lib/trustPack";
 import { API_BASE, apiTargetLabel, runPostMortem } from "./lib/api";
 import {
@@ -25,10 +24,14 @@ import type { LiveObjection } from "./lib/liveObjections";
 import { fetchLiveTriage, type LiveTriageResult } from "./lib/liveTriage";
 import type { MeetingPlatformId } from "./lib/meetingPlatforms";
 import { loadDemoSalesTranscript } from "./lib/demoTranscript";
-import { setLinkedPlatform } from "./lib/meetingPlatforms";
 
 const ACCEPTED_EXT = [".mp3", ".wav", ".mp4", ".m4a", ".webm", ".mpeg", ".mpga"];
 const ACCEPT_ATTR = ".mp3,.wav,.mp4,.m4a,.webm,audio/*,video/mp4,video/webm";
+const DOCUMENT_EXT = [".pdf", ".docx"];
+const DOCUMENT_ACCEPT = ".pdf,.docx,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document";
+const DOCUMENT_MAX_BYTES = 10 * 1024 * 1024;
+const TEXT_ACCEPT = ".txt,.md,.csv,text/plain,text/markdown,text/csv";
+const TEXT_MAX_BYTES = 5 * 1024 * 1024;
 
 type InputTab = "call" | "email" | "field" | "live";
 
@@ -44,14 +47,37 @@ function isAcceptedFile(file: File): boolean {
   return false;
 }
 
+function isAcceptedDocument(file: File): boolean {
+  const ext = getExtension(file.name);
+  if (DOCUMENT_EXT.includes(ext)) return true;
+  if (
+    file.type === "application/pdf" ||
+    file.type === "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+  ) {
+    return true;
+  }
+  return false;
+}
+
 function formatFileSize(bytes: number): string {
   if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 }
 
+async function readTextEvidence(file: File): Promise<string> {
+  const ext = getExtension(file.name);
+  const supported = [".txt", ".md", ".csv"].includes(ext) || file.type.startsWith("text/");
+  if (!supported) throw new Error("Use a .txt, .md, or .csv text export.");
+  if (file.size > TEXT_MAX_BYTES) throw new Error("Text export exceeds 5 MB.");
+  const text = (await file.text()).trim();
+  if (!text) throw new Error("The uploaded text file is empty.");
+  return text;
+}
+
 export default function App() {
   const [activeTab, setActiveTab] = useState<InputTab>("call");
   const [file, setFile] = useState<File | null>(null);
+  const [documentFile, setDocumentFile] = useState<File | null>(null);
   const [recordingSource, setRecordingSource] = useState<"upload" | "field" | null>(null);
   const [fieldSessionId, setFieldSessionId] = useState<string | null>(null);
   const [dealValue, setDealValue] = useState("52000");
@@ -74,6 +100,7 @@ export default function App() {
   const [emailThread, setEmailThread] = useState("");
   const [demoTranscriptLoading, setDemoTranscriptLoading] = useState(false);
   const [demoTranscriptNotice, setDemoTranscriptNotice] = useState<string | null>(null);
+  const [emailImportNotice, setEmailImportNotice] = useState<string | null>(null);
   const [result, setResult] = useState<PostMortemResult | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -84,19 +111,28 @@ export default function App() {
   const [trustPack, setTrustPack] = useState<TrustPackSlug | null>(null);
 
   const hasAudio = !!file;
+  const hasUploadedRecording = recordingSource === "upload" && hasAudio;
+  const hasDocument = !!documentFile;
   const hasCallTranscript = callTranscript.trim().length > 0;
   const hasEmail = emailThread.trim().length > 0;
   const hasFieldRecording = recordingSource === "field" && hasAudio;
   const hasCallInput = hasAudio || hasCallTranscript;
-  const channelCount = [hasCallInput, hasEmail, hasFieldRecording].filter(Boolean).length;
-  const hasAnyInput = hasCallInput || hasEmail;
+  const channelCount = [
+    hasUploadedRecording,
+    hasCallTranscript,
+    hasEmail,
+    hasFieldRecording,
+    hasDocument,
+  ].filter(Boolean).length;
+  const hasAnyInput = hasCallInput || hasEmail || hasDocument;
 
   const loadingMessage = useMemo(() => {
     if (channelCount >= 2) return "Stitching cross-channel context into intelligence brief...";
     if (hasAudio) return "Transcribing audio and building intelligence brief...";
+    if (hasDocument) return "Extracting document and building intelligence brief...";
     if (hasEmail) return "Parsing email thread and building intelligence brief...";
     return "Analyzing deal and building intelligence brief...";
-  }, [channelCount, hasAudio, hasEmail]);
+  }, [channelCount, hasAudio, hasDocument, hasEmail]);
 
   const headerStatus = loading
     ? "INTELLIGENCE BRIEF IN PROGRESS..."
@@ -107,6 +143,7 @@ export default function App() {
   const runAnalysis = useCallback(
     async (payload: {
       file?: File | null;
+      document?: File | null;
       transcript: string;
       emailThread: string;
       dealValue: string;
@@ -119,6 +156,7 @@ export default function App() {
     }) => {
       const data = await runPostMortem({
         file: payload.file,
+        document: payload.document,
         transcript: payload.transcript,
         emailThread: payload.emailThread,
         dealValue: payload.dealValue,
@@ -144,7 +182,7 @@ export default function App() {
     let failures = 0;
     for (const entry of pending) {
       try {
-        let file: File | null = null;
+        let file: File | null = entry.recordingFile ?? null;
         if (entry.recordingSessionId) {
           const blob = await assembleSessionBlob(entry.recordingSessionId, "audio/webm");
           if (blob) {
@@ -153,6 +191,7 @@ export default function App() {
         }
         await runAnalysis({
           file,
+          document: entry.documentFile ?? null,
           transcript: entry.transcript,
           emailThread: entry.emailThread,
           dealValue: entry.dealValue,
@@ -185,6 +224,63 @@ export default function App() {
     check();
     const id = setInterval(check, 15000);
     return () => clearInterval(id);
+  }, []);
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const provider = params.has("google")
+      ? "google"
+      : params.has("teams")
+        ? "teams"
+        : params.has("hubspot")
+          ? "hubspot"
+          : null;
+    const outcome = provider ? params.get(provider) : null;
+    const reason = params.get("reason");
+
+    // OAuth callbacks opened by Connect popups report success to the original app,
+    // then close. The original page keeps every in-memory File and evidence field.
+    if (provider && outcome && window.opener) {
+      window.opener.postMessage(
+        { type: "lazarus-oauth-complete", provider, outcome, reason },
+        window.location.origin
+      );
+      window.close();
+      return;
+    }
+
+    const providerLabel = (name?: string) => {
+      if (name === "google") return "Gmail";
+      if (name === "teams") return "Outlook";
+      if (name === "hubspot") return "HubSpot";
+      return "Integration";
+    };
+
+    const onOAuthMessage = (event: MessageEvent) => {
+      if (event.origin !== window.location.origin) return;
+      const detail = event.data as {
+        type?: string;
+        provider?: string;
+        outcome?: string;
+        reason?: string | null;
+      };
+      if (detail.type !== "lazarus-oauth-complete") return;
+
+      window.dispatchEvent(new CustomEvent("lazarus-oauth-complete", { detail }));
+      if (detail.outcome === "connected") {
+        setSyncNotice(
+          `${providerLabel(detail.provider)} connected. Your evidence package was preserved.`
+        );
+        setError(null);
+      } else {
+        setError(
+          `${providerLabel(detail.provider)} connection failed${detail.reason ? ` (${detail.reason})` : ""}.`
+        );
+      }
+    };
+
+    window.addEventListener("message", onOAuthMessage);
+    return () => window.removeEventListener("message", onOAuthMessage);
   }, []);
 
   useEffect(() => {
@@ -222,6 +318,38 @@ export default function App() {
     setActiveTab("call");
   }, []);
 
+  const handleDocument = useCallback((f: File | undefined) => {
+    if (!f) return;
+    if (!isAcceptedDocument(f)) {
+      setError("Unsupported document type. Use .pdf or .docx.");
+      return;
+    }
+    if (f.size > DOCUMENT_MAX_BYTES) {
+      setError("Document exceeds 10 MB limit.");
+      return;
+    }
+    setError(null);
+    setDocumentFile(f);
+    setActiveTab("call");
+  }, []);
+
+  const handleTextEvidence = useCallback(
+    async (f: File | undefined) => {
+      if (!f) return;
+      try {
+        const text = await readTextEvidence(f);
+        const separator = `\n\n--- ${f.name} ---\n\n`;
+        setCallTranscript((previous) => (previous.trim() ? `${previous}${separator}${text}` : text));
+        setDemoTranscriptNotice(`Added transcript file: ${f.name}`);
+        setActiveTab("call");
+        setError(null);
+      } catch (err) {
+        setError(err instanceof Error ? err.message : "Could not read text evidence.");
+      }
+    },
+    []
+  );
+
   const onDragEnter = useCallback((e: React.DragEvent) => {
     e.preventDefault();
     e.stopPropagation();
@@ -257,7 +385,9 @@ export default function App() {
     setError(null);
     try {
       const { text, source } = await loadDemoSalesTranscript();
-      setCallTranscript(text);
+      setCallTranscript((previous) =>
+        previous.trim() ? `${previous}\n\n--- SAMPLE TRANSCRIPT ---\n\n${text}` : text
+      );
       setActiveTab("call");
       const sourceLabel =
         source === "s3-primary"
@@ -277,7 +407,9 @@ export default function App() {
 
   const handleRun = async () => {
     if (!hasAnyInput) {
-      setError("Add a call recording, transcript, email thread, or any combination.");
+      setError(
+        "Add one or more evidence sources. Every recording, transcript, email thread, and document is analyzed together."
+      );
       return;
     }
 
@@ -300,12 +432,15 @@ export default function App() {
         dealValue,
         transcript: callTranscript,
         emailThread,
+        recordingFile: recordingSource === "upload" ? file ?? undefined : undefined,
+        documentFile: documentFile ?? undefined,
         recordingSessionId: fieldSessionId ?? undefined,
       });
       // Clear all input state so the user cannot double-submit and badges reset
       setFile(null);
       setCallTranscript("");
       setEmailThread("");
+      setDocumentFile(null);
       setFieldSessionId(null);
       setRecordingSource(null);
       setSyncNotice("Analysis queued — will auto-sync when connection restores.");
@@ -319,6 +454,7 @@ export default function App() {
     try {
       await runAnalysis({
         file,
+        document: documentFile,
         transcript: callTranscript,
         emailThread,
         dealValue,
@@ -349,9 +485,9 @@ export default function App() {
   };
 
   const tabs: { id: InputTab; label: string; dot?: boolean }[] = [
-    { id: "call", label: "Call Auto-Autopsy", dot: hasCallInput },
+    { id: "call", label: "Upload Files", dot: hasCallInput },
     { id: "live", label: "Live Meeting", dot: liveSessionActive },
-    { id: "email", label: "Email Thread", dot: hasEmail },
+    { id: "email", label: "Mailbox Search", dot: hasEmail },
     { id: "field", label: "🎙️ Field Capture", dot: hasFieldRecording },
   ];
 
@@ -460,17 +596,9 @@ export default function App() {
       </header>
 
       <div className="app-main">
-        <HeroTrustBanner />
-        <CaptureStack
-          onOpenLiveTab={(platform) => {
-            if (platform) setLinkedPlatform(platform);
-            setActiveTab("live");
-          }}
-        />
-
         <div className="workspace">
           <section className="panel panel-left intake-viewport">
-            <div className="panel-label">Deal Intake — upload or paste from any meeting tool</div>
+            <div className="panel-label">Evidence Package — every source analyzed together</div>
 
             <IntakeHowTo
               hasInput={hasAnyInput}
@@ -488,9 +616,23 @@ export default function App() {
               onSalesCycleDaysChange={setSalesCycleDays}
               onHistoricalJsonChange={setHistoricalCrmJson}
               onParseError={setHistoricalParseError}
+              onHubSpotNotice={(message) => {
+                setSyncNotice(message);
+                setError(null);
+              }}
+              onHubSpotError={(message) => {
+                setError(message);
+              }}
             />
 
-            <div className="console-tabs" role="tablist" aria-label="Input modes">
+            <div className="evidence-package-banner" role="status">
+              <strong>{channelCount} source{channelCount === 1 ? "" : "s"} attached</strong>
+              <span>
+                Add recordings + transcripts + emails + documents. Tabs add to the same package.
+              </span>
+            </div>
+
+            <div className="console-tabs" role="tablist" aria-label="Additive evidence channels">
               {tabs.map((tab) => (
                 <button
                   key={tab.id}
@@ -510,10 +652,48 @@ export default function App() {
               {activeTab === "call" && (
                 <div className="console-tab-audio">
                   <p className="console-tab-hint">
-                    Drop a recording or paste a transcript from Meet, Teams, or anywhere you already
-                    meet — then add Lazarus on top. Stitches with Email Thread and Field Capture
-                    before analysis.
+                    Start with a Word document, PDF, recording, or transcript. Add more sources at any
+                    time.
                   </p>
+                  <div
+                    className={`dropzone dropzone-tab dropzone-document ${documentFile ? "has-file" : ""}`}
+                  >
+                    <input
+                      id="document-upload"
+                      className="dropzone-file-input"
+                      type="file"
+                      accept={DOCUMENT_ACCEPT}
+                      onChange={(e) => {
+                        handleDocument(e.target.files?.[0]);
+                        e.target.value = "";
+                      }}
+                    />
+                    <div className="dropzone-content dropzone-content-compact">
+                      <span className="dropzone-icon">{documentFile ? "✓" : "📄"}</span>
+                      <span className="dropzone-text">
+                        {documentFile
+                          ? "Document loaded — ready for analysis"
+                          : "Upload Word or PDF"}
+                      </span>
+                      {documentFile ? (
+                        <>
+                          <span className="dropzone-filename">{documentFile.name}</span>
+                          <span className="dropzone-meta">{formatFileSize(documentFile.size)}</span>
+                        </>
+                      ) : (
+                        <span className="dropzone-hint">.docx or .pdf · max 10 MB</span>
+                      )}
+                    </div>
+                  </div>
+                  {documentFile && (
+                    <button
+                      type="button"
+                      className="file-clear-btn"
+                      onClick={() => setDocumentFile(null)}
+                    >
+                      Remove document
+                    </button>
+                  )}
                   <div
                     className={`dropzone dropzone-tab ${dragOver ? "drag-over" : ""} ${file && recordingSource === "upload" ? "has-file" : ""}`}
                   >
@@ -577,14 +757,27 @@ export default function App() {
                   <div className="input-group input-group-grow">
                     <div className="input-label-row">
                       <label htmlFor="call-transcript">Call Transcript</label>
-                      <button
-                        type="button"
-                        className="btn-secondary btn-demo-transcript"
-                        onClick={handleLoadDemoTranscript}
-                        disabled={demoTranscriptLoading}
-                      >
-                        {demoTranscriptLoading ? "Loading demo…" : "Use sample demo transcript"}
-                      </button>
+                      <div className="input-label-actions">
+                        <label className="btn-secondary text-upload-control">
+                          Upload transcript
+                          <input
+                            type="file"
+                            accept={TEXT_ACCEPT}
+                            onChange={(e) => {
+                              void handleTextEvidence(e.target.files?.[0]);
+                              e.target.value = "";
+                            }}
+                          />
+                        </label>
+                        <button
+                          type="button"
+                          className="btn-secondary btn-demo-transcript"
+                          onClick={handleLoadDemoTranscript}
+                          disabled={demoTranscriptLoading}
+                        >
+                          {demoTranscriptLoading ? "Loading demo…" : "Use sample"}
+                        </button>
+                      </div>
                     </div>
                     <textarea
                       id="call-transcript"
@@ -596,26 +789,35 @@ export default function App() {
                     {demoTranscriptNotice && (
                       <p className="demo-transcript-notice">{demoTranscriptNotice}</p>
                     )}
-                    <MetricGlossary variant="panel" />
                   </div>
                 </div>
               )}
 
               {activeTab === "email" && (
                 <div className="console-tab-transcript">
-                  <p className="console-tab-hint">
-                    Paste stalled email history. Chronologically stitched with call and field inputs.
-                  </p>
-                  <div className="input-group input-group-grow">
-                    <label htmlFor="email-thread">Paste Stalled Email History Thread</label>
-                    <textarea
-                      id="email-thread"
-                      className="transcript-textarea"
-                      value={emailThread}
-                      onChange={(e) => setEmailThread(e.target.value)}
-                      placeholder="Paste forwarded email chain, reply threads, or CRM email export..."
-                    />
-                  </div>
+                  <EmailProviderControls
+                    onImportThread={(thread, notice) => {
+                      setEmailThread((previous) =>
+                        previous.trim()
+                          ? `${previous}\n\n--- IMPORTED EMAILS ---\n\n${thread}`
+                          : thread
+                      );
+                      setEmailImportNotice(notice);
+                      setError(null);
+                    }}
+                    onError={(message) => {
+                      setError(message);
+                      setEmailImportNotice(null);
+                    }}
+                    hasEmailEvidence={hasEmail}
+                    onClearEmailEvidence={() => {
+                      setEmailThread("");
+                      setEmailImportNotice(null);
+                    }}
+                  />
+                  {emailImportNotice && (
+                    <p className="demo-transcript-notice">{emailImportNotice}</p>
+                  )}
                 </div>
               )}
 
@@ -653,13 +855,20 @@ export default function App() {
                   <span className="input-badge input-badge-text">Call transcript attached</span>
                 )}
                 {hasEmail && (
-                  <span className="input-badge input-badge-email">Email thread attached</span>
+                  <span className="input-badge input-badge-email">
+                    Connected mailbox thread attached
+                  </span>
+                )}
+                {hasDocument && (
+                  <span className="input-badge input-badge-text">PDF/DOCX attached</span>
                 )}
                 {hasFieldRecording && (
                   <span className="input-badge input-badge-field">Field capture attached</span>
                 )}
                 {channelCount >= 2 && (
-                  <span className="input-badge input-badge-merge">Cross-channel stitch ready</span>
+                  <span className="input-badge input-badge-merge">
+                    All {channelCount} sources analyze together
+                  </span>
                 )}
                 {liveTranscriptPayload.length > 0 && (
                   <span className="input-badge input-badge-text">
@@ -675,7 +884,9 @@ export default function App() {
             )}
 
             <button className="run-button" onClick={handleRun} disabled={loading}>
-              {loading ? "Running Analysis..." : "Run Deal Analysis"}
+              {loading
+                ? "Analyzing Evidence Package..."
+                : `Analyze Evidence Package${channelCount ? ` (${channelCount})` : ""}`}
             </button>
             <div className="privacy-trust-banner" role="status">
               <span className="privacy-trust-icon" aria-hidden="true">

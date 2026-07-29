@@ -1,5 +1,10 @@
 import { useEffect, useId, useRef, useState } from "react";
-import { METRIC_LEGEND } from "../lib/metricLegend";
+import {
+  METRIC_LEGEND,
+  formatScoreOutOf100,
+  resolveLegendScore,
+  type LegendScoreSource,
+} from "../lib/metricLegend";
 
 /** @deprecated Prefer METRIC_LEGEND — kept as alias for existing imports. */
 export const METRIC_GLOSSARY = METRIC_LEGEND;
@@ -7,9 +12,11 @@ export const METRIC_GLOSSARY = METRIC_LEGEND;
 interface Props {
   /** Compact floating control for the deal header; panel = intake-side legend. */
   variant?: "icon" | "panel";
+  /** Live scores from a completed report (optional on intake). */
+  scores?: LegendScoreSource | null;
 }
 
-export default function MetricGlossary({ variant = "icon" }: Props) {
+export default function MetricGlossary({ variant = "icon", scores }: Props) {
   const [open, setOpen] = useState(false);
   const panelId = useId();
   const rootRef = useRef<HTMLDivElement>(null);
@@ -34,15 +41,23 @@ export default function MetricGlossary({ variant = "icon" }: Props) {
 
   const list = (
     <dl className="metric-glossary-list">
-      {METRIC_LEGEND.map((entry) => (
-        <div key={entry.id} className="metric-glossary-item">
-          <dt>{entry.term}</dt>
-          <dd>
-            {entry.definition}
-            <span className="metric-glossary-map">In the report: {entry.reportMapsTo}</span>
-          </dd>
-        </div>
-      ))}
+      {METRIC_LEGEND.map((entry) => {
+        const score = resolveLegendScore(entry, scores);
+        return (
+          <div key={entry.id} className="metric-glossary-item">
+            <dt>
+              {entry.term}
+              {score != null && (
+                <span className="metric-glossary-score">{formatScoreOutOf100(score)}</span>
+              )}
+            </dt>
+            <dd>
+              {entry.definition}
+              <span className="metric-glossary-map">In the report: {entry.reportMapsTo}</span>
+            </dd>
+          </div>
+        );
+      })}
     </dl>
   );
 
@@ -51,7 +66,7 @@ export default function MetricGlossary({ variant = "icon" }: Props) {
       <aside className="metric-glossary-panel metric-legend-intake" aria-label="Metric legend">
         <h3 className="metric-glossary-heading">Metric legend</h3>
         <p className="metric-glossary-lede">
-          Terms Lazarus scores from the transcript — and where they show up in the report.
+          Terms Lazarus scores from 0–100 — and where they show up in the report.
         </p>
         {list}
       </aside>

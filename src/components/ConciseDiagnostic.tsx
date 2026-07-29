@@ -342,15 +342,15 @@ export default function ConciseDiagnostic({ result }: Props) {
         <h2 className="card-title">One-Click CRM Portability</h2>
         <div className="card-body">
           <p className="meta-line">
-            Manager-ready overview for HubSpot or Salesforce — what’s going on, who owns what, what
-            to do next, supporting signals, and the metric legend in one paste.
+            One paste for Apollo, HubSpot, or Salesforce: deal overview, recovery plan, and metric
+            scores.
           </p>
           <button
             type="button"
             className={`copy-button crm-copy-btn ${copiedCrm ? "copied" : ""}`}
             onClick={copyCrmNotes}
           >
-            {copiedCrm ? "Copied!" : "📋 Copy Deal Overview for CRM"}
+            {copiedCrm ? "Copied!" : "Copy Deal Overview for CRM"}
           </button>
         </div>
       </article>

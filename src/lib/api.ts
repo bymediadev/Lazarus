@@ -1,12 +1,17 @@
 import { GroundingAudit, HistoricalCrmContextEntry, LiveTranscriptTurn, PostMortemResult, TranscriptSources } from "../types";
 
 /** Empty = same-origin / Vite proxy to localhost:3001. Set to Railway URL for remote API. */
-export const API_BASE = (import.meta.env.VITE_API_URL ?? "").replace(/\/$/, "");
+const viteEnv = (
+  import.meta as ImportMeta & {
+    env?: Record<string, string | undefined>;
+  }
+).env;
+export const API_BASE = (viteEnv?.VITE_API_URL ?? "").replace(/\/$/, "");
 
 /** Sent as X-Api-Key when VITE_LAZARUS_API_KEY is set (must match server LAZARUS_API_KEY). */
 export function apiAuthHeaders(json = false): Record<string, string> {
   const headers: Record<string, string> = {};
-  const key = (import.meta.env.VITE_LAZARUS_API_KEY ?? "").trim();
+  const key = (viteEnv?.VITE_LAZARUS_API_KEY ?? "").trim();
   if (key) headers["X-Api-Key"] = key;
   if (json) headers["Content-Type"] = "application/json";
   return headers;
@@ -31,6 +36,7 @@ export interface PostMortemResponse extends PostMortemResult {
 
 export interface PostMortemPayload {
   file?: File | null;
+  document?: File | null;
   transcript?: string;
   emailThread?: string;
   dealValue: string;
@@ -47,6 +53,10 @@ export async function runPostMortem(payload: PostMortemPayload): Promise<PostMor
 
   if (payload.file) {
     formData.append("recording", payload.file);
+  }
+
+  if (payload.document) {
+    formData.append("document", payload.document);
   }
 
   const manual = payload.transcript?.trim();
@@ -143,5 +153,5 @@ export async function saveRescueOutcome(
   if (!res.ok) {
     throw new Error(data.error || `Save failed (${res.status})`);
   }
-  return data;
+  return { ok: data.ok === true, id: data.id };
 }

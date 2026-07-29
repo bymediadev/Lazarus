@@ -14,23 +14,27 @@ export function buildAnalysisTranscript(options: {
   manualTranscript?: string;
   emailThread?: string;
   fieldTranscript?: string;
+  documentText?: string;
   fieldCaptureAudio?: boolean;
   audioMeta?: { durationSeconds?: number; speakerCount?: number };
   audioCapturedAt?: string;
   callCapturedAt?: string;
   emailCapturedAt?: string;
   fieldCapturedAt?: string;
+  documentCapturedAt?: string;
 }): BuiltTranscript {
   const stitched = stitchContext({
     audioTranscript: options.audioTranscript,
     callTranscript: options.manualTranscript,
     emailThread: options.emailThread,
     fieldTranscript: options.fieldTranscript,
+    documentText: options.documentText,
     fieldCaptureAudio: options.fieldCaptureAudio,
     audioCapturedAt: options.audioCapturedAt,
     callCapturedAt: options.callCapturedAt,
     emailCapturedAt: options.emailCapturedAt,
     fieldCapturedAt: options.fieldCapturedAt,
+    documentCapturedAt: options.documentCapturedAt,
   });
 
   return {

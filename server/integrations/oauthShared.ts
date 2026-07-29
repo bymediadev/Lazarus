@@ -48,20 +48,28 @@ export function verifySignedOAuthState(
 }
 
 export function resolveFrontendOrigin(): string {
-  const publicApi = (process.env.PUBLIC_API_URL ?? "").trim().replace(/\/$/, "");
-  if (publicApi.startsWith("https://")) return publicApi;
-
   const fromEnv = (process.env.FRONTEND_ORIGIN ?? "")
     .split(",")
     .map((o) => o.trim())
     .filter(Boolean);
+
+  // Local OAuth popups must land on localhost so postMessage can reach the opener tab.
+  const isProd = process.env.NODE_ENV === "production";
+  if (!isProd) {
+    const local = fromEnv.find((o) => /localhost|127\.0\.0\.1/i.test(o));
+    if (local) return local.replace(/\/$/, "");
+  }
 
   const httpsPublic = fromEnv.find(
     (o) => o.startsWith("https://") && !/localhost|127\.0\.0\.1/i.test(o)
   );
   if (httpsPublic) return httpsPublic.replace(/\/$/, "");
 
-  if (process.env.NODE_ENV === "production") {
+  // Production monolith: PUBLIC_API_URL is often the same origin as the UI.
+  const publicApi = (process.env.PUBLIC_API_URL ?? "").trim().replace(/\/$/, "");
+  if (isProd && publicApi.startsWith("https://")) return publicApi;
+
+  if (isProd) {
     return "https://lazarus-4uxi.onrender.com";
   }
 
