@@ -4,7 +4,6 @@ import DealProfilePanel, { parseHistoricalCrmJson } from "./components/DealProfi
 import MeetingCompanion from "./components/MeetingCompanion";
 import LiveTriageBrief from "./components/LiveTriageBrief";
 import FieldRecorder from "./components/FieldRecorder";
-import EnterpriseTrust from "./components/EnterpriseTrust";
 import SiteFooter from "./components/SiteFooter";
 import TrustPackLink from "./components/TrustPackLink";
 import TrustPackModal from "./components/TrustPackModal";
@@ -28,8 +27,10 @@ import { loadDemoSalesTranscript } from "./lib/demoTranscript";
 const ACCEPTED_EXT = [".mp3", ".wav", ".mp4", ".m4a", ".webm", ".mpeg", ".mpga"];
 const ACCEPT_ATTR = ".mp3,.wav,.mp4,.m4a,.webm,audio/*,video/mp4,video/webm";
 const DOCUMENT_EXT = [".pdf", ".docx"];
-const DOCUMENT_ACCEPT = ".pdf,.docx,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document";
+const DOCUMENT_ACCEPT =
+  ".pdf,.docx,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document";
 const DOCUMENT_MAX_BYTES = 10 * 1024 * 1024;
+const UNIFIED_UPLOAD_ACCEPT = `${ACCEPT_ATTR},${DOCUMENT_ACCEPT}`;
 const TEXT_ACCEPT = ".txt,.md,.csv,text/plain,text/markdown,text/csv";
 const TEXT_MAX_BYTES = 5 * 1024 * 1024;
 
@@ -333,6 +334,22 @@ export default function App() {
     setActiveTab("call");
   }, []);
 
+  const handleEvidenceUpload = useCallback(
+    (f: File | undefined) => {
+      if (!f) return;
+      if (isAcceptedDocument(f)) {
+        handleDocument(f);
+        return;
+      }
+      if (isAcceptedFile(f)) {
+        handleFile(f);
+        return;
+      }
+      setError("Unsupported file. Use .pdf, .docx, .mp3, .wav, .mp4, or .m4a.");
+    },
+    [handleDocument, handleFile]
+  );
+
   const handleTextEvidence = useCallback(
     async (f: File | undefined) => {
       if (!f) return;
@@ -374,9 +391,9 @@ export default function App() {
       e.preventDefault();
       e.stopPropagation();
       setDragOver(false);
-      handleFile(e.dataTransfer.files[0]);
+      handleEvidenceUpload(e.dataTransfer.files[0]);
     },
-    [handleFile]
+    [handleEvidenceUpload]
   );
 
   const handleLoadDemoTranscript = async () => {
@@ -485,10 +502,10 @@ export default function App() {
   };
 
   const tabs: { id: InputTab; label: string; dot?: boolean }[] = [
-    { id: "call", label: "Upload Files", dot: hasCallInput },
-    { id: "live", label: "Live Meeting", dot: liveSessionActive },
-    { id: "email", label: "Mailbox Search", dot: hasEmail },
-    { id: "field", label: "🎙️ Field Capture", dot: hasFieldRecording },
+    { id: "call", label: "Upload", dot: hasCallInput },
+    { id: "live", label: "Live", dot: liveSessionActive },
+    { id: "email", label: "Mailbox", dot: hasEmail },
+    { id: "field", label: "Field", dot: hasFieldRecording },
   ];
 
   const handleLiveSessionUpdate = useCallback(
@@ -598,14 +615,14 @@ export default function App() {
       <div className="app-main">
         <div className="workspace">
           <section className="panel panel-left intake-viewport">
-            <div className="panel-label">Evidence Package — every source analyzed together</div>
-
             <IntakeHowTo
               hasInput={hasAnyInput}
               hasResult={!!result}
               loading={loading}
+              sourceCount={channelCount}
               demoLoading={demoTranscriptLoading}
               onLoadDemo={handleLoadDemoTranscript}
+              onRun={handleRun}
             />
 
             <DealProfilePanel
@@ -624,13 +641,6 @@ export default function App() {
                 setError(message);
               }}
             />
-
-            <div className="evidence-package-banner" role="status">
-              <strong>{channelCount} source{channelCount === 1 ? "" : "s"} attached</strong>
-              <span>
-                Add recordings + transcripts + emails + documents. Tabs add to the same package.
-              </span>
-            </div>
 
             <div className="console-tabs" role="tablist" aria-label="Additive evidence channels">
               {tabs.map((tab) => (
@@ -652,96 +662,80 @@ export default function App() {
               {activeTab === "call" && (
                 <div className="console-tab-audio">
                   <p className="console-tab-hint">
-                    Start with a Word document, PDF, recording, or transcript. Add more sources at any
-                    time.
+                    Drop a Word doc, PDF, or call recording here. Add a transcript below if you have
+                    one.
                   </p>
                   <div
-                    className={`dropzone dropzone-tab dropzone-document ${documentFile ? "has-file" : ""}`}
+                    className={`dropzone dropzone-tab dropzone-unified ${dragOver ? "drag-over" : ""} ${hasUploadedRecording || hasDocument ? "has-file" : ""}`}
                   >
                     <input
-                      id="document-upload"
+                      id="evidence-upload"
                       className="dropzone-file-input"
                       type="file"
-                      accept={DOCUMENT_ACCEPT}
-                      onChange={(e) => {
-                        handleDocument(e.target.files?.[0]);
-                        e.target.value = "";
-                      }}
-                    />
-                    <div className="dropzone-content dropzone-content-compact">
-                      <span className="dropzone-icon">{documentFile ? "✓" : "📄"}</span>
-                      <span className="dropzone-text">
-                        {documentFile
-                          ? "Document loaded — ready for analysis"
-                          : "Upload Word or PDF"}
-                      </span>
-                      {documentFile ? (
-                        <>
-                          <span className="dropzone-filename">{documentFile.name}</span>
-                          <span className="dropzone-meta">{formatFileSize(documentFile.size)}</span>
-                        </>
-                      ) : (
-                        <span className="dropzone-hint">.docx or .pdf · max 10 MB</span>
-                      )}
-                    </div>
-                  </div>
-                  {documentFile && (
-                    <button
-                      type="button"
-                      className="file-clear-btn"
-                      onClick={() => setDocumentFile(null)}
-                    >
-                      Remove document
-                    </button>
-                  )}
-                  <div
-                    className={`dropzone dropzone-tab ${dragOver ? "drag-over" : ""} ${file && recordingSource === "upload" ? "has-file" : ""}`}
-                  >
-                    <input
-                      id="recording-upload"
-                      className="dropzone-file-input"
-                      type="file"
-                      accept={ACCEPT_ATTR}
+                      accept={UNIFIED_UPLOAD_ACCEPT}
                       onDragEnter={onDragEnter}
                       onDragOver={onDragOver}
                       onDragLeave={onDragLeave}
                       onDrop={onDrop}
                       onChange={(e) => {
-                        handleFile(e.target.files?.[0]);
+                        handleEvidenceUpload(e.target.files?.[0]);
                         e.target.value = "";
                       }}
                     />
                     <div className="dropzone-content">
                       <span className="dropzone-icon">
-                        {file && recordingSource === "upload" ? "✓" : "⬡"}
+                        {hasUploadedRecording || hasDocument ? "✓" : "⬆"}
                       </span>
                       <span className="dropzone-text">
-                        {file && recordingSource === "upload"
-                          ? "Recording loaded — ready for analysis"
-                          : "Drop Call Recording (.mp3 / .wav / .mp4)"}
+                        {hasUploadedRecording || hasDocument
+                          ? "File attached — drop another to add or replace"
+                          : "Upload Word, PDF, or call recording"}
                       </span>
-                      {file && recordingSource === "upload" && (
-                        <>
-                          <span className="dropzone-filename">{file.name}</span>
-                          <span className="dropzone-meta">{formatFileSize(file.size)}</span>
-                        </>
-                      )}
-                      {!(file && recordingSource === "upload") && (
-                        <span className="dropzone-hint">Click or drag a file here</span>
-                      )}
+                      <span className="dropzone-hint">
+                        .docx · .pdf · .mp3 · .wav · .mp4 · max 10 MB for documents
+                      </span>
                     </div>
                   </div>
-                  {file && recordingSource === "upload" && (
-                    <button
-                      type="button"
-                      className="file-clear-btn"
-                      onClick={() => {
-                        setFile(null);
-                        setRecordingSource(null);
-                      }}
-                    >
-                      Remove recording
-                    </button>
+                  {(hasUploadedRecording || hasDocument) && (
+                    <ul className="upload-attachment-list" aria-label="Attached files">
+                      {hasDocument && documentFile && (
+                        <li>
+                          <div>
+                            <strong>Document</strong>
+                            <span>
+                              {documentFile.name} · {formatFileSize(documentFile.size)}
+                            </span>
+                          </div>
+                          <button
+                            type="button"
+                            className="file-clear-btn"
+                            onClick={() => setDocumentFile(null)}
+                          >
+                            Remove
+                          </button>
+                        </li>
+                      )}
+                      {hasUploadedRecording && file && (
+                        <li>
+                          <div>
+                            <strong>Recording</strong>
+                            <span>
+                              {file.name} · {formatFileSize(file.size)}
+                            </span>
+                          </div>
+                          <button
+                            type="button"
+                            className="file-clear-btn"
+                            onClick={() => {
+                              setFile(null);
+                              setRecordingSource(null);
+                            }}
+                          >
+                            Remove
+                          </button>
+                        </li>
+                      )}
+                    </ul>
                   )}
                   <div className="input-group" style={{ marginTop: "1rem" }}>
                     <label htmlFor="deal-value">Estimated Deal Value ($)</label>
@@ -759,7 +753,7 @@ export default function App() {
                       <label htmlFor="call-transcript">Call Transcript</label>
                       <div className="input-label-actions">
                         <label className="btn-secondary text-upload-control">
-                          Upload transcript
+                          Upload text
                           <input
                             type="file"
                             accept={TEXT_ACCEPT}
@@ -769,14 +763,6 @@ export default function App() {
                             }}
                           />
                         </label>
-                        <button
-                          type="button"
-                          className="btn-secondary btn-demo-transcript"
-                          onClick={handleLoadDemoTranscript}
-                          disabled={demoTranscriptLoading}
-                        >
-                          {demoTranscriptLoading ? "Loading demo…" : "Use sample"}
-                        </button>
                       </div>
                     </div>
                     <textarea
@@ -883,21 +869,8 @@ export default function App() {
               </div>
             )}
 
-            <button className="run-button" onClick={handleRun} disabled={loading}>
-              {loading
-                ? "Analyzing Evidence Package..."
-                : `Analyze Evidence Package${channelCount ? ` (${channelCount})` : ""}`}
-            </button>
-            <div className="privacy-trust-banner" role="status">
-              <span className="privacy-trust-icon" aria-hidden="true">
-                🛡️
-              </span>
-              <span className="privacy-trust-text">
-                Privacy sandbox active · 30-day transcript purge · deal scores retained for the cycle
-              </span>
-            </div>
             <p className="upload-consent">
-              By running analysis, you confirm you have the legal right to upload this content.{" "}
+              Only upload content you’re authorized to use.{" "}
               {TRUST_PACK_NAV.filter((l) => l.slug === "terms" || l.slug === "privacy").map(
                 ({ slug, label }, i) => (
                   <span key={slug}>
@@ -959,8 +932,6 @@ export default function App() {
             )}
           </section>
         </div>
-
-        <EnterpriseTrust />
       </div>
 
       <SiteFooter />

@@ -42,11 +42,8 @@ export default function LiveTriageBrief({
   if (!active) {
     return (
       <div className="empty-state">
-        <span>AWAITING INPUT</span>
-        <span>
-          Start a Live Meeting (Zoom, Meet, or Teams) for a live triage brief — or paste a transcript
-          and run full analysis
-        </span>
+        <span>READY</span>
+        <span>Add evidence, then run analysis.</span>
       </div>
     );
   }

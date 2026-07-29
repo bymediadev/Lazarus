@@ -138,10 +138,6 @@ export default function AnalysisReport({ result: raw, sources }: Props) {
 
   return (
     <div className="cards">
-      {pi && <DealHeaderMetrics indices={pi} viabilityScore={vs.viability_score} />}
-
-      <ConciseDiagnostic result={r} />
-
       <details className="full-analysis-toggle expanded-analysis">
         <summary>Expanded Analysis</summary>
         <div className="full-analysis-body">
@@ -652,6 +648,10 @@ export default function AnalysisReport({ result: raw, sources }: Props) {
       )}
         </div>
       </details>
+
+      {pi && <DealHeaderMetrics indices={pi} viabilityScore={vs.viability_score} />}
+
+      <ConciseDiagnostic result={r} />
     </div>
   );
 }
