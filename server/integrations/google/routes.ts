@@ -22,7 +22,7 @@ export function registerGoogleMeetRoutes(app: Express): void {
       account_email: tokens?.account_email ?? null,
       connected_at: tokens?.connected_at ?? null,
       note: isGoogleMeetConfigured()
-        ? "Google connected for Meet/Workspace and Gmail thread search. Ask for a company or deal — Lazarus expands matching threads into the evidence package."
+        ? "Google connected for Meet/Workspace and Gmail thread search. Ask for a company or deal — Lazarus Deal Recovery expands matching threads into the evidence package."
         : "Add GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET to enable Connect Google / Gmail.",
     });
   });

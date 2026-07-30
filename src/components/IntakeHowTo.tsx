@@ -24,7 +24,7 @@ export default function IntakeHowTo({
         : "Add evidence to begin.";
 
   return (
-    <aside className="intake-how-to" aria-label="How to run Lazarus">
+    <aside className="intake-how-to" aria-label="How to run Lazarus Deal Recovery">
       <div>
         <h2 className="intake-how-to-title">Deal evidence</h2>
         <p className="intake-how-to-status">{status}</p>

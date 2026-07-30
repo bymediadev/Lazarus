@@ -84,7 +84,7 @@ export async function runLiveTriage(body: LiveTriageRequest): Promise<LiveTriage
       ? body.deal_value
       : undefined;
 
-  const prompt = `You are Lazarus live deal triage during a B2B sales call (${platform}).
+  const prompt = `You are Lazarus Deal Recovery live deal triage during a B2B sales call (${platform}).
 Return ONLY valid JSON — a lightweight mid-call snapshot, NOT a full autopsy:
 
 {

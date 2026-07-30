@@ -21,13 +21,14 @@ export function HeroTrustBanner() {
     <section className="hero-trust">
       <p className="hero-trust-eyebrow">Deal judgment layer · v1</p>
       <h2 className="hero-trust-headline">
-        Keep your meeting tools. Add Lazarus on top. Know if the deal is still winnable — and why.
+        Keep your meeting tools. Add Lazarus Deal Recovery on top. Know if the deal is still winnable —
+        and why.
       </h2>
       <p className="hero-trust-body">
-        Lazarus is not another recorder. You already meet on Google Meet, Microsoft Teams, or whatever
-        your team uses. We read what the buyer said — from a file, a transcript, email, or field notes —
-        and score the deal with fixed rules you can defend in a forecast meeting. A person still runs
-        the deal.
+        Lazarus Deal Recovery is not another recorder. You already meet on Google Meet, Microsoft Teams,
+        or whatever your team uses. We read what the buyer said — from a file, a transcript, email, or
+        field notes — and score the deal with fixed rules you can defend in a forecast meeting. A person
+        still runs the deal.
       </p>
       <ul className="hero-trust-bullets">
         <li>
@@ -62,8 +63,8 @@ export default function EnterpriseTrust() {
         <span className="enterprise-trust-label">Enterprise Trust &amp; Privacy</span>
         <h2>Built for legal review before your first upload</h2>
         <p>
-          Lazarus judges the deal on our server — not in the browser, not in a chatbot essay. Your
-          sensitive data never trains public models. Full legal pack linked below.
+          Lazarus Deal Recovery judges the deal on our server — not in the browser, not in a chatbot
+          essay. Your sensitive data never trains public models. Full legal pack linked below.
         </p>
       </div>
       <div className="trust-grid">
@@ -85,8 +86,8 @@ export default function EnterpriseTrust() {
         <div className="trust-meta-item">
           <span className="trust-meta-key">Recording consent</span>
           <span className="trust-meta-val">
-            Lazarus does not join or record your meetings. You upload what you already have the right
-            to use (
+            Lazarus Deal Recovery does not join or record your meetings. You upload what you already have
+            the right to use (
             <TrustPackLink slug="terms">Terms of Service §2</TrustPackLink>).
           </span>
         </div>

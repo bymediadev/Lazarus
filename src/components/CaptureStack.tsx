@@ -10,7 +10,7 @@ interface CaptureSource {
   status: SourceStatus;
 }
 
-/** Meeting platforms only — Lazarus sits on top; no CI/note-taker brand fight. */
+/** Meeting platforms only — Lazarus Deal Recovery sits on top; no CI/note-taker brand fight. */
 const CAPTURE_SOURCES: CaptureSource[] = [
   { id: "meet", label: "Google Meet", status: "import" },
   { id: "teams", label: "Microsoft Teams", status: "import" },
@@ -19,7 +19,7 @@ const CAPTURE_SOURCES: CaptureSource[] = [
 
 export default function CaptureStack({ onOpenLiveTab }: CaptureStackProps) {
   return (
-    <section className="capture-stack" aria-label="How Lazarus fits your stack">
+    <section className="capture-stack" aria-label="How Lazarus Deal Recovery fits your stack">
       <p className="capture-stack-eyebrow">Three layers — keep your meetings, add judgment</p>
       <ol className="capture-stack-layers">
         <li>
@@ -27,12 +27,12 @@ export default function CaptureStack({ onOpenLiveTab }: CaptureStackProps) {
           <span>Meet, Teams, or whatever you already use to meet and save the call.</span>
         </li>
         <li>
-          <strong>Layer 2 — Lazarus</strong>
+          <strong>Layer 2 — Lazarus Deal Recovery</strong>
           <span>Scores deal risk, maps people, links today to past notes.</span>
         </li>
         <li>
           <strong>Layer 3 — You</strong>
-          <span>Rep and manager run the deal. Lazarus does not close for you.</span>
+          <span>Rep and manager run the deal. Lazarus Deal Recovery does not close for you.</span>
         </li>
       </ol>
 
@@ -79,7 +79,8 @@ export default function CaptureStack({ onOpenLiveTab }: CaptureStackProps) {
         <p className="capture-stack-note">
           <strong>Today:</strong> Connect Google Meet, Microsoft Teams, or Zoom — same live Recovery
           Brief (platform stream or mic + paste). Or drop a recording / paste a transcript.{" "}
-          <strong>Pitch:</strong> Keep your meeting tools. Lazarus is the judgment layer on top.
+          <strong>Pitch:</strong> Keep your meeting tools. Lazarus Deal Recovery is the judgment layer
+          on top.
         </p>
       </div>
     </section>

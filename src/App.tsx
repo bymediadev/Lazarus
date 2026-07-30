@@ -598,9 +598,9 @@ export default function App() {
     <div className="app">
       <header className="header">
         <div className="header-brand">
-          <img src="/logo.png" alt="Lazarus Deal Resuscitation" className="header-logo" />
-          <h1>Lazarus</h1>
-          <span className="tag">Deal Judgment Layer</span>
+          <img src="/logo.png" alt="Lazarus Deal Recovery" className="header-logo" />
+          <h1>Lazarus Deal Recovery</h1>
+          <span className="tag">Judgment Layer</span>
         </div>
         <span className="header-status">
           {headerStatus}

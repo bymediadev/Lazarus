@@ -285,7 +285,7 @@ app.post("/api/post-mortem", requireApiKey, uploadFields, async (req, res) => {
     };
     if (strippedPriorAnalysis) {
       addWarning(
-        "Removed a prior Lazarus analysis that was pasted below the call transcript. Only the call text was analyzed."
+        "Removed a prior Lazarus Deal Recovery analysis that was pasted below the call transcript. Only the call text was analyzed."
       );
     }
     for (const w of result.grounding_audit?.warnings ?? []) addWarning(w);
@@ -486,7 +486,7 @@ if (process.env.NODE_ENV === "production" || existsSync(distPath)) {
 
 const PORT = process.env.PORT ?? 3001;
 app.listen(PORT, () => {
-  console.log(`Lazarus API running on http://localhost:${PORT}`);
+  console.log(`Lazarus Deal Recovery API running on http://localhost:${PORT}`);
   if (existsSync(distPath)) {
     console.log(`Serving frontend from ${distPath}`);
   }
