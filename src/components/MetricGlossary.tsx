@@ -66,7 +66,7 @@ export default function MetricGlossary({ variant = "icon", scores }: Props) {
       <aside className="metric-glossary-panel metric-legend-intake" aria-label="Metric legend">
         <h3 className="metric-glossary-heading">Metric legend</h3>
         <p className="metric-glossary-lede">
-          Terms Lazarus scores from 0–100 — and where they show up in the report.
+          Terms Lazarus Deal Recovery scores from 0–100 — and where they show up in the report.
         </p>
         {list}
       </aside>

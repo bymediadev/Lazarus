@@ -96,7 +96,7 @@ export default function PipelineLeakCalculator({ embedded = false }: { embedded?
         {!embedded && (
           <span className="pipeline-leak-eyebrow">Pipeline Leak Calculator</span>
         )}
-        <h2>{embedded ? "Pipeline leak model" : "See where revenue dies — and what Lazarus rescues"}</h2>
+        <h2>{embedded ? "Pipeline leak model" : "See where revenue dies — and what Lazarus Deal Recovery rescues"}</h2>
         <p>
           Model your outbound funnel leaks, then quantify company revenue and rep commission
           recovered when automation saves {rescuePct}% of stalled conversations and meetings.

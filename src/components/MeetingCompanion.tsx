@@ -351,7 +351,7 @@ export default function MeetingCompanion({
     <div className="meeting-companion">
       <p className="console-tab-hint">
         Float the live panel in the corner during Zoom, Meet, or Teams. Track objections as they
-        land — check them off or let Lazarus auto-clear when the buyer answers. End the session for
+        land — check them off or let Lazarus Deal Recovery auto-clear when the buyer answers. End the session for
         a full post-call score on the same deal.
       </p>
 

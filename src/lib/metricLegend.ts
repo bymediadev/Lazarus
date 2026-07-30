@@ -94,7 +94,7 @@ export function formatMetricLegendMarkdown(scores?: LegendScoreSource | null): s
   const lines = [
     "## Metric legend",
     "",
-    "_How Lazarus terms map to the report (scores out of 100):_",
+    "_How Lazarus Deal Recovery terms map to the report (scores out of 100):_",
     "",
   ];
   for (const entry of METRIC_LEGEND) {

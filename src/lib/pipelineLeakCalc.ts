@@ -7,7 +7,7 @@ export interface PipelineLeakInputs {
   pickupPct: number;
   meetingPct: number;
   closePct: number;
-  /** Fraction of leaked pipeline Lazarus recovers (default 10%) */
+  /** Fraction of leaked pipeline Lazarus Deal Recovery recovers (default 10%) */
   rescueRate?: number;
 }
 

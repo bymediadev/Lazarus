@@ -1302,10 +1302,19 @@ body {
 
 .header-brand h1 {
   font-family: var(--mono);
-  font-size: 1.1rem;
+  font-size: 0.95rem;
   font-weight: 700;
-  letter-spacing: 0.15em;
+  letter-spacing: 0.08em;
   text-transform: uppercase;
+  white-space: nowrap;
+}
+
+@media (max-width: 720px) {
+  .header-brand h1 {
+    white-space: normal;
+    font-size: 0.85rem;
+    letter-spacing: 0.06em;
+  }
 }
 
 .header-brand .tag {

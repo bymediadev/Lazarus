@@ -22,7 +22,7 @@ export function registerTeamsRoutes(app: Express): void {
       account_email: tokens?.account_email ?? null,
       connected_at: tokens?.connected_at ?? null,
       note: isTeamsConfigured()
-        ? "Teams/Graph connected with Outlook thread search. Ask for a company or deal — Lazarus expands matching conversations into the evidence package."
+        ? "Teams/Graph connected with Outlook thread search. Ask for a company or deal — Lazarus Deal Recovery expands matching conversations into the evidence package."
         : "Add TEAMS_CLIENT_ID and TEAMS_CLIENT_SECRET (Azure app) to enable Connect Teams / Outlook.",
     });
   });

@@ -174,7 +174,7 @@ const crmNotes = formatCompressedCrmNotes(
     stakeholders: [],
   })
 );
-check("CRM overview names account", crmNotes.includes("Lazarus Deal Overview — Acme"));
+check("CRM overview names account", crmNotes.includes("Lazarus Deal Recovery Overview — Acme"));
 check("CRM overview includes recovery action", crmNotes.includes("schedule legal review"));
 check("CRM overview includes dispersion /100", crmNotes.includes("Dispersion:** 48/100"));
 check("CRM overview includes metric legend", crmNotes.includes("Metric legend"));
