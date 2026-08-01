@@ -20,7 +20,7 @@
     <img src="/logo.png" alt="Lazarus Deal Recovery" />
     <h1>Security Overview</h1>
     <p class="legal-meta">
-      <strong>Version:</strong> 1.1 · June 2026 · Aligned to Lazarus Deal Recovery v1 (deal autopsy engine)<br />
+      <strong>Version:</strong> 1.2 · August 2026 · Aligned to Lazarus Deal Recovery v1 (live evidence channels)<br />
       <strong>Provider:</strong> Lazarus Deal Recovery — Lazarus Revenue Intelligence Inc., Ontario, Canada<br />
       <strong>Contact:</strong> security@lazarusrevenue.com
     </p>
@@ -35,7 +35,8 @@
   <h2>1. Product summary (v1 — shipped)</h2>
   <p>
     Lazarus Deal Recovery v1 is a <strong>deterministic deal autopsy engine</strong> for stalled B2B pipeline.
-    Customers upload a sales call recording and/or transcript. A private API server transcribes audio
+    Customers assemble an <strong>evidence package</strong> from uploads, mailbox thread search, live meeting
+    transcripts, field capture, and optional HubSpot note import. A private API server transcribes audio
     (optional AssemblyAI), runs AI-assisted extraction (Layer 1), deterministic scoring (Layer 2),
     and returns a deal autopsy report with evidence quotes, People Map, Deal Risk Index (DRI), and
     recovery recommendations. Humans decide; Lazarus Deal Recovery does not send outreach or close deals autonomously.
@@ -43,24 +44,32 @@
   <table class="legal-table">
     <tr><th>Included in v1</th><th>Not in v1 (roadmap)</th></tr>
     <tr>
-      <td>Per-deal autopsy from audio/transcript upload</td>
-      <td>CRM sync (Salesforce, HubSpot)</td>
+      <td>Per-deal autopsy from audio, transcript, Word/PDF, and email threads</td>
+      <td>Bi-directional CRM write-back / Salesforce sync</td>
     </tr>
     <tr>
-      <td>Grounding audit + deterministic DRI / viability / trajectory</td>
+      <td>User-initiated Gmail / Outlook thread search (read-only OAuth)</td>
+      <td>Always-on inbox scraping or silent mailbox webhooks</td>
+    </tr>
+    <tr>
+      <td>Live meeting triage (Zoom RTMS; Meet / Teams where configured)</td>
       <td>Org-wide executive dashboard across full pipeline</td>
     </tr>
     <tr>
-      <td>Rescue script and stakeholder force map</td>
+      <td>In-browser field / in-person capture</td>
       <td>White-label partner console / multi-client branding</td>
     </tr>
     <tr>
-      <td>Pipeline Leak Calculator (manual inputs; no CRM)</td>
+      <td>Optional HubSpot read-only deal + notes import</td>
       <td>Autonomous AI SDR or automated outreach</td>
     </tr>
     <tr>
-      <td>Optional save to Supabase + rescue outcome metadata</td>
+      <td>Grounding audit + deterministic DRI / viability / trajectory</td>
       <td>SOC 2 Type II certification</td>
+    </tr>
+    <tr>
+      <td>Optional save to Supabase + rescue outcome metadata</td>
+      <td>Encrypted OAuth token vault / SSO (SAML)</td>
     </tr>
   </table>
   <p>
@@ -71,11 +80,30 @@
   <h2>2. Architecture</h2>
   <table class="legal-table">
     <tr><th>Component</th><th>Role</th><th>Data access</th></tr>
-    <tr><td>Web console</td><td>Upload UI, report display</td><td>No database credentials; calls private API only</td></tr>
-    <tr><td>API server</td><td>Transcription, Gemini extract, scoring, persistence</td><td>Service role (server-side only)</td></tr>
+    <tr><td>Web console</td><td>Evidence intake, report display</td><td>No database credentials; calls private API only</td></tr>
+    <tr><td>API server</td><td>Transcription, Gemini extract, scoring, OAuth connectors, persistence</td><td>Service role (server-side only)</td></tr>
     <tr><td>Supabase</td><td>PostgreSQL + auth (when enabled)</td><td>RLS on tenant tables; service role for API writes</td></tr>
-    <tr><td>Google Gemini</td><td>Text extraction API</td><td>Transcript sent per request; zero-training config</td></tr>
+    <tr><td>Google Gemini</td><td>Text extraction API</td><td>Transcript / stitched evidence sent per request; zero-training config</td></tr>
     <tr><td>AssemblyAI</td><td>Speech-to-text when Customer uploads audio</td><td>Audio buffer sent per request; not stored by Lazarus Deal Recovery</td></tr>
+    <tr><td>Google (Gmail / Meet)</td><td>Optional read-only mailbox + meeting connect</td><td>User-authorized OAuth; thread text only when searched/attached</td></tr>
+    <tr><td>Microsoft Graph (Outlook / Teams)</td><td>Optional read-only mailbox + meeting connect</td><td>User-authorized OAuth; conversation text when searched/attached</td></tr>
+    <tr><td>Zoom</td><td>Optional live RTMS transcript stream</td><td>Webhook-authenticated live turns during an explicit session</td></tr>
+    <tr><td>HubSpot</td><td>Optional read-only deals + notes import</td><td>User-authorized OAuth; no CRM write scopes</td></tr>
+  </table>
+
+  <h2>2a. Live evidence channels</h2>
+  <p>
+    Channels are <strong>user-initiated</strong>. Lazarus Deal Recovery does not silently scrape inboxes or
+    join every meeting. Mailbox search attaches specific deal threads; live sessions require an explicit
+    connect; field capture starts when the rep records.
+  </p>
+  <table class="legal-table">
+    <tr><th>Channel</th><th>Access model</th><th>What leaves the source system</th></tr>
+    <tr><td>Gmail / Outlook</td><td>Read-only OAuth (<code>gmail.readonly</code> / <code>Mail.Read</code>)</td><td>Matching thread text the user searches and attaches</td></tr>
+    <tr><td>Zoom / Meet / Teams live</td><td>App / Graph scopes + session start</td><td>Live transcript turns for triage (not a Zoom recording archive)</td></tr>
+    <tr><td>Field capture</td><td>Browser recording the user starts</td><td>Short audio buffer → transcript; audio not the system of record</td></tr>
+    <tr><td>HubSpot notes</td><td>Read-only deals + notes scopes</td><td>Selected deal note text for historical context</td></tr>
+    <tr><td>Upload</td><td>Explicit file upload</td><td>Parsed document text or transcribed audio</td></tr>
   </table>
 
   <h2>3. Data classification</h2>
@@ -101,11 +129,13 @@
     <tr><td>API hardening (prod)</td><td>Optional <code>LAZARUS_API_KEY</code>, CORS allowlist, cron secret for purge jobs</td></tr>
   </table>
 
-  <h2>5. Recording consent</h2>
+  <h2>5. Recording and mailbox consent</h2>
   <div class="critical">
-    Lazarus Deal Recovery does not record calls. Customers upload content and warrant they have legal authority to do so
-    (PIPEDA, U.S. state laws, employment and customer agreements). This is the primary legal risk surface
-    for the product — see <a href="/api/trust-pack/terms">Terms §2</a> and <a href="/api/trust-pack/dpa">DPA §2</a>.
+    Lazarus Deal Recovery does not join meetings as a hidden recorder. Customers upload content, start field
+    capture, connect a mailbox, or start a live session and warrant they have legal authority to do so
+    (PIPEDA, U.S. state laws, employment and customer agreements). Mailbox and CRM connectors are
+    <strong>read-only</strong> and user-initiated. This is the primary legal risk surface for the product —
+    see <a href="/api/trust-pack/terms">Terms §2</a> and <a href="/api/trust-pack/dpa">DPA §2</a>.
   </div>
 
   <h2>6. Sub-processors</h2>
@@ -120,7 +150,8 @@
 
   <h2>8. Customer responsibilities</h2>
   <ul>
-    <li>Obtain recording consent and internal policy approval</li>
+    <li>Obtain recording consent and internal policy approval for uploads, field capture, and live sessions</li>
+    <li>Authorize only accounts the organization permits to connect (Gmail, Outlook, Zoom, HubSpot)</li>
     <li>Manage user access within their organization</li>
     <li>Configure retention preferences where available</li>
     <li>Review AI outputs before acting on them in live deals</li>
@@ -133,9 +164,10 @@
     <li>Supabase Auth end-to-end (browser login + <code>user_id</code> on every save)</li>
     <li>Single sign-on (SAML/OIDC)</li>
     <li>Formal penetration test report</li>
-    <li>CRM native integrations (Salesforce / HubSpot)</li>
+    <li>Encrypted OAuth token vault (tokens today are server-side; harden at rest for enterprise)</li>
+    <li>Salesforce bi-directional sync / HubSpot write-back</li>
     <li>White-label partner dashboard and custom domains</li>
-    <li>Continuous stall detection from CRM activity and email (not call-only)</li>
+    <li>Always-on stall detection webhooks (vs user-initiated evidence pull)</li>
   </ul>
 
   <h2>10. Document index</h2>
