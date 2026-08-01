@@ -20,7 +20,7 @@
     <img src="/logo.png" alt="Lazarus Deal Recovery" />
     <h1>Privacy Policy</h1>
     <p class="legal-meta">
-      <strong>Version:</strong> 1.1 · June 2026 · Aligned to Lazarus Deal Recovery v1<br />
+      <strong>Version:</strong> 1.2 · August 2026 · Aligned to Lazarus Deal Recovery v1<br />
       <strong>Controller / Provider:</strong> Lazarus Deal Recovery (&ldquo;we,&rdquo; &ldquo;us&rdquo;) — Lazarus Revenue Intelligence Inc., Ontario, Canada<br />
       <strong>Contact:</strong> privacy@lazarusrevenue.com
     </p>
@@ -39,7 +39,8 @@
   <table class="legal-table">
     <tr><th>Category</th><th>Examples</th><th>Purpose</th></tr>
     <tr><td>Account data</td><td>Name, email, organization (when auth is enabled)</td><td>Authentication, support, billing</td></tr>
-    <tr><td>Customer content</td><td>Call recordings (processed in memory), transcripts, deal notes</td><td>Per-deal autopsy and optional storage of outputs</td></tr>
+    <tr><td>Customer content</td><td>Call recordings (processed in memory), transcripts, documents, mailbox threads you attach, live session turns, field capture, HubSpot notes</td><td>Per-deal autopsy and optional storage of outputs</td></tr>
+    <tr><td>Connector account data</td><td>OAuth tokens and connected account email when you link Gmail, Outlook, Zoom, or HubSpot</td><td>Read-only evidence import; disconnect clears tokens</td></tr>
     <tr><td>Deal metadata</td><td>Client name, deal value, scores, rescue feedback</td><td>Reporting and product functionality</td></tr>
     <tr><td>Technical logs</td><td>IP address, browser, API timestamps</td><td>Security, abuse prevention, uptime</td></tr>
   </table>
@@ -100,8 +101,12 @@
     <tr><td>Supabase</td><td>Database hosting, authentication</td><td>North America (default)</td></tr>
     <tr><td>Google (Gemini API)</td><td>LLM extraction (Layer 1 only; scoring is server-side)</td><td>United States</td></tr>
     <tr><td>AssemblyAI</td><td>Optional audio transcription</td><td>United States</td></tr>
+    <tr><td>Google (Gmail / Meet APIs)</td><td>Optional read-only mailbox and meeting connect</td><td>United States</td></tr>
+    <tr><td>Microsoft (Graph)</td><td>Optional read-only Outlook / Teams connect</td><td>United States / customer tenant region</td></tr>
+    <tr><td>Zoom</td><td>Optional live meeting transcript stream (RTMS)</td><td>United States / customer Zoom region</td></tr>
+    <tr><td>HubSpot</td><td>Optional read-only deals and notes import</td><td>United States / customer HubSpot region</td></tr>
   </table>
-  <p>Material sub-processor changes will be communicated per the DPA.</p>
+  <p>Optional connectors process data only when the customer connects and uses them. Material sub-processor changes will be communicated per the DPA.</p>
 
   <h2>8. Your privacy rights</h2>
   <p>

@@ -9,7 +9,7 @@ export default function SiteFooter() {
     <footer className="site-footer">
         <div className="site-footer-inner">
           <span className="site-footer-brand">
-            Lazarus Deal Recovery · Trust Pack v1.7
+            Lazarus Deal Recovery · Trust Pack v1.11
           </span>
           <nav className="site-footer-nav" aria-label="Legal">
             {TRUST_PACK_NAV.map(({ slug, label }) => (
