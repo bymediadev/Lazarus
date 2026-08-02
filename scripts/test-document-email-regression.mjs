@@ -14,6 +14,7 @@ import { extractMailboxSearchTarget } from "../src/lib/emailProviders.ts";
 import { formatCompressedCrmNotes } from "../src/lib/crmNotes.ts";
 import { normalizeResult } from "../src/types.ts";
 import { resolveFrontendOrigin } from "../server/integrations/oauthShared.ts";
+import { parseRelevanceVerdict } from "../server/relevanceGate.ts";
 
 let failed = 0;
 
@@ -178,6 +179,28 @@ check("CRM overview names account", crmNotes.includes("Lazarus Deal Recovery Ove
 check("CRM overview includes recovery action", crmNotes.includes("schedule legal review"));
 check("CRM overview includes dispersion /100", crmNotes.includes("Dispersion:** 48/100"));
 check("CRM overview includes metric legend", crmNotes.includes("Metric legend"));
+
+const notSales = parseRelevanceVerdict(
+  JSON.stringify({
+    label: "not_sales",
+    reason: "This is a pasta recipe with no buyer or deal context.",
+    confidence: "high",
+  })
+);
+check("relevance rejects recipes", notSales.label === "not_sales");
+check("relevance keeps recipe reason", notSales.reason.includes("pasta recipe"));
+
+const salesDeal = parseRelevanceVerdict(
+  JSON.stringify({
+    label: "sales_deal",
+    reason: "Discovery call about budget and a VP veto.",
+    confidence: "high",
+  })
+);
+check("relevance accepts sales calls", salesDeal.label === "sales_deal");
+
+const unknownLabel = parseRelevanceVerdict('{"label":"maybe","reason":"unclear"}');
+check("relevance unknown label defaults to sales_deal", unknownLabel.label === "sales_deal");
 
 if (failed > 0) {
   console.error(`\n${failed} check(s) failed`);

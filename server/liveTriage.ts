@@ -1,4 +1,5 @@
 import { GoogleGenerativeAI } from "@google/generative-ai";
+import { classifySalesRelevance } from "./relevanceGate.js";
 
 export type LiveTriageTier = "LOW" | "MODERATE" | "HIGH" | "CRITICAL";
 export type LiveTriageMomentum = "improving" | "stalling" | "slipping" | "unclear";
@@ -73,6 +74,21 @@ export async function runLiveTriage(body: LiveTriageRequest): Promise<LiveTriage
       top_blockers: [],
       next_moves: ["Keep the live session running — speak or paste buyer lines as they land."],
       confidence: "low",
+      updated_at: new Date().toISOString(),
+    };
+  }
+
+  const relevance = await classifySalesRelevance(transcript);
+  if (relevance.label === "not_sales") {
+    return {
+      risk_tier: "LOW",
+      momentum: "unclear",
+      headline: `Can't use this for deal triage — ${relevance.reason}`,
+      top_blockers: ["Live dialogue does not look like a sales or deal conversation."],
+      next_moves: [
+        "Switch to the buyer call, or paste sales dialogue / a deal email into the evidence package.",
+      ],
+      confidence: relevance.confidence,
       updated_at: new Date().toISOString(),
     };
   }

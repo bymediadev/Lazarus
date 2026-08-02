@@ -34,6 +34,24 @@ export interface PostMortemResponse extends PostMortemResult {
   processed_at?: string;
 }
 
+export interface RelevanceVerdict {
+  label: "sales_deal" | "not_sales";
+  reason: string;
+  confidence?: "low" | "medium" | "high";
+}
+
+export class PostMortemApiError extends Error {
+  code?: string;
+  relevance?: RelevanceVerdict;
+
+  constructor(message: string, opts?: { code?: string; relevance?: RelevanceVerdict }) {
+    super(message);
+    this.name = "PostMortemApiError";
+    this.code = opts?.code;
+    this.relevance = opts?.relevance;
+  }
+}
+
 export interface PostMortemPayload {
   file?: File | null;
   document?: File | null;
@@ -46,6 +64,8 @@ export interface PostMortemPayload {
   historicalCrmContext?: HistoricalCrmContextEntry[];
   liveTranscriptPayload?: LiveTranscriptTurn[];
   liveSessionObjections?: { text: string; status: string; source: string }[];
+  /** Bypass sales-relevance gate after an explicit user override. */
+  forceAnalysis?: boolean;
 }
 
 export async function runPostMortem(payload: PostMortemPayload): Promise<PostMortemResponse> {
@@ -73,6 +93,10 @@ export async function runPostMortem(payload: PostMortemPayload): Promise<PostMor
 
   if (payload.fieldCapture) {
     formData.append("field_capture", "1");
+  }
+
+  if (payload.forceAnalysis) {
+    formData.append("force_analysis", "1");
   }
 
   if (payload.accountId) {
@@ -104,11 +128,18 @@ export async function runPostMortem(payload: PostMortemPayload): Promise<PostMor
 
   const contentType = res.headers.get("content-type") ?? "";
   const data = contentType.includes("application/json")
-    ? ((await res.json()) as PostMortemResponse & { error?: string })
+    ? ((await res.json()) as PostMortemResponse & {
+        error?: string;
+        code?: string;
+        relevance?: RelevanceVerdict;
+      })
     : null;
 
   if (!res.ok) {
-    throw new Error(data?.error || `Post-mortem failed (${res.status}).`);
+    throw new PostMortemApiError(data?.error || `Post-mortem failed (${res.status}).`, {
+      code: data?.code,
+      relevance: data?.relevance,
+    });
   }
 
   if (!data) {
