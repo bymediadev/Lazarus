@@ -10,7 +10,7 @@ import TrustPackModal from "./components/TrustPackModal";
 import IntakeHowTo from "./components/IntakeHowTo";
 import EmailProviderControls from "./components/EmailProviderControls";
 import { TRUST_PACK_NAV, TRUST_PACK_OPEN_EVENT, type TrustPackSlug } from "./lib/trustPack";
-import { API_BASE, apiTargetLabel, runPostMortem } from "./lib/api";
+import { API_BASE, apiTargetLabel, PostMortemApiError, runPostMortem } from "./lib/api";
 import {
   listPendingAnalyses,
   queuePendingAnalysis,
@@ -105,6 +105,7 @@ export default function App() {
   const [result, setResult] = useState<PostMortemResult | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [relevanceBlocked, setRelevanceBlocked] = useState(false);
   const [dragOver, setDragOver] = useState(false);
   const [warnings, setWarnings] = useState<string[]>([]);
   const [apiOnline, setApiOnline] = useState<boolean | null>(null);
@@ -154,6 +155,7 @@ export default function App() {
       historicalCrmContext?: HistoricalCrmContextEntry[] | null;
       liveTranscriptPayload?: LiveTranscriptTurn[];
       liveSessionObjections?: { text: string; status: string; source: string }[];
+      forceAnalysis?: boolean;
     }) => {
       const data = await runPostMortem({
         file: payload.file,
@@ -167,9 +169,11 @@ export default function App() {
         historicalCrmContext: payload.historicalCrmContext ?? undefined,
         liveTranscriptPayload: payload.liveTranscriptPayload,
         liveSessionObjections: payload.liveSessionObjections,
+        forceAnalysis: payload.forceAnalysis,
       });
       setResult(normalizeResult({ ...data, sources: data.sources, processed_at: data.processed_at }));
       setWarnings(data.warnings ?? []);
+      setRelevanceBlocked(false);
     },
     []
   );
@@ -305,15 +309,18 @@ export default function App() {
     setFieldSessionId(sessionId);
     setRecordingSource("field");
     setError(null);
+    setRelevanceBlocked(false);
   }, []);
 
   const handleFile = useCallback((f: File | undefined) => {
     if (!f) return;
     if (!isAcceptedFile(f)) {
       setError("Unsupported file type. Use .mp3, .wav, .mp4, or .m4a.");
+      setRelevanceBlocked(false);
       return;
     }
     setError(null);
+    setRelevanceBlocked(false);
     setFile(f);
     setRecordingSource("upload");
     setActiveTab("call");
@@ -323,13 +330,16 @@ export default function App() {
     if (!f) return;
     if (!isAcceptedDocument(f)) {
       setError("Unsupported document type. Use .pdf or .docx.");
+      setRelevanceBlocked(false);
       return;
     }
     if (f.size > DOCUMENT_MAX_BYTES) {
       setError("Document exceeds 10 MB limit.");
+      setRelevanceBlocked(false);
       return;
     }
     setError(null);
+    setRelevanceBlocked(false);
     setDocumentFile(f);
     setActiveTab("call");
   }, []);
@@ -400,6 +410,7 @@ export default function App() {
     setDemoTranscriptLoading(true);
     setDemoTranscriptNotice(null);
     setError(null);
+    setRelevanceBlocked(false);
     try {
       const { text, source } = await loadDemoSalesTranscript();
       setCallTranscript((previous) =>
@@ -422,17 +433,19 @@ export default function App() {
     }
   };
 
-  const handleRun = async () => {
+  const handleRun = async (forceAnalysis = false) => {
     if (!hasAnyInput) {
       setError(
         "Add one or more evidence sources. Every recording, transcript, email thread, and document is analyzed together."
       );
+      setRelevanceBlocked(false);
       return;
     }
 
     const historicalCrmContext = parseHistoricalCrmJson(historicalCrmJson);
     if (historicalCrmJson.trim() && historicalCrmContext === null) {
       setError("Historical CRM context must be valid JSON array.");
+      setRelevanceBlocked(false);
       return;
     }
 
@@ -467,6 +480,7 @@ export default function App() {
     setLoading(true);
     setError(null);
     setWarnings([]);
+    if (!forceAnalysis) setRelevanceBlocked(false);
 
     try {
       await runAnalysis({
@@ -481,19 +495,25 @@ export default function App() {
         historicalCrmContext,
         liveTranscriptPayload: liveTranscriptPayload.length ? liveTranscriptPayload : undefined,
         liveSessionObjections: liveSessionObjections.length ? liveSessionObjections : undefined,
+        forceAnalysis,
       });
       if (fieldSessionId) {
         await clearSessionChunks(fieldSessionId);
         setFieldSessionId(null);
       }
     } catch (err) {
-      if (err instanceof TypeError) {
+      if (err instanceof PostMortemApiError && err.code === "NOT_SALES_EVIDENCE") {
+        setError(err.message);
+        setRelevanceBlocked(true);
+      } else if (err instanceof TypeError) {
+        setRelevanceBlocked(false);
         setError(
           API_BASE
             ? `Cannot reach Railway API (${apiTargetLabel()}). Check the URL and CORS settings.`
             : "Cannot reach API server. Run npm run dev and try again."
         );
       } else {
+        setRelevanceBlocked(false);
         setError(err instanceof Error ? err.message : "Something went wrong.");
       }
     } finally {
@@ -768,7 +788,10 @@ export default function App() {
                       id="call-transcript"
                       className="transcript-textarea"
                       value={callTranscript}
-                      onChange={(e) => setCallTranscript(e.target.value)}
+                      onChange={(e) => {
+                        setCallTranscript(e.target.value);
+                        setRelevanceBlocked(false);
+                      }}
                       placeholder="Paste call transcript or meeting notes..."
                     />
                     {demoTranscriptNotice && (
@@ -789,6 +812,7 @@ export default function App() {
                       );
                       setEmailImportNotice(notice);
                       setError(null);
+                      setRelevanceBlocked(false);
                     }}
                     onError={(message) => {
                       setError(message);
@@ -868,7 +892,7 @@ export default function App() {
               </div>
             )}
 
-            <button className="run-button" onClick={handleRun} disabled={loading}>
+            <button className="run-button" onClick={() => void handleRun(false)} disabled={loading}>
               {loading ? "Analyzing…" : `Run Analysis${channelCount ? ` (${channelCount})` : ""}`}
             </button>
 
@@ -894,7 +918,21 @@ export default function App() {
               </div>
             )}
 
-            {error && <div className="error-banner">{error}</div>}
+            {error && (
+              <div className="error-banner">
+                <p>{error}</p>
+                {relevanceBlocked && (
+                  <button
+                    type="button"
+                    className="btn-secondary relevance-override-btn"
+                    onClick={() => void handleRun(true)}
+                    disabled={loading}
+                  >
+                    Analyze anyway
+                  </button>
+                )}
+              </div>
+            )}
             {historicalParseError && !error && (
               <div className="error-banner">{historicalParseError}</div>
             )}

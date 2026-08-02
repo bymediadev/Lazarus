@@ -22,6 +22,7 @@ import { stripOutcomeMetadata } from "./sanitize.js";
 import { normalizeEmailThread, normalizeManualTranscript } from "./normalize.js";
 import { scanLiveObjections as scanLiveObjectionsServer } from "./liveObjections.js";
 import { runLiveTriage } from "./liveTriage.js";
+import { classifySalesRelevance } from "./relevanceGate.js";
 import { registerTrustPackRoutes, trustPackSlugFromPath } from "./trustPack.js";
 import {
   mapHubSpotDealToDeepContext,
@@ -255,6 +256,19 @@ app.post("/api/post-mortem", requireApiKey, uploadFields, async (req, res) => {
     }
 
     const transcript = stripOutcomeMetadata(rawTranscript);
+    const forceAnalysis = ["1", "true", true].includes(
+      req.body.force_analysis as string | boolean
+    );
+    const relevance = await classifySalesRelevance(transcript);
+    if (relevance.label === "not_sales" && !forceAnalysis) {
+      res.status(400).json({
+        error: `Can't use this — it doesn't look like sales or deal evidence. ${relevance.reason}`,
+        code: "NOT_SALES_EVIDENCE",
+        relevance,
+      });
+      return;
+    }
+
     const result = await analyzeTranscript(transcript, { dealValue, deepContext });
 
     const recurringVetoHolders = deepContext.historicalCrmContext?.length
@@ -283,6 +297,11 @@ app.post("/api/post-mortem", requireApiKey, uploadFields, async (req, res) => {
     const addWarning = (msg: string) => {
       if (!warnings.includes(msg)) warnings.push(msg);
     };
+    if (forceAnalysis && relevance.label === "not_sales") {
+      addWarning(
+        `Relevance override used — classifier flagged this as not sales/deal evidence (${relevance.reason}).`
+      );
+    }
     if (strippedPriorAnalysis) {
       addWarning(
         "Removed a prior Lazarus Deal Recovery analysis that was pasted below the call transcript. Only the call text was analyzed."
@@ -302,6 +321,7 @@ app.post("/api/post-mortem", requireApiKey, uploadFields, async (req, res) => {
       processed_at: processedAt,
       audio_meta: audioMeta ?? null,
       warnings,
+      relevance,
     });
   } catch (err) {
     console.error("Post-mortem error:", err);
