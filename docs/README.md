@@ -1,10 +1,10 @@
 # Docs index
 
-**Private repo — team only.** These files are for building, deploying, and selling Lazarus Deal Recovery. Do not forward, publish, or paste into public channels.
+Operator and product docs for Lazarus Deal Recovery. Root overview: [`../README.md`](../README.md)
 
-Root product overview and quick start: [`../README.md`](../README.md)
+Deploy path: **Render monolith only** (API + UI on one service).
 
-Deploy path: **Render monolith only** (API + UI on one service). No split frontend hosts.
+Do not commit secrets — use `.env.example` and host/GitHub secret stores.
 
 ---
 
@@ -16,11 +16,9 @@ Deploy path: **Render monolith only** (API + UI on one service). No split fronte
 | [google-meet-setup.md](./google-meet-setup.md) | Google OAuth, Meet, Gmail thread search |
 | [teams-setup.md](./teams-setup.md) | Microsoft Entra / Teams / Outlook |
 
-Env vars and secret names: repo root `.env.example` (never commit real values).
-
 ---
 
-## Security & trust (internal drafts)
+## Security & trust drafts
 
 | Doc | Use when |
 |-----|----------|
@@ -30,14 +28,14 @@ Customer-facing Trust Pack HTML lives in `public/` and is served at `/api/trust-
 
 ---
 
-## Product / GTM (internal only)
+## Product / GTM drafts
 
 | Doc | Use when |
 |-----|----------|
-| [pitch-deck-james.md](./pitch-deck-james.md) | Internal pitch narrative |
+| [pitch-deck-james.md](./pitch-deck-james.md) | Pitch narrative (draft — not a product claim) |
 | [backlog-messaging-channels.md](./backlog-messaging-channels.md) | Parked Slack / WhatsApp / SMS backlog — do not build yet |
 
-ICP and outreach rules for agents: `.cursor/skills/icp/SKILL.md` (local Cursor skill; not a public playbook).
+ICP and outreach rules for agents: `.cursor/skills/icp/SKILL.md` (local Cursor skill).
 
 ---
 
@@ -50,8 +48,8 @@ ICP and outreach rules for agents: `.cursor/skills/icp/SKILL.md` (local Cursor s
 
 ---
 
-## What does not belong here
+## What does not belong in git
 
 - API keys, OAuth client secrets, service-role keys → Render / local `.env` / GitHub Actions secrets only
-- Customer data or live transcripts → never commit
-- Public marketing copy that overclaims product scope → keep claims aligned with shipped code
+- Customer data or live transcripts
+- Marketing copy that overclaims shipped product scope

@@ -1,6 +1,6 @@
 # Monika — Historical Memory Operational Test
 
-> **INTERNAL ONLY** — test plan. Not a customer-facing commitment.
+> **Test plan** — operational notes only; not a customer-facing commitment.
 
 **Date:** Today (Jul 9, 2026)  
 **Goal:** Validate whether privacy-safe historical deal memory solves the 30-day cap problem for long MM/Enterprise cycles — without weakening the privacy story.

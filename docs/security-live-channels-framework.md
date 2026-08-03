@@ -1,6 +1,6 @@
 # Security Framework Blueprint — Live Evidence Channels
 
-> **INTERNAL ONLY** — talking points for demos / InfoSec. Customer-facing Trust Pack is in `public/`.
+> **Draft talking points** — demos / InfoSec. Canonical customer-facing Trust Pack is in `public/`.
 
 **Status:** Internal blueprint for demos / InfoSec conversations  
 **Aligned to:** Lazarus Deal Recovery (shipped code as of 2026-07)  

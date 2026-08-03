@@ -1,6 +1,6 @@
 # Lazarus Pitch Deck — James (v2 · Lucy Sync Pivot)
 
-> **INTERNAL ONLY** — not for customers, investors outside the circle, or public repos.
+> **Draft / not customer-facing** — internal pitch narrative; not a public product claim.
 
 **Positioning shift:** Deal Autopsy Tool → **Live Buyer Execution Engine**  
 **Date:** July 2026 · Internal use

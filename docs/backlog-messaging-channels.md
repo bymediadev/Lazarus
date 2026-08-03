@@ -1,6 +1,6 @@
 # Backlog: Slack / WhatsApp / SMS evidence channels
 
-> **INTERNAL ONLY** — product backlog. Parked; not a shipped claim.
+> **Backlog draft** — parked; not a shipped product claim.
 
 **Status:** Parked — do not build now  
 **Parked:** 2026-07-29  

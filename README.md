@@ -1,8 +1,8 @@
 # Lazarus Deal Recovery
 
-**Private repository — internal use only.** Do not share clones, secrets, prompts, or docs outside the team.
-
 Judgment layer for sales managers and VPs: which stalled deals will close, which are recoverable vs a flat no, and what to do next. Gemini extracts evidence; `server/scoring.ts` computes viability, DRI, and trajectory. Humans decide.
+
+Never commit secrets (`.env`, `.data/`, API keys). Use `.env.example` as the template.
 
 Full doc map: [`docs/README.md`](docs/README.md)
 
@@ -17,8 +17,6 @@ npm run dev            # UI http://localhost:5173 · API http://localhost:3001
 ```
 
 On Windows, always use `npm run dev` (includes `node --use-system-ca` for Gemini TLS).
-
-Env reference: `.env.example` (never commit `.env` or `.data/`).
 
 ---
 
@@ -108,7 +106,7 @@ Free tier sleeps after ~15 min idle — hit `/api/health` before demos.
 
 ## Integrations
 
-Setup guides live under `docs/` — do not paste credentials into tickets or chats.
+Setup guides live under `docs/` — keep real credentials in env vars / host secrets only.
 
 | Channel | Status | Guide |
 |---------|--------|-------|
@@ -137,7 +135,7 @@ Not claimed as bidirectional CRM sync. Meet/Teams share the same Live Meeting �
 - Build on `feature/*` first.
 - After each Cursor session, append a handoff to [`docs/session-log.md`](docs/session-log.md).
 
-### Still open (ops) — not production-complete until these land
+### Still open (ops)
 
 - [ ] Set `FRONTEND_ORIGIN` to the real production domain (keep localhost for local)
 - [ ] Legal counsel review of Trust Pack
