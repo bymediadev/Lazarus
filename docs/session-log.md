@@ -1,5 +1,7 @@
 # Cursor Session Log
 
+> **INTERNAL ONLY** — engineering handoffs. Do not share outside the team.
+
 Two-sentence handoff notes for each build session. Append newest entries at the top.
 
 ---

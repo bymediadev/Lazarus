@@ -1,5 +1,7 @@
 # Lazarus Pitch Deck — James (v2 · Lucy Sync Pivot)
 
+> **INTERNAL ONLY** — not for customers, investors outside the circle, or public repos.
+
 **Positioning shift:** Deal Autopsy Tool → **Live Buyer Execution Engine**  
 **Date:** July 2026 · Internal use
 

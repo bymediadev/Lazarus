@@ -1,5 +1,7 @@
 # Lovable ↔ Lazarus Express API wiring
 
+> **INTERNAL ONLY** — deploy wiring. Do not paste live keys into this file.
+
 Wire the Lovable **frontend** to the external Lazarus Express API on Render.  
 **Keep the current UI exactly as-is — only change API calls.**
 
