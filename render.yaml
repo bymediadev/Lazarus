@@ -15,7 +15,7 @@ services:
         value: production
       - key: DATA_RETENTION_DAYS
         value: "30"
-      # Render injects PORT — do not set it. Leave VITE_API_URL unset (same-origin /api).
+      # Render injects PORT — do not set it. UI is same-origin /api (monolith).
       - key: GEMINI_API_KEY
         sync: false
       - key: FRONTEND_ORIGIN

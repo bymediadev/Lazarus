@@ -1,6 +1,6 @@
 import { GroundingAudit, HistoricalCrmContextEntry, LiveTranscriptTurn, PostMortemResult, TranscriptSources } from "../types";
 
-/** Empty = same-origin / Vite proxy to localhost:3001. Set to Railway URL for remote API. */
+/** Empty = same-origin (production) or Vite proxy to localhost:3001 (local `npm run dev`). */
 const viteEnv = (
   import.meta as ImportMeta & {
     env?: Record<string, string | undefined>;

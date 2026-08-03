@@ -4,7 +4,7 @@
 
 Judgment layer for sales managers and VPs: which stalled deals will close, which are recoverable vs a flat no, and what to do next. Gemini extracts evidence; `server/scoring.ts` computes viability, DRI, and trajectory. Humans decide.
 
-Full doc map: **[`docs/README.md`](docs/README.md)**
+Full doc map: [`docs/README.md`](docs/README.md)
 
 ---
 
@@ -89,9 +89,9 @@ Legacy HTML paths (e.g. `/privacy.html`) 301 to the canonical URLs above.
 
 ---
 
-## Deploy (Render)
+## Deploy (Render monolith)
 
-One **Web Service** monolith: `npm run build` → `dist/`, `npm start` → Express serves `/api/*` + static UI.
+One **Web Service**: `npm run build` → `dist/`, `npm start` → Express serves `/api/*` and the static UI. This is the only supported deploy path.
 
 | Setting | Value |
 |---------|-------|
@@ -100,9 +100,7 @@ One **Web Service** monolith: `npm run build` → `dist/`, `npm start` → Expre
 | Health | `/api/health` |
 | Blueprint | `render.yaml` (optional) |
 
-Required env (copy from local `.env`): `GEMINI_API_KEY`, `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, `PURGE_CRON_SECRET`, `DATA_RETENTION_DAYS`, `NODE_ENV=production`, `FRONTEND_ORIGIN`, `LAZARUS_API_KEY`, `VITE_LAZARUS_API_KEY` (same random string as `LAZARUS_API_KEY`). Do **not** set `VITE_API_URL` on the monolith — UI uses same-origin `/api`.
-
-Split UI (Lovable) + API: see [`docs/lovable-api-wiring.md`](docs/lovable-api-wiring.md).
+Required env (copy from local `.env`): `GEMINI_API_KEY`, `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, `PURGE_CRON_SECRET`, `DATA_RETENTION_DAYS`, `NODE_ENV=production`, `FRONTEND_ORIGIN`, `LAZARUS_API_KEY`, `VITE_LAZARUS_API_KEY` (same random string as `LAZARUS_API_KEY`). Leave `VITE_API_URL` unset — UI calls same-origin `/api`.
 
 Free tier sleeps after ~15 min idle — hit `/api/health` before demos.
 
@@ -139,7 +137,7 @@ Not claimed as bidirectional CRM sync. Meet/Teams share the same Live Meeting �
 - Build on `feature/*` first.
 - After each Cursor session, append a handoff to [`docs/session-log.md`](docs/session-log.md).
 
-### Still open (ops)
+### Still open (ops) — not production-complete until these land
 
 - [ ] Set `FRONTEND_ORIGIN` to the real production domain (keep localhost for local)
 - [ ] Legal counsel review of Trust Pack

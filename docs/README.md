@@ -4,6 +4,8 @@
 
 Root product overview and quick start: [`../README.md`](../README.md)
 
+Deploy path: **Render monolith only** (API + UI on one service). No split frontend hosts.
+
 ---
 
 ## Setup & integrations
@@ -13,7 +15,6 @@ Root product overview and quick start: [`../README.md`](../README.md)
 | [zoom-rtms-setup.md](./zoom-rtms-setup.md) | Zoom RTMS live transcripts |
 | [google-meet-setup.md](./google-meet-setup.md) | Google OAuth, Meet, Gmail thread search |
 | [teams-setup.md](./teams-setup.md) | Microsoft Entra / Teams / Outlook |
-| [lovable-api-wiring.md](./lovable-api-wiring.md) | Split deploy: Lovable UI → Render API |
 
 Env vars and secret names: repo root `.env.example` (never commit real values).
 
