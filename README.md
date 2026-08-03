@@ -1,4 +1,4 @@
-# Lazarus
+# Lazarus Deal Recovery 
 
 Deterministic deal autopsy engine for stalled B2B pipeline. Gemini extracts forces; `server/scoring.ts` computes viability, DRI, and trajectory.
 
