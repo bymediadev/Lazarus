@@ -23,8 +23,8 @@ function check(label, condition) {
 const scopes = HUBSPOT_OAUTH_SCOPES.split(/\s+/).filter(Boolean);
 check("scopes include oauth", scopes.includes("oauth"));
 check("scopes include deals.read", scopes.includes("crm.objects.deals.read"));
-check("scopes include notes.read", scopes.includes("crm.objects.notes.read"));
-check("exactly three scopes", scopes.length === 3);
+check("no notes.read scope (not recognized on platform 2026.03)", !scopes.includes("crm.objects.notes.read"));
+check("exactly two scopes", scopes.length === 2);
 check(
   "no write scopes",
   !scopes.some((s) => /write|crm\.objects\.(contacts|companies)/i.test(s))
@@ -50,7 +50,7 @@ const authUrl = buildHubSpotAuthorizeUrl(state);
 check("authorize url hosts hubspot", authUrl.startsWith("https://app.hubspot.com/oauth/authorize"));
 check("authorize url includes client_id", authUrl.includes("client_id=test-client-id"));
 check("authorize url includes deals.read scope", authUrl.includes("crm.objects.deals.read"));
-check("authorize url includes notes.read scope", authUrl.includes("crm.objects.notes.read"));
+check("authorize url excludes notes.read scope", !authUrl.includes("crm.objects.notes.read"));
 check("authorize url includes signed state", authUrl.includes(`state=${encodeURIComponent(state)}`) || authUrl.includes(state));
 
 if (prevId === undefined) delete process.env.HUBSPOT_CLIENT_ID;

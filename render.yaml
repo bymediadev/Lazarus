@@ -60,3 +60,13 @@ services:
         sync: false
       - key: TEAMS_REDIRECT_URI
         sync: false
+      - key: HUBSPOT_CLIENT_ID
+        sync: false
+      - key: HUBSPOT_CLIENT_SECRET
+        sync: false
+      - key: HUBSPOT_REDIRECT_URI
+        sync: false
+      - key: HUBSPOT_WEBHOOK_SECRET
+        sync: false
+      - key: OAUTH_STATE_SECRET
+        sync: false

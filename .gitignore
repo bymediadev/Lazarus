@@ -5,6 +5,7 @@ dist
 .data
 windows-extra-cas.pem
 npm-install.log
+hubspot.config.yml
 
 # Cursor / debug session logs
 .cursor/
