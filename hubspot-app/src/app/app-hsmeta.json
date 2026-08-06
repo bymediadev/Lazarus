@@ -1,0 +1,33 @@
+{
+  "uid": "lazarus_deal_recovery_app",
+  "type": "app",
+  "config": {
+    "description": "Read-only deal search and note import for Lazarus Deal Recovery — forecast clarity on stalled opportunities.",
+    "name": "Lazarus Deal Recovery",
+    "distribution": "marketplace",
+    "auth": {
+      "type": "oauth",
+      "redirectUrls": [
+        "http://localhost:3001/api/integrations/hubspot/callback",
+        "https://lazarus-4uxi.onrender.com/api/integrations/hubspot/callback"
+      ],
+      "requiredScopes": [
+        "oauth",
+        "crm.objects.deals.read"
+      ],
+      "optionalScopes": [],
+      "conditionallyRequiredScopes": []
+    },
+    "permittedUrls": {
+      "fetch": ["https://api.hubapi.com"],
+      "iframe": [],
+      "img": []
+    },
+    "support": {
+      "supportEmail": "support@lazarusdealrecovery.com",
+      "documentationUrl": "https://lazarus-4uxi.onrender.com",
+      "supportUrl": "https://lazarus-4uxi.onrender.com",
+      "supportPhone": "+18005555555"
+    }
+  }
+}

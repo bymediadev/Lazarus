@@ -15,6 +15,7 @@ Do not commit secrets — use `.env.example` and host/GitHub secret stores.
 | [zoom-rtms-setup.md](./zoom-rtms-setup.md) | Zoom RTMS live transcripts |
 | [google-meet-setup.md](./google-meet-setup.md) | Google OAuth, Meet, Gmail thread search |
 | [teams-setup.md](./teams-setup.md) | Microsoft Entra / Teams / Outlook |
+| [hubspot-setup.md](./hubspot-setup.md) | HubSpot public OAuth app + Lazarus Connect (see also `hubspot-app/`) |
 
 ---
 

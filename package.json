@@ -18,6 +18,8 @@
     "test:pipeline": "node --import tsx scripts/test-pipeline-leak.mjs",
     "test:document-email": "node --import tsx scripts/test-document-email-regression.mjs",
     "test:hubspot": "node --import tsx scripts/test-hubspot-regression.mjs",
+    "test:hubspot:live": "node --import tsx scripts/test-hubspot-live-smoke.mjs",
+    "hubspot:env": "node scripts/apply-hubspot-env.mjs",
     "test:stress-deep-context": "node --use-system-ca scripts/test-stress-deep-context.mjs",
     "purge:retention": "node --use-system-ca -r ./server/preload-ca.cjs ./node_modules/tsx/dist/cli.mjs server/purge-retention.ts",
     "cleanup:ports": "node scripts/cleanup-ports.mjs"

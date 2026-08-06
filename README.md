@@ -110,7 +110,7 @@ Setup guides live under `docs/` — keep real credentials in env vars / host sec
 
 | Channel | Status | Guide |
 |---------|--------|-------|
-| HubSpot | Read-only OAuth + webhook ingest | `.env.example` · `npm run test:hubspot` |
+| HubSpot | Read-only OAuth + deal note import | [`docs/hubspot-setup.md`](docs/hubspot-setup.md) · `npm run test:hubspot` · `npm run test:hubspot:live` |
 | Zoom RTMS | Live transcripts | [`docs/zoom-rtms-setup.md`](docs/zoom-rtms-setup.md) |
 | Google Meet / Gmail | OAuth + mailbox search | [`docs/google-meet-setup.md`](docs/google-meet-setup.md) |
 | Microsoft Teams / Outlook | OAuth + mailbox search | [`docs/teams-setup.md`](docs/teams-setup.md) |

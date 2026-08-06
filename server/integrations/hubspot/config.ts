@@ -23,9 +23,9 @@ export function isHubSpotConfigured(): boolean {
   return getHubSpotConfig() !== null;
 }
 
-/** Minimal read-only scopes — no write, no contacts/companies. */
-export const HUBSPOT_OAUTH_SCOPES = [
-  "oauth",
-  "crm.objects.deals.read",
-  "crm.objects.notes.read",
-].join(" ");
+/**
+ * Minimal read-only scopes — no write, no contacts/companies.
+ * Note: `crm.objects.notes.read` is not recognized on HubSpot developer platform
+ * 2026.03 (deploy rejects it). Deal-associated notes are requested with deals.read.
+ */
+export const HUBSPOT_OAUTH_SCOPES = ["oauth", "crm.objects.deals.read"].join(" ");
