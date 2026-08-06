@@ -1,9 +1,10 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   disconnectHubSpot,
   fetchHubSpotStatus,
   hubspotConnectUrl,
   importHubSpotDealNotes,
+  listHubSpotDeals,
   searchHubSpotDeals,
   type HubSpotDealHit,
   type HubSpotProviderStatus,
@@ -21,30 +22,73 @@ interface Props {
   onError: (message: string) => void;
 }
 
+function dealOptionLabel(deal: HubSpotDealHit): string {
+  const stage = deal.dealstage || "no stage";
+  const amount = deal.amount ? ` · ${deal.amount}` : "";
+  return `${deal.dealname} — ${stage}${amount}`;
+}
+
 export default function HubSpotDealControls({ onImport, onError }: Props) {
   const [status, setStatus] = useState<HubSpotProviderStatus | null>(null);
-  const [busy, setBusy] = useState<"search" | "import" | "disconnect" | null>(null);
-  const [query, setQuery] = useState("");
+  const [busy, setBusy] = useState<"load" | "import" | "disconnect" | null>(null);
+  const [filter, setFilter] = useState("");
   const [deals, setDeals] = useState<HubSpotDealHit[]>([]);
-  const [lastQuery, setLastQuery] = useState<string | null>(null);
+  const [selectedDealId, setSelectedDealId] = useState("");
   const [statusError, setStatusError] = useState<string | null>(null);
+  const [importedDealId, setImportedDealId] = useState<string | null>(null);
 
   const refresh = useCallback(async () => {
     try {
       const next = await fetchHubSpotStatus();
       setStatus(next);
       setStatusError(null);
+      return next;
     } catch {
       setStatusError("HubSpot status unavailable. Check the API connection and try again.");
+      return null;
     }
   }, []);
 
+  const loadDeals = useCallback(
+    async (query?: string) => {
+      setBusy("load");
+      try {
+        const q = (query ?? "").trim();
+        const result = q.length >= 2 ? await searchHubSpotDeals(q) : await listHubSpotDeals(25);
+        setDeals(result.deals);
+        setSelectedDealId((prev) => {
+          if (prev && result.deals.some((d) => d.id === prev)) return prev;
+          return result.deals[0]?.id ?? "";
+        });
+        if (!result.deals.length) {
+          onError(
+            q.length >= 2
+              ? `No HubSpot deals matched “${q}”.`
+              : "No recent HubSpot deals found. Create a deal in HubSpot, then refresh."
+          );
+        }
+      } catch (err) {
+        onError(err instanceof Error ? err.message : "HubSpot deal list failed.");
+      } finally {
+        setBusy(null);
+      }
+    },
+    [onError]
+  );
+
   useEffect(() => {
-    void refresh();
+    void (async () => {
+      const next = await refresh();
+      if (next?.connected) void loadDeals();
+    })();
+
     const onOAuthComplete = (event: Event) => {
-      const detail = (event as CustomEvent<{ provider?: string }>).detail;
+      const detail = (event as CustomEvent<{ provider?: string; outcome?: string }>).detail;
       if (detail?.provider && detail.provider !== "hubspot") return;
-      void refresh();
+      void (async () => {
+        const next = await refresh();
+        if (next?.connected) void loadDeals();
+      })();
     };
     const onWindowFocus = () => {
       void refresh();
@@ -55,7 +99,7 @@ export default function HubSpotDealControls({ onImport, onError }: Props) {
       window.removeEventListener("lazarus-oauth-complete", onOAuthComplete);
       window.removeEventListener("focus", onWindowFocus);
     };
-  }, [refresh]);
+  }, [refresh, loadDeals]);
 
   const openOAuthPopup = () => {
     const popup = window.open(
@@ -70,37 +114,27 @@ export default function HubSpotDealControls({ onImport, onError }: Props) {
     popup.focus();
   };
 
-  const runSearch = async () => {
-    if (query.trim().length < 2) {
-      onError("Enter a deal name (at least 2 characters).");
+  const selectedDeal = useMemo(
+    () => deals.find((d) => d.id === selectedDealId) ?? null,
+    [deals, selectedDealId]
+  );
+
+  const runImport = async () => {
+    if (!selectedDeal) {
+      onError("Choose a HubSpot deal from the dropdown.");
       return;
     }
-    setBusy("search");
-    try {
-      const result = await searchHubSpotDeals(query);
-      setDeals(result.deals);
-      setLastQuery(result.query);
-      if (!result.deals.length) {
-        onError(`No HubSpot deals matched “${result.query}”.`);
-      }
-    } catch (err) {
-      onError(err instanceof Error ? err.message : "HubSpot deal search failed.");
-    } finally {
-      setBusy(null);
-    }
-  };
-
-  const runImport = async (deal: HubSpotDealHit) => {
     setBusy("import");
     try {
-      const result = await importHubSpotDealNotes(deal.id);
+      const result = await importHubSpotDealNotes(selectedDeal.id);
+      setImportedDealId(selectedDeal.id);
       onImport(
         {
           accountId: result.account_id,
           salesCycleDays: String(result.sales_cycle_days),
           historicalCrmContext: result.historical_crm_context,
         },
-        `Imported ${result.note_count} note${result.note_count === 1 ? "" : "s"} from “${result.deal.dealname}” into Deal Profile.`
+        `Added “${result.deal.dealname}” as CRM context (${result.note_count} note${result.note_count === 1 ? "" : "s"}).`
       );
     } catch (err) {
       onError(err instanceof Error ? err.message : "HubSpot import failed.");
@@ -114,7 +148,9 @@ export default function HubSpotDealControls({ onImport, onError }: Props) {
     try {
       await disconnectHubSpot();
       setDeals([]);
-      setLastQuery(null);
+      setSelectedDealId("");
+      setImportedDealId(null);
+      setFilter("");
       await refresh();
     } catch (err) {
       onError(err instanceof Error ? err.message : "Disconnect failed.");
@@ -174,62 +210,70 @@ export default function HubSpotDealControls({ onImport, onError }: Props) {
       )}
 
       {status?.connected && (
-        <>
+        <div className="hubspot-deal-picker">
           <p className="hubspot-deal-hint">
-            Search deals and import associated notes into account ID, sales cycle, and historical CRM
-            JSON (read-only).
+            Pick a deal from your CRM, then add it as analysis context (notes + stage history).
           </p>
-          <div className="mailbox-query-row hubspot-deal-search">
+
+          <div className="hubspot-deal-filter-row">
             <input
               type="search"
-              value={query}
-              onChange={(event) => setQuery(event.target.value)}
-              placeholder="Search HubSpot deals by name…"
-              aria-label="HubSpot deal search"
+              value={filter}
+              onChange={(event) => setFilter(event.target.value)}
+              placeholder="Filter deals by name…"
+              aria-label="Filter HubSpot deals"
               onKeyDown={(event) => {
                 if (event.key !== "Enter") return;
                 event.preventDefault();
-                void runSearch();
+                void loadDeals(filter);
               }}
             />
             <button
               type="button"
-              className="btn-primary mailbox-search-btn"
-              disabled={busy !== null || query.trim().length < 2}
-              onClick={() => void runSearch()}
+              className="btn-secondary email-provider-btn"
+              disabled={busy !== null}
+              onClick={() => void loadDeals(filter)}
             >
-              {busy === "search" ? "Searching…" : "Search"}
+              {busy === "load" ? "Loading…" : "Refresh"}
             </button>
           </div>
 
-          {lastQuery != null && (
-            <ul className="hubspot-deal-list" aria-live="polite">
-              {deals.length === 0 ? (
-                <li className="hubspot-deal-empty">No deals for “{lastQuery}”.</li>
-              ) : (
-                deals.map((deal) => (
-                  <li key={deal.id}>
-                    <div>
-                      <strong>{deal.dealname}</strong>
-                      <span>
-                        {deal.dealstage || "no stage"}
-                        {deal.amount ? ` · ${deal.amount}` : ""}
-                      </span>
-                    </div>
-                    <button
-                      type="button"
-                      className="btn-secondary email-provider-btn"
-                      disabled={busy !== null}
-                      onClick={() => void runImport(deal)}
-                    >
-                      {busy === "import" ? "Importing…" : "Import notes"}
-                    </button>
-                  </li>
-                ))
-              )}
-            </ul>
-          )}
-        </>
+          <label className="hubspot-deal-select-label" htmlFor="hubspot-deal-select">
+            Deal
+          </label>
+          <select
+            id="hubspot-deal-select"
+            className="hubspot-deal-select"
+            value={selectedDealId}
+            disabled={busy !== null || deals.length === 0}
+            onChange={(event) => setSelectedDealId(event.target.value)}
+            aria-label="Select HubSpot deal"
+          >
+            {deals.length === 0 ? (
+              <option value="">No deals loaded</option>
+            ) : (
+              deals.map((deal) => (
+                <option key={deal.id} value={deal.id}>
+                  {dealOptionLabel(deal)}
+                </option>
+              ))
+            )}
+          </select>
+
+          <div className="hubspot-deal-picker-actions">
+            <button
+              type="button"
+              className="btn-primary mailbox-search-btn"
+              disabled={busy !== null || !selectedDeal}
+              onClick={() => void runImport()}
+            >
+              {busy === "import" ? "Adding…" : "Add deal as context"}
+            </button>
+            {importedDealId && selectedDealId === importedDealId && (
+              <span className="hubspot-deal-added">Added to Deal Profile</span>
+            )}
+          </div>
+        </div>
       )}
     </div>
   );

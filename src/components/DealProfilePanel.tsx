@@ -88,7 +88,7 @@ export default function DealProfilePanel({
     <details className="deal-profile-panel">
       <summary>HubSpot import + deal history (optional)</summary>
       <p className="console-tab-hint">
-        Import HubSpot notes or add prior deal history.
+        Connect HubSpot, choose a deal, add it as context — or paste prior deal history.
       </p>
 
       <HubSpotDealControls

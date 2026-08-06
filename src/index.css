@@ -604,6 +604,55 @@ body {
   line-height: 1.4;
 }
 
+.hubspot-deal-picker {
+  margin-top: 0.15rem;
+}
+
+.hubspot-deal-filter-row {
+  display: flex;
+  gap: 0.55rem;
+  margin-bottom: 0.65rem;
+}
+
+.hubspot-deal-filter-row input {
+  flex: 1;
+  min-width: 0;
+}
+
+.hubspot-deal-select-label {
+  display: block;
+  margin-bottom: 0.3rem;
+  font-size: 0.72rem;
+  color: var(--muted);
+  font-family: var(--mono);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.hubspot-deal-select {
+  width: 100%;
+  margin-bottom: 0.75rem;
+  padding: 0.55rem 0.65rem;
+  border: 1px solid var(--panel-border);
+  border-radius: 3px;
+  background: rgba(0, 0, 0, 0.22);
+  color: var(--text);
+  font-size: 0.85rem;
+}
+
+.hubspot-deal-picker-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.hubspot-deal-added {
+  font-size: 0.76rem;
+  color: var(--teal);
+  font-family: var(--mono);
+}
+
 .hubspot-deal-search {
   margin-top: 0.15rem;
 }

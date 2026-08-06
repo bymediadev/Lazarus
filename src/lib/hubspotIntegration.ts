@@ -60,6 +60,16 @@ export async function disconnectHubSpot(): Promise<void> {
   }
 }
 
+export async function listHubSpotDeals(limit = 25): Promise<HubSpotDealSearchResult> {
+  const res = await fetch(
+    `${API_BASE}/api/integrations/hubspot/list-deals?limit=${encodeURIComponent(String(limit))}`,
+    { headers: apiAuthHeaders() }
+  );
+  const data = (await res.json()) as HubSpotDealSearchResult & { error?: string };
+  if (!res.ok) throw new Error(data.error ?? `HubSpot deal list failed (${res.status})`);
+  return data;
+}
+
 export async function searchHubSpotDeals(query: string): Promise<HubSpotDealSearchResult> {
   const res = await fetch(`${API_BASE}/api/integrations/hubspot/search-deals`, {
     method: "POST",

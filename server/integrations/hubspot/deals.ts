@@ -82,6 +82,39 @@ function mapDealHit(deal: HubSpotApiDeal): HubSpotDealSearchHit {
   };
 }
 
+const DEAL_PROPERTIES = ["dealname", "dealstage", "amount", "closedate", "createdate"] as const;
+
+/** Recent deals for the picker dropdown (no name filter). */
+export async function listRecentHubSpotDeals(limit = 25): Promise<HubSpotDealSearchHit[]> {
+  const capped = Math.min(Math.max(limit, 1), 50);
+  const params = new URLSearchParams({
+    limit: String(capped),
+    properties: DEAL_PROPERTIES.join(","),
+    sorts: "hs_lastmodifieddate",
+  });
+  // HubSpot list API uses `sorts` query differently — prefer search with empty filters.
+  const res = await hubspotFetch("/objects/deals/search", {
+    method: "POST",
+    body: JSON.stringify({
+      properties: [...DEAL_PROPERTIES],
+      limit: capped,
+      sorts: [{ propertyName: "hs_lastmodifieddate", direction: "DESCENDING" }],
+    }),
+  });
+
+  const data = (await res.json()) as HubSpotSearchResponse;
+  if (!res.ok) {
+    // Fallback: plain list if search rejects empty filterGroups
+    const listRes = await hubspotFetch(`/objects/deals?${params}`);
+    const listData = (await listRes.json()) as HubSpotSearchResponse;
+    if (!listRes.ok) {
+      throw new Error(data.message ?? listData.message ?? `HubSpot deal list failed (${res.status})`);
+    }
+    return (listData.results ?? []).map(mapDealHit);
+  }
+  return (data.results ?? []).map(mapDealHit);
+}
+
 /** Search deals by name (read-only CRM search). */
 export async function searchHubSpotDeals(
   query: string,
@@ -105,7 +138,7 @@ export async function searchHubSpotDeals(
           ],
         },
       ],
-      properties: ["dealname", "dealstage", "amount", "closedate", "createdate"],
+      properties: [...DEAL_PROPERTIES],
       limit: capped,
       sorts: [{ propertyName: "hs_lastmodifieddate", direction: "DESCENDING" }],
     }),

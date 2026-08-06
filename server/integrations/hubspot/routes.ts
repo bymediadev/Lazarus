@@ -5,7 +5,7 @@ import {
   verifySignedOAuthState,
 } from "../oauthShared.js";
 import { getHubSpotConfig, isHubSpotConfigured, HUBSPOT_OAUTH_SCOPES } from "./config.js";
-import { importHubSpotDealNotes, searchHubSpotDeals } from "./deals.js";
+import { importHubSpotDealNotes, listRecentHubSpotDeals, searchHubSpotDeals } from "./deals.js";
 import { buildHubSpotAuthorizeUrl, exchangeHubSpotCode } from "./oauth.js";
 import { clearHubSpotTokens, isHubSpotConnected, loadHubSpotTokens } from "./tokens.js";
 
@@ -66,18 +66,41 @@ export function registerHubSpotRoutes(app: Express): void {
     res.json({ ok: true });
   });
 
+  app.get("/api/integrations/hubspot/list-deals", async (req, res) => {
+    if (!isHubSpotConnected()) {
+      res.status(401).json({ error: "HubSpot is not connected. Connect HubSpot first." });
+      return;
+    }
+    const limitRaw = Number(req.query.limit ?? 25);
+    const limit = Number.isFinite(limitRaw) ? limitRaw : 25;
+    try {
+      const deals = await listRecentHubSpotDeals(limit);
+      res.json({
+        ok: true,
+        provider: "hubspot",
+        query: "",
+        count: deals.length,
+        deals,
+      });
+    } catch (err) {
+      console.error("[hubspot-list] error:", err);
+      res.status(500).json({
+        error: err instanceof Error ? err.message : "HubSpot deal list failed",
+      });
+    }
+  });
+
   app.post("/api/integrations/hubspot/search-deals", async (req, res) => {
     if (!isHubSpotConnected()) {
       res.status(401).json({ error: "HubSpot is not connected. Connect HubSpot first." });
       return;
     }
     const query = String(req.body?.query ?? "").trim();
-    if (query.length < 2) {
-      res.status(400).json({ error: "Enter a deal name (at least 2 characters)." });
-      return;
-    }
     try {
-      const deals = await searchHubSpotDeals(query, 15);
+      const deals =
+        query.length < 2
+          ? await listRecentHubSpotDeals(25)
+          : await searchHubSpotDeals(query, 15);
       res.json({
         ok: true,
         provider: "hubspot",

@@ -84,8 +84,10 @@ Redeploy until `/api/health` shows `"hubspot": true`.
 
 ## 4. Demo flow (Deal Profile)
 
-1. **Connect HubSpot** → search deal → **Import notes**
-2. Add another source → **Analyze Evidence Package**
+1. **Connect HubSpot**
+2. Deal dropdown loads recent CRM deals (filter/refresh optional)
+3. Choose a deal → **Add deal as context** (notes + stage → Deal Profile)
+4. Add another source → **Analyze Evidence Package**
 
 Tokens: `.data/hubspot-tokens.json` (do not commit).
 
@@ -103,5 +105,6 @@ npm run test:hubspot:live
 | GET | `/api/integrations/hubspot/connect` |
 | GET | `/api/integrations/hubspot/callback` |
 | POST | `/api/integrations/hubspot/disconnect` |
+| GET | `/api/integrations/hubspot/list-deals` |
 | POST | `/api/integrations/hubspot/search-deals` |
 | POST | `/api/integrations/hubspot/import-deal-notes` |
