@@ -12,6 +12,8 @@ const anon = (viteEnv?.VITE_SUPABASE_ANON_KEY ?? "").trim();
 
 let client: SupabaseClient | null = null;
 
+export type LazarusLoginProvider = "google" | "hubspot" | "salesforce";
+
 export function isAuthConfigured(): boolean {
   return !!(url && anon);
 }
@@ -30,57 +32,13 @@ export function getSupabaseBrowserClient(): SupabaseClient | null {
   return client;
 }
 
-export async function fetchAuthStatus(): Promise<{
-  configured: boolean;
-  note: string;
-}> {
-  try {
-    const res = await fetch(`${API_BASE}/api/auth/status`);
-    if (!res.ok) return { configured: isAuthConfigured(), note: "Auth status unavailable" };
-    return res.json() as Promise<{ configured: boolean; note: string }>;
-  } catch {
-    return { configured: isAuthConfigured(), note: "Auth status unavailable" };
-  }
-}
-
-export async function signInWithEmail(email: string): Promise<void> {
+async function applySessionFromBridge(data: {
+  email?: string;
+  token_hash?: string | null;
+  email_otp?: string | null;
+}): Promise<{ email: string }> {
   const sb = getSupabaseBrowserClient();
-  if (!sb) throw new Error("Auth is not configured (VITE_SUPABASE_URL / VITE_SUPABASE_ANON_KEY).");
-  const { error } = await sb.auth.signInWithOtp({
-    email: email.trim(),
-    options: { emailRedirectTo: window.location.origin },
-  });
-  if (error) throw error;
-}
-
-export async function signInWithGoogle(): Promise<void> {
-  const sb = getSupabaseBrowserClient();
-  if (!sb) throw new Error("Auth is not configured.");
-  const { error } = await sb.auth.signInWithOAuth({
-    provider: "google",
-    options: { redirectTo: window.location.origin },
-  });
-  if (error) throw error;
-}
-
-export async function signInWithCrmProvider(
-  provider: "hubspot" | "salesforce"
-): Promise<{ email: string }> {
-  const sb = getSupabaseBrowserClient();
-  if (!sb) throw new Error("Auth is not configured.");
-
-  const res = await fetch(`${API_BASE}/api/auth/session-from-crm`, {
-    method: "POST",
-    headers: apiAuthHeaders(true),
-    body: JSON.stringify({ provider }),
-  });
-  const data = (await res.json()) as {
-    error?: string;
-    email?: string;
-    token_hash?: string | null;
-    email_otp?: string | null;
-  };
-  if (!res.ok) throw new Error(data.error ?? "CRM sign-in failed");
+  if (!sb) throw new Error("Lazarus login is not configured on this build.");
 
   if (data.token_hash) {
     const { error } = await sb.auth.verifyOtp({
@@ -96,10 +54,117 @@ export async function signInWithCrmProvider(
     });
     if (error) throw error;
   } else {
-    throw new Error("CRM bridge did not return a session token. Check service role key.");
+    throw new Error("Sign-in did not return a session. Try again after approving the popup.");
   }
 
   return { email: data.email ?? "" };
+}
+
+export async function fetchAuthStatus(): Promise<{
+  configured: boolean;
+  google?: boolean;
+  hubspot?: boolean;
+  salesforce?: boolean;
+  email?: boolean;
+  note: string;
+}> {
+  try {
+    const res = await fetch(`${API_BASE}/api/auth/status`);
+    if (!res.ok) return { configured: isAuthConfigured(), note: "Auth status unavailable" };
+    return res.json() as Promise<{
+      configured: boolean;
+      google?: boolean;
+      hubspot?: boolean;
+      salesforce?: boolean;
+      email?: boolean;
+      note: string;
+    }>;
+  } catch {
+    return { configured: isAuthConfigured(), note: "Auth status unavailable" };
+  }
+}
+
+/** Email magic link — Lazarus branded; no Supabase dashboard required for the user. */
+export async function signInWithEmail(email: string): Promise<{
+  message: string;
+  action_link?: string;
+  token_hash?: string;
+}> {
+  const res = await fetch(`${API_BASE}/api/auth/email-magic-link`, {
+    method: "POST",
+    headers: apiAuthHeaders(true),
+    body: JSON.stringify({ email: email.trim() }),
+  });
+  const data = (await res.json()) as {
+    error?: string;
+    message?: string;
+    action_link?: string;
+    token_hash?: string;
+  };
+  if (!res.ok) throw new Error(data.error ?? "Email sign-in failed");
+
+  // Dev convenience: if server returned a hash, complete session immediately.
+  if (data.token_hash) {
+    await applySessionFromBridge({ email: email.trim(), token_hash: data.token_hash });
+  }
+
+  return {
+    message: data.message ?? "Check your email for the Lazarus sign-in link.",
+    action_link: data.action_link,
+    token_hash: data.token_hash,
+  };
+}
+
+/** @deprecated Prefer Lazarus Google OAuth via signInWithProvider("google"). */
+export async function signInWithGoogle(): Promise<void> {
+  await signInWithProvider("google");
+}
+
+export function providerConnectUrl(provider: LazarusLoginProvider): string {
+  if (provider === "google") return `${API_BASE}/api/integrations/google/connect`;
+  if (provider === "hubspot") return `${API_BASE}/api/integrations/hubspot/connect`;
+  return `${API_BASE}/api/integrations/salesforce/connect`;
+}
+
+export function openProviderConnectPopup(provider: LazarusLoginProvider): Window {
+  const popup = window.open(
+    providerConnectUrl(provider),
+    `lazarus-${provider}-login`,
+    "popup=yes,width=560,height=720,resizable=yes,scrollbars=yes"
+  );
+  if (!popup) throw new Error("Allow popups to sign in with " + provider + ".");
+  popup.focus();
+  return popup;
+}
+
+/** Finish Lazarus session after OAuth popup connected Google / HubSpot / Salesforce. */
+export async function completeProviderSignIn(
+  provider: LazarusLoginProvider
+): Promise<{ email: string }> {
+  const res = await fetch(`${API_BASE}/api/auth/session-from-provider`, {
+    method: "POST",
+    headers: apiAuthHeaders(true),
+    body: JSON.stringify({ provider }),
+  });
+  const data = (await res.json()) as {
+    error?: string;
+    email?: string;
+    token_hash?: string | null;
+    email_otp?: string | null;
+  };
+  if (!res.ok) throw new Error(data.error ?? "Sign-in failed");
+  return applySessionFromBridge(data);
+}
+
+/** Alias for CRM bridge naming. */
+export async function signInWithCrmProvider(
+  provider: "hubspot" | "salesforce" | "google"
+): Promise<{ email: string }> {
+  return completeProviderSignIn(provider);
+}
+
+export async function signInWithProvider(provider: LazarusLoginProvider): Promise<void> {
+  openProviderConnectPopup(provider);
 }
 
 export async function signOut(): Promise<void> {

@@ -9,28 +9,26 @@ import {
 } from "react";
 import { setApiBearerToken } from "../lib/api";
 import {
+  completeProviderSignIn,
   getSession,
   getSupabaseBrowserClient,
   isAuthConfigured,
-  signInWithCrmProvider,
+  openProviderConnectPopup,
   signInWithEmail,
-  signInWithGoogle,
   signOut,
+  type LazarusLoginProvider,
   type Session,
   type User,
 } from "../lib/auth";
-import { hubspotConnectUrl } from "../lib/hubspotIntegration";
-import { salesforceConnectUrl } from "../lib/salesforceIntegration";
 
 interface AuthContextValue {
   configured: boolean;
   loading: boolean;
   session: Session | null;
   user: User | null;
-  signInEmail: (email: string) => Promise<void>;
-  signInGoogle: () => Promise<void>;
-  connectAndSignInCrm: (provider: "hubspot" | "salesforce") => Promise<void>;
-  completeCrmSignIn: (provider: "hubspot" | "salesforce") => Promise<void>;
+  signInEmail: (email: string) => Promise<{ message: string; action_link?: string }>;
+  startProviderLogin: (provider: LazarusLoginProvider) => Promise<void>;
+  completeProviderLogin: (provider: LazarusLoginProvider) => Promise<void>;
   logout: () => Promise<void>;
 }
 
@@ -64,19 +62,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return () => sub.subscription.unsubscribe();
   }, [configured]);
 
-  const connectAndSignInCrm = useCallback(async (provider: "hubspot" | "salesforce") => {
-    const url = provider === "hubspot" ? hubspotConnectUrl() : salesforceConnectUrl();
-    const popup = window.open(
-      url,
-      `lazarus-${provider}-oauth`,
-      "popup=yes,width=560,height=720,resizable=yes,scrollbars=yes"
-    );
-    if (!popup) throw new Error("Allow popups to connect and sign in.");
-    popup.focus();
+  /** After OAuth popup connects, LoginScreen completes the Lazarus session. */
+
+  const startProviderLogin = useCallback(async (provider: LazarusLoginProvider) => {
+    openProviderConnectPopup(provider);
   }, []);
 
-  const completeCrmSignIn = useCallback(async (provider: "hubspot" | "salesforce") => {
-    await signInWithCrmProvider(provider);
+  const completeProviderLogin = useCallback(async (provider: LazarusLoginProvider) => {
+    await completeProviderSignIn(provider);
   }, []);
 
   const value = useMemo<AuthContextValue>(
@@ -86,12 +79,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       session,
       user: session?.user ?? null,
       signInEmail: signInWithEmail,
-      signInGoogle: signInWithGoogle,
-      connectAndSignInCrm,
-      completeCrmSignIn,
+      startProviderLogin,
+      completeProviderLogin,
       logout: signOut,
     }),
-    [configured, loading, session, connectAndSignInCrm, completeCrmSignIn]
+    [configured, loading, session, startProviderLogin, completeProviderLogin]
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

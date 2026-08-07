@@ -24,7 +24,13 @@ services:
         sync: false
       - key: SUPABASE_URL
         sync: false
+      - key: SUPABASE_ANON_KEY
+        sync: false
       - key: SUPABASE_SERVICE_ROLE_KEY
+        sync: false
+      - key: VITE_SUPABASE_URL
+        sync: false
+      - key: VITE_SUPABASE_ANON_KEY
         sync: false
       - key: PURGE_CRON_SECRET
         sync: false
@@ -68,5 +74,17 @@ services:
         sync: false
       - key: HUBSPOT_WEBHOOK_SECRET
         sync: false
+      - key: SALESFORCE_CLIENT_ID
+        sync: false
+      - key: SALESFORCE_CLIENT_SECRET
+        sync: false
+      - key: SALESFORCE_REDIRECT_URI
+        sync: false
+      - key: SALESFORCE_LOGIN_URL
+        sync: false
+      - key: SALESFORCE_WEBHOOK_SECRET
+        sync: false
       - key: OAUTH_STATE_SECRET
+        sync: false
+      - key: SUPABASE_ACCESS_TOKEN
         sync: false
