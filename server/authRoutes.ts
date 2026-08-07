@@ -90,7 +90,7 @@ export function registerAuthRoutes(app: Express): void {
       hubspot: isHubSpotConfigured() && serverReady,
       salesforce: isSalesforceConfigured() && serverReady,
       note: serverReady
-        ? "Lazarus login ready — Google/HubSpot/Salesforce via app OAuth; email magic link."
+        ? "Lazarus login ready — email/password accounts; Google/HubSpot/Salesforce via app OAuth."
         : "Add SUPABASE_URL + SUPABASE_SERVICE_ROLE_KEY (and VITE_SUPABASE_*) to enable login.",
     });
   });
@@ -118,6 +118,61 @@ export function registerAuthRoutes(app: Express): void {
       supabaseUrl,
       supabaseAnonKey,
     });
+  });
+
+  /** Create Lazarus account (email + password) in Supabase Auth.users. */
+  app.post("/api/auth/signup", async (req, res) => {
+    const email = String(req.body?.email ?? "")
+      .trim()
+      .toLowerCase();
+    const password = String(req.body?.password ?? "");
+    if (!email || !email.includes("@")) {
+      res.status(400).json({ error: "Enter a valid work email." });
+      return;
+    }
+    if (password.length < 8) {
+      res.status(400).json({ error: "Password must be at least 8 characters." });
+      return;
+    }
+
+    const admin = adminAuth();
+    if (!admin) {
+      res.status(503).json({
+        error: "Account signup requires SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY.",
+      });
+      return;
+    }
+
+    try {
+      const created = await admin.auth.admin.createUser({
+        email,
+        password,
+        email_confirm: true,
+        app_metadata: { login_provider: "password" },
+      });
+      if (created.error || !created.data.user) {
+        const msg = created.error?.message ?? "Failed to create account";
+        if (/already|registered|exists/i.test(msg)) {
+          res.status(409).json({
+            error: "An account with this email already exists. Sign in instead.",
+          });
+          return;
+        }
+        throw created.error ?? new Error(msg);
+      }
+
+      res.json({ ok: true, user_id: created.data.user.id, email });
+    } catch (err) {
+      console.error("[auth-signup]", err);
+      const msg = err instanceof Error ? err.message : "Could not create account";
+      if (/already|registered|exists/i.test(msg)) {
+        res.status(409).json({
+          error: "An account with this email already exists. Sign in instead.",
+        });
+        return;
+      }
+      res.status(500).json({ error: msg });
+    }
   });
 
   /** After Google / HubSpot / Salesforce OAuth popup succeeds. */
@@ -173,9 +228,10 @@ export function registerAuthRoutes(app: Express): void {
   });
 
   /**
-   * Email magic link for Lazarus login.
-   * Prefer server-side generateLink + invite so we don't depend on dashboard Google settings.
-   * Uses Supabase's built-in mailer when available; in development also returns action_link.
+   * Email sign-in for Lazarus.
+   * Always mints a one-time session token so login works even when Supabase mailer
+   * is not configured. Optionally also emails a magic link when OTP send succeeds.
+   * Set AUTH_REQUIRE_EMAIL_DELIVERY=true to refuse sign-in unless the email was sent.
    */
   app.post("/api/auth/email-magic-link", async (req, res) => {
     const email = String(req.body?.email ?? "")
@@ -196,7 +252,6 @@ export function registerAuthRoutes(app: Express): void {
 
     try {
       const redirectTo = resolveFrontendOrigin();
-      // Ensure user exists (confirmed) so magic link always works.
       const listed = await admin.auth.admin.listUsers({ page: 1, perPage: 200 });
       const users = (listed.data?.users ?? []) as Array<{ id: string; email?: string | null }>;
       const found = users.find((u) => u.email?.toLowerCase() === email);
@@ -220,13 +275,19 @@ export function registerAuthRoutes(app: Express): void {
 
       const props = link.data.properties as {
         hashed_token?: string;
+        email_otp?: string;
         action_link?: string;
       };
 
-      // Ask GoTrue to send the email when possible (same as client OTP).
+      if (!props.hashed_token && !props.email_otp) {
+        throw new Error("Could not mint a Lazarus sign-in token.");
+      }
+
+      // Best-effort inbox delivery (often disabled / rate-limited on free Supabase).
       const anonKey = (process.env.SUPABASE_ANON_KEY ?? "").trim();
       const url = (process.env.SUPABASE_URL ?? "").trim();
       let emailed = false;
+      let emailError: string | null = null;
       if (url && anonKey) {
         const pub = createClient(url, anonKey, {
           auth: { persistSession: false, autoRefreshToken: false },
@@ -237,22 +298,32 @@ export function registerAuthRoutes(app: Express): void {
         });
         emailed = !otp.error;
         if (otp.error) {
+          emailError = otp.error.message;
           console.warn("[auth-email] OTP send:", otp.error.message);
         }
       }
 
-      const isDev = process.env.NODE_ENV !== "production";
+      const requireDelivery =
+        (process.env.AUTH_REQUIRE_EMAIL_DELIVERY ?? "").trim().toLowerCase() === "true";
+      if (requireDelivery && !emailed) {
+        res.status(503).json({
+          error:
+            emailError ??
+            "Email delivery is required but the magic link could not be sent. Configure Supabase Auth email/SMTP.",
+        });
+        return;
+      }
+
       res.json({
         ok: true,
         emailed,
+        // Client completes the session immediately with token_hash (no inbox required).
+        token_hash: props.hashed_token ?? null,
+        email_otp: props.email_otp ?? null,
         message: emailed
-          ? "Check your email for the Lazarus sign-in link."
-          : isDev && props.action_link
-            ? "Email send unavailable — use the local sign-in link below."
-            : "If email delivery is enabled, check your inbox for the Lazarus sign-in link.",
-        // Local/dev convenience only — never expose in production responses.
-        ...(isDev && props.action_link ? { action_link: props.action_link } : {}),
-        ...(isDev && props.hashed_token ? { token_hash: props.hashed_token } : {}),
+          ? "Signed in. A backup link was also emailed to you."
+          : "Signed in with your email.",
+        ...(props.action_link ? { action_link: props.action_link } : {}),
       });
     } catch (err) {
       console.error("[auth-email]", err);

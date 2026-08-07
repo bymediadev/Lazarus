@@ -13,6 +13,16 @@ import {
 import { buildGoogleAuthorizeUrl, exchangeGoogleCode } from "./oauth.js";
 import { clearGoogleTokens, isGoogleConnected, loadGoogleTokens } from "./tokens.js";
 
+function redirectLoginResult(
+  frontendOrigin: string,
+  outcome: "connected" | "error",
+  reason?: string
+): string {
+  const q = new URLSearchParams({ google: outcome });
+  if (reason) q.set("reason", reason);
+  return `${frontendOrigin}/?${q.toString()}`;
+}
+
 export function registerGoogleMeetRoutes(app: Express): void {
   app.get("/api/integrations/google/status", (_req, res) => {
     const tokens = loadGoogleTokens();
@@ -50,16 +60,20 @@ export function registerGoogleMeetRoutes(app: Express): void {
     const cfg = getGoogleMeetConfig();
 
     if (!code || !verifySignedOAuthState(state, cfg?.clientSecret ?? "")) {
-      res.redirect(`${frontendOrigin}/?google=error&reason=invalid_state`);
+      res.redirect(redirectLoginResult(frontendOrigin, "error", "invalid_state"));
       return;
     }
 
     try {
       await exchangeGoogleCode(code);
-      res.redirect(`${frontendOrigin}/?google=connected`);
+      res.redirect(redirectLoginResult(frontendOrigin, "connected"));
     } catch (err) {
       console.error("[google-oauth] callback error:", err);
-      res.redirect(`${frontendOrigin}/?google=error&reason=token_exchange`);
+      const reason =
+        err instanceof Error && /TLS|certificate/i.test(err.message)
+          ? "tls_certificate"
+          : "token_exchange";
+      res.redirect(redirectLoginResult(frontendOrigin, "error", reason));
     }
   });
 

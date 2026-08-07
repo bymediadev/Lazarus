@@ -15,8 +15,11 @@ import {
   getSupabaseBrowserClient,
   isAuthConfigured,
   openProviderConnectPopup,
-  signInWithEmail,
+  requestPasswordReset,
+  signInWithPassword,
   signOut,
+  signUpWithPassword,
+  updatePassword,
   type LazarusLoginProvider,
   type Session,
   type User,
@@ -27,7 +30,10 @@ interface AuthContextValue {
   loading: boolean;
   session: Session | null;
   user: User | null;
-  signInEmail: (email: string) => Promise<{ message: string; action_link?: string }>;
+  signInPassword: (email: string, password: string) => Promise<void>;
+  signUpPassword: (email: string, password: string) => Promise<void>;
+  changePassword: (newPassword: string) => Promise<void>;
+  resetPasswordEmail: (email: string) => Promise<void>;
   startProviderLogin: (provider: LazarusLoginProvider) => Promise<void>;
   completeProviderLogin: (provider: LazarusLoginProvider) => Promise<void>;
   logout: () => Promise<void>;
@@ -93,7 +99,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       loading,
       session,
       user: session?.user ?? null,
-      signInEmail: signInWithEmail,
+      signInPassword: signInWithPassword,
+      signUpPassword: signUpWithPassword,
+      changePassword: updatePassword,
+      resetPasswordEmail: requestPasswordReset,
       startProviderLogin,
       completeProviderLogin,
       logout: signOut,

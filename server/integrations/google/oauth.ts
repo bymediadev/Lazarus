@@ -1,5 +1,6 @@
 import { getGoogleMeetConfig, GOOGLE_MEET_SCOPES } from "./config.js";
 import { loadGoogleTokens, saveGoogleTokens, type GoogleTokenRecord } from "./tokens.js";
+import { secureFetch } from "../../secureFetch.js";
 
 const AUTH_URL = "https://accounts.google.com/o/oauth2/v2/auth";
 const TOKEN_URL = "https://oauth2.googleapis.com/token";
@@ -40,20 +41,33 @@ export async function exchangeGoogleCode(code: string): Promise<GoogleTokenRecor
     grant_type: "authorization_code",
   });
 
-  const res = await fetch(TOKEN_URL, {
-    method: "POST",
-    headers: { "Content-Type": "application/x-www-form-urlencoded" },
-    body,
-  });
+  let res: Response;
+  try {
+    res = await secureFetch(TOKEN_URL, {
+      method: "POST",
+      headers: { "Content-Type": "application/x-www-form-urlencoded" },
+      body,
+    });
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    if (/UNABLE_TO_VERIFY|certificate/i.test(msg)) {
+      throw new Error(
+        "Google sign-in failed (Windows TLS). Run: powershell -File scripts/export-windows-cas.ps1 then restart npm run dev."
+      );
+    }
+    throw err;
+  }
 
   const data = (await res.json()) as TokenResponse & { error?: string; error_description?: string };
   if (!res.ok) {
-    throw new Error(data.error_description ?? data.error ?? `Google token exchange failed (${res.status})`);
+    throw new Error(
+      data.error_description ?? data.error ?? `Google token exchange failed (${res.status})`
+    );
   }
 
   let account_email: string | undefined;
   try {
-    const userRes = await fetch(USERINFO_URL, {
+    const userRes = await secureFetch(USERINFO_URL, {
       headers: { Authorization: `Bearer ${data.access_token}` },
     });
     if (userRes.ok) {
@@ -93,7 +107,7 @@ export async function getValidGoogleAccessToken(): Promise<string | null> {
     grant_type: "refresh_token",
   });
 
-  const res = await fetch(TOKEN_URL, {
+  const res = await secureFetch(TOKEN_URL, {
     method: "POST",
     headers: { "Content-Type": "application/x-www-form-urlencoded" },
     body,

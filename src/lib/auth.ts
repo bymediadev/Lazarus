@@ -59,14 +59,19 @@ export function getSupabaseBrowserClient(): SupabaseClient | null {
   return client;
 }
 
+function requireClient(): SupabaseClient {
+  const sb = getSupabaseBrowserClient();
+  if (!sb) throw new Error("Lazarus login is not configured on this build.");
+  return sb;
+}
+
 async function applySessionFromBridge(data: {
   email?: string;
   token_hash?: string | null;
   email_otp?: string | null;
 }): Promise<{ email: string }> {
   await ensureAuthConfig();
-  const sb = getSupabaseBrowserClient();
-  if (!sb) throw new Error("Lazarus login is not configured on this build.");
+  const sb = requireClient();
 
   if (data.token_hash) {
     const { error } = await sb.auth.verifyOtp({
@@ -112,11 +117,70 @@ export async function fetchAuthStatus(): Promise<{
   }
 }
 
-/** Email magic link — Lazarus branded; no Supabase dashboard required for the user. */
+function assertPassword(password: string): void {
+  if (password.length < 8) {
+    throw new Error("Password must be at least 8 characters.");
+  }
+}
+
+/** Sign in with email + password (Supabase Auth). */
+export async function signInWithPassword(email: string, password: string): Promise<void> {
+  await ensureAuthConfig();
+  assertPassword(password);
+  const sb = requireClient();
+  const { error } = await sb.auth.signInWithPassword({
+    email: email.trim(),
+    password,
+  });
+  if (error) throw error;
+}
+
+/**
+ * Create Lazarus account with email + password.
+ * Uses server admin create (email pre-confirmed) so signup works without SMTP,
+ * then signs in with the password.
+ */
+export async function signUpWithPassword(email: string, password: string): Promise<void> {
+  await ensureAuthConfig();
+  assertPassword(password);
+  const trimmed = email.trim();
+
+  const res = await fetch(`${API_BASE}/api/auth/signup`, {
+    method: "POST",
+    headers: apiAuthHeaders(true),
+    body: JSON.stringify({ email: trimmed, password }),
+  });
+  const data = (await res.json()) as { error?: string; ok?: boolean };
+  if (!res.ok) throw new Error(data.error ?? "Could not create account");
+
+  await signInWithPassword(trimmed, password);
+}
+
+/** Change password for the signed-in user. */
+export async function updatePassword(newPassword: string): Promise<void> {
+  await ensureAuthConfig();
+  assertPassword(newPassword);
+  const sb = requireClient();
+  const { error } = await sb.auth.updateUser({ password: newPassword });
+  if (error) throw error;
+}
+
+/** Send password-reset email (requires Supabase mailer / SMTP). */
+export async function requestPasswordReset(email: string): Promise<void> {
+  await ensureAuthConfig();
+  const sb = requireClient();
+  const { error } = await sb.auth.resetPasswordForEmail(email.trim(), {
+    redirectTo: window.location.origin,
+  });
+  if (error) throw error;
+}
+
+/** Legacy passwordless email path (kept for OAuth-adjacent flows). */
 export async function signInWithEmail(email: string): Promise<{
   message: string;
   action_link?: string;
   token_hash?: string;
+  signedIn?: boolean;
 }> {
   await ensureAuthConfig();
   const res = await fetch(`${API_BASE}/api/auth/email-magic-link`, {
@@ -128,24 +192,30 @@ export async function signInWithEmail(email: string): Promise<{
     error?: string;
     message?: string;
     action_link?: string;
-    token_hash?: string;
+    token_hash?: string | null;
+    email_otp?: string | null;
   };
   if (!res.ok) throw new Error(data.error ?? "Email sign-in failed");
 
+  let signedIn = false;
   if (data.token_hash) {
     await applySessionFromBridge({ email: email.trim(), token_hash: data.token_hash });
+    signedIn = true;
+  } else if (data.email_otp) {
+    await applySessionFromBridge({
+      email: email.trim(),
+      email_otp: data.email_otp,
+    });
+    signedIn = true;
   }
 
   return {
-    message: data.message ?? "Check your email for the Lazarus sign-in link.",
+    message:
+      data.message ?? (signedIn ? "Signed in." : "Check your email for the Lazarus sign-in link."),
     action_link: data.action_link,
-    token_hash: data.token_hash,
+    token_hash: data.token_hash ?? undefined,
+    signedIn,
   };
-}
-
-/** @deprecated Prefer Lazarus Google OAuth via signInWithProvider("google"). */
-export async function signInWithGoogle(): Promise<void> {
-  await signInWithProvider("google");
 }
 
 export function providerConnectUrl(provider: LazarusLoginProvider): string {
@@ -165,7 +235,6 @@ export function openProviderConnectPopup(provider: LazarusLoginProvider): Window
   return popup;
 }
 
-/** Finish Lazarus session after OAuth popup connected Google / HubSpot / Salesforce. */
 export async function completeProviderSignIn(
   provider: LazarusLoginProvider
 ): Promise<{ email: string }> {
@@ -185,7 +254,6 @@ export async function completeProviderSignIn(
   return applySessionFromBridge(data);
 }
 
-/** Alias for CRM bridge naming. */
 export async function signInWithCrmProvider(
   provider: "hubspot" | "salesforce" | "google"
 ): Promise<{ email: string }> {

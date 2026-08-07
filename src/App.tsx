@@ -12,10 +12,12 @@ import LazarusGuide from "./components/LazarusGuide";
 import EmailProviderControls from "./components/EmailProviderControls";
 import { useAuth } from "./components/AuthProvider";
 import LoginScreen from "./components/LoginScreen";
+import AccountPortal from "./components/AccountPortal";
 import { pushHubSpotNote } from "./lib/hubspotIntegration";
 import { pushSalesforceNote } from "./lib/salesforceIntegration";
 import { TRUST_PACK_NAV, TRUST_PACK_OPEN_EVENT, type TrustPackSlug } from "./lib/trustPack";
 import { API_BASE, apiTargetLabel, PostMortemApiError, runPostMortem } from "./lib/api";
+import { publishOAuthComplete, subscribeOAuthComplete } from "./lib/oauthBridge";
 import {
   listPendingAnalyses,
   queuePendingAnalysis,
@@ -84,6 +86,7 @@ export default function App() {
   const auth = useAuth();
   const [activeTab, setActiveTab] = useState<InputTab>("call");
   const [guideOpen, setGuideOpen] = useState(false);
+  const [accountPortalOpen, setAccountPortalOpen] = useState(false);
   const [guideHighlight, setGuideHighlight] = useState<string | null>(null);
   const [linkedHubSpotDealId, setLinkedHubSpotDealId] = useState<string | null>(null);
   const [linkedSalesforceOppId, setLinkedSalesforceOppId] = useState<string | null>(null);
@@ -259,17 +262,6 @@ export default function App() {
     const outcome = provider ? params.get(provider) : null;
     const reason = params.get("reason");
 
-    // OAuth callbacks opened by Connect popups report success to the original app,
-    // then close. The original page keeps every in-memory File and evidence field.
-    if (provider && outcome && window.opener) {
-      window.opener.postMessage(
-        { type: "lazarus-oauth-complete", provider, outcome, reason },
-        window.location.origin
-      );
-      window.close();
-      return;
-    }
-
     const providerLabel = (name?: string) => {
       if (name === "google") return "Gmail";
       if (name === "teams") return "Outlook";
@@ -278,31 +270,31 @@ export default function App() {
       return "Integration";
     };
 
-    const onOAuthMessage = (event: MessageEvent) => {
-      if (event.origin !== window.location.origin) return;
-      const detail = event.data as {
-        type?: string;
-        provider?: string;
-        outcome?: string;
-        reason?: string | null;
-      };
-      if (detail.type !== "lazarus-oauth-complete") return;
+    // Google often clears window.opener (COOP). Broadcast to every Lazarus tab, then close.
+    if (provider && outcome) {
+      publishOAuthComplete({ provider, outcome, reason });
+      window.history.replaceState({}, "", window.location.pathname || "/");
+      window.setTimeout(() => {
+        try {
+          window.close();
+        } catch {
+          /* browser may block */
+        }
+      }, 350);
+    }
 
-      window.dispatchEvent(new CustomEvent("lazarus-oauth-complete", { detail }));
+    return subscribeOAuthComplete((detail) => {
       if (detail.outcome === "connected") {
         setSyncNotice(
           `${providerLabel(detail.provider)} connected. Your evidence package was preserved.`
         );
         setError(null);
-      } else {
+      } else if (detail.outcome === "error") {
         setError(
           `${providerLabel(detail.provider)} connection failed${detail.reason ? ` (${detail.reason})` : ""}.`
         );
       }
-    };
-
-    window.addEventListener("message", onOAuthMessage);
-    return () => window.removeEventListener("message", onOAuthMessage);
+    });
   }, []);
 
   useEffect(() => {
@@ -677,9 +669,9 @@ export default function App() {
             <button
               type="button"
               className="btn-secondary header-logout"
-              onClick={() => void auth.logout()}
+              onClick={() => setAccountPortalOpen(true)}
             >
-              Sign out
+              Account
             </button>
           )}
         </div>
@@ -1064,6 +1056,8 @@ export default function App() {
         onHighlightTarget={setGuideHighlight}
         onSelectTab={setActiveTab}
       />
+
+      <AccountPortal open={accountPortalOpen} onClose={() => setAccountPortalOpen(false)} />
         </>
       )}
     </div>
