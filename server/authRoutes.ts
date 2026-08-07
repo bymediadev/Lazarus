@@ -95,6 +95,31 @@ export function registerAuthRoutes(app: Express): void {
     });
   });
 
+  /**
+   * Public anon credentials for the Lazarus UI (safe to expose — same as VITE_SUPABASE_*).
+   * Lets Render serve login without baking VITE_* at build time.
+   */
+  app.get("/api/auth/public-config", (_req, res) => {
+    const supabaseUrl = (process.env.SUPABASE_URL ?? process.env.VITE_SUPABASE_URL ?? "").trim();
+    const supabaseAnonKey = (
+      process.env.SUPABASE_ANON_KEY ??
+      process.env.VITE_SUPABASE_ANON_KEY ??
+      ""
+    ).trim();
+    if (!supabaseUrl || !supabaseAnonKey) {
+      res.status(503).json({
+        configured: false,
+        error: "Set SUPABASE_URL and SUPABASE_ANON_KEY on the server (or VITE_SUPABASE_*).",
+      });
+      return;
+    }
+    res.json({
+      configured: true,
+      supabaseUrl,
+      supabaseAnonKey,
+    });
+  });
+
   /** After Google / HubSpot / Salesforce OAuth popup succeeds. */
   app.post("/api/auth/session-from-provider", async (req, res) => {
     const provider = String(req.body?.provider ?? "").trim().toLowerCase() as AuthProviderId;

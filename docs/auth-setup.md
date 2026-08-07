@@ -27,7 +27,17 @@ Restart `npm run dev` after changing `VITE_*`.
 
 ### Render
 
-Set the same `VITE_SUPABASE_URL` / `VITE_SUPABASE_ANON_KEY` (build-time) plus server `SUPABASE_*` keys, then redeploy.
+Server already has `SUPABASE_URL` / keys. After deploy, the UI loads anon credentials from
+`GET /api/auth/public-config` (no rebuild required for `VITE_*`).
+
+Optional but recommended build-time vars:
+
+| Key | Notes |
+|-----|--------|
+| `VITE_SUPABASE_URL` | Same as `SUPABASE_URL` |
+| `VITE_SUPABASE_ANON_KEY` | Same as `SUPABASE_ANON_KEY` |
+| `SUPABASE_ANON_KEY` | Required for `/api/auth/public-config` |
+| `SUPABASE_SERVICE_ROLE_KEY` | Server only — never `VITE_` |
 
 ### Optional URL allow-list
 

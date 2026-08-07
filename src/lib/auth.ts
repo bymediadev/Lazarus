@@ -7,21 +7,48 @@ const viteEnv = (
   }
 ).env;
 
-const url = (viteEnv?.VITE_SUPABASE_URL ?? "").trim();
-const anon = (viteEnv?.VITE_SUPABASE_ANON_KEY ?? "").trim();
-
+let runtimeUrl = (viteEnv?.VITE_SUPABASE_URL ?? "").trim();
+let runtimeAnon = (viteEnv?.VITE_SUPABASE_ANON_KEY ?? "").trim();
 let client: SupabaseClient | null = null;
+let configPromise: Promise<boolean> | null = null;
 
 export type LazarusLoginProvider = "google" | "hubspot" | "salesforce";
 
 export function isAuthConfigured(): boolean {
-  return !!(url && anon);
+  return !!(runtimeUrl && runtimeAnon);
+}
+
+/** Load anon credentials from Vite env or from Render/runtime `/api/auth/public-config`. */
+export async function ensureAuthConfig(): Promise<boolean> {
+  if (isAuthConfigured()) return true;
+  if (configPromise) return configPromise;
+
+  configPromise = (async () => {
+    try {
+      const res = await fetch(`${API_BASE}/api/auth/public-config`);
+      if (!res.ok) return false;
+      const data = (await res.json()) as {
+        configured?: boolean;
+        supabaseUrl?: string;
+        supabaseAnonKey?: string;
+      };
+      if (!data.configured || !data.supabaseUrl || !data.supabaseAnonKey) return false;
+      runtimeUrl = data.supabaseUrl.trim();
+      runtimeAnon = data.supabaseAnonKey.trim();
+      client = null;
+      return isAuthConfigured();
+    } catch {
+      return false;
+    }
+  })();
+
+  return configPromise;
 }
 
 export function getSupabaseBrowserClient(): SupabaseClient | null {
   if (!isAuthConfigured()) return null;
   if (!client) {
-    client = createClient(url, anon, {
+    client = createClient(runtimeUrl, runtimeAnon, {
       auth: {
         persistSession: true,
         autoRefreshToken: true,
@@ -37,6 +64,7 @@ async function applySessionFromBridge(data: {
   token_hash?: string | null;
   email_otp?: string | null;
 }): Promise<{ email: string }> {
+  await ensureAuthConfig();
   const sb = getSupabaseBrowserClient();
   if (!sb) throw new Error("Lazarus login is not configured on this build.");
 
@@ -90,6 +118,7 @@ export async function signInWithEmail(email: string): Promise<{
   action_link?: string;
   token_hash?: string;
 }> {
+  await ensureAuthConfig();
   const res = await fetch(`${API_BASE}/api/auth/email-magic-link`, {
     method: "POST",
     headers: apiAuthHeaders(true),
@@ -103,7 +132,6 @@ export async function signInWithEmail(email: string): Promise<{
   };
   if (!res.ok) throw new Error(data.error ?? "Email sign-in failed");
 
-  // Dev convenience: if server returned a hash, complete session immediately.
   if (data.token_hash) {
     await applySessionFromBridge({ email: email.trim(), token_hash: data.token_hash });
   }
@@ -141,6 +169,7 @@ export function openProviderConnectPopup(provider: LazarusLoginProvider): Window
 export async function completeProviderSignIn(
   provider: LazarusLoginProvider
 ): Promise<{ email: string }> {
+  await ensureAuthConfig();
   const res = await fetch(`${API_BASE}/api/auth/session-from-provider`, {
     method: "POST",
     headers: apiAuthHeaders(true),
@@ -174,6 +203,7 @@ export async function signOut(): Promise<void> {
 }
 
 export async function getSession(): Promise<Session | null> {
+  await ensureAuthConfig();
   const sb = getSupabaseBrowserClient();
   if (!sb) return null;
   const { data } = await sb.auth.getSession();

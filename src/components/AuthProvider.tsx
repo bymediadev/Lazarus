@@ -10,6 +10,7 @@ import {
 import { setApiBearerToken } from "../lib/api";
 import {
   completeProviderSignIn,
+  ensureAuthConfig,
   getSession,
   getSupabaseBrowserClient,
   isAuthConfigured,
@@ -35,34 +36,48 @@ interface AuthContextValue {
 const AuthContext = createContext<AuthContextValue | null>(null);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const configured = isAuthConfigured();
-  const [loading, setLoading] = useState(configured);
+  const [configured, setConfigured] = useState(() => isAuthConfigured());
+  const [loading, setLoading] = useState(true);
   const [session, setSession] = useState<Session | null>(null);
 
   useEffect(() => {
-    if (!configured) {
-      setLoading(false);
-      setApiBearerToken(null);
-      return;
-    }
-    const sb = getSupabaseBrowserClient();
-    if (!sb) {
-      setLoading(false);
-      return;
-    }
-    void getSession().then((s) => {
+    let cancelled = false;
+    let unsubscribe: (() => void) | undefined;
+
+    void (async () => {
+      const ok = await ensureAuthConfig();
+      if (cancelled) return;
+      setConfigured(ok);
+      if (!ok) {
+        setApiBearerToken(null);
+        setLoading(false);
+        return;
+      }
+
+      const sb = getSupabaseBrowserClient();
+      if (!sb) {
+        setLoading(false);
+        return;
+      }
+
+      const s = await getSession();
+      if (cancelled) return;
       setSession(s);
       setApiBearerToken(s?.access_token ?? null);
       setLoading(false);
-    });
-    const { data: sub } = sb.auth.onAuthStateChange((_event, next) => {
-      setSession(next);
-      setApiBearerToken(next?.access_token ?? null);
-    });
-    return () => sub.subscription.unsubscribe();
-  }, [configured]);
 
-  /** After OAuth popup connects, LoginScreen completes the Lazarus session. */
+      const { data: sub } = sb.auth.onAuthStateChange((_event, next) => {
+        setSession(next);
+        setApiBearerToken(next?.access_token ?? null);
+      });
+      unsubscribe = () => sub.subscription.unsubscribe();
+    })();
+
+    return () => {
+      cancelled = true;
+      unsubscribe?.();
+    };
+  }, []);
 
   const startProviderLogin = useCallback(async (provider: LazarusLoginProvider) => {
     openProviderConnectPopup(provider);
