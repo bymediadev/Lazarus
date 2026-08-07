@@ -8,7 +8,12 @@ import SiteFooter from "./components/SiteFooter";
 import TrustPackLink from "./components/TrustPackLink";
 import TrustPackModal from "./components/TrustPackModal";
 import IntakeHowTo from "./components/IntakeHowTo";
+import LazarusGuide from "./components/LazarusGuide";
 import EmailProviderControls from "./components/EmailProviderControls";
+import { useAuth } from "./components/AuthProvider";
+import LoginScreen from "./components/LoginScreen";
+import { pushHubSpotNote } from "./lib/hubspotIntegration";
+import { pushSalesforceNote } from "./lib/salesforceIntegration";
 import { TRUST_PACK_NAV, TRUST_PACK_OPEN_EVENT, type TrustPackSlug } from "./lib/trustPack";
 import { API_BASE, apiTargetLabel, PostMortemApiError, runPostMortem } from "./lib/api";
 import {
@@ -76,7 +81,12 @@ async function readTextEvidence(file: File): Promise<string> {
 }
 
 export default function App() {
+  const auth = useAuth();
   const [activeTab, setActiveTab] = useState<InputTab>("call");
+  const [guideOpen, setGuideOpen] = useState(false);
+  const [guideHighlight, setGuideHighlight] = useState<string | null>(null);
+  const [linkedHubSpotDealId, setLinkedHubSpotDealId] = useState<string | null>(null);
+  const [linkedSalesforceOppId, setLinkedSalesforceOppId] = useState<string | null>(null);
   const [file, setFile] = useState<File | null>(null);
   const [documentFile, setDocumentFile] = useState<File | null>(null);
   const [recordingSource, setRecordingSource] = useState<"upload" | "field" | null>(null);
@@ -156,6 +166,8 @@ export default function App() {
       liveTranscriptPayload?: LiveTranscriptTurn[];
       liveSessionObjections?: { text: string; status: string; source: string }[];
       forceAnalysis?: boolean;
+      hubspotDealId?: string;
+      salesforceOpportunityId?: string;
     }) => {
       const data = await runPostMortem({
         file: payload.file,
@@ -170,6 +182,8 @@ export default function App() {
         liveTranscriptPayload: payload.liveTranscriptPayload,
         liveSessionObjections: payload.liveSessionObjections,
         forceAnalysis: payload.forceAnalysis,
+        hubspotDealId: payload.hubspotDealId,
+        salesforceOpportunityId: payload.salesforceOpportunityId,
       });
       setResult(normalizeResult({ ...data, sources: data.sources, processed_at: data.processed_at }));
       setWarnings(data.warnings ?? []);
@@ -239,7 +253,9 @@ export default function App() {
         ? "teams"
         : params.has("hubspot")
           ? "hubspot"
-          : null;
+          : params.has("salesforce")
+            ? "salesforce"
+            : null;
     const outcome = provider ? params.get(provider) : null;
     const reason = params.get("reason");
 
@@ -258,6 +274,7 @@ export default function App() {
       if (name === "google") return "Gmail";
       if (name === "teams") return "Outlook";
       if (name === "hubspot") return "HubSpot";
+      if (name === "salesforce") return "Salesforce";
       return "Integration";
     };
 
@@ -496,6 +513,8 @@ export default function App() {
         liveTranscriptPayload: liveTranscriptPayload.length ? liveTranscriptPayload : undefined,
         liveSessionObjections: liveSessionObjections.length ? liveSessionObjections : undefined,
         forceAnalysis,
+        hubspotDealId: linkedHubSpotDealId ?? undefined,
+        salesforceOpportunityId: linkedSalesforceOppId ?? undefined,
       });
       if (fieldSessionId) {
         await clearSessionChunks(fieldSessionId);
@@ -614,22 +633,56 @@ export default function App() {
     []
   );
 
+  useEffect(() => {
+    if (!guideHighlight) {
+      document.querySelectorAll(".guide-target-active").forEach((el) => {
+        el.classList.remove("guide-target-active");
+      });
+      return;
+    }
+    document.querySelectorAll(".guide-target-active").forEach((el) => {
+      el.classList.remove("guide-target-active");
+    });
+    document.querySelectorAll(`[data-guide-target="${guideHighlight}"]`).forEach((el) => {
+      el.classList.add("guide-target-active");
+    });
+  }, [guideHighlight]);
+
   return (
-    <div className="app">
+    <div className={`app${guideHighlight ? ` guide-highlighting` : ""}`}>
+      {auth.configured && auth.loading ? (
+        <div className="login-screen">
+          <p className="login-sub">Loading session…</p>
+        </div>
+      ) : auth.configured && !auth.session ? (
+        <LoginScreen />
+      ) : (
+        <>
       <header className="header">
         <div className="header-brand">
           <img src="/logo.png" alt="Lazarus Deal Recovery" className="header-logo" />
           <h1>Lazarus Deal Recovery</h1>
           <span className="tag">Judgment Layer</span>
         </div>
-        <span className="header-status">
-          {headerStatus}
-          {apiOnline === false &&
-            (API_BASE
-              ? ` · API OFFLINE (${apiTargetLabel()})`
-              : " · API OFFLINE — run npm run dev")}
-          {apiOnline === true && API_BASE && ` · API: ${apiTargetLabel()}`}
-        </span>
+        <div className="header-right">
+          <span className="header-status">
+            {headerStatus}
+            {apiOnline === false &&
+              (API_BASE
+                ? ` · API OFFLINE (${apiTargetLabel()})`
+                : " · API OFFLINE — run npm run dev")}
+            {apiOnline === true && API_BASE && ` · API: ${apiTargetLabel()}`}
+          </span>
+          {auth.session && (
+            <button
+              type="button"
+              className="btn-secondary header-logout"
+              onClick={() => void auth.logout()}
+            >
+              Sign out
+            </button>
+          )}
+        </div>
       </header>
 
       <div className="app-main">
@@ -642,6 +695,7 @@ export default function App() {
               sourceCount={channelCount}
               demoLoading={demoTranscriptLoading}
               onLoadDemo={handleLoadDemoTranscript}
+              onOpenGuide={() => setGuideOpen(true)}
             />
 
             <DealProfilePanel
@@ -652,13 +706,15 @@ export default function App() {
               onSalesCycleDaysChange={setSalesCycleDays}
               onHistoricalJsonChange={setHistoricalCrmJson}
               onParseError={setHistoricalParseError}
-              onHubSpotNotice={(message) => {
+              onCrmNotice={(message) => {
                 setSyncNotice(message);
                 setError(null);
               }}
-              onHubSpotError={(message) => {
+              onCrmError={(message) => {
                 setError(message);
               }}
+              onLinkedHubSpotDeal={setLinkedHubSpotDealId}
+              onLinkedSalesforceOpp={setLinkedSalesforceOppId}
             />
 
             <div className="console-tabs" role="tablist" aria-label="Additive evidence channels">
@@ -669,6 +725,13 @@ export default function App() {
                   role="tab"
                   aria-selected={activeTab === tab.id}
                   className={`console-tab${activeTab === tab.id ? " console-tab-active" : ""}`}
+                  data-guide-target={
+                    tab.id === "call"
+                      ? "guide-upload-tab"
+                      : tab.id === "live"
+                        ? "guide-live-tab"
+                        : undefined
+                  }
                   onClick={() => setActiveTab(tab.id)}
                 >
                   {tab.label}
@@ -892,7 +955,7 @@ export default function App() {
               </div>
             )}
 
-            <button className="run-button" onClick={() => void handleRun(false)} disabled={loading}>
+            <button className="run-button" data-guide-target="guide-run-analysis" onClick={() => void handleRun(false)} disabled={loading}>
               {loading ? "Analyzing…" : `Run Analysis${channelCount ? ` (${channelCount})` : ""}`}
             </button>
 
@@ -960,7 +1023,18 @@ export default function App() {
                 onRefresh={() => void refreshLiveTriage()}
               />
             ) : result ? (
-              <AnalysisReport result={result} sources={result.sources} />
+              <AnalysisReport
+                result={result}
+                sources={result.sources}
+                linkedHubSpotDealId={linkedHubSpotDealId}
+                linkedSalesforceOppId={linkedSalesforceOppId}
+                onPushHubSpot={async (dealId, noteBody) => {
+                  await pushHubSpotNote(dealId, noteBody, result.id);
+                }}
+                onPushSalesforce={async (oppId, noteBody) => {
+                  await pushSalesforceNote(oppId, noteBody, result.id);
+                }}
+              />
             ) : (
               <LiveTriageBrief
                 active={false}
@@ -980,6 +1054,18 @@ export default function App() {
       <SiteFooter />
 
       {trustPack && <TrustPackModal slug={trustPack} onClose={() => setTrustPack(null)} />}
+
+      <LazarusGuide
+        open={guideOpen}
+        onClose={() => {
+          setGuideOpen(false);
+          setGuideHighlight(null);
+        }}
+        onHighlightTarget={setGuideHighlight}
+        onSelectTab={setActiveTab}
+      />
+        </>
+      )}
     </div>
   );
 }

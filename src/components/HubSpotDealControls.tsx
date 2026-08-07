@@ -14,6 +14,7 @@ export interface HubSpotImportPayload {
   accountId: string;
   salesCycleDays: string;
   historicalCrmContext: HistoricalCrmContextEntry[];
+  dealId: string;
 }
 
 interface Props {
@@ -99,6 +100,7 @@ export default function HubSpotDealControls({ onImport, onError }: Props) {
           accountId: result.account_id,
           salesCycleDays: String(result.sales_cycle_days),
           historicalCrmContext: result.historical_crm_context,
+          dealId: result.deal.id,
         },
         `Imported ${result.note_count} note${result.note_count === 1 ? "" : "s"} from “${result.deal.dealname}” into Deal Profile.`
       );
@@ -127,7 +129,7 @@ export default function HubSpotDealControls({ onImport, onError }: Props) {
     return (
       <div className="hubspot-deal-controls hubspot-deal-controls--muted" aria-label="HubSpot">
         <span className="hubspot-deal-kicker">HubSpot</span>
-        <p>Not configured — add HUBSPOT_CLIENT_ID / HUBSPOT_CLIENT_SECRET to enable read-only import.</p>
+        <p>Not configured — add HUBSPOT_CLIENT_ID / HUBSPOT_CLIENT_SECRET to enable CRM sync.</p>
       </div>
     );
   }

@@ -2,6 +2,9 @@ import type { HistoricalCrmContextEntry } from "../types";
 import { normalizeVetoHolders } from "../../shared/deepContextTypes";
 import { demoDeepContext } from "../lib/demoDeepContext";
 import HubSpotDealControls, { type HubSpotImportPayload } from "./HubSpotDealControls";
+import SalesforceDealControls, {
+  type SalesforceImportPayload,
+} from "./SalesforceDealControls";
 
 interface Props {
   accountId: string;
@@ -11,8 +14,10 @@ interface Props {
   onSalesCycleDaysChange: (value: string) => void;
   onHistoricalJsonChange: (value: string) => void;
   onParseError: (message: string | null) => void;
-  onHubSpotNotice?: (message: string) => void;
-  onHubSpotError?: (message: string) => void;
+  onCrmNotice?: (message: string) => void;
+  onCrmError?: (message: string) => void;
+  onLinkedHubSpotDeal?: (dealId: string | null) => void;
+  onLinkedSalesforceOpp?: (oppId: string | null) => void;
 }
 
 export function parseHistoricalCrmJson(raw: string): HistoricalCrmContextEntry[] | null {
@@ -56,8 +61,10 @@ export default function DealProfilePanel({
   onSalesCycleDaysChange,
   onHistoricalJsonChange,
   onParseError,
-  onHubSpotNotice,
-  onHubSpotError,
+  onCrmNotice,
+  onCrmError,
+  onLinkedHubSpotDeal,
+  onLinkedSalesforceOpp,
 }: Props) {
   const loadDemoHistory = () => {
     onAccountIdChange(demoDeepContext.account_id);
@@ -80,21 +87,40 @@ export default function DealProfilePanel({
     onAccountIdChange(payload.accountId);
     onSalesCycleDaysChange(payload.salesCycleDays);
     onHistoricalJsonChange(JSON.stringify(payload.historicalCrmContext, null, 2));
+    onLinkedHubSpotDeal?.(payload.dealId);
     onParseError(null);
-    onHubSpotNotice?.(notice);
+    onCrmNotice?.(notice);
+  };
+
+  const handleSalesforceImport = (payload: SalesforceImportPayload, notice: string) => {
+    onAccountIdChange(payload.accountId);
+    onSalesCycleDaysChange(payload.salesCycleDays);
+    onHistoricalJsonChange(JSON.stringify(payload.historicalCrmContext, null, 2));
+    onLinkedSalesforceOpp?.(payload.opportunityId);
+    onParseError(null);
+    onCrmNotice?.(notice);
   };
 
   return (
-    <details className="deal-profile-panel">
-      <summary>HubSpot import + deal history (optional)</summary>
+    <details className="deal-profile-panel" data-guide-target="guide-deal-profile">
+      <summary>CRM import + deal history (optional)</summary>
       <p className="console-tab-hint">
-        Import HubSpot notes or add prior deal history.
+        Import HubSpot or Salesforce notes, or paste prior deal history. Push updates after analysis
+        are human-confirmed.
       </p>
 
       <HubSpotDealControls
         onImport={handleHubSpotImport}
         onError={(message) => {
-          if (onHubSpotError) onHubSpotError(message);
+          if (onCrmError) onCrmError(message);
+          else onParseError(message);
+        }}
+      />
+
+      <SalesforceDealControls
+        onImport={handleSalesforceImport}
+        onError={(message) => {
+          if (onCrmError) onCrmError(message);
           else onParseError(message);
         }}
       />

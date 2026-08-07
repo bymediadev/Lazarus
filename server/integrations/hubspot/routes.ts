@@ -5,9 +5,11 @@ import {
   verifySignedOAuthState,
 } from "../oauthShared.js";
 import { getHubSpotConfig, isHubSpotConfigured, HUBSPOT_OAUTH_SCOPES } from "./config.js";
-import { importHubSpotDealNotes, searchHubSpotDeals } from "./deals.js";
+import { importHubSpotDealNotes, pushNoteToHubSpotDeal, searchHubSpotDeals } from "./deals.js";
 import { buildHubSpotAuthorizeUrl, exchangeHubSpotCode } from "./oauth.js";
 import { clearHubSpotTokens, isHubSpotConnected, loadHubSpotTokens } from "./tokens.js";
+import { upsertCrmDealLink } from "../../crmDealLinks.js";
+import { optionalAuthUserId } from "../../authMiddleware.js";
 
 export function registerHubSpotRoutes(app: Express): void {
   app.get("/api/integrations/hubspot/status", (_req, res) => {
@@ -20,7 +22,7 @@ export function registerHubSpotRoutes(app: Express): void {
       connected_at: tokens?.connected_at ?? null,
       scopes: HUBSPOT_OAUTH_SCOPES,
       note: isHubSpotConfigured()
-        ? "HubSpot connected for read-only deal search and note import into Deal Profile."
+        ? "HubSpot connected for deal search, note import, and human-confirmed Push to HubSpot."
         : "Add HUBSPOT_CLIENT_ID and HUBSPOT_CLIENT_SECRET to enable Connect HubSpot.",
     });
   });
@@ -105,6 +107,15 @@ export function registerHubSpotRoutes(app: Express): void {
     }
     try {
       const result = await importHubSpotDealNotes(dealId);
+      await upsertCrmDealLink({
+        provider: "hubspot",
+        externalDealId: dealId,
+        accountId: result.mapped.account_id,
+        salesCycleDays: result.mapped.sales_cycle_days,
+        historicalCrmContext: result.mapped.historical_crm_context,
+        lastInboundAt: new Date().toISOString(),
+        userId: await optionalAuthUserId(req),
+      });
       res.json({
         ok: true,
         provider: "hubspot",
@@ -119,6 +130,48 @@ export function registerHubSpotRoutes(app: Express): void {
       console.error("[hubspot-import] error:", err);
       res.status(500).json({
         error: err instanceof Error ? err.message : "HubSpot deal note import failed",
+      });
+    }
+  });
+
+  /** Human-confirmed Lazarus → HubSpot note write + deal link upsert. */
+  app.post("/api/integrations/hubspot/push-note", async (req, res) => {
+    if (!isHubSpotConnected()) {
+      res.status(401).json({ error: "HubSpot is not connected. Connect HubSpot first." });
+      return;
+    }
+    const dealId = String(req.body?.dealId ?? req.body?.deal_id ?? "").trim();
+    const noteBody = String(req.body?.noteBody ?? req.body?.note_body ?? "").trim();
+    const postMortemId = String(req.body?.postMortemId ?? req.body?.post_mortem_id ?? "").trim();
+    if (!dealId) {
+      res.status(400).json({ error: "dealId is required" });
+      return;
+    }
+    if (!noteBody) {
+      res.status(400).json({ error: "noteBody is required" });
+      return;
+    }
+    try {
+      const pushed = await pushNoteToHubSpotDeal(dealId, noteBody);
+      const userId = await optionalAuthUserId(req);
+      const linkId = await upsertCrmDealLink({
+        provider: "hubspot",
+        externalDealId: dealId,
+        postMortemId: postMortemId || null,
+        userId,
+        lastOutboundAt: new Date().toISOString(),
+      });
+      res.json({
+        ok: true,
+        provider: "hubspot",
+        deal_id: dealId,
+        note_id: pushed.noteId,
+        link_id: linkId,
+      });
+    } catch (err) {
+      console.error("[hubspot-push] error:", err);
+      res.status(500).json({
+        error: err instanceof Error ? err.message : "HubSpot push failed",
       });
     }
   });

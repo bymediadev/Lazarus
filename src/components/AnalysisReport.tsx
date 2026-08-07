@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { saveRescueOutcome } from "../lib/api";
 import ConciseDiagnostic from "./ConciseDiagnostic";
+import FastFactsPanel from "./FastFactsPanel";
 import DealHeaderMetrics from "./DealHeaderMetrics";
 import {
   CausalForce,
@@ -19,6 +20,10 @@ import {
 interface Props {
   result: PostMortemResult;
   sources?: TranscriptSources;
+  linkedHubSpotDealId?: string | null;
+  linkedSalesforceOppId?: string | null;
+  onPushHubSpot?: (dealId: string, noteBody: string) => Promise<void>;
+  onPushSalesforce?: (oppId: string, noteBody: string) => Promise<void>;
 }
 
 function CrmField({ label, value }: { label: string; value?: string }) {
@@ -72,8 +77,16 @@ function CouplingList({ title, items, className }: { title: string; items: Force
   );
 }
 
-export default function AnalysisReport({ result: raw, sources }: Props) {
+export default function AnalysisReport({
+  result: raw,
+  sources,
+  linkedHubSpotDealId,
+  linkedSalesforceOppId,
+  onPushHubSpot,
+  onPushSalesforce,
+}: Props) {
   const [copied, setCopied] = useState(false);
+  const [view, setView] = useState<"fast" | "concise">("fast");
   const [rescueAction, setRescueAction] = useState("");
   const [rescueOutcome, setRescueOutcome] = useState("still_stalled");
   const [rescueSaved, setRescueSaved] = useState(false);
@@ -651,7 +664,39 @@ export default function AnalysisReport({ result: raw, sources }: Props) {
 
       {pi && <DealHeaderMetrics indices={pi} viabilityScore={vs.viability_score} />}
 
-      <ConciseDiagnostic result={r} />
+      <div className="report-view-tabs" data-guide-target="guide-results" role="tablist">
+        <button
+          type="button"
+          role="tab"
+          aria-selected={view === "fast"}
+          className={`report-view-tab${view === "fast" ? " active" : ""}`}
+          onClick={() => setView("fast")}
+        >
+          Fast Facts
+        </button>
+        <button
+          type="button"
+          role="tab"
+          aria-selected={view === "concise"}
+          className={`report-view-tab${view === "concise" ? " active" : ""}`}
+          onClick={() => setView("concise")}
+        >
+          Concise
+        </button>
+      </div>
+
+      {view === "fast" ? (
+        <FastFactsPanel
+          result={r}
+          linkedHubSpotDealId={linkedHubSpotDealId}
+          linkedSalesforceOppId={linkedSalesforceOppId}
+          postMortemId={raw.id}
+          onPushHubSpot={onPushHubSpot}
+          onPushSalesforce={onPushSalesforce}
+        />
+      ) : (
+        <ConciseDiagnostic result={r} />
+      )}
     </div>
   );
 }

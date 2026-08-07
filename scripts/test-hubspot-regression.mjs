@@ -23,11 +23,13 @@ function check(label, condition) {
 const scopes = HUBSPOT_OAUTH_SCOPES.split(/\s+/).filter(Boolean);
 check("scopes include oauth", scopes.includes("oauth"));
 check("scopes include deals.read", scopes.includes("crm.objects.deals.read"));
+check("scopes include deals.write", scopes.includes("crm.objects.deals.write"));
+check("scopes include notes.write", scopes.includes("crm.objects.notes.write"));
 check("no notes.read scope (not recognized on platform 2026.03)", !scopes.includes("crm.objects.notes.read"));
-check("exactly two scopes", scopes.length === 2);
+check("exactly four scopes", scopes.length === 4);
 check(
-  "no write scopes",
-  !scopes.some((s) => /write|crm\.objects\.(contacts|companies)/i.test(s))
+  "no contacts/companies scopes",
+  !scopes.some((s) => /crm\.objects\.(contacts|companies)/i.test(s))
 );
 
 const secret = "hubspot-test-secret";

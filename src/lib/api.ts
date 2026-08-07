@@ -8,11 +8,19 @@ const viteEnv = (
 ).env;
 export const API_BASE = (viteEnv?.VITE_API_URL ?? "").replace(/\/$/, "");
 
+/** Supabase access token for user-scoped saves (set by AuthProvider). */
+let apiBearerToken: string | null = null;
+
+export function setApiBearerToken(token: string | null): void {
+  apiBearerToken = token?.trim() || null;
+}
+
 /** Sent as X-Api-Key when VITE_LAZARUS_API_KEY is set (must match server LAZARUS_API_KEY). */
 export function apiAuthHeaders(json = false): Record<string, string> {
   const headers: Record<string, string> = {};
   const key = (viteEnv?.VITE_LAZARUS_API_KEY ?? "").trim();
   if (key) headers["X-Api-Key"] = key;
+  if (apiBearerToken) headers["Authorization"] = `Bearer ${apiBearerToken}`;
   if (json) headers["Content-Type"] = "application/json";
   return headers;
 }
@@ -66,6 +74,10 @@ export interface PostMortemPayload {
   liveSessionObjections?: { text: string; status: string; source: string }[];
   /** Bypass sales-relevance gate after an explicit user override. */
   forceAnalysis?: boolean;
+  /** Linked HubSpot deal id for crm_deal_links after save. */
+  hubspotDealId?: string;
+  /** Linked Salesforce opportunity id. */
+  salesforceOpportunityId?: string;
 }
 
 export async function runPostMortem(payload: PostMortemPayload): Promise<PostMortemResponse> {
@@ -117,6 +129,14 @@ export async function runPostMortem(payload: PostMortemPayload): Promise<PostMor
 
   if (payload.liveSessionObjections?.length) {
     formData.append("live_session_objections", JSON.stringify(payload.liveSessionObjections));
+  }
+
+  if (payload.hubspotDealId) {
+    formData.append("hubspot_deal_id", payload.hubspotDealId);
+  }
+
+  if (payload.salesforceOpportunityId) {
+    formData.append("salesforce_opportunity_id", payload.salesforceOpportunityId);
   }
 
   const url = `${API_BASE}/api/post-mortem`;

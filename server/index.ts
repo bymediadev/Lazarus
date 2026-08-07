@@ -37,6 +37,16 @@ import { registerTeamsRoutes } from "./integrations/teams/routes.js";
 import { isTeamsConfigured } from "./integrations/teams/config.js";
 import { registerHubSpotRoutes } from "./integrations/hubspot/routes.js";
 import { isHubSpotConfigured } from "./integrations/hubspot/config.js";
+import { registerSalesforceRoutes } from "./integrations/salesforce/routes.js";
+import { isSalesforceConfigured } from "./integrations/salesforce/config.js";
+import { answerGuideQuestion } from "./guide.js";
+import {
+  upsertCrmDealLink,
+  getCrmDealLinkByExternalId,
+  updateCrmDealLinkContext,
+} from "./crmDealLinks.js";
+import { registerAuthRoutes } from "./authRoutes.js";
+import { optionalAuthUserId } from "./authMiddleware.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const distPath = path.join(__dirname, "../dist");
@@ -125,6 +135,7 @@ app.get("/api/health", (_req, res) => {
     google_meet: isGoogleMeetConfigured(),
     teams: isTeamsConfigured(),
     hubspot: isHubSpotConfigured(),
+    salesforce: isSalesforceConfigured(),
   });
 });
 
@@ -280,7 +291,9 @@ app.post("/api/post-mortem", requireApiKey, uploadFields, async (req, res) => {
       recurringVetoHolders
     );
 
+    const authUserId = (await optionalAuthUserId(req)) ?? undefined;
     const savedId = await savePostMortem({
+      userId: authUserId,
       clientName: result.client_name,
       dealValue,
       dealStatus: result.deal_classification.status,
@@ -292,6 +305,31 @@ app.post("/api/post-mortem", requireApiKey, uploadFields, async (req, res) => {
       ...(ingestMetadata ? { ingestMetadata: ingestMetadata as Record<string, unknown> } : {}),
       dealMemorySummary: dealMemorySummary as Record<string, unknown>,
     });
+
+    const linkedHubSpotDealId = String(req.body?.hubspot_deal_id ?? "").trim();
+    const linkedSalesforceOppId = String(req.body?.salesforce_opportunity_id ?? "").trim();
+    if (savedId && linkedHubSpotDealId) {
+      await upsertCrmDealLink({
+        provider: "hubspot",
+        externalDealId: linkedHubSpotDealId,
+        postMortemId: savedId,
+        userId: authUserId,
+        accountId: deepContext.accountId,
+        salesCycleDays: deepContext.salesCycleDays,
+        historicalCrmContext: deepContext.historicalCrmContext,
+      });
+    }
+    if (savedId && linkedSalesforceOppId) {
+      await upsertCrmDealLink({
+        provider: "salesforce",
+        externalDealId: linkedSalesforceOppId,
+        postMortemId: savedId,
+        userId: authUserId,
+        accountId: deepContext.accountId,
+        salesCycleDays: deepContext.salesCycleDays,
+        historicalCrmContext: deepContext.historicalCrmContext,
+      });
+    }
 
     const warnings: string[] = [];
     const addWarning = (msg: string) => {
@@ -331,7 +369,7 @@ app.post("/api/post-mortem", requireApiKey, uploadFields, async (req, res) => {
   }
 });
 
-/** HubSpot deal webhook → deep-context fields (ingest helper; not full CRM sync). */
+/** HubSpot deal webhook → deep-context upsert into crm_deal_links (CRM → Lazarus). */
 app.post("/api/webhooks/hubspot", async (req, res) => {
   const expectedSecret = (process.env.HUBSPOT_WEBHOOK_SECRET ?? "").trim();
   const providedSecret =
@@ -349,11 +387,55 @@ app.post("/api/webhooks/hubspot", async (req, res) => {
       res.status(400).json({ error: "No deal payload found — expected deal or deals[]" });
       return;
     }
-    res.json({ ok: true, mapped });
+    const externalId = String(mapped.deal_id ?? mapped.account_id ?? "").trim();
+    let linkId: string | null = null;
+    if (externalId) {
+      const existing = await getCrmDealLinkByExternalId("hubspot", externalId);
+      if (existing) {
+        await updateCrmDealLinkContext(existing.id, {
+          historical_crm_context: mapped.historical_crm_context,
+          sales_cycle_days: mapped.sales_cycle_days,
+          last_inbound_at: new Date().toISOString(),
+        });
+        linkId = existing.id;
+      } else {
+        linkId = await upsertCrmDealLink({
+          provider: "hubspot",
+          externalDealId: externalId,
+          accountId: mapped.account_id,
+          salesCycleDays: mapped.sales_cycle_days,
+          historicalCrmContext: mapped.historical_crm_context,
+          lastInboundAt: new Date().toISOString(),
+        });
+      }
+    }
+    res.json({ ok: true, mapped, link_id: linkId, synced: !!linkId });
   } catch (err) {
     console.error("HubSpot webhook error:", err);
     res.status(500).json({
       error: err instanceof Error ? err.message : "HubSpot webhook mapping failed",
+    });
+  }
+});
+
+/** Product guide Q&A — grounded on static how-to content only. */
+app.post("/api/guide/chat", requireApiKey, async (req, res) => {
+  try {
+    const question = String(req.body?.question ?? "");
+    const history = Array.isArray(req.body?.history)
+      ? (req.body.history as { role?: string; content?: string }[])
+          .filter((m) => m && (m.role === "user" || m.role === "assistant") && m.content)
+          .map((m) => ({
+            role: m.role as "user" | "assistant",
+            content: String(m.content),
+          }))
+      : [];
+    const result = await answerGuideQuestion(question, history);
+    res.json(result);
+  } catch (err) {
+    console.error("Guide chat error:", err);
+    res.status(500).json({
+      error: err instanceof Error ? err.message : "Guide chat failed",
     });
   }
 });
@@ -478,6 +560,8 @@ registerZoomRoutes(app);
 registerGoogleMeetRoutes(app);
 registerTeamsRoutes(app);
 registerHubSpotRoutes(app);
+registerSalesforceRoutes(app);
+registerAuthRoutes(app);
 registerTrustPackRoutes(app, publicPath);
 
 /** Public assets (logo, legal-shared.css). Trust-pack HTML only via /api/trust-pack/:slug. */

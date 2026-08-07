@@ -242,3 +242,46 @@ export const hubspotDealTestUtils = {
   buildDealSnapshotFromApi,
   mapDealHit,
 };
+
+/** Create a note on a HubSpot deal and associate it (Lazarus → CRM). */
+export async function pushNoteToHubSpotDeal(
+  dealId: string,
+  noteBody: string
+): Promise<{ noteId: string }> {
+  const id = dealId.trim();
+  const body = noteBody.trim();
+  if (!id) throw new Error("dealId is required");
+  if (!body) throw new Error("Note body is empty");
+
+  const createRes = await hubspotFetch("/objects/notes", {
+    method: "POST",
+    body: JSON.stringify({
+      properties: {
+        hs_note_body: body,
+        hs_timestamp: Date.now().toString(),
+      },
+    }),
+  });
+  const created = (await createRes.json()) as { id?: string; message?: string };
+  if (!createRes.ok || !created.id) {
+    throw new Error(created.message ?? `HubSpot note create failed (${createRes.status})`);
+  }
+
+  const assocRes = await hubspotFetch(
+    `/objects/notes/${encodeURIComponent(created.id)}/associations/deals/${encodeURIComponent(id)}/note_to_deal`,
+    { method: "PUT" }
+  );
+  if (!assocRes.ok) {
+    // Fallback association type id 214 (note → deal) used by CRM v3
+    const fallback = await hubspotFetch(
+      `/objects/notes/${encodeURIComponent(created.id)}/associations/deals/${encodeURIComponent(id)}/214`,
+      { method: "PUT" }
+    );
+    if (!fallback.ok) {
+      const err = (await fallback.json().catch(() => ({}))) as { message?: string };
+      throw new Error(err.message ?? `HubSpot note association failed (${fallback.status})`);
+    }
+  }
+
+  return { noteId: created.id };
+}

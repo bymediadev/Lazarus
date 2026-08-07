@@ -81,3 +81,22 @@ export async function importHubSpotDealNotes(dealId: string): Promise<HubSpotDea
   if (!res.ok) throw new Error(data.error ?? `HubSpot import failed (${res.status})`);
   return data;
 }
+
+export async function pushHubSpotNote(
+  dealId: string,
+  noteBody: string,
+  postMortemId?: string | null
+): Promise<{ ok: boolean; note_id: string }> {
+  const res = await fetch(`${API_BASE}/api/integrations/hubspot/push-note`, {
+    method: "POST",
+    headers: apiAuthHeaders(true),
+    body: JSON.stringify({
+      dealId,
+      noteBody,
+      ...(postMortemId ? { postMortemId } : {}),
+    }),
+  });
+  const data = (await res.json()) as { ok?: boolean; note_id?: string; error?: string };
+  if (!res.ok) throw new Error(data.error ?? `HubSpot push failed (${res.status})`);
+  return { ok: true, note_id: data.note_id ?? "" };
+}
