@@ -141,11 +141,100 @@ export const GUIDE_FAQ: { q: string; a: string }[] = [
     a: "No silent mass writes. You can copy CRM-ready notes, or confirm Push to HubSpot/Salesforce after analysis. CRM changes can sync back into Lazarus when webhooks are configured.",
   },
   {
+    q: "How do I push notes to HubSpot?",
+    a: "Run Analysis first so you have a recovery brief. Link a HubSpot deal under Deal Profile if you haven’t. In Fast Facts or Concise Diagnostic, click Push to HubSpot and confirm — Lazarus writes a note on that deal. You can also use Copy for CRM and paste manually.",
+  },
+  {
+    q: "How do I push notes to Salesforce?",
+    a: "Run Analysis, link a Salesforce opportunity under Deal Profile, then use Push to Salesforce on the brief (human-confirmed). Or Copy for CRM and paste into the opportunity.",
+  },
+  {
     q: "What is Fast Facts?",
     a: "Spark Notes on the deal after analysis: what the deal is, main detractors/veto risk, and how to save it — before you dig into the full brief.",
   },
 ];
 
+/** Offline how-to match — no Gemini required. */
+export function matchGuideOffline(question: string): { answer: string; steps: string[] } | null {
+  const q = question.trim().toLowerCase();
+  if (q.length < 3) return null;
+
+  const pushHubspot =
+    /(push|write|send).*(note|notes|brief).*(hubspot)|hubspot.*(push|note|notes)/i.test(q) ||
+    /how (do i|to) push.*hubspot/i.test(q);
+  if (pushHubspot) {
+    return {
+      answer: GUIDE_FAQ.find((f) => /push notes to HubSpot/i.test(f.q))!.a,
+      steps: [
+        "Run Analysis so a recovery brief exists.",
+        "Under Deal Profile, Connect HubSpot and link/import the deal if needed.",
+        "Open Fast Facts or Concise Diagnostic.",
+        "Click Push to HubSpot and confirm the write (human-confirmed).",
+        "Or use Copy for CRM and paste the note into HubSpot yourself.",
+      ],
+    };
+  }
+
+  const pushSf =
+    /(push|write|send).*(note|notes|brief).*(salesforce)|salesforce.*(push|note|notes)/i.test(q);
+  if (pushSf) {
+    return {
+      answer: GUIDE_FAQ.find((f) => /push notes to Salesforce/i.test(f.q))!.a,
+      steps: [
+        "Run Analysis so a recovery brief exists.",
+        "Under Deal Profile, Connect Salesforce and link the opportunity.",
+        "On the brief, click Push to Salesforce and confirm.",
+        "Or Copy for CRM and paste manually.",
+      ],
+    };
+  }
+
+  const firstAnalysis = /(first analysis|run analysis|how (do i|to) (run|start|use)|getting started)/i.test(
+    q
+  );
+  if (firstAnalysis) {
+    return {
+      answer: "Add evidence on the left, click Run Analysis, then read Fast Facts and the recovery brief on the right.",
+      steps: [
+        GUIDE_STEPS["fa-1"].body,
+        GUIDE_STEPS["fa-2"].body,
+        GUIDE_STEPS["fa-3"].body,
+        GUIDE_STEPS["fa-4"].body,
+      ],
+    };
+  }
+
+  const hubspotImport = /(hubspot).*(import|history|connect|deal)/i.test(q);
+  if (hubspotImport && !pushHubspot) {
+    return {
+      answer: "Connect HubSpot under Deal Profile, search a deal, Import notes, then run analysis with that CRM context.",
+      steps: [GUIDE_STEPS["hs-1"].body, GUIDE_STEPS["hs-2"].body, GUIDE_STEPS["hs-3"].body],
+    };
+  }
+
+  const live = /(live|zoom|meet|teams|triage|meeting)/i.test(q);
+  if (live) {
+    return {
+      answer: "Use the Live tab for mid-call blockers, then end the session to fold the transcript into a full analysis.",
+      steps: [GUIDE_STEPS["lv-1"].body, GUIDE_STEPS["lv-2"].body],
+    };
+  }
+
+  // Exact-ish FAQ keyword overlap
+  for (const item of GUIDE_FAQ) {
+    const tokens = item.q
+      .toLowerCase()
+      .replace(/[?]/g, "")
+      .split(/\s+/)
+      .filter((t) => t.length > 3);
+    const hits = tokens.filter((t) => q.includes(t)).length;
+    if (hits >= Math.min(3, tokens.length)) {
+      return { answer: item.a, steps: [] };
+    }
+  }
+
+  return null;
+}
 /** Plain-text grounding corpus for the guide Q&A model. */
 export function buildGuideGroundingText(): string {
   const lines: string[] = [
