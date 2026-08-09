@@ -13,10 +13,12 @@ import EmailProviderControls from "./components/EmailProviderControls";
 import { useAuth } from "./components/AuthProvider";
 import LoginScreen from "./components/LoginScreen";
 import AccountPortal from "./components/AccountPortal";
+import FounderCommandCenter from "./components/FounderCommandCenter";
 import { pushHubSpotNote } from "./lib/hubspotIntegration";
 import { pushSalesforceNote } from "./lib/salesforceIntegration";
 import { TRUST_PACK_NAV, TRUST_PACK_OPEN_EVENT, type TrustPackSlug } from "./lib/trustPack";
 import { API_BASE, apiTargetLabel, PostMortemApiError, runPostMortem } from "./lib/api";
+import { fetchFounderMe } from "./lib/founderApi";
 import { publishOAuthComplete, subscribeOAuthComplete } from "./lib/oauthBridge";
 import {
   listPendingAnalyses,
@@ -84,6 +86,9 @@ async function readTextEvidence(file: File): Promise<string> {
 
 export default function App() {
   const auth = useAuth();
+  const [opsUser, setOpsUser] = useState(false);
+  const [opsChecked, setOpsChecked] = useState(false);
+  const [forceProductConsole, setForceProductConsole] = useState(false);
   const [activeTab, setActiveTab] = useState<InputTab>("call");
   const [guideOpen, setGuideOpen] = useState(false);
   const [accountPortalOpen, setAccountPortalOpen] = useState(false);
@@ -194,6 +199,34 @@ export default function App() {
     },
     []
   );
+
+  useEffect(() => {
+    let cancelled = false;
+    if (!auth.session) {
+      setOpsUser(false);
+      setOpsChecked(true);
+      setForceProductConsole(false);
+      return;
+    }
+    setOpsChecked(false);
+    void (async () => {
+      try {
+        const me = await fetchFounderMe();
+        if (!cancelled) {
+          setOpsUser(me.ops === true);
+          setOpsChecked(true);
+        }
+      } catch {
+        if (!cancelled) {
+          setOpsUser(false);
+          setOpsChecked(true);
+        }
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [auth.session?.access_token]);
 
   const drainPendingQueue = useCallback(async () => {
     if (!navigator.onLine || apiOnline === false) return;
@@ -648,6 +681,15 @@ export default function App() {
         </div>
       ) : auth.configured && !auth.session ? (
         <LoginScreen />
+      ) : auth.session && !opsChecked ? (
+        <div className="login-screen">
+          <p className="login-sub">Loading…</p>
+        </div>
+      ) : auth.session && opsUser && !forceProductConsole ? (
+        <FounderCommandCenter
+          opsEmail={auth.user?.email ?? null}
+          onOpenProduct={() => setForceProductConsole(true)}
+        />
       ) : (
         <>
       <header className="header">
@@ -665,6 +707,15 @@ export default function App() {
                 : " · API OFFLINE — run npm run dev")}
             {apiOnline === true && API_BASE && ` · API: ${apiTargetLabel()}`}
           </span>
+          {opsUser && (
+            <button
+              type="button"
+              className="btn-secondary header-logout"
+              onClick={() => setForceProductConsole(false)}
+            >
+              Ops HQ
+            </button>
+          )}
           {auth.session && (
             <button
               type="button"

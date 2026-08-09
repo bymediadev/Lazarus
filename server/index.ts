@@ -47,6 +47,8 @@ import {
 } from "./crmDealLinks.js";
 import { registerAuthRoutes } from "./authRoutes.js";
 import { optionalAuthUserId } from "./authMiddleware.js";
+import { apiEventsMiddleware, setApiErrorLocal } from "./apiEvents.js";
+import { registerFounderRoutes } from "./founderRoutes.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const distPath = path.join(__dirname, "../dist");
@@ -121,6 +123,7 @@ app.use((_req, res, next) => {
 registerZoomWebhook(app);
 
 app.use(express.json());
+app.use(apiEventsMiddleware);
 
 app.get("/api/health", (_req, res) => {
   const geminiKey = (process.env.GEMINI_API_KEY ?? "").trim();
@@ -365,6 +368,7 @@ app.post("/api/post-mortem", requireApiKey, uploadFields, async (req, res) => {
     console.error("Post-mortem error:", err);
     const raw = err instanceof Error ? err.message : "Post-mortem failed.";
     const friendly = formatApiError(raw);
+    setApiErrorLocal(res, friendly);
     res.status(500).json({ error: friendly });
   }
 });
@@ -562,6 +566,7 @@ registerTeamsRoutes(app);
 registerHubSpotRoutes(app);
 registerSalesforceRoutes(app);
 registerAuthRoutes(app);
+registerFounderRoutes(app);
 registerTrustPackRoutes(app, publicPath);
 
 /** Public assets (logo, legal-shared.css). Trust-pack HTML only via /api/trust-pack/:slug. */

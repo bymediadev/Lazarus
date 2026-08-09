@@ -13,6 +13,7 @@
     "preview": "vite preview",
     "check:env": "node scripts/check-env.mjs",
     "auth:configure": "node --env-file=.env scripts/configure-supabase-auth.mjs",
+    "auth:set-founder": "node --env-file=.env scripts/set-founder.mjs",
     "test:grounding": "node --import tsx scripts/test-grounding-regression.mjs",
     "test:scoring": "node --import tsx scripts/test-scoring-regression.mjs",
     "test": "npm run test:scoring && npm run test:grounding && npm run test:pipeline && npm run test:document-email && npm run test:hubspot && npm run check:env",
