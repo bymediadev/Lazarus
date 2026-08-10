@@ -38,6 +38,8 @@ import { isTeamsConfigured } from "./integrations/teams/config.js";
 import { registerHubSpotRoutes } from "./integrations/hubspot/routes.js";
 import { isHubSpotConfigured } from "./integrations/hubspot/config.js";
 import { registerSalesforceRoutes } from "./integrations/salesforce/routes.js";
+import { registerWhiteWhaleRoutes } from "./integrations/whitewhale/routes.js";
+import { isWhiteWhaleConfigured } from "./integrations/whitewhale/config.js";
 import { isSalesforceConfigured } from "./integrations/salesforce/config.js";
 import { answerGuideQuestion } from "./guide.js";
 import {
@@ -144,6 +146,7 @@ app.get("/api/health", (_req, res) => {
     teams: isTeamsConfigured(),
     hubspot: isHubSpotConfigured(),
     salesforce: isSalesforceConfigured(),
+    whitewhale: isWhiteWhaleConfigured(),
   });
 });
 
@@ -584,6 +587,7 @@ registerGoogleMeetRoutes(app);
 registerTeamsRoutes(app);
 registerHubSpotRoutes(app);
 registerSalesforceRoutes(app);
+registerWhiteWhaleRoutes(app);
 registerAuthRoutes(app);
 registerFounderRoutes(app);
 registerTrustPackRoutes(app, publicPath);

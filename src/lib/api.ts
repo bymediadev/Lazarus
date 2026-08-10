@@ -1,4 +1,5 @@
 import { GroundingAudit, HistoricalCrmContextEntry, LiveTranscriptTurn, PostMortemResult, TranscriptSources } from "../types";
+import type { WhiteWhaleAccountIntel } from "../../shared/whitewhaleTypes";
 
 /** Empty = same-origin (production) or Vite proxy to localhost:3001 (local `npm run dev`). */
 const viteEnv = (
@@ -92,6 +93,8 @@ export interface PostMortemPayload {
   hubspotDealId?: string;
   /** Linked Salesforce opportunity id. */
   salesforceOpportunityId?: string;
+  /** WhiteWhale buying signals / Why Now for the account. */
+  whitewhaleContext?: WhiteWhaleAccountIntel;
 }
 
 export async function runPostMortem(payload: PostMortemPayload): Promise<PostMortemResponse> {
@@ -151,6 +154,10 @@ export async function runPostMortem(payload: PostMortemPayload): Promise<PostMor
 
   if (payload.salesforceOpportunityId) {
     formData.append("salesforce_opportunity_id", payload.salesforceOpportunityId);
+  }
+
+  if (payload.whitewhaleContext) {
+    formData.append("whitewhale_context", JSON.stringify(payload.whitewhaleContext));
   }
 
   const url = `${API_BASE}/api/post-mortem`;

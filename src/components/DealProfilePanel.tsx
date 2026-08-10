@@ -5,14 +5,18 @@ import HubSpotDealControls, { type HubSpotImportPayload } from "./HubSpotDealCon
 import SalesforceDealControls, {
   type SalesforceImportPayload,
 } from "./SalesforceDealControls";
+import WhiteWhaleControls, { type WhiteWhaleAttachPayload } from "./WhiteWhaleControls";
+import type { WhiteWhaleAccountIntel } from "../lib/whitewhaleIntegration";
 
 interface Props {
   accountId: string;
   salesCycleDays: string;
   historicalJson: string;
+  whitewhaleIntel: WhiteWhaleAccountIntel | null;
   onAccountIdChange: (value: string) => void;
   onSalesCycleDaysChange: (value: string) => void;
   onHistoricalJsonChange: (value: string) => void;
+  onWhitewhaleIntelChange: (intel: WhiteWhaleAccountIntel | null) => void;
   onParseError: (message: string | null) => void;
   onCrmNotice?: (message: string) => void;
   onCrmError?: (message: string) => void;
@@ -57,9 +61,11 @@ export default function DealProfilePanel({
   accountId,
   salesCycleDays,
   historicalJson,
+  whitewhaleIntel,
   onAccountIdChange,
   onSalesCycleDaysChange,
   onHistoricalJsonChange,
+  onWhitewhaleIntelChange,
   onParseError,
   onCrmNotice,
   onCrmError,
@@ -101,12 +107,20 @@ export default function DealProfilePanel({
     onCrmNotice?.(notice);
   };
 
+  const handleWhiteWhaleAttach = (payload: WhiteWhaleAttachPayload, notice: string) => {
+    onWhitewhaleIntelChange(payload.intel);
+    if (!accountId.trim()) {
+      onAccountIdChange(payload.domain);
+    }
+    onCrmNotice?.(notice);
+  };
+
   return (
     <details className="deal-profile-panel" data-guide-target="guide-deal-profile">
       <summary>CRM import + deal history (optional)</summary>
       <p className="console-tab-hint">
-        Import HubSpot or Salesforce notes, or paste prior deal history. Push updates after analysis
-        are human-confirmed.
+        Import HubSpot or Salesforce notes, pull WhiteWhale company signals, or paste prior deal
+        history. Push updates after analysis are human-confirmed.
       </p>
 
       <HubSpotDealControls
@@ -125,6 +139,15 @@ export default function DealProfilePanel({
         }}
       />
 
+      <WhiteWhaleControls
+        attachedDomain={whitewhaleIntel?.domain ?? null}
+        onAttach={handleWhiteWhaleAttach}
+        onClear={() => onWhitewhaleIntelChange(null)}
+        onError={(message) => {
+          if (onCrmError) onCrmError(message);
+          else onParseError(message);
+        }}
+      />
       <div className="input-group">
         <label htmlFor="account-id">Account ID</label>
         <input
