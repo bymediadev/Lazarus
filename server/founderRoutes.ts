@@ -462,7 +462,7 @@ export function registerFounderRoutes(app: Express): void {
         res.status(404).json({ error: "User not found" });
         return;
       }
-      const redirectTo = resolveFrontendOrigin();
+      const redirectTo = `${resolveFrontendOrigin().replace(/\/$/, "")}/?lazarus_reset=1`;
       const { error } = await supabase.auth.resetPasswordForEmail(userData.user.email, {
         redirectTo,
       });

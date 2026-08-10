@@ -1,5 +1,11 @@
 import { createClient, type Session, type SupabaseClient, type User } from "@supabase/supabase-js";
 import { API_BASE, apiAuthHeaders } from "./api";
+import {
+  clearPasswordRecoveryState,
+  capturePasswordRecoveryFromUrl,
+  markAwaitingPasswordReset,
+  markPasswordRecoveryPending,
+} from "./passwordRecovery";
 
 const viteEnv = (
   import.meta as ImportMeta & {
@@ -48,12 +54,20 @@ export async function ensureAuthConfig(): Promise<boolean> {
 export function getSupabaseBrowserClient(): SupabaseClient | null {
   if (!isAuthConfigured()) return null;
   if (!client) {
+    // Re-check immediately before PKCE code exchange clears the URL.
+    capturePasswordRecoveryFromUrl();
     client = createClient(runtimeUrl, runtimeAnon, {
       auth: {
         persistSession: true,
         autoRefreshToken: true,
         detectSessionInUrl: true,
       },
+    });
+    // Subscribe synchronously — PASSWORD_RECOVERY can fire during URL detection.
+    client.auth.onAuthStateChange((event) => {
+      if (event === "PASSWORD_RECOVERY") {
+        markPasswordRecoveryPending();
+      }
     });
   }
   return client;
@@ -163,16 +177,61 @@ export async function updatePassword(newPassword: string): Promise<void> {
   const sb = requireClient();
   const { error } = await sb.auth.updateUser({ password: newPassword });
   if (error) throw error;
+  clearPasswordRecoveryState();
 }
 
 /** Send password-reset email (requires Supabase mailer / SMTP). */
 export async function requestPasswordReset(email: string): Promise<void> {
   await ensureAuthConfig();
-  const sb = requireClient();
-  const { error } = await sb.auth.resetPasswordForEmail(email.trim(), {
-    redirectTo: window.location.origin,
+  markAwaitingPasswordReset();
+  markPasswordRecoveryPending();
+
+  const res = await fetch(`${API_BASE}/api/auth/password-reset`, {
+    method: "POST",
+    headers: apiAuthHeaders(true),
+    body: JSON.stringify({ email: email.trim() }),
   });
-  if (error) throw error;
+  const data = (await res.json()) as {
+    error?: string;
+    message?: string;
+    token_hash?: string | null;
+    emailed?: boolean;
+  };
+
+  if (!res.ok) {
+    clearPasswordRecoveryState();
+    const msg = data.error ?? "Password reset failed";
+    if (/rate limit/i.test(msg)) {
+      throw new Error(
+        "Too many reset emails were sent. Wait about an hour, then try again — or use Google sign-in if that account is linked."
+      );
+    }
+    throw new Error(msg);
+  }
+
+  // Prefer in-app recovery (bypasses inbox rate limits) when the server minted a token.
+  if (data.token_hash) {
+    const sb = requireClient();
+    const { error } = await sb.auth.verifyOtp({
+      type: "recovery",
+      token_hash: data.token_hash,
+    });
+    if (error) {
+      clearPasswordRecoveryState();
+      throw error;
+    }
+    markPasswordRecoveryPending();
+    return;
+  }
+
+  // Email-only path (no token returned).
+  if (!data.emailed) {
+    clearPasswordRecoveryState();
+    throw new Error(
+      data.message ??
+        "Could not start password reset. Check that the API has SUPABASE_SERVICE_ROLE_KEY, then try again."
+    );
+  }
 }
 
 /** Legacy passwordless email path (kept for OAuth-adjacent flows). */

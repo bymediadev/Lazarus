@@ -23,11 +23,15 @@ export default function LoginScreen() {
   }>({});
   const finishingRef = useRef(false);
   const oauthStartedAtRef = useRef<number>(0);
+  /** Only finish Lazarus login after the user started OAuth for this provider. */
+  const pendingProviderRef = useRef<ProviderId | null>(null);
 
   const finishProviderLogin = useCallback(
     async (provider: ProviderId) => {
       if (finishingRef.current) return;
+      if (pendingProviderRef.current !== provider) return;
       finishingRef.current = true;
+      pendingProviderRef.current = null;
       setNotice("Finishing Lazarus sign-in…");
       setBusy(provider);
       setError(null);
@@ -58,7 +62,15 @@ export default function LoginScreen() {
   useEffect(() => {
     return subscribeOAuthComplete((detail) => {
       if (!detail.provider) return;
+      const provider = detail.provider as ProviderId;
+      if (provider !== "google" && provider !== "hubspot" && provider !== "salesforce") {
+        return;
+      }
+      // Ignore leftover OAuth events unless the user just clicked Continue with…
+      if (pendingProviderRef.current !== provider) return;
+
       if (detail.outcome === "error") {
+        pendingProviderRef.current = null;
         const reason = detail.reason ?? "oauth";
         const friendly =
           reason === "tls_certificate" || reason === "token_exchange"
@@ -70,27 +82,25 @@ export default function LoginScreen() {
         return;
       }
       if (detail.outcome === "connected") {
-        const provider = detail.provider as ProviderId;
-        if (provider === "google" || provider === "hubspot" || provider === "salesforce") {
-          void finishProviderLogin(provider);
-        }
+        void finishProviderLogin(provider);
       }
     });
   }, [finishProviderLogin]);
 
-  // If Google is already connected (or popup finished without opener), poll and sign in.
+  // Fallback when the popup finishes but opener messaging fails (e.g. Google COOP).
+  // Only accepts a *fresh* OAuth connection from this click — never a prior token.
   useEffect(() => {
     if (busy !== "google") return;
     const startedAt = oauthStartedAtRef.current || Date.now();
     const id = window.setInterval(() => {
       void (async () => {
         try {
+          if (pendingProviderRef.current !== "google") return;
           const status = await fetchGoogleMeetStatus();
           if (!status.connected || !status.account_email) return;
           const connectedAt = status.connected_at
             ? new Date(status.connected_at).getTime()
             : 0;
-          // Fresh OAuth during this attempt (allow small clock skew).
           if (connectedAt >= startedAt - 15_000) {
             await finishProviderLogin("google");
           }
@@ -106,6 +116,7 @@ export default function LoginScreen() {
     if (busy !== "google" && busy !== "hubspot" && busy !== "salesforce") return;
     const id = window.setTimeout(() => {
       if (busy === "google" || busy === "hubspot" || busy === "salesforce") {
+        pendingProviderRef.current = null;
         setBusy(null);
         setNotice(null);
         setError((prev) => prev ?? "Sign-in popup closed before finishing. Try again.");
@@ -127,30 +138,18 @@ export default function LoginScreen() {
     }
   };
 
-  const startProvider = async (provider: ProviderId) => {
+  const startProvider = (provider: ProviderId) => {
     setError(null);
     oauthStartedAtRef.current = Date.now();
-
-    if (provider === "google") {
-      try {
-        const status = await fetchGoogleMeetStatus();
-        if (status.connected && status.account_email) {
-          setNotice("Google already connected — signing into Lazarus…");
-          await finishProviderLogin("google");
-          return;
-        }
-      } catch {
-        /* fall through to popup */
-      }
-    }
-
+    pendingProviderRef.current = provider;
     setNotice(
-      `Approve ${provider === "google" ? "Google" : provider === "hubspot" ? "HubSpot" : "Salesforce"} in the popup — Lazarus will finish sign-in automatically.`
+      `Approve ${provider === "google" ? "Google" : provider === "hubspot" ? "HubSpot" : "Salesforce"} in the popup — Lazarus signs you in only after that succeeds.`
     );
     setBusy(provider);
     try {
       void auth.startProviderLogin(provider);
     } catch (err) {
+      pendingProviderRef.current = null;
       setError(err instanceof Error ? err.message : `Could not open ${provider} sign-in`);
       setBusy(null);
       setNotice(null);
@@ -168,8 +167,7 @@ export default function LoginScreen() {
   return (
     <div className="login-screen">
       <div className="login-card">
-        <img src="/logo.png" alt="" className="login-logo" />
-        <h1>Lazarus Deal Recovery</h1>
+        <img src="/logo.png" alt="Lazarus Deal Recovery" className="login-logo" />
         <p className="login-sub">
           {mode === "signup"
             ? "Create your Lazarus account — email and password are stored securely in your auth database."
@@ -277,7 +275,8 @@ export default function LoginScreen() {
             onClick={() =>
               void run("reset", async () => {
                 await auth.resetPasswordEmail(email);
-                setNotice("If that email has an account, a reset link was sent.");
+                // If recovery session was minted, AuthProvider shows the set-password screen.
+                setNotice("If you weren’t taken to set a password, check your email for a reset link.");
               })
             }
           >
@@ -305,7 +304,7 @@ export default function LoginScreen() {
             type="button"
             className="btn-secondary login-oauth"
             disabled={!!busy}
-            onClick={() => void startProvider("google")}
+            onClick={() => startProvider("google")}
           >
             {busy === "google" ? "Waiting for Google…" : "Google"}
           </button>
@@ -315,7 +314,7 @@ export default function LoginScreen() {
             type="button"
             className="btn-secondary login-oauth"
             disabled={!!busy}
-            onClick={() => void startProvider("hubspot")}
+            onClick={() => startProvider("hubspot")}
           >
             {busy === "hubspot" ? "Waiting for HubSpot…" : "HubSpot"}
           </button>
@@ -325,7 +324,7 @@ export default function LoginScreen() {
             type="button"
             className="btn-secondary login-oauth"
             disabled={!!busy}
-            onClick={() => void startProvider("salesforce")}
+            onClick={() => startProvider("salesforce")}
           >
             {busy === "salesforce" ? "Waiting for Salesforce…" : "Salesforce"}
           </button>

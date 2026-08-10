@@ -175,6 +175,106 @@ export function registerAuthRoutes(app: Express): void {
     }
   });
 
+  /**
+   * Password reset — mint a recovery token via service role (no inbox required).
+   * Avoids Supabase Auth email rate limits that block resetPasswordForEmail.
+   * Best-effort email is still attempted when the mailer is available.
+   */
+  app.post("/api/auth/password-reset", async (req, res) => {
+    const email = String(req.body?.email ?? "")
+      .trim()
+      .toLowerCase();
+    if (!email || !email.includes("@")) {
+      res.status(400).json({ error: "Enter a valid work email." });
+      return;
+    }
+
+    const admin = adminAuth();
+    if (!admin) {
+      res.status(503).json({
+        error: "Password reset requires SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY.",
+      });
+      return;
+    }
+
+    try {
+      const redirectTo = `${resolveFrontendOrigin().replace(/\/$/, "")}/?lazarus_reset=1`;
+      const link = await admin.auth.admin.generateLink({
+        type: "recovery",
+        email,
+        options: { redirectTo },
+      });
+      if (link.error) {
+        const msg = link.error.message ?? "Password reset failed";
+        // Do not reveal whether the email exists.
+        if (/not found|unable to find|user not found/i.test(msg)) {
+          res.json({
+            ok: true,
+            emailed: false,
+            message: "If that email has an account, you can set a new password next.",
+          });
+          return;
+        }
+        throw link.error;
+      }
+
+      const props = link.data.properties as {
+        hashed_token?: string;
+        email_otp?: string;
+        action_link?: string;
+      };
+
+      // Best-effort inbox delivery (often rate-limited on free Supabase).
+      let emailed = false;
+      let emailError: string | null = null;
+      const anonKey = (process.env.SUPABASE_ANON_KEY ?? "").trim();
+      const url = (process.env.SUPABASE_URL ?? "").trim();
+      if (url && anonKey) {
+        const pub = createClient(url, anonKey, {
+          auth: { persistSession: false, autoRefreshToken: false },
+        });
+        const sent = await pub.auth.resetPasswordForEmail(email, { redirectTo });
+        emailed = !sent.error;
+        if (sent.error) {
+          emailError = sent.error.message;
+          console.warn("[auth-password-reset] email send:", sent.error.message);
+        }
+      }
+
+      if (!props.hashed_token && !emailed) {
+        res.status(503).json({
+          error:
+            emailError && /rate limit/i.test(emailError)
+              ? "Email rate limit exceeded — wait about an hour, or restart the API with SUPABASE_SERVICE_ROLE_KEY so Lazarus can reset without email."
+              : (emailError ?? "Could not start password reset. Try again later."),
+        });
+        return;
+      }
+
+      res.json({
+        ok: true,
+        emailed,
+        email_error: emailError,
+        token_hash: props.hashed_token ?? null,
+        action_link: props.action_link ?? null,
+        message: emailed
+          ? "Check your email for a reset link."
+          : "Continue to choose a new password.",
+      });
+    } catch (err) {
+      console.error("[auth-password-reset]", err);
+      const msg = err instanceof Error ? err.message : "Password reset failed";
+      if (/rate limit/i.test(msg)) {
+        res.status(429).json({
+          error:
+            "Email rate limit exceeded. Wait about an hour before requesting another reset email.",
+        });
+        return;
+      }
+      res.status(500).json({ error: msg });
+    }
+  });
+
   /** After Google / HubSpot / Salesforce OAuth popup succeeds. */
   app.post("/api/auth/session-from-provider", async (req, res) => {
     const provider = String(req.body?.provider ?? "").trim().toLowerCase() as AuthProviderId;

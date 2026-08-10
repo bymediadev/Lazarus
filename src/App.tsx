@@ -12,8 +12,10 @@ import LazarusGuide from "./components/LazarusGuide";
 import EmailProviderControls from "./components/EmailProviderControls";
 import { useAuth } from "./components/AuthProvider";
 import LoginScreen from "./components/LoginScreen";
+import PasswordRecoveryScreen from "./components/PasswordRecoveryScreen";
 import AccountPortal from "./components/AccountPortal";
 import FounderCommandCenter from "./components/FounderCommandCenter";
+import { isPasswordRecoveryPending } from "./lib/passwordRecovery";
 import { pushHubSpotNote } from "./lib/hubspotIntegration";
 import { pushSalesforceNote } from "./lib/salesforceIntegration";
 import { TRUST_PACK_NAV, TRUST_PACK_OPEN_EVENT, type TrustPackSlug } from "./lib/trustPack";
@@ -681,6 +683,8 @@ export default function App() {
         </div>
       ) : auth.configured && !auth.session ? (
         <LoginScreen />
+      ) : auth.session && (auth.passwordRecovery || isPasswordRecoveryPending()) ? (
+        <PasswordRecoveryScreen />
       ) : auth.session && !opsChecked ? (
         <div className="login-screen">
           <p className="login-sub">Loading…</p>

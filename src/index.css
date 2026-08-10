@@ -4035,6 +4035,15 @@ body {
   margin-bottom: 0.45rem;
 }
 
+.login-card .run-button {
+  width: 100%;
+  margin-top: 0.25rem;
+}
+
+.login-card .error-banner {
+  margin-top: 0.75rem;
+}
+
 .account-portal-overlay {
   position: fixed;
   inset: 0;

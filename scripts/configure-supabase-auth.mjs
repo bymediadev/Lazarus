@@ -34,10 +34,13 @@ const siteUrl =
 const redirectUrls = [
   "http://localhost:5173",
   "http://localhost:5173/**",
+  "http://localhost:5173/?lazarus_reset=1",
   "http://127.0.0.1:5173",
   "http://127.0.0.1:5173/**",
+  "http://127.0.0.1:5173/?lazarus_reset=1",
   siteUrl,
   `${siteUrl.replace(/\/$/, "")}/**`,
+  `${siteUrl.replace(/\/$/, "")}/?lazarus_reset=1`,
 ].join(",");
 
 const body = {

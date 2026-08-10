@@ -7,7 +7,7 @@ End users sign into **Lazarus Deal Recovery** — not the Supabase website. Supa
 | Path | Flow |
 |------|------|
 | **Sign in / Create account** | Email + password → Supabase Auth (`signInWithPassword` / server `createUser`) |
-| **Forgot password** | Supabase reset email (needs SMTP / mailer configured) |
+| **Forgot password** | Server mints a recovery session (bypasses inbox rate limits) → **Save new password** screen. Best-effort email still attempted when the mailer allows it. |
 | **Account portal** | Signed-in users: view email, change password, sign out |
 | **Google / HubSpot / Salesforce** | Existing Lazarus OAuth popup → session bridge |
 
@@ -41,7 +41,9 @@ Server already has `SUPABASE_URL` / keys. After deploy, the UI loads anon creden
 
 ### Optional URL allow-list
 
-If password-reset redirects fail, add your app origins under Supabase → Authentication → URL Configuration (Site URL + Redirect URLs). Users still never log into that dashboard.
+If password-reset redirects fail, add your app origins under Supabase → Authentication → URL Configuration (Site URL + Redirect URLs), including `http://localhost:5173/?lazarus_reset=1` and your production origin with `/?lazarus_reset=1`. Users still never log into that dashboard.
+
+After the email link opens Lazarus, you should see a **Save new password** screen (not the main product). Request a fresh reset link after deploying this fix — older links may not include the reset hint.
 
 ---
 
