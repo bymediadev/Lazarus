@@ -40,6 +40,7 @@ import { isHubSpotConfigured } from "./integrations/hubspot/config.js";
 import { registerSalesforceRoutes } from "./integrations/salesforce/routes.js";
 import { registerWhiteWhaleRoutes } from "./integrations/whitewhale/routes.js";
 import { isWhiteWhaleConfigured } from "./integrations/whitewhale/config.js";
+import { lookupWhiteWhaleIntelForAccount } from "./integrations/whitewhale/lookup.js";
 import { isSalesforceConfigured } from "./integrations/salesforce/config.js";
 import { answerGuideQuestion } from "./guide.js";
 import {
@@ -302,6 +303,11 @@ app.post("/api/post-mortem", requireApiKey, uploadFields, async (req, res) => {
       return;
     }
 
+    const whitewhaleIntel = await lookupWhiteWhaleIntelForAccount(deepContext.accountId);
+    if (whitewhaleIntel) {
+      deepContext.whitewhaleContext = whitewhaleIntel;
+    }
+
     const result = await analyzeTranscript(transcript, { dealValue, deepContext });
 
     const recurringVetoHolders = deepContext.historicalCrmContext?.length
@@ -325,7 +331,11 @@ app.post("/api/post-mortem", requireApiKey, uploadFields, async (req, res) => {
           diagnosis: result.diagnosis,
           actionPlan: result.action_plan.join("\n"),
           transcriptText: rawTranscript,
-          analysisJson: JSON.stringify({ ...result, processed_at: processedAt }),
+          analysisJson: JSON.stringify({
+            ...result,
+            processed_at: processedAt,
+            whitewhale_intel: whitewhaleIntel,
+          }),
           ...(ingestMetadata ? { ingestMetadata: ingestMetadata as Record<string, unknown> } : {}),
           dealMemorySummary: dealMemorySummary as Record<string, unknown>,
         })
@@ -385,6 +395,7 @@ app.post("/api/post-mortem", requireApiKey, uploadFields, async (req, res) => {
       audio_meta: audioMeta ?? null,
       warnings,
       relevance,
+      whitewhale_intel: whitewhaleIntel,
     });
   } catch (err) {
     console.error("Post-mortem error:", err);

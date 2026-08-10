@@ -210,6 +210,43 @@ export default function AnalysisReport({
         <div className="card-body"><p>{r.executive_summary}</p></div>
       </article>
 
+      {r.whitewhale_intel?.domain && (
+        <article className="card card-neutral whitewhale-report" aria-label="Why Now buying signals">
+          <h2 className="card-title">Why Now / Buying Signals</h2>
+          <div className="card-body">
+            <p className="meta-line">
+              {r.whitewhale_intel.name || r.whitewhale_intel.domain}
+              {r.whitewhale_intel.scaled_score != null &&
+                ` · WhiteWhale score ${r.whitewhale_intel.scaled_score}`}
+            </p>
+            {r.whitewhale_intel.summary && (
+              <p className="whitewhale-why-now">{r.whitewhale_intel.summary}</p>
+            )}
+            {r.whitewhale_intel.signals.length > 0 && (
+              <ul className="whitewhale-signal-list">
+                {r.whitewhale_intel.signals.slice(0, 8).map((signal, i) => {
+                  const source = signal.sources?.[0];
+                  return (
+                    <li key={`${signal.name}-${i}`}>
+                      <strong>{signal.name}</strong>
+                      {signal.answer ? ` — ${signal.answer}` : ""}
+                      {source?.headline || source?.one_sentence_summary ? (
+                        <span className="whitewhale-signal-source">
+                          {" "}
+                          (
+                          {source.headline || source.one_sentence_summary}
+                          {source.source ? ` · ${source.source}` : ""})
+                        </span>
+                      ) : null}
+                    </li>
+                  );
+                })}
+              </ul>
+            )}
+          </div>
+        </article>
+      )}
+
       {r.stakeholders && r.stakeholders.length > 0 && (
         <article className="card card-neutral">
           <h2 className="card-title">People Map (Human Bottlenecks)</h2>

@@ -1,3 +1,6 @@
+import type { WhiteWhaleAccountIntel } from "../shared/whitewhaleTypes";
+export type { WhiteWhaleAccountIntel };
+
 export type EnterpriseDealStatus =
   | "ACTIVE"
   | "STALLED — RECOVERABLE"
@@ -373,6 +376,8 @@ export interface PostMortemResult {
   processed_at?: string;
   id?: string | null;
   warnings?: string[];
+  /** Why Now / buying signals from WhiteWhale (server auto-lookup). */
+  whitewhale_intel?: WhiteWhaleAccountIntel | null;
   weighted_cause_structure?: WeightedCauseStructure;
   constraint_model?: unknown;
   root_cause_analysis?: unknown;

@@ -18,7 +18,6 @@ import FounderCommandCenter from "./components/FounderCommandCenter";
 import { isPasswordRecoveryPending } from "./lib/passwordRecovery";
 import { pushHubSpotNote } from "./lib/hubspotIntegration";
 import { pushSalesforceNote } from "./lib/salesforceIntegration";
-import type { WhiteWhaleAccountIntel } from "./lib/whitewhaleIntegration";
 import { TRUST_PACK_NAV, TRUST_PACK_OPEN_EVENT, type TrustPackSlug } from "./lib/trustPack";
 import { API_BASE, apiTargetLabel, PostMortemApiError, runPostMortem } from "./lib/api";
 import {
@@ -123,7 +122,6 @@ export default function App() {
   const [salesCycleDays, setSalesCycleDays] = useState("");
   const [historicalCrmJson, setHistoricalCrmJson] = useState("");
   const [historicalParseError, setHistoricalParseError] = useState<string | null>(null);
-  const [whitewhaleIntel, setWhitewhaleIntel] = useState<WhiteWhaleAccountIntel | null>(null);
   const [liveTranscriptPayload, setLiveTranscriptPayload] = useState<LiveTranscriptTurn[]>([]);
   const [liveSessionObjections, setLiveSessionObjections] = useState<
     { text: string; status: string; source: string }[]
@@ -196,7 +194,6 @@ export default function App() {
       forceAnalysis?: boolean;
       hubspotDealId?: string;
       salesforceOpportunityId?: string;
-      whitewhaleContext?: WhiteWhaleAccountIntel | null;
     }) => {
       const data = await runPostMortem({
         file: payload.file,
@@ -213,7 +210,6 @@ export default function App() {
         forceAnalysis: payload.forceAnalysis,
         hubspotDealId: payload.hubspotDealId,
         salesforceOpportunityId: payload.salesforceOpportunityId,
-        whitewhaleContext: payload.whitewhaleContext ?? undefined,
       });
       setResult(normalizeResult({ ...data, sources: data.sources, processed_at: data.processed_at }));
       setWarnings(data.warnings ?? []);
@@ -588,7 +584,6 @@ export default function App() {
         forceAnalysis,
         hubspotDealId: linkedHubSpotDealId ?? undefined,
         salesforceOpportunityId: linkedSalesforceOppId ?? undefined,
-        whitewhaleContext: whitewhaleIntel,
       });
       if (
         shouldEnforceGuestCap({ signedIn: !!auth.session, opsUser })
@@ -822,11 +817,9 @@ export default function App() {
               accountId={accountId}
               salesCycleDays={salesCycleDays}
               historicalJson={historicalCrmJson}
-              whitewhaleIntel={whitewhaleIntel}
               onAccountIdChange={setAccountId}
               onSalesCycleDaysChange={setSalesCycleDays}
               onHistoricalJsonChange={setHistoricalCrmJson}
-              onWhitewhaleIntelChange={setWhitewhaleIntel}
               onParseError={setHistoricalParseError}
               onCrmNotice={(message) => {
                 setSyncNotice(message);

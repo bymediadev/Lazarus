@@ -3,6 +3,7 @@ import {
   type VetoHolderRef,
   normalizeVetoHolders,
 } from "../shared/deepContextTypes.js";
+import type { WhiteWhaleAccountIntel } from "../shared/whitewhaleTypes.js";
 
 export type { VetoHolderRef, HistoricalCrmContextEntry };
 
@@ -24,6 +25,8 @@ export interface DeepContextInput {
   historicalCrmContext?: HistoricalCrmContextEntry[];
   liveTranscriptPayload?: LiveTranscriptTurn[];
   liveSessionObjections?: LiveSessionObjection[];
+  /** Account buying signals / Why Now (from WhiteWhale). */
+  whitewhaleContext?: WhiteWhaleAccountIntel | null;
 }
 
 export interface LiveDealTriage {
@@ -67,6 +70,8 @@ export interface IngestMetadata {
   account_id?: string;
   sales_cycle_days?: number;
   historical_crm_context?: HistoricalCrmContextEntry[];
+  whitewhale_domain?: string;
+  whitewhale_scaled_score?: number | null;
   live_session_objections?: {
     count: number;
     open_count: number;
@@ -289,8 +294,9 @@ export function parseDeepContextFromBody(body: Record<string, unknown>): DeepCon
 export function buildIngestMetadata(ctx: DeepContextInput): IngestMetadata | undefined {
   const hasHistory = (ctx.historicalCrmContext?.length ?? 0) > 0;
   const hasObjections = (ctx.liveSessionObjections?.length ?? 0) > 0;
+  const hasWw = !!ctx.whitewhaleContext?.domain;
 
-  if (!ctx.accountId && !ctx.salesCycleDays && !hasHistory && !hasObjections) {
+  if (!ctx.accountId && !ctx.salesCycleDays && !hasHistory && !hasObjections && !hasWw) {
     return undefined;
   }
 
@@ -298,6 +304,10 @@ export function buildIngestMetadata(ctx: DeepContextInput): IngestMetadata | und
   if (ctx.accountId) metadata.account_id = ctx.accountId;
   if (ctx.salesCycleDays) metadata.sales_cycle_days = ctx.salesCycleDays;
   if (hasHistory) metadata.historical_crm_context = ctx.historicalCrmContext;
+  if (ctx.whitewhaleContext?.domain) {
+    metadata.whitewhale_domain = ctx.whitewhaleContext.domain;
+    metadata.whitewhale_scaled_score = ctx.whitewhaleContext.scaled_score ?? null;
+  }
 
   if (hasObjections && ctx.liveSessionObjections) {
     const open_count = ctx.liveSessionObjections.filter(
@@ -431,6 +441,33 @@ export function buildDeepContextMessageBlock(ctx: DeepContextInput): string {
     parts.push(
       "LIVE SESSION OBJECTIONS (from meeting companion — cross-reference with dialogue):",
       JSON.stringify(ctx.liveSessionObjections, null, 2)
+    );
+  }
+
+  if (ctx.whitewhaleContext?.domain) {
+    const ww = ctx.whitewhaleContext;
+    const signalLines = (ww.signals ?? [])
+      .slice(0, 8)
+      .map((s) => {
+        const src =
+          s.sources?.[0]?.headline ||
+          s.sources?.[0]?.one_sentence_summary ||
+          s.sources?.[0]?.source ||
+          "";
+        return `- ${s.name}: ${s.answer}${src ? ` (source: ${src})` : ""}`;
+      })
+      .join("\n");
+    parts.push(
+      [
+        "WHITEWHALE ACCOUNT BUYING SIGNALS (market timing / Why Now — NOT CRM notes; use for forecastability and recoverable-vs-flat-no judgment only):",
+        `Domain: ${ww.domain}`,
+        ww.name ? `Account name: ${ww.name}` : "",
+        ww.scaled_score != null ? `WhiteWhale scaled score: ${ww.scaled_score}` : "",
+        ww.summary ? `Why Now narrative: ${ww.summary}` : "",
+        signalLines ? `Positive signals:\n${signalLines}` : "No positive signals returned.",
+      ]
+        .filter(Boolean)
+        .join("\n")
     );
   }
 
