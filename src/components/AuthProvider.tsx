@@ -120,7 +120,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const startProviderLogin = useCallback(async (provider: LazarusLoginProvider) => {
-    openProviderConnectPopup(provider);
+    await openProviderConnectPopup(provider);
   }, []);
 
   const completeProviderLogin = useCallback(async (provider: LazarusLoginProvider) => {

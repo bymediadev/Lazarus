@@ -146,14 +146,12 @@ export default function LoginScreen() {
       `Approve ${provider === "google" ? "Google" : provider === "hubspot" ? "HubSpot" : "Salesforce"} in the popup — Lazarus signs you in only after that succeeds.`
     );
     setBusy(provider);
-    try {
-      void auth.startProviderLogin(provider);
-    } catch (err) {
+    void auth.startProviderLogin(provider).catch((err) => {
       pendingProviderRef.current = null;
       setError(err instanceof Error ? err.message : `Could not open ${provider} sign-in`);
       setBusy(null);
       setNotice(null);
-    }
+    });
   };
 
   const switchMode = (next: Mode) => {

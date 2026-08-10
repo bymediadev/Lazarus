@@ -283,7 +283,22 @@ export function providerConnectUrl(provider: LazarusLoginProvider): string {
   return `${API_BASE}/api/integrations/salesforce/connect`;
 }
 
-export function openProviderConnectPopup(provider: LazarusLoginProvider): Window {
+/** Ensure the API is reachable before opening the OAuth popup (avoids blank "refused" tabs). */
+export async function assertApiReachableForOAuth(): Promise<void> {
+  try {
+    const res = await fetch(`${API_BASE}/api/health`, { method: "GET" });
+    if (!res.ok) {
+      throw new Error(`API health check failed (${res.status})`);
+    }
+  } catch {
+    throw new Error(
+      "Cannot reach the Lazarus API (connection refused). Run npm run dev so the server is on localhost:3001, then try Google / HubSpot again."
+    );
+  }
+}
+
+export async function openProviderConnectPopup(provider: LazarusLoginProvider): Promise<Window> {
+  await assertApiReachableForOAuth();
   const popup = window.open(
     providerConnectUrl(provider),
     `lazarus-${provider}-login`,
