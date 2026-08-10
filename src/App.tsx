@@ -20,6 +20,16 @@ import { pushHubSpotNote } from "./lib/hubspotIntegration";
 import { pushSalesforceNote } from "./lib/salesforceIntegration";
 import { TRUST_PACK_NAV, TRUST_PACK_OPEN_EVENT, type TrustPackSlug } from "./lib/trustPack";
 import { API_BASE, apiTargetLabel, PostMortemApiError, runPostMortem } from "./lib/api";
+import {
+  captureDemoBypassFromUrl,
+  GUEST_ANALYSIS_CAP,
+  getGuestUsage,
+  guestCapLockMessage,
+  guestNearCapMessage,
+  incrementGuestUsage,
+  isGuestUsageLocked,
+  shouldEnforceGuestCap,
+} from "./lib/guestUsage";
 import { fetchFounderMe } from "./lib/founderApi";
 import { publishOAuthComplete, subscribeOAuthComplete } from "./lib/oauthBridge";
 import {
@@ -94,6 +104,12 @@ export default function App() {
   const [activeTab, setActiveTab] = useState<InputTab>("call");
   const [guideOpen, setGuideOpen] = useState(false);
   const [accountPortalOpen, setAccountPortalOpen] = useState(false);
+  const [loginOpen, setLoginOpen] = useState(false);
+  const [loginMode, setLoginMode] = useState<"signin" | "signup">("signin");
+  const [guestUsage, setGuestUsage] = useState(() => {
+    captureDemoBypassFromUrl();
+    return getGuestUsage();
+  });
   const [guideHighlight, setGuideHighlight] = useState<string | null>(null);
   const [linkedHubSpotDealId, setLinkedHubSpotDealId] = useState<string | null>(null);
   const [linkedSalesforceOppId, setLinkedSalesforceOppId] = useState<string | null>(null);
@@ -201,6 +217,23 @@ export default function App() {
     },
     []
   );
+
+  useEffect(() => {
+    captureDemoBypassFromUrl();
+    setGuestUsage(getGuestUsage());
+  }, [auth.session?.access_token]);
+
+  const enforceGuestCap = shouldEnforceGuestCap({
+    signedIn: !!auth.session,
+    opsUser,
+  });
+  const guestLocked = enforceGuestCap && guestUsage >= GUEST_ANALYSIS_CAP;
+  const guestNearCap = enforceGuestCap && guestUsage === GUEST_ANALYSIS_CAP - 1;
+
+  const openSignupPortal = useCallback(() => {
+    setLoginMode("signup");
+    setLoginOpen(true);
+  }, []);
 
   useEffect(() => {
     let cancelled = false;
@@ -486,6 +519,15 @@ export default function App() {
       return;
     }
 
+    if (
+      shouldEnforceGuestCap({ signedIn: !!auth.session, opsUser }) &&
+      isGuestUsageLocked()
+    ) {
+      setError(guestCapLockMessage());
+      openSignupPortal();
+      return;
+    }
+
     const historicalCrmContext = parseHistoricalCrmJson(historicalCrmJson);
     if (historicalCrmJson.trim() && historicalCrmContext === null) {
       setError("Historical CRM context must be valid JSON array.");
@@ -543,6 +585,12 @@ export default function App() {
         hubspotDealId: linkedHubSpotDealId ?? undefined,
         salesforceOpportunityId: linkedSalesforceOppId ?? undefined,
       });
+      if (
+        shouldEnforceGuestCap({ signedIn: !!auth.session, opsUser })
+      ) {
+        const next = incrementGuestUsage();
+        setGuestUsage(next);
+      }
       if (fieldSessionId) {
         await clearSessionChunks(fieldSessionId);
         setFieldSessionId(null);
@@ -551,6 +599,9 @@ export default function App() {
       if (err instanceof PostMortemApiError && err.code === "NOT_SALES_EVIDENCE") {
         setError(err.message);
         setRelevanceBlocked(true);
+      } else if (err instanceof PostMortemApiError && err.code === "GUEST_USAGE_LIMIT") {
+        setError(err.message);
+        openSignupPortal();
       } else if (err instanceof TypeError) {
         setRelevanceBlocked(false);
         setError(
@@ -677,13 +728,7 @@ export default function App() {
 
   return (
     <div className={`app${guideHighlight ? ` guide-highlighting` : ""}`}>
-      {auth.configured && auth.loading ? (
-        <div className="login-screen">
-          <p className="login-sub">Loading session…</p>
-        </div>
-      ) : auth.configured && !auth.session ? (
-        <LoginScreen />
-      ) : auth.session && (auth.passwordRecovery || isPasswordRecoveryPending()) ? (
+      {auth.session && (auth.passwordRecovery || isPasswordRecoveryPending()) ? (
         <PasswordRecoveryScreen />
       ) : auth.session && !opsChecked ? (
         <div className="login-screen">
@@ -699,7 +744,6 @@ export default function App() {
       <header className="header">
         <div className="header-brand">
           <img src="/logo.png" alt="Lazarus Deal Recovery" className="header-logo" />
-          <h1>Lazarus Deal Recovery</h1>
           <span className="tag">Judgment Layer</span>
         </div>
         <div className="header-right">
@@ -719,6 +763,30 @@ export default function App() {
             >
               Ops HQ
             </button>
+          )}
+          {auth.configured && !auth.session && !auth.loading && (
+            <div className="header-auth-links">
+              <button
+                type="button"
+                className="header-auth-link"
+                onClick={() => {
+                  setLoginMode("signin");
+                  setLoginOpen(true);
+                }}
+              >
+                Login
+              </button>
+              <button
+                type="button"
+                className="btn-secondary header-logout"
+                onClick={() => {
+                  setLoginMode("signup");
+                  setLoginOpen(true);
+                }}
+              >
+                Sign up
+              </button>
+            </div>
           )}
           {auth.session && (
             <button
@@ -1002,9 +1070,44 @@ export default function App() {
               </div>
             )}
 
-            <button className="run-button" data-guide-target="guide-run-analysis" onClick={() => void handleRun(false)} disabled={loading}>
-              {loading ? "Analyzing…" : `Run Analysis${channelCount ? ` (${channelCount})` : ""}`}
+            <button
+              className="run-button"
+              data-guide-target="guide-run-analysis"
+              onClick={() => void handleRun(false)}
+              disabled={loading || guestLocked}
+            >
+              {loading
+                ? "Analyzing…"
+                : guestLocked
+                  ? "Sign up to continue"
+                  : `Run Analysis${channelCount ? ` (${channelCount})` : ""}`}
             </button>
+
+            {enforceGuestCap && !guestLocked && (
+              <p className="guest-usage-meta">
+                Free analyses: {Math.max(0, GUEST_ANALYSIS_CAP - guestUsage)} of {GUEST_ANALYSIS_CAP}{" "}
+                left
+                {!auth.session && " · Sign up to save results"}
+              </p>
+            )}
+
+            {guestNearCap && (
+              <div className="warning-banner guest-usage-banner">
+                <p>{guestNearCapMessage()}</p>
+                <button type="button" className="btn-secondary" onClick={openSignupPortal}>
+                  Sign up
+                </button>
+              </div>
+            )}
+
+            {guestLocked && (
+              <div className="error-banner guest-usage-lock">
+                <p>{guestCapLockMessage()}</p>
+                <button type="button" className="run-button" onClick={openSignupPortal}>
+                  Sign up to continue
+                </button>
+              </div>
+            )}
 
             <p className="upload-consent">
               Only upload content you’re authorized to use.{" "}
@@ -1036,7 +1139,7 @@ export default function App() {
                     type="button"
                     className="btn-secondary relevance-override-btn"
                     onClick={() => void handleRun(true)}
-                    disabled={loading}
+                    disabled={loading || guestLocked}
                   >
                     Analyze anyway
                   </button>
@@ -1113,6 +1216,12 @@ export default function App() {
       />
 
       <AccountPortal open={accountPortalOpen} onClose={() => setAccountPortalOpen(false)} />
+      {loginOpen && (
+        <LoginScreen
+          initialMode={loginMode}
+          onClose={() => setLoginOpen(false)}
+        />
+      )}
         </>
       )}
     </div>

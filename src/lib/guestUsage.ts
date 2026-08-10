@@ -1,0 +1,96 @@
+/** Guest freemium usage — client-side counter (server also soft-limits anonymous). */
+
+export const GUEST_ANALYSIS_CAP = 5;
+const STORAGE_KEY = "lazarus_guest_analyses";
+const DEMO_BYPASS_KEY = "lazarus_demo_bypass";
+
+function readCount(): number {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    const n = Number(raw);
+    return Number.isFinite(n) && n > 0 ? Math.floor(n) : 0;
+  } catch {
+    return 0;
+  }
+}
+
+function writeCount(n: number): void {
+  try {
+    localStorage.setItem(STORAGE_KEY, String(Math.max(0, Math.floor(n))));
+  } catch {
+    /* private mode */
+  }
+}
+
+/** Capture ?demo=1 once so shared demo machines stay unlocked for the tab session. */
+export function captureDemoBypassFromUrl(): boolean {
+  if (typeof window === "undefined") return false;
+  try {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get("demo") === "1") {
+      sessionStorage.setItem(DEMO_BYPASS_KEY, "1");
+      return true;
+    }
+  } catch {
+    /* ignore */
+  }
+  return isDemoBypassActive();
+}
+
+export function isDemoBypassActive(): boolean {
+  const viteEnv = (
+    import.meta as ImportMeta & { env?: Record<string, string | undefined> }
+  ).env;
+  if ((viteEnv?.VITE_GUEST_USAGE_BYPASS ?? "").trim().toLowerCase() === "true") {
+    return true;
+  }
+  try {
+    return sessionStorage.getItem(DEMO_BYPASS_KEY) === "1";
+  } catch {
+    return false;
+  }
+}
+
+export function getGuestUsage(): number {
+  return readCount();
+}
+
+export function guestAnalysesRemaining(): number {
+  return Math.max(0, GUEST_ANALYSIS_CAP - readCount());
+}
+
+export function isGuestUsageLocked(): boolean {
+  return readCount() >= GUEST_ANALYSIS_CAP;
+}
+
+/** True when one free run remains (warn before lock). */
+export function isGuestUsageNearCap(): boolean {
+  return guestAnalysesRemaining() === 1;
+}
+
+export function incrementGuestUsage(): number {
+  const next = readCount() + 1;
+  writeCount(next);
+  return next;
+}
+
+/**
+ * Guests are capped unless signed in, ops, or demo bypass.
+ * Signed-in users are never guest-capped (caller should skip).
+ */
+export function shouldEnforceGuestCap(opts: {
+  signedIn: boolean;
+  opsUser?: boolean;
+}): boolean {
+  if (opts.signedIn || opts.opsUser) return false;
+  if (isDemoBypassActive()) return false;
+  return true;
+}
+
+export function guestCapLockMessage(): string {
+  return `You’ve used your ${GUEST_ANALYSIS_CAP} free analyses. Sign up to continue — paid plans come next.`;
+}
+
+export function guestNearCapMessage(): string {
+  return "1 free analysis left — sign up to keep going after this run.";
+}

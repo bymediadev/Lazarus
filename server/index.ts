@@ -47,6 +47,11 @@ import {
 } from "./crmDealLinks.js";
 import { registerAuthRoutes } from "./authRoutes.js";
 import { optionalAuthUserId } from "./authMiddleware.js";
+import {
+  guestServerLimitMessage,
+  isAnonymousGuestRateLimited,
+  isDemoUsageBypassAllowed,
+} from "./guestRateLimit.js";
 import { apiEventsMiddleware, setApiErrorLocal } from "./apiEvents.js";
 import { registerFounderRoutes } from "./founderRoutes.js";
 
@@ -195,6 +200,17 @@ function requireApiKey(req: express.Request, res: express.Response, next: expres
 
 app.post("/api/post-mortem", requireApiKey, uploadFields, async (req, res) => {
   try {
+    const authUserIdEarly = (await optionalAuthUserId(req)) ?? undefined;
+    if (!authUserIdEarly && !isDemoUsageBypassAllowed(req)) {
+      if (isAnonymousGuestRateLimited(req)) {
+        res.status(429).json({
+          error: guestServerLimitMessage(),
+          code: "GUEST_USAGE_LIMIT",
+        });
+        return;
+      }
+    }
+
     const processedAt = new Date().toISOString();
     const dealValue = parseFloat(String(req.body.deal_value)) || 0;
     const deepContext = parseDeepContextFromBody(req.body as Record<string, unknown>);
@@ -294,20 +310,23 @@ app.post("/api/post-mortem", requireApiKey, uploadFields, async (req, res) => {
       recurringVetoHolders
     );
 
-    const authUserId = (await optionalAuthUserId(req)) ?? undefined;
-    const savedId = await savePostMortem({
-      userId: authUserId,
-      clientName: result.client_name,
-      dealValue,
-      dealStatus: result.deal_classification.status,
-      headline: result.executive_summary,
-      diagnosis: result.diagnosis,
-      actionPlan: result.action_plan.join("\n"),
-      transcriptText: rawTranscript,
-      analysisJson: JSON.stringify({ ...result, processed_at: processedAt }),
-      ...(ingestMetadata ? { ingestMetadata: ingestMetadata as Record<string, unknown> } : {}),
-      dealMemorySummary: dealMemorySummary as Record<string, unknown>,
-    });
+    const authUserId = authUserIdEarly;
+    // Guests can run analyses for demos; only persist when signed in.
+    const savedId = authUserId
+      ? await savePostMortem({
+          userId: authUserId,
+          clientName: result.client_name,
+          dealValue,
+          dealStatus: result.deal_classification.status,
+          headline: result.executive_summary,
+          diagnosis: result.diagnosis,
+          actionPlan: result.action_plan.join("\n"),
+          transcriptText: rawTranscript,
+          analysisJson: JSON.stringify({ ...result, processed_at: processedAt }),
+          ...(ingestMetadata ? { ingestMetadata: ingestMetadata as Record<string, unknown> } : {}),
+          dealMemorySummary: dealMemorySummary as Record<string, unknown>,
+        })
+      : null;
 
     const linkedHubSpotDealId = String(req.body?.hubspot_deal_id ?? "").trim();
     const linkedSalesforceOppId = String(req.body?.salesforce_opportunity_id ?? "").trim();

@@ -1295,26 +1295,10 @@ body {
 }
 
 .header-logo {
-  height: 40px;
+  height: 56px;
   width: auto;
   object-fit: contain;
-}
-
-.header-brand h1 {
-  font-family: var(--mono);
-  font-size: 0.95rem;
-  font-weight: 700;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  white-space: nowrap;
-}
-
-@media (max-width: 720px) {
-  .header-brand h1 {
-    white-space: normal;
-    font-size: 0.85rem;
-    letter-spacing: 0.06em;
-  }
+  border-radius: 4px;
 }
 
 .header-brand .tag {
@@ -2000,6 +1984,25 @@ body {
   color: var(--teal);
   text-align: center;
   line-height: 1.35;
+}
+
+.guest-usage-meta {
+  margin: 0.45rem 0 0;
+  font-size: 0.72rem;
+  color: var(--muted);
+  text-align: center;
+}
+
+.guest-usage-banner,
+.guest-usage-lock {
+  margin-top: 0.65rem;
+  display: grid;
+  gap: 0.5rem;
+}
+
+.guest-usage-banner .btn-secondary,
+.guest-usage-lock .run-button {
+  justify-self: start;
 }
 
 .upload-consent {
@@ -3932,6 +3935,56 @@ body {
   gap: 0.65rem;
 }
 
+.header-auth-links {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+}
+
+.header-auth-link {
+  background: none;
+  border: none;
+  color: var(--muted);
+  cursor: pointer;
+  font-family: var(--mono);
+  font-size: 0.68rem;
+  font-weight: 600;
+  padding: 0.35rem 0.4rem;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.header-auth-link:hover {
+  color: var(--teal, #3dd6c6);
+}
+
+.login-modal-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 90;
+  display: grid;
+  place-items: center;
+  padding: 1.5rem;
+}
+
+.login-modal-overlay .guide-backdrop {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+}
+
+.login-modal-overlay .login-card {
+  position: relative;
+  z-index: 1;
+}
+
+.login-continue-guest {
+  display: block;
+  width: 100%;
+  margin-top: 0.85rem;
+  text-align: center;
+}
+
 .login-screen {
   min-height: 100vh;
   display: grid;
@@ -3951,14 +4004,11 @@ body {
 }
 
 .login-logo {
-  width: 42px;
-  height: 42px;
-  margin-bottom: 0.75rem;
-}
-
-.login-card h1 {
-  margin: 0 0 0.35rem;
-  font-size: 1.25rem;
+  display: block;
+  width: 160px;
+  height: auto;
+  margin: 0 auto 1rem;
+  border-radius: 6px;
 }
 
 .login-sub {
@@ -3966,6 +4016,7 @@ body {
   font-size: 0.85rem;
   margin: 0 0 1rem;
   line-height: 1.45;
+  text-align: center;
 }
 
 .login-mode-tabs {

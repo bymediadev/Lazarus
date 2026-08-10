@@ -6,10 +6,21 @@ End users sign into **Lazarus Deal Recovery** — not the Supabase website. Supa
 
 | Path | Flow |
 |------|------|
-| **Sign in / Create account** | Email + password → Supabase Auth (`signInWithPassword` / server `createUser`) |
+| **Sign in / Create account** | Optional — header **Login** / **Sign up** open a portal. Guests get **5 free analyses**, then must sign up to continue. Analyses save only when signed in. |
 | **Forgot password** | Server mints a recovery session (bypasses inbox rate limits) → **Save new password** screen. Best-effort email still attempted when the mailer allows it. |
 | **Account portal** | Signed-in users: view email, change password, sign out |
 | **Google / HubSpot / Salesforce** | Existing Lazarus OAuth popup → session bridge |
+
+### Guest freemium
+
+| Who | Cap | Persist |
+|-----|-----|---------|
+| Guest (not logged in) | 5 analyses (client), then lock + Sign up CTA | No |
+| Signed-in user | Unlimited for now | Yes |
+| Ops/founder | Unlimited | Yes |
+| Demo machine | `?demo=1` (tab session) or `VITE_GUEST_USAGE_BYPASS=true` | Same as above |
+
+Anonymous API abuse soft-limit: ~10 analyses/day per IP+UA (`GUEST_ANALYSIS_DAILY_LIMIT`). Authenticated requests skip it. Production demo header bypass requires `GUEST_USAGE_DEMO_BYPASS=true`.
 
 Passwords live in Supabase Auth (hashed). Changing password uses the signed-in session (`updateUser({ password })`).
 

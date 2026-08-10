@@ -25,6 +25,20 @@ export function apiAuthHeaders(json = false): Record<string, string> {
   return headers;
 }
 
+/** Extra headers for post-mortem (demo bypass on trusted machines). */
+export function postMortemHeaders(): Record<string, string> {
+  const headers = apiAuthHeaders();
+  try {
+    const demo =
+      sessionStorage.getItem("lazarus_demo_bypass") === "1" ||
+      (viteEnv?.VITE_GUEST_USAGE_BYPASS ?? "").trim().toLowerCase() === "true";
+    if (demo) headers["X-Lazarus-Demo-Bypass"] = "1";
+  } catch {
+    /* ignore */
+  }
+  return headers;
+}
+
 export function apiTargetLabel(): string {
   if (!API_BASE) return "local API (localhost:3001)";
   try {
@@ -142,7 +156,7 @@ export async function runPostMortem(payload: PostMortemPayload): Promise<PostMor
   const url = `${API_BASE}/api/post-mortem`;
   const res = await fetch(url, {
     method: "POST",
-    headers: apiAuthHeaders(),
+    headers: postMortemHeaders(),
     body: formData,
   });
 
