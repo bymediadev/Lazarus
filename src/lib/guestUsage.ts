@@ -1,8 +1,34 @@
-/** Guest freemium usage — client-side counter (server also soft-limits anonymous). */
+/** Guest freemium usage — client-side counter (server also soft-limits non-founder). */
 
 export const GUEST_ANALYSIS_CAP = 5;
 const STORAGE_KEY = "lazarus_guest_analyses";
 const DEMO_BYPASS_KEY = "lazarus_demo_bypass";
+
+/** Founder demo account — the only email with uncapped free analyses. */
+export const FOUNDER_UNLIMITED_EMAILS = ["joshua.bennett003@gmail.com"] as const;
+
+function normalizeEmail(email: string | null | undefined): string {
+  return (email ?? "").trim().toLowerCase();
+}
+
+/** True for the founder account that skips free-analysis limits. */
+export function isFounderUnlimitedEmail(email: string | null | undefined): boolean {
+  const e = normalizeEmail(email);
+  if (!e) return false;
+  if ((FOUNDER_UNLIMITED_EMAILS as readonly string[]).includes(e)) return true;
+  try {
+    const viteEnv = (
+      import.meta as ImportMeta & { env?: Record<string, string | undefined> }
+    ).env;
+    const extra = (viteEnv?.VITE_FOUNDER_EMAILS ?? "")
+      .split(",")
+      .map((x: string) => x.trim().toLowerCase())
+      .filter(Boolean);
+    return extra.includes(e);
+  } catch {
+    return false;
+  }
+}
 
 function readCount(): number {
   try {
@@ -75,22 +101,28 @@ export function incrementGuestUsage(): number {
 }
 
 /**
- * Guests are capped unless signed in, ops, or demo bypass.
- * Signed-in users are never guest-capped (caller should skip).
+ * Free-analysis cap applies to everyone except the founder account (and ops role / demo bypass).
+ * Regular signed-in users still hit the freemium lock — demos run on the founder login.
  */
 export function shouldEnforceGuestCap(opts: {
-  signedIn: boolean;
+  signedIn?: boolean;
   opsUser?: boolean;
+  email?: string | null;
 }): boolean {
-  if (opts.signedIn || opts.opsUser) return false;
+  // Founder email wins even before /api/founder/me resolves
+  if (isFounderUnlimitedEmail(opts.email)) return false;
+  if (opts.opsUser) return false;
   if (isDemoBypassActive()) return false;
   return true;
 }
 
-export function guestCapLockMessage(): string {
-  return `You’ve used your ${GUEST_ANALYSIS_CAP} free analyses. Sign up to continue — paid plans come next.`;
+export function guestCapLockMessage(signedIn = false): string {
+  if (signedIn) {
+    return `You’ve used your ${GUEST_ANALYSIS_CAP} free analyses. Paid plans come next — founder demos use the founder login.`;
+  }
+  return `You’ve used your ${GUEST_ANALYSIS_CAP} free analyses. Sign up to save work — paid plans unlock more analyses.`;
 }
 
 export function guestNearCapMessage(): string {
-  return "1 free analysis left — sign up to keep going after this run.";
+  return "1 free analysis left before the freemium lock.";
 }

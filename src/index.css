@@ -3963,6 +3963,12 @@ body {
   gap: 0.65rem;
 }
 
+.header-ops-underhood {
+  white-space: nowrap;
+  font-size: 0.72rem;
+  letter-spacing: 0.02em;
+}
+
 .header-auth-links {
   display: flex;
   align-items: center;
@@ -4344,6 +4350,42 @@ body {
   color: var(--muted);
 }
 
+.ops-stat-foot {
+  display: block;
+  color: var(--muted);
+  font-size: 0.65rem;
+  margin-top: 0.15rem;
+}
+
+.ops-stat-changed {
+  outline: 1px solid color-mix(in srgb, var(--teal, #3dd6c6) 45%, transparent);
+}
+
+.ops-delta {
+  font-size: 0.72rem;
+  font-weight: 500;
+  color: var(--muted);
+}
+
+.ops-inline-link {
+  background: none;
+  border: none;
+  color: var(--teal, #3dd6c6);
+  cursor: pointer;
+  font: inherit;
+  padding: 0;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.ops-apis-headline {
+  margin: 0.75rem 0 1rem;
+}
+
+.ops-usage-bars {
+  margin: 0.75rem 0 1.25rem;
+}
+
 .ops-stat strong {
   font-size: 1.2rem;
 }
@@ -4470,4 +4512,281 @@ body {
   border: 1px solid rgba(232, 93, 93, 0.4);
   font-size: 0.85rem;
   color: #f0a0a0;
+}
+
+/* --- Deal lifecycle (signed-in My deals) --- */
+.deal-life-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 95;
+  display: grid;
+  place-items: stretch;
+}
+
+.deal-life-overlay .guide-backdrop {
+  position: absolute;
+  inset: 0;
+}
+
+.deal-life-panel {
+  position: relative;
+  z-index: 1;
+  margin: 1rem auto;
+  width: min(1100px, calc(100vw - 1.5rem));
+  max-height: calc(100vh - 2rem);
+  overflow: auto;
+  background: var(--panel, #12161c);
+  border: 1px solid var(--panel-border, rgba(255, 255, 255, 0.12));
+  border-radius: 8px;
+  padding: 1.1rem 1.25rem 1.5rem;
+  box-shadow: 0 18px 50px rgba(0, 0, 0, 0.45);
+}
+
+.deal-life-header {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  align-items: flex-start;
+  margin-bottom: 1rem;
+}
+
+.deal-life-header h2 {
+  margin: 0.15rem 0 0.35rem;
+  font-size: 1.35rem;
+}
+
+.deal-life-header p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.88rem;
+  max-width: 40rem;
+  line-height: 1.45;
+}
+
+.deal-life-kicker {
+  font-size: 0.68rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--teal, #3dd6c6);
+  margin: 0 !important;
+}
+
+.deal-life-header-actions {
+  display: flex;
+  gap: 0.45rem;
+  flex-shrink: 0;
+}
+
+.deal-life-muted {
+  color: var(--muted);
+  font-size: 0.85rem;
+  line-height: 1.45;
+}
+
+.deal-life-error {
+  padding: 0.55rem 0.75rem;
+  border-radius: 4px;
+  background: rgba(232, 93, 93, 0.12);
+  border: 1px solid rgba(232, 93, 93, 0.4);
+  color: #f0a0a0;
+  font-size: 0.85rem;
+}
+
+.deal-life-summary {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(7rem, 1fr));
+  gap: 0.55rem;
+  margin: 0.75rem 0 1rem;
+}
+
+.deal-life-summary > div {
+  padding: 0.55rem 0.65rem;
+  border: 1px solid var(--panel-border, rgba(255, 255, 255, 0.1));
+  border-radius: 4px;
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+}
+
+.deal-life-summary span {
+  font-size: 0.68rem;
+  color: var(--muted);
+}
+
+.deal-life-summary strong {
+  font-size: 1.1rem;
+}
+
+.deal-life-body {
+  display: grid;
+  grid-template-columns: minmax(220px, 0.9fr) minmax(0, 1.4fr);
+  gap: 1rem;
+}
+
+@media (max-width: 820px) {
+  .deal-life-body {
+    grid-template-columns: 1fr;
+  }
+}
+
+.deal-life-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  max-height: 60vh;
+  overflow: auto;
+}
+
+.deal-life-list-item {
+  width: 100%;
+  text-align: left;
+  background: rgba(0, 0, 0, 0.22);
+  border: 1px solid var(--panel-border, rgba(255, 255, 255, 0.1));
+  border-radius: 4px;
+  padding: 0.65rem 0.7rem;
+  color: inherit;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  font: inherit;
+}
+
+.deal-life-list-item:hover,
+.deal-life-list-item.active {
+  border-color: color-mix(in srgb, var(--teal, #3dd6c6) 55%, transparent);
+}
+
+.deal-life-list-title {
+  font-weight: 650;
+  font-size: 0.92rem;
+}
+
+.deal-life-list-meta {
+  font-size: 0.72rem;
+  color: var(--muted);
+}
+
+.deal-life-pill {
+  display: inline-block;
+  width: fit-content;
+  font-size: 0.68rem;
+  font-weight: 600;
+  padding: 0.15rem 0.4rem;
+  border-radius: 3px;
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.deal-life-pill-good {
+  background: rgba(61, 214, 198, 0.18);
+  color: var(--teal, #3dd6c6);
+}
+
+.deal-life-pill-warn {
+  background: rgba(230, 180, 70, 0.16);
+  color: #e6b446;
+}
+
+.deal-life-pill-bad {
+  background: rgba(232, 93, 93, 0.16);
+  color: #f0a0a0;
+}
+
+.deal-life-delta {
+  font-size: 0.75rem;
+  color: var(--muted);
+}
+
+.deal-life-delta-up {
+  color: var(--teal, #3dd6c6);
+}
+
+.deal-life-delta-down {
+  color: #f0a0a0;
+}
+
+.deal-life-detail h3 {
+  margin: 0 0 0.35rem;
+}
+
+.deal-life-detail h4 {
+  margin: 1rem 0 0.4rem;
+  font-size: 0.85rem;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.deal-life-detail-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.55rem;
+  margin: 0.75rem 0;
+}
+
+.deal-life-detail-grid > div {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  padding: 0.5rem 0.6rem;
+  border: 1px solid var(--panel-border, rgba(255, 255, 255, 0.1));
+  border-radius: 4px;
+}
+
+.deal-life-detail-grid span {
+  font-size: 0.68rem;
+  color: var(--muted);
+}
+
+.deal-life-blocker {
+  font-size: 0.88rem;
+  line-height: 1.45;
+}
+
+.deal-life-timeline {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+  border-left: 2px solid rgba(61, 214, 198, 0.35);
+  padding-left: 0.85rem;
+}
+
+.deal-life-timeline-card {
+  background: rgba(0, 0, 0, 0.22);
+  border: 1px solid var(--panel-border, rgba(255, 255, 255, 0.1));
+  border-radius: 4px;
+  padding: 0.7rem 0.75rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.deal-life-timeline-top {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.deal-life-timeline-when {
+  font-size: 0.75rem;
+  color: var(--muted);
+}
+
+.deal-life-timeline-status {
+  margin: 0;
+  font-weight: 600;
+  font-size: 0.88rem;
+}
+
+.deal-life-timeline-card .btn-primary {
+  align-self: flex-start;
+  margin-top: 0.25rem;
 }

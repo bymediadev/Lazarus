@@ -13,14 +13,13 @@
     <a href="/api/trust-pack/terms">Terms of Service</a>
     <a href="/api/trust-pack/dpa">Data Processing Addendum</a>
     <a href="/api/trust-pack/security-overview">Security Overview</a>
-    <a href="/api/trust-pack/battlecard">Security Battlecard</a>
   </div>
 
   <header class="legal-header">
     <img src="/logo.png" alt="Lazarus Deal Recovery" />
     <h1>Security Overview</h1>
     <p class="legal-meta">
-      <strong>Version:</strong> 1.2 · August 2026 · Aligned to Lazarus Deal Recovery v1 (live evidence channels)<br />
+      <strong>Version:</strong> 1.3 · August 2026 · Aligned to Lazarus Deal Recovery (guest freemium + optional accounts)<br />
       <strong>Provider:</strong> Lazarus Deal Recovery — Lazarus Revenue Intelligence Inc., Ontario, Canada<br />
       <strong>Contact:</strong> security@lazarusrevenue.com
     </p>
@@ -32,31 +31,40 @@
     It describes the <strong>current</strong> Lazarus Deal Recovery architecture — not a certification claim.
   </p>
 
-  <h2>1. Product summary (v1 — shipped)</h2>
+  <h2>1. Product summary (shipped)</h2>
   <p>
-    Lazarus Deal Recovery v1 is a <strong>deterministic deal autopsy engine</strong> for stalled B2B pipeline.
+    Lazarus Deal Recovery is a <strong>deterministic deal autopsy / revenue intelligence engine</strong> for stalled B2B pipeline.
     Customers assemble an <strong>evidence package</strong> from uploads, mailbox thread search, live meeting
-    transcripts, field capture, and optional HubSpot note import. A private API server transcribes audio
-    (optional AssemblyAI), runs AI-assisted extraction (Layer 1), deterministic scoring (Layer 2),
-    and returns a deal autopsy report with evidence quotes, People Map, Deal Risk Index (DRI), and
-    recovery recommendations. Humans decide; Lazarus Deal Recovery does not send outreach or close deals autonomously.
+    transcripts, field capture, optional HubSpot note import, and optional account-signal enrichment.
+    A private API server transcribes audio (optional AssemblyAI), runs AI-assisted extraction (Layer 1),
+    deterministic scoring (Layer 2), and returns a deal autopsy report with evidence quotes, People Map,
+    Deal Risk Index (DRI), and recovery recommendations. Humans decide; Lazarus Deal Recovery does not send
+    outreach or close deals autonomously.
   </p>
   <table class="legal-table">
-    <tr><th>Included in v1</th><th>Not in v1 (roadmap)</th></tr>
+    <tr><th>Included today</th><th>Not yet (roadmap)</th></tr>
     <tr>
-      <td>Per-deal autopsy from audio, transcript, Word/PDF, and email threads</td>
-      <td>Bi-directional CRM write-back / Salesforce sync</td>
+      <td>Guest freemium analyses (limited) + optional Supabase Auth login</td>
+      <td>Paid self-serve billing / plan portal</td>
     </tr>
     <tr>
-      <td>User-initiated Gmail / Outlook thread search (read-only OAuth)</td>
+      <td>Account-scoped save of analyses for signed-in users (guests do not persist)</td>
+      <td>Org-wide multi-seat admin with SSO (SAML)</td>
+    </tr>
+    <tr>
+      <td>Per-deal autopsy from audio, transcript, Word/PDF, and email threads</td>
+      <td>Bi-directional CRM write-back / full Salesforce sync</td>
+    </tr>
+    <tr>
+      <td>Optional CRM deal-link metadata + deal lifecycle UI (in progress)</td>
       <td>Always-on inbox scraping or silent mailbox webhooks</td>
     </tr>
     <tr>
-      <td>Live meeting triage (Zoom RTMS; Meet / Teams where configured)</td>
+      <td>User-initiated Gmail / Outlook thread search (read-only OAuth)</td>
       <td>Org-wide executive dashboard across full pipeline</td>
     </tr>
     <tr>
-      <td>In-browser field / in-person capture</td>
+      <td>Live meeting triage (Zoom RTMS; Meet / Teams where configured)</td>
       <td>White-label partner console / multi-client branding</td>
     </tr>
     <tr>
@@ -64,12 +72,16 @@
       <td>Autonomous AI SDR or automated outreach</td>
     </tr>
     <tr>
-      <td>Grounding audit + deterministic DRI / viability / trajectory</td>
+      <td>Optional WhiteWhale account buying-signal enrichment on reports</td>
       <td>SOC 2 Type II certification</td>
     </tr>
     <tr>
-      <td>Optional save to Supabase + rescue outcome metadata</td>
-      <td>Encrypted OAuth token vault / SSO (SAML)</td>
+      <td>Grounding audit + deterministic DRI / viability / trajectory</td>
+      <td>Encrypted OAuth token vault / formal pen-test report pack</td>
+    </tr>
+    <tr>
+      <td>Founder Ops Command Center (internal; founder/ops role only)</td>
+      <td>Customer-facing admin audit console</td>
     </tr>
   </table>
   <p>
@@ -80,18 +92,27 @@
   <h2>2. Architecture</h2>
   <table class="legal-table">
     <tr><th>Component</th><th>Role</th><th>Data access</th></tr>
-    <tr><td>Web console</td><td>Evidence intake, report display</td><td>No database credentials; calls private API only</td></tr>
-    <tr><td>API server</td><td>Transcription, Gemini extract, scoring, OAuth connectors, persistence</td><td>Service role (server-side only)</td></tr>
-    <tr><td>Supabase</td><td>PostgreSQL + auth (when enabled)</td><td>RLS on tenant tables; service role for API writes</td></tr>
-    <tr><td>Google Gemini</td><td>Text extraction API</td><td>Transcript / stitched evidence sent per request; zero-training config</td></tr>
+    <tr><td>Web console</td><td>Evidence intake, report display, optional login</td><td>No database credentials; calls private API only</td></tr>
+    <tr><td>API server</td><td>Transcription, Gemini extract, scoring, OAuth connectors, persistence, freemium limits</td><td>Service role (server-side only)</td></tr>
+    <tr><td>Supabase Auth + PostgreSQL</td><td>Optional login; RLS-isolated saves for signed-in users</td><td>Per-user rows via <code>user_id</code>; service role for API writes</td></tr>
+    <tr><td>Google Gemini</td><td>Text extraction API</td><td>Transcript / stitched evidence sent per request; zero-training config where available</td></tr>
     <tr><td>AssemblyAI</td><td>Speech-to-text when Customer uploads audio</td><td>Audio buffer sent per request; not stored by Lazarus Deal Recovery</td></tr>
+    <tr><td>WhiteWhale (optional)</td><td>Account buying signals / Why Now</td><td>Company domain lookup when configured</td></tr>
     <tr><td>Google (Gmail / Meet)</td><td>Optional read-only mailbox + meeting connect</td><td>User-authorized OAuth; thread text only when searched/attached</td></tr>
     <tr><td>Microsoft Graph (Outlook / Teams)</td><td>Optional read-only mailbox + meeting connect</td><td>User-authorized OAuth; conversation text when searched/attached</td></tr>
     <tr><td>Zoom</td><td>Optional live RTMS transcript stream</td><td>Webhook-authenticated live turns during an explicit session</td></tr>
-    <tr><td>HubSpot</td><td>Optional read-only deals + notes import</td><td>User-authorized OAuth; no CRM write scopes</td></tr>
+    <tr><td>HubSpot</td><td>Optional read-only deals + notes import</td><td>User-authorized OAuth; no CRM write scopes in the standard path</td></tr>
   </table>
 
-  <h2>2a. Live evidence channels</h2>
+  <h2>2a. Guest freemium vs signed-in persistence</h2>
+  <table class="legal-table">
+    <tr><th>Mode</th><th>Auth</th><th>Persistence</th><th>Limits</th></tr>
+    <tr><td>Guest</td><td>None required</td><td>Analysis not saved to an account</td><td>Client + server freemium / soft rate limits</td></tr>
+    <tr><td>Signed-in (customer)</td><td>Supabase Auth</td><td>Analyses may be saved under <code>user_id</code> with RLS</td><td>Freemium soft limits unless on a paid plan (when offered)</td></tr>
+    <tr><td>Founder / ops</td><td>Supabase Auth + allowlist / role</td><td>Same persistence model; Ops Command Center for support</td><td>Founder demo account may be uncapped for demos</td></tr>
+  </table>
+
+  <h2>2b. Live evidence channels</h2>
   <p>
     Channels are <strong>user-initiated</strong>. Lazarus Deal Recovery does not silently scrape inboxes or
     join every meeting. Mailbox search attaches specific deal threads; live sessions require an explicit
@@ -104,14 +125,16 @@
     <tr><td>Field capture</td><td>Browser recording the user starts</td><td>Short audio buffer → transcript; audio not the system of record</td></tr>
     <tr><td>HubSpot notes</td><td>Read-only deals + notes scopes</td><td>Selected deal note text for historical context</td></tr>
     <tr><td>Upload</td><td>Explicit file upload</td><td>Parsed document text or transcribed audio</td></tr>
+    <tr><td>WhiteWhale (optional)</td><td>Server-side API when configured</td><td>Account/domain signal summary for report enrichment</td></tr>
   </table>
 
   <h2>3. Data classification</h2>
   <table class="legal-table">
     <tr><th>Class</th><th>Examples</th><th>Handling</th></tr>
-    <tr><td>Customer confidential</td><td>Recordings, transcripts, deal names</td><td>Encrypted, RLS-isolated, retention-limited</td></tr>
-    <tr><td>Derived intelligence</td><td>Scores, DRI, People Map JSON</td><td>Stored per tenant; no public model training</td></tr>
+    <tr><td>Customer confidential</td><td>Recordings, transcripts, deal names</td><td>Encrypted in transit; stored only when signed-in save applies; RLS-isolated; retention-limited</td></tr>
+    <tr><td>Derived intelligence</td><td>Scores, DRI, People Map JSON</td><td>Stored per user when saved; no public model training</td></tr>
     <tr><td>Anonymous metadata</td><td>Rescue outcome vectors (no transcript)</td><td>Retained post-purge for product analytics</td></tr>
+    <tr><td>Operational telemetry</td><td>API event logs for founder/ops</td><td>Internal diagnostics; not used to train public models</td></tr>
     <tr><td>Credentials</td><td>API keys, service role</td><td>Environment variables; never in frontend</td></tr>
   </table>
 
@@ -120,13 +143,13 @@
     <tr><th>Control</th><th>Implementation</th></tr>
     <tr><td>Encryption in transit</td><td>TLS 1.3 (HTTPS) for all client and API traffic</td></tr>
     <tr><td>Encryption at rest</td><td>AES-256 via Supabase / cloud infrastructure</td></tr>
-    <tr><td>Tenant isolation</td><td>PostgreSQL RLS on <code>call_post_mortems</code> and <code>rescue_outcomes</code>; per-user rows when Supabase Auth + <code>user_id</code> are enabled</td></tr>
-    <tr><td>Privileged access</td><td>Service role bypasses RLS server-side only; RPC functions locked to service role</td></tr>
+    <tr><td>Tenant isolation</td><td>PostgreSQL RLS on customer tables; per-user rows when Supabase Auth + <code>user_id</code> are used</td></tr>
+    <tr><td>Privileged access</td><td>Service role bypasses RLS server-side only; RPC functions locked to service role; founder/ops routes require allowlisted login</td></tr>
     <tr><td>Browser exposure</td><td>Service role and Gemini keys never shipped to client</td></tr>
-    <tr><td>AI data use</td><td>APIs configured for zero retention / no public model training</td></tr>
+    <tr><td>AI data use</td><td>APIs configured for zero retention / no public model training where available</td></tr>
     <tr><td>Anti-hallucination</td><td>Server-side grounding audit; invented content stripped before scoring</td></tr>
-    <tr><td>Retention</td><td>Default 30-day purge of raw <code>transcript_text</code>; analysis JSON retained</td></tr>
-    <tr><td>API hardening (prod)</td><td>Optional <code>LAZARUS_API_KEY</code>, CORS allowlist, cron secret for purge jobs</td></tr>
+    <tr><td>Retention</td><td>Default 30-day purge of raw <code>transcript_text</code> on saved records; analysis JSON retained until deleted</td></tr>
+    <tr><td>API hardening (prod)</td><td>Optional <code>LAZARUS_API_KEY</code>, CORS allowlist, cron secret for purge / alert jobs, freemium soft limits</td></tr>
   </table>
 
   <h2>5. Recording and mailbox consent</h2>
@@ -134,8 +157,8 @@
     Lazarus Deal Recovery does not join meetings as a hidden recorder. Customers upload content, start field
     capture, connect a mailbox, or start a live session and warrant they have legal authority to do so
     (PIPEDA, U.S. state laws, employment and customer agreements). Mailbox and CRM connectors are
-    <strong>read-only</strong> and user-initiated. This is the primary legal risk surface for the product —
-    see <a href="/api/trust-pack/terms">Terms §2</a> and <a href="/api/trust-pack/dpa">DPA §2</a>.
+    <strong>read-only</strong> and user-initiated in the standard product path. This is the primary legal risk
+    surface for the product — see <a href="/api/trust-pack/terms">Terms §2</a> and <a href="/api/trust-pack/dpa">DPA §2</a>.
   </div>
 
   <h2>6. Sub-processors</h2>
@@ -143,7 +166,7 @@
 
   <h2>7. Incident response</h2>
   <ul>
-    <li>Monitor API and database availability and error rates</li>
+    <li>Monitor API and database availability and error rates (including founder Ops alerts when configured)</li>
     <li>On confirmed personal data breach: notify affected B2B customers without undue delay</li>
     <li>Contain, investigate, remediate, and document per <a href="/api/trust-pack/dpa">DPA §7</a></li>
   </ul>
@@ -161,13 +184,13 @@
   <p>Commonly requested — disclosed honestly in security reviews:</p>
   <ul>
     <li>SOC 2 Type II — not yet obtained</li>
-    <li>Supabase Auth end-to-end (browser login + <code>user_id</code> on every save)</li>
-    <li>Single sign-on (SAML/OIDC)</li>
-    <li>Formal penetration test report</li>
+    <li>Single sign-on (SAML/OIDC) for customer orgs</li>
+    <li>Formal penetration test report pack for RFPs</li>
     <li>Encrypted OAuth token vault (tokens today are server-side; harden at rest for enterprise)</li>
     <li>Salesforce bi-directional sync / HubSpot write-back</li>
     <li>White-label partner dashboard and custom domains</li>
     <li>Always-on stall detection webhooks (vs user-initiated evidence pull)</li>
+    <li>Paid self-serve plan portal</li>
   </ul>
 
   <h2>10. Document index</h2>
@@ -177,12 +200,13 @@
     <tr><td>PP-001</td><td><a href="/api/trust-pack/privacy">Privacy Policy</a></td><td>All users, DPOs</td></tr>
     <tr><td>DPA-001</td><td><a href="/api/trust-pack/dpa">Data Processing Addendum</a></td><td>B2B / enterprise</td></tr>
     <tr><td>SEC-001</td><td>This Security Overview</td><td>InfoSec, procurement</td></tr>
-    <tr><td>SEC-002</td><td><a href="/api/trust-pack/battlecard">Security Battlecard</a></td><td>Sales meetings</td></tr>
+    <tr><td>SEC-002</td><td>Security Battlecard (founder-internal)</td><td>Founder account only — not a public Trust Pack link</td></tr>
   </table>
 
   <p class="note">
     This overview is accurate to the current codebase. Have legal and security counsel review before
-    submitting to regulated customers or RFPs that require formal certifications.
+    submitting to regulated customers or RFPs that require formal certifications. Lazarus Deal Recovery
+    is not SOC 2 certified today; hosting providers may maintain their own certifications.
   </p>
 </body>
 </html>

@@ -35,6 +35,11 @@ function attachTrustPackMiddleware(server: { middlewares: { use: Function } }) {
       next();
       return;
     }
+    // Battlecard is founder-gated on the Express API — do not serve from Vite.
+    if (match[1] === "battlecard") {
+      next();
+      return;
+    }
     const file = TRUST_PACK_FILES[match[1]];
     if (!file) {
       res.statusCode = 404;
@@ -69,7 +74,11 @@ export default defineConfig({
         target: process.env.VITE_API_URL || "http://localhost:3001",
         changeOrigin: true,
         bypass(req) {
-          if (req.url?.startsWith("/api/trust-pack/")) {
+          // Public Trust Pack HTML is served by Vite middleware; battlecard proxies to API (auth).
+          if (
+            req.url?.startsWith("/api/trust-pack/") &&
+            !req.url.startsWith("/api/trust-pack/battlecard")
+          ) {
             return req.url;
           }
         },
@@ -83,7 +92,10 @@ export default defineConfig({
         target: process.env.VITE_API_URL || "http://localhost:3001",
         changeOrigin: true,
         bypass(req) {
-          if (req.url?.startsWith("/api/trust-pack/")) {
+          if (
+            req.url?.startsWith("/api/trust-pack/") &&
+            !req.url.startsWith("/api/trust-pack/battlecard")
+          ) {
             return req.url;
           }
         },

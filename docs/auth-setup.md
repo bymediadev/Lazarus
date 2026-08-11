@@ -15,12 +15,12 @@ End users sign into **Lazarus Deal Recovery** — not the Supabase website. Supa
 
 | Who | Cap | Persist |
 |-----|-----|---------|
-| Guest (not logged in) | 5 analyses (client), then lock + Sign up CTA | No |
-| Signed-in user | Unlimited for now | Yes |
-| Ops/founder | Unlimited | Yes |
-| Demo machine | `?demo=1` (tab session) or `VITE_GUEST_USAGE_BYPASS=true` | Same as above |
+| Guest (not logged in) | 5 analyses (client), then lock | No |
+| Signed-in free user | Same freemium cap (client + soft daily API limit) | Yes |
+| **Founder only** (`joshua.bennett003@gmail.com`) / ops role | **Unlimited** — use this account for demos | Yes |
+| Demo machine | `?demo=1` (tab session) or `VITE_GUEST_USAGE_BYPASS=true` | Unlocks that browser tab |
 
-Anonymous API abuse soft-limit: ~10 analyses/day per IP+UA (`GUEST_ANALYSIS_DAILY_LIMIT`). Authenticated requests skip it. Production demo header bypass requires `GUEST_USAGE_DEMO_BYPASS=true`.
+No other email skips the free-analysis blocker. Anonymous soft-limit ~10/day per IP+UA (`GUEST_ANALYSIS_DAILY_LIMIT`); signed-in non-founder accounts get a per-user daily soft-limit. Production demo header bypass requires `GUEST_USAGE_DEMO_BYPASS=true`.
 
 Passwords live in Supabase Auth (hashed). Changing password uses the signed-in session (`updateUser({ password })`).
 
@@ -56,6 +56,17 @@ If password-reset redirects fail, add your app origins under Supabase → Authen
 
 After the email link opens Lazarus, you should see a **Save new password** screen (not the main product). Request a fresh reset link after deploying this fix — older links may not include the reset hint.
 
+### Saved deals & lifecycle (signed-in)
+
+After login, **My deals** in the header opens past analyses on your account:
+
+- Deal threads grouped by CRM link (HubSpot/Salesforce) or account + client name
+- Lifecycle phase (stalled vs unstuck/active/closed) without opening the CRM
+- Timeline of runs with viability/risk deltas so you can see improvement or slip
+- **Open this run** reloads the full Recovery Brief
+
+Guests still analyze without persisting; sign in to save.
+
 ---
 
 ## Ops Command Center (founder / part-time hire)
@@ -83,6 +94,8 @@ FOUNDER_ALERT_EMAILS=you@company.com,hire@company.com
 
 `FOUNDER_EMAILS` and `OPS_EMAILS` both unlock the command center. `FOUNDER_ALERT_EMAILS` receives morning / afternoon / evening status emails (and CRITICAL break-throughs).
 
+After you sign in with an allowlisted account, Lazarus opens **Founder Ops Command Center** by default (Overview / Issues / Lookup / System). From the product console, use **Under the hood** in the header to return. Only that account (and other ops emails you add) see this button.
+
 4. Apply SQL migration [`supabase/migrations/010_founder_ops.sql`](../supabase/migrations/010_founder_ops.sql) in the Supabase SQL editor (creates `api_events`, audit, alert state, notes).
 
 5. Optional email delivery (Resend):
@@ -93,6 +106,15 @@ FOUNDER_ALERT_FROM=Lazarus Ops <onboarding@resend.dev>
 FOUNDER_ALERT_TZ=America/New_York
 FOUNDER_ALERT_HOURS=8,13,20
 ```
+
+### APIs & usage tab
+
+In Ops HQ, open **APIs & usage** for a single consolidated view:
+
+- Which providers are **out / degraded** (live probes for Gemini, AssemblyAI, WhiteWhale + config for CRM/DB)
+- Whether failure **categories shifted** vs the prior week (AI / Auth / CRM / Quota / Network)
+- **Billing / end-of-usage** signals (WhiteWhale credits, Gemini 429s, volume spikes)
+- 7-day usage series and per-provider status
 
 GitHub Actions workflows `founder-ops-digests.yml` and `founder-ops-critical.yml` call `/api/founder/alerts/digest` and `/api/founder/alerts/run` with the same `PURGE_CRON_SECRET` / `LAZARUS_API_URL` secrets as retention purge.
 

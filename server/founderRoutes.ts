@@ -9,6 +9,7 @@ import {
 } from "./founderAuth.js";
 import { runCriticalAlertPass, runDigestAlert, isDigestHour } from "./founderAlerts.js";
 import { buildSystemStatus, classifyIssue } from "./founderSystem.js";
+import { buildApisInventory } from "./founderApis.js";
 import { resolveFrontendOrigin } from "./integrations/oauthShared.js";
 
 async function writeAudit(
@@ -265,6 +266,16 @@ export function registerFounderRoutes(app: Express): void {
       });
     } catch (err) {
       res.status(500).json({ error: err instanceof Error ? err.message : "Usage failed" });
+    }
+  });
+
+  /** Consolidated under-the-hood: outages, category shifts, usage, billing signals. */
+  app.get("/api/founder/apis", requireOps, async (_req, res) => {
+    try {
+      const inventory = await buildApisInventory();
+      res.json(inventory);
+    } catch (err) {
+      res.status(500).json({ error: err instanceof Error ? err.message : "APIs inventory failed" });
     }
   });
 

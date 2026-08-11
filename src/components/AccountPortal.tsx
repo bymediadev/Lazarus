@@ -91,6 +91,14 @@ export default function AccountPortal({ open, onClose }: Props) {
         </section>
 
         <section className="account-portal-section">
+          <h3>Saved deals</h3>
+          <p className="meta-line">
+            Use <strong>My deals</strong> in the header for past runs, CRM links, and lifecycle
+            (stalled vs getting unstuck).
+          </p>
+        </section>
+
+        <section className="account-portal-section">
           <button
             type="button"
             className="run-button"

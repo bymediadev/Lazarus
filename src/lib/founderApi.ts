@@ -168,6 +168,66 @@ export async function founderTestDigest(slot = "afternoon") {
   );
 }
 
+export type FounderApisInventory = {
+  checked_at: string;
+  headline: string;
+  status: "ok" | "warning" | "critical";
+  outages: Array<{
+    id: string;
+    label: string;
+    status: string;
+    meaning: string;
+    billing: { level: string; detail: string; metric_label?: string; metric_value?: string | number | null };
+  }>;
+  providers: Array<{
+    id: string;
+    label: string;
+    category: string;
+    status: "ok" | "out" | "degraded" | "not_configured" | "unknown";
+    configured: boolean;
+    meaning: string;
+    billing: {
+      level: "ok" | "watch" | "pay_soon" | "exhausted" | "unknown";
+      detail: string;
+      metric_label?: string;
+      metric_value?: string | number | null;
+    };
+    last_error_at: string | null;
+    last_error_code: string | null;
+    error_count_7d: number;
+    probe: string;
+  }>;
+  category_shift: Array<{
+    category: string;
+    current_7d: number;
+    prior_7d: number;
+    delta: number;
+    changed: boolean;
+  }>;
+  category_changed: boolean;
+  usage: {
+    range: string;
+    series: { day: string; total: number; errors: number; quota_errors: number }[];
+    analyses_7d: number;
+    analyses_prior_7d: number;
+    events_7d: number;
+    errors_7d: number;
+    quota_errors_7d: number;
+    quota_errors_prior_7d: number;
+  };
+  billing_alerts: Array<{
+    id: string;
+    severity: "info" | "warning" | "critical";
+    title: string;
+    detail: string;
+    action: string;
+  }>;
+};
+
+export async function fetchFounderApis(): Promise<FounderApisInventory> {
+  return founderFetch<FounderApisInventory>("/api/founder/apis");
+}
+
 export async function copyText(text: string): Promise<void> {
   await navigator.clipboard.writeText(text);
 }

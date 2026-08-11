@@ -81,6 +81,11 @@ Customer-facing legal/security pages (source in `public/`):
 | ToS-001 | Terms of Service | `/api/trust-pack/terms` |
 | DPA-001 | Data Processing Addendum | `/api/trust-pack/dpa` |
 | SEC-001 | Security Overview | `/api/trust-pack/security-overview` |
+
+Founder-only sales enablement (owner: `joshua.bennett003@gmail.com`; Bearer auth required; open from Founder Ops):
+
+| ID | Doc | Path |
+|----|-----|------|
 | SEC-002 | Security Battlecard | `/api/trust-pack/battlecard` |
 
 Legacy HTML paths (e.g. `/privacy.html`) 301 to the canonical URLs above.

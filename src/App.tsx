@@ -14,6 +14,7 @@ import { useAuth } from "./components/AuthProvider";
 import LoginScreen from "./components/LoginScreen";
 import PasswordRecoveryScreen from "./components/PasswordRecoveryScreen";
 import AccountPortal from "./components/AccountPortal";
+import DealLifecyclePanel from "./components/DealLifecyclePanel";
 import FounderCommandCenter from "./components/FounderCommandCenter";
 import { isPasswordRecoveryPending } from "./lib/passwordRecovery";
 import { pushHubSpotNote } from "./lib/hubspotIntegration";
@@ -104,6 +105,7 @@ export default function App() {
   const [activeTab, setActiveTab] = useState<InputTab>("call");
   const [guideOpen, setGuideOpen] = useState(false);
   const [accountPortalOpen, setAccountPortalOpen] = useState(false);
+  const [dealsPortalOpen, setDealsPortalOpen] = useState(false);
   const [loginOpen, setLoginOpen] = useState(false);
   const [loginMode, setLoginMode] = useState<"signin" | "signup">("signin");
   const [guestUsage, setGuestUsage] = useState(() => {
@@ -226,6 +228,7 @@ export default function App() {
   const enforceGuestCap = shouldEnforceGuestCap({
     signedIn: !!auth.session,
     opsUser,
+    email: auth.user?.email ?? null,
   });
   const guestLocked = enforceGuestCap && guestUsage >= GUEST_ANALYSIS_CAP;
   const guestNearCap = enforceGuestCap && guestUsage === GUEST_ANALYSIS_CAP - 1;
@@ -520,10 +523,14 @@ export default function App() {
     }
 
     if (
-      shouldEnforceGuestCap({ signedIn: !!auth.session, opsUser }) &&
+      shouldEnforceGuestCap({
+        signedIn: !!auth.session,
+        opsUser,
+        email: auth.user?.email ?? null,
+      }) &&
       isGuestUsageLocked()
     ) {
-      setError(guestCapLockMessage());
+      setError(guestCapLockMessage(!!auth.session));
       openSignupPortal();
       return;
     }
@@ -586,10 +593,16 @@ export default function App() {
         salesforceOpportunityId: linkedSalesforceOppId ?? undefined,
       });
       if (
-        shouldEnforceGuestCap({ signedIn: !!auth.session, opsUser })
+        shouldEnforceGuestCap({
+          signedIn: !!auth.session,
+          opsUser,
+          email: auth.user?.email ?? null,
+        })
       ) {
         const next = incrementGuestUsage();
         setGuestUsage(next);
+      } else if (auth.session) {
+        setSyncNotice("Saved to your account — open My deals for timeline & CRM lifecycle.");
       }
       if (fieldSessionId) {
         await clearSessionChunks(fieldSessionId);
@@ -758,10 +771,11 @@ export default function App() {
           {opsUser && (
             <button
               type="button"
-              className="btn-secondary header-logout"
+              className="btn-primary header-ops-underhood"
               onClick={() => setForceProductConsole(false)}
+              title="Open Founder Ops — system health, issues, user lookup, under the hood"
             >
-              Ops HQ
+              Under the hood
             </button>
           )}
           {auth.configured && !auth.session && !auth.loading && (
@@ -789,13 +803,23 @@ export default function App() {
             </div>
           )}
           {auth.session && (
-            <button
-              type="button"
-              className="btn-secondary header-logout"
-              onClick={() => setAccountPortalOpen(true)}
-            >
-              Account
-            </button>
+            <>
+              <button
+                type="button"
+                className="btn-primary header-ops-underhood"
+                onClick={() => setDealsPortalOpen(true)}
+                title="Saved runs, CRM hooks, and deal lifecycle"
+              >
+                My deals
+              </button>
+              <button
+                type="button"
+                className="btn-secondary header-logout"
+                onClick={() => setAccountPortalOpen(true)}
+              >
+                Account
+              </button>
+            </>
           )}
         </div>
       </header>
@@ -1102,7 +1126,7 @@ export default function App() {
 
             {guestLocked && (
               <div className="error-banner guest-usage-lock">
-                <p>{guestCapLockMessage()}</p>
+                <p>{guestCapLockMessage(!!auth.session)}</p>
                 <button type="button" className="run-button" onClick={openSignupPortal}>
                   Sign up to continue
                 </button>
@@ -1216,6 +1240,23 @@ export default function App() {
       />
 
       <AccountPortal open={accountPortalOpen} onClose={() => setAccountPortalOpen(false)} />
+      <DealLifecyclePanel
+        open={dealsPortalOpen}
+        onClose={() => setDealsPortalOpen(false)}
+        onOpenRun={({ analysis, hubspotDealId, salesforceOppId }) => {
+          setResult(
+            normalizeResult({
+              ...(analysis as PostMortemResult),
+              id: String(analysis.id ?? ""),
+            })
+          );
+          if (hubspotDealId) setLinkedHubSpotDealId(hubspotDealId);
+          if (salesforceOppId) setLinkedSalesforceOppId(salesforceOppId);
+          setError(null);
+          setSyncNotice("Opened a saved run from your account.");
+          setLiveSessionActive(false);
+        }}
+      />
       {loginOpen && (
         <LoginScreen
           initialMode={loginMode}

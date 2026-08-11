@@ -1,12 +1,16 @@
 import type { Request } from "express";
+import { isOpsUser, resolveAuthUser } from "./founderAuth.js";
 
-/** Soft anonymous rate limit so clearing localStorage is not unlimited free use. */
+/** Soft freemium rate limit so clearing localStorage is not unlimited free use. */
 
 type Bucket = { count: number; resetAt: number };
 
 const buckets = new Map<string, Bucket>();
 
 const DAY_MS = 24 * 60 * 60 * 1000;
+
+/** Founder demo account — the only hard-coded unlimited email. */
+const FOUNDER_UNLIMITED_EMAILS = new Set(["joshua.bennett003@gmail.com"]);
 
 function dailyLimit(): number {
   const n = Number((process.env.GUEST_ANALYSIS_DAILY_LIMIT ?? "10").trim());
@@ -27,11 +31,9 @@ function pruneExpired(now: number): void {
   }
 }
 
-/** Returns true when the request should be blocked. */
-export function isAnonymousGuestRateLimited(req: Request): boolean {
+function bumpAndLimited(key: string): boolean {
   const now = Date.now();
   pruneExpired(now);
-  const key = clientKey(req);
   let bucket = buckets.get(key);
   if (!bucket || bucket.resetAt <= now) {
     bucket = { count: 0, resetAt: now + DAY_MS };
@@ -44,6 +46,36 @@ export function isAnonymousGuestRateLimited(req: Request): boolean {
   return false;
 }
 
+export function isFounderUnlimitedEmail(email: string | null | undefined): boolean {
+  const e = (email ?? "").trim().toLowerCase();
+  if (!e) return false;
+  if (FOUNDER_UNLIMITED_EMAILS.has(e)) return true;
+  // FOUNDER_EMAILS / OPS_EMAILS env allowlist (ops hire)
+  return isOpsUser({ email: e, app_metadata: {} });
+}
+
+/**
+ * Only founder / ops (and demo bypass) skip freemium.
+ * Regular signed-in accounts remain capped.
+ */
+export async function isFreemiumExempt(req: Request): Promise<boolean> {
+  if (isDemoUsageBypassAllowed(req)) return true;
+  const user = await resolveAuthUser(req);
+  if (!user) return false;
+  if (isOpsUser(user)) return true;
+  return isFounderUnlimitedEmail(user.email);
+}
+
+/** Anonymous IP+UA freemium bucket. */
+export function isAnonymousGuestRateLimited(req: Request): boolean {
+  return bumpAndLimited(clientKey(req));
+}
+
+/** Per-user freemium for signed-in non-founder accounts. */
+export function isSignedInFreemiumRateLimited(userId: string): boolean {
+  return bumpAndLimited(`user:${userId}`);
+}
+
 export function isDemoUsageBypassAllowed(req: Request): boolean {
   const header = String(req.headers["x-lazarus-demo-bypass"] ?? "").trim();
   if (header !== "1") return false;
@@ -53,5 +85,5 @@ export function isDemoUsageBypassAllowed(req: Request): boolean {
 }
 
 export function guestServerLimitMessage(): string {
-  return `Anonymous free analyses are limited for today. Sign up to continue — paid plans come next.`;
+  return `Free analyses are limited for today. Paid plans come next — founder demos use the founder login.`;
 }

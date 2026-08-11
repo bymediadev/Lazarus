@@ -29,7 +29,12 @@ body.wide { max-width: 8.5in; }
   margin-bottom: 1.5rem;
 }
 
-.legal-header img { height: 36px; margin-bottom: 0.5rem; }
+.legal-header img {
+  height: 88px;
+  width: auto;
+  margin-bottom: 0.75rem;
+  border-radius: 4px;
+}
 
 .legal-meta {
   font-size: 0.85rem;

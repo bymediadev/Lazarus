@@ -53,10 +53,12 @@ import { optionalAuthUserId } from "./authMiddleware.js";
 import {
   guestServerLimitMessage,
   isAnonymousGuestRateLimited,
-  isDemoUsageBypassAllowed,
+  isFreemiumExempt,
+  isSignedInFreemiumRateLimited,
 } from "./guestRateLimit.js";
 import { apiEventsMiddleware, setApiErrorLocal } from "./apiEvents.js";
 import { registerFounderRoutes } from "./founderRoutes.js";
+import { registerMeDealRoutes } from "./meDeals.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const distPath = path.join(__dirname, "../dist");
@@ -205,8 +207,17 @@ function requireApiKey(req: express.Request, res: express.Response, next: expres
 app.post("/api/post-mortem", requireApiKey, uploadFields, async (req, res) => {
   try {
     const authUserIdEarly = (await optionalAuthUserId(req)) ?? undefined;
-    if (!authUserIdEarly && !isDemoUsageBypassAllowed(req)) {
-      if (isAnonymousGuestRateLimited(req)) {
+    const freemiumExempt = await isFreemiumExempt(req);
+    if (!freemiumExempt) {
+      if (!authUserIdEarly) {
+        if (isAnonymousGuestRateLimited(req)) {
+          res.status(429).json({
+            error: guestServerLimitMessage(),
+            code: "GUEST_USAGE_LIMIT",
+          });
+          return;
+        }
+      } else if (isSignedInFreemiumRateLimited(authUserIdEarly)) {
         res.status(429).json({
           error: guestServerLimitMessage(),
           code: "GUEST_USAGE_LIMIT",
@@ -601,6 +612,7 @@ registerSalesforceRoutes(app);
 registerWhiteWhaleRoutes(app);
 registerAuthRoutes(app);
 registerFounderRoutes(app);
+registerMeDealRoutes(app);
 registerTrustPackRoutes(app, publicPath);
 
 /** Public assets (logo, legal-shared.css). Trust-pack HTML only via /api/trust-pack/:slug. */

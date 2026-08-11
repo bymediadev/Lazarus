@@ -29,14 +29,22 @@
     <a href="/api/trust-pack/terms">Terms of Service</a>
     <a href="/api/trust-pack/dpa">Data Processing Addendum</a>
     <a href="/api/trust-pack/security-overview">Security Overview</a>
-    <a href="/api/trust-pack/battlecard">Security Battlecard</a>
   </div>
 
   <header class="legal-header">
     <img src="/logo.png" alt="Lazarus Deal Recovery" />
     <h1>Security &amp; Sales Battlecard</h1>
-    <p class="legal-meta">SEC-002 · Sales enablement · v1.11 · August 2026 · Companion to SEC-001</p>
+    <p class="legal-meta">
+      SEC-002 · Founder sales enablement · v1.12 · August 2026 · Companion to SEC-001<br />
+      <strong>Owner account:</strong> joshua.bennett003@gmail.com · Access: Founder Ops only (not public Trust Pack)
+    </p>
   </header>
+
+  <p class="note">
+    <strong>Internal artifact.</strong> This battlecard belongs to the Lazarus founder account
+    (<code>joshua.bennett003@gmail.com</code>). It is gated on the API and opened from Founder Ops —
+    do not distribute as a public legal document. Customer-facing Trust Pack docs remain Privacy, Terms, DPA, and Security Overview.
+  </p>
 
   <h2>What is Lazarus Deal Recovery? (say this first)</h2>
   <div class="win">
@@ -162,8 +170,10 @@
   <div class="vs">
     <strong>Lazarus Deal Recovery only analyzes what you authorize for that deal.</strong>
     You upload files, paste transcripts, search a mailbox for a specific thread, start a live meeting
-    session, record a short field note, or import HubSpot notes. There is no silent always-on inbox scrape
-    and no secret CRM write pipe. Every score traces back to evidence you attached for that run.
+    session, record a short field note, or import HubSpot notes. Optional WhiteWhale enrichment adds
+    account buying signals when configured. Guests can try freemium analyses (not saved); signed-in
+    users may persist reports to their account. There is no silent always-on inbox scrape and no secret
+    CRM write pipe. Every score traces back to evidence you attached for that run.
   </div>
   <table class="legal-table">
     <tr><th>Source</th><th>What it is</th><th>Who provides it</th></tr>
@@ -173,24 +183,26 @@
     <tr><td>Live meeting</td><td>Zoom RTMS (and Meet / Teams where configured)</td><td>Customer starts a live session</td></tr>
     <tr><td>Field capture</td><td>Short in-person audio note</td><td>Customer records in browser (offline-capable)</td></tr>
     <tr><td>HubSpot notes</td><td>Read-only deal notes import</td><td>Customer connects HubSpot (optional)</td></tr>
+    <tr><td>WhiteWhale signals (optional)</td><td>Account buying / Why Now enrichment on the report</td><td>Configured server-side; domain lookup for the deal account</td></tr>
     <tr><td>Historical CRM context</td><td>Past objections, veto-holders, dated notes (JSON)</td><td>Customer paste / API — optional</td></tr>
     <tr><td>Deal value</td><td>Estimated pipeline amount</td><td>Customer enters in UI</td></tr>
   </table>
-  <p><strong>What we do not use as sources today:</strong> Salesforce auto-sync, HubSpot write-back, public web scraping, or training data from other customers.</p>
+  <p><strong>What we do not use as sources today:</strong> Salesforce auto-sync write-back, HubSpot write-back, public web scraping, or training data from other customers.</p>
   <p><em>One-liner:</em> &ldquo;You choose the evidence. We score the deal. Read-only connectors — no secret write pipe.&rdquo;</p>
 
   <h2>What systems does Lazarus Deal Recovery use?</h2>
   <table class="legal-table">
     <tr><th>System</th><th>Role</th><th>What data touches it</th></tr>
-    <tr><td>Lazarus Deal Recovery API server</td><td>Orchestration, grounding audit, scoring, connectors, optional save</td><td>Evidence package content during analysis</td></tr>
-    <tr><td>Web console (browser)</td><td>Intake UI and report display</td><td>Files / OAuth in transit to API — no scoring in browser</td></tr>
+    <tr><td>Lazarus Deal Recovery API server</td><td>Orchestration, grounding audit, scoring, connectors, freemium limits, optional save</td><td>Evidence package content during analysis</td></tr>
+    <tr><td>Web console (browser)</td><td>Intake UI and report display; optional login</td><td>Files / OAuth in transit to API — no scoring in browser</td></tr>
     <tr><td>Google Gemini API</td><td>Layer 1 — reads text, extracts names, quotes, objections</td><td>Transcript / stitched text per request (ephemeral)</td></tr>
     <tr><td>AssemblyAI</td><td>Speech-to-text when audio is uploaded</td><td>Audio buffer per request (optional; paste transcript to skip)</td></tr>
-    <tr><td>Supabase (PostgreSQL)</td><td>Optional persistence, auth, row-level security</td><td>Analysis JSON, transcript text if save enabled — not raw audio</td></tr>
+    <tr><td>Supabase (PostgreSQL + Auth)</td><td>Optional login; persistence for signed-in users; RLS</td><td>Analysis JSON, transcript text if save enabled — not raw audio. Guests do not persist.</td></tr>
+    <tr><td>WhiteWhale (optional)</td><td>Account buying-signal enrichment</td><td>Company domain / account identifiers when configured</td></tr>
     <tr><td>Google / Microsoft / Zoom / HubSpot</td><td>Optional read-only evidence connectors</td><td>Only when the customer connects and pulls or starts a session</td></tr>
   </table>
   <p>API keys and database admin credentials stay on the server. They are never shipped to the browser.</p>
-  <p><em>One-liner:</em> &ldquo;Gemini reads. Our server scores. Your keys never hit the browser.&rdquo;</p>
+  <p><em>One-liner:</em> &ldquo;Gemini reads. Our server scores. Guests try; signed-in users can save. Keys never hit the browser.&rdquo;</p>
 
   <h2>How is the deal scored?</h2>
   <div class="win">
@@ -227,10 +239,10 @@
   <table class="legal-table">
     <tr><th>Resource</th><th>ID / link</th><th>Covers</th></tr>
     <tr><td>Privacy Policy</td><td><a href="/api/trust-pack/privacy">PP-001</a></td><td>What we collect, retention, rights (PIPEDA, CCPA, GDPR references)</td></tr>
-    <tr><td>Terms of Service</td><td><a href="/api/trust-pack/terms">ToS-001</a></td><td>Customer warranty on upload rights, acceptable use</td></tr>
+    <tr><td>Terms of Service</td><td><a href="/api/trust-pack/terms">ToS-001</a></td><td>Customer warranty on upload rights, acceptable use, guest freemium</td></tr>
     <tr><td>Data Processing Addendum</td><td><a href="/api/trust-pack/dpa">DPA-001</a></td><td>B2B processing roles, breach notice, deletion</td></tr>
     <tr><td>Security Overview</td><td><a href="/api/trust-pack/security-overview">SEC-001</a></td><td>Full architecture, controls, sub-processors, roadmap</td></tr>
-    <tr><td>Security Battlecard</td><td><a href="/api/trust-pack/battlecard">SEC-002</a></td><td>Sales + InfoSec talk track (this document)</td></tr>
+    <tr><td>Security Battlecard</td><td>SEC-002 (this document)</td><td>Founder-owned sales + InfoSec talk track — not public</td></tr>
     <tr><td>Google Gemini API Terms</td><td><a href="https://ai.google.dev/gemini-api/terms" rel="noopener noreferrer">ai.google.dev/gemini-api/terms</a></td><td>Google API use for text extraction</td></tr>
     <tr><td>Google Privacy Policy</td><td><a href="https://policies.google.com/privacy" rel="noopener noreferrer">policies.google.com/privacy</a></td><td>Google corporate privacy (API provider)</td></tr>
     <tr><td>AssemblyAI Privacy</td><td><a href="https://www.assemblyai.com/legal/privacy-policy" rel="noopener noreferrer">assemblyai.com/legal/privacy-policy</a></td><td>Transcription sub-processor (when audio uploaded)</td></tr>
@@ -245,10 +257,10 @@
     <tr><th>Topic</th><th>What we do</th></tr>
     <tr><td>AI training</td><td>Your content is not used to train public AI models</td></tr>
     <tr><td>Encryption</td><td>Locked in transit and at rest; audio is not saved to disk</td></tr>
-    <tr><td>Who sees your data</td><td>Each customer only sees their own rows in the database</td></tr>
-    <tr><td>How long we keep stuff</td><td>Raw transcript text: 30-day purge (you can change this). Deal scores and reports: kept for the deal</td></tr>
+    <tr><td>Who sees your data</td><td>Each signed-in customer only sees their own rows; guests do not persist analyses</td></tr>
+    <tr><td>How long we keep stuff</td><td>Raw transcript text: 30-day purge (you can change this). Deal scores and reports: kept for the deal when saved</td></tr>
     <tr><td>Recording calls</td><td>We don&rsquo;t record calls. You upload what you already have the right to use (see Terms)</td></tr>
-    <tr><td>Legal docs</td><td><a href="/api/trust-pack/privacy">Privacy Policy</a> · <a href="/api/trust-pack/terms">Terms of Service</a> · <a href="/api/trust-pack/dpa">Data Processing Addendum</a> · <a href="/api/trust-pack/security-overview">Security Overview</a> · <a href="/api/trust-pack/battlecard">Security Battlecard</a></td></tr>
+    <tr><td>Legal docs (public)</td><td><a href="/api/trust-pack/privacy">Privacy Policy</a> · <a href="/api/trust-pack/terms">Terms of Service</a> · <a href="/api/trust-pack/dpa">Data Processing Addendum</a> · <a href="/api/trust-pack/security-overview">Security Overview</a></td></tr>
   </table>
 
   <h2>How it is built (for IT / security)</h2>
@@ -281,13 +293,15 @@
     <tr><th>&ldquo;AI makes things up.&rdquo;</th><td>We check quotes against the transcript. Fakes get stripped, you get a warning banner, then we score what&rsquo;s left.</td></tr>
     <tr><th>&ldquo;You purge data — how do you remember?&rdquo;</th><td>Recordings go away. Deal scores, people, and blockers stay for the life of the deal.</td></tr>
     <tr><th>&ldquo;Where did this score come from?&rdquo;</th><td>Your evidence → Gemini extracts → server grounds quotes → <code>scoring.ts</code> computes DRI. Formula shown in report.</td></tr>
-    <tr><th>&ldquo;What systems touch our data?&rdquo;</th><td>Lazarus Deal Recovery API, Gemini (extract), AssemblyAI (if audio), optional Google/Microsoft/Zoom/HubSpot connectors, Supabase (if save). Full table in this battlecard + SEC-001.</td></tr>
-    <tr><th>&ldquo;Is our data safe?&rdquo;</th><td>Encryption, contracts, purge options, no public AI training, audio not stored as the system of record.</td></tr>
+    <tr><th>&ldquo;What systems touch our data?&rdquo;</th><td>Lazarus Deal Recovery API, Gemini (extract), AssemblyAI (if audio), optional Google/Microsoft/Zoom/HubSpot connectors, optional WhiteWhale signals, Supabase (if signed-in save). Full table in this battlecard + SEC-001.</td></tr>
+    <tr><th>&ldquo;Is our data safe?&rdquo;</th><td>Encryption, contracts, purge options, no public AI training, audio not stored as the system of record. Guests don&rsquo;t persist; signed-in saves are RLS-scoped.</td></tr>
     <tr><th>&ldquo;SOC 2?&rdquo;</th><td>Not yet. See Security Overview for the roadmap. Good fit for pilot and mid-market today.</td></tr>
+    <tr><th>&ldquo;Do I need an account?&rdquo;</th><td>No for a free try. Sign in if you want analyses saved to your account.</td></tr>
   </table>
 
   <p class="footer">
-    Lazarus Deal Recovery Trust Pack v1.11 · Full detail: <a href="/api/trust-pack/security-overview">SEC-001 Security Overview</a> ·
+    Lazarus Deal Recovery Trust Pack v1.12 · Founder battlecard SEC-002 · Owner: joshua.bennett003@gmail.com ·
+    Full detail: <a href="/api/trust-pack/security-overview">SEC-001 Security Overview</a> ·
     Have legal review before big enterprise deals · Contact: security@lazarusrevenue.com · lazarusrevenue.com
   </p>
 </body>

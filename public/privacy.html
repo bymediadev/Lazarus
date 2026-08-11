@@ -13,14 +13,13 @@
     <a href="/api/trust-pack/terms">Terms of Service</a>
     <a href="/api/trust-pack/dpa">Data Processing Addendum</a>
     <a href="/api/trust-pack/security-overview">Security Overview</a>
-    <a href="/api/trust-pack/battlecard">Security Battlecard</a>
   </div>
 
   <header class="legal-header">
     <img src="/logo.png" alt="Lazarus Deal Recovery" />
     <h1>Privacy Policy</h1>
     <p class="legal-meta">
-      <strong>Version:</strong> 1.2 · August 2026 · Aligned to Lazarus Deal Recovery v1<br />
+      <strong>Version:</strong> 1.3 · August 2026 · Aligned to Lazarus Deal Recovery (guest freemium + optional accounts)<br />
       <strong>Controller / Provider:</strong> Lazarus Deal Recovery (&ldquo;we,&rdquo; &ldquo;us&rdquo;) — Lazarus Revenue Intelligence Inc., Ontario, Canada<br />
       <strong>Contact:</strong> privacy@lazarusrevenue.com
     </p>
@@ -30,24 +29,29 @@
   <h2>1. Who this applies to</h2>
   <p>
     This Privacy Policy describes how Lazarus Deal Recovery collects and uses information when you use our B2B
-    <strong>deal autopsy and call analysis</strong> service (Lazarus Deal Recovery v1). If you use Lazarus Deal Recovery on behalf
-    of a company, your organization is responsible for the business content you upload; we process it
-    as described here and in any executed <a href="/api/trust-pack/dpa">Data Processing Addendum (DPA)</a>.
+    <strong>revenue intelligence / deal recovery</strong> service (forecastability aids and per-deal autopsy).
+    You may try the product as a <strong>guest</strong> (no account) or <strong>sign in</strong> with an optional
+    account (Supabase Auth). If you use Lazarus Deal Recovery on behalf of a company, your organization is
+    responsible for the business content you upload; we process it as described here and in any executed
+    <a href="/api/trust-pack/dpa">Data Processing Addendum (DPA)</a>.
   </p>
 
   <h2>2. Information we collect</h2>
   <table class="legal-table">
     <tr><th>Category</th><th>Examples</th><th>Purpose</th></tr>
-    <tr><td>Account data</td><td>Name, email, organization (when auth is enabled)</td><td>Authentication, support, billing</td></tr>
-    <tr><td>Customer content</td><td>Call recordings (processed in memory), transcripts, documents, mailbox threads you attach, live session turns, field capture, HubSpot notes</td><td>Per-deal autopsy and optional storage of outputs</td></tr>
-    <tr><td>Connector account data</td><td>OAuth tokens and connected account email when you link Gmail, Outlook, Zoom, or HubSpot</td><td>Read-only evidence import; disconnect clears tokens</td></tr>
-    <tr><td>Deal metadata</td><td>Client name, deal value, scores, rescue feedback</td><td>Reporting and product functionality</td></tr>
-    <tr><td>Technical logs</td><td>IP address, browser, API timestamps</td><td>Security, abuse prevention, uptime</td></tr>
+    <tr><td>Account data</td><td>Email, name, organization (when you create or use a login)</td><td>Authentication, support, billing readiness, account-scoped saves</td></tr>
+    <tr><td>Customer content</td><td>Call recordings (processed in memory), transcripts, documents, mailbox threads you attach, live session turns, field capture, HubSpot notes</td><td>Per-deal analysis and optional storage of outputs for signed-in users</td></tr>
+    <tr><td>Account buying signals (optional)</td><td>Company-domain signal summaries when WhiteWhale enrichment is configured</td><td>Deal-context &ldquo;Why Now&rdquo; enrichment on reports — not used to train public AI models</td></tr>
+    <tr><td>Connector account data</td><td>OAuth tokens and connected account email when you link Gmail, Outlook, Zoom, HubSpot, or similar</td><td>Read-only evidence import; disconnect clears tokens</td></tr>
+    <tr><td>Saved analyses &amp; CRM link metadata</td><td>Scores, reports, optional HubSpot/Salesforce deal IDs linked to a saved analysis</td><td>Account history and deal lifecycle features for signed-in users</td></tr>
+    <tr><td>Usage / freemium telemetry</td><td>Analysis counts, IP/user-agent soft limits for guests and non-founder accounts</td><td>Abuse prevention and free-tier enforcement</td></tr>
+    <tr><td>Technical logs</td><td>IP address, browser, API timestamps, error codes</td><td>Security, reliability, founder/ops diagnostics</td></tr>
   </table>
   <p>
-    <strong>Pilot note:</strong> Lazarus Deal Recovery v1 may be used without a login. When Supabase is configured,
-    analysis outputs may be saved server-side; account-based isolation is enabled when Supabase Auth
-    is wired. See <a href="/api/trust-pack/security-overview">Security Overview §2</a>.
+    <strong>Guest vs signed-in:</strong> Guests may run a limited number of free analyses. Guest runs are
+    <strong>not persisted</strong> to an account. When you are signed in, analysis outputs may be saved to your
+    user account in Supabase (with Row-Level Security). See
+    <a href="/api/trust-pack/security-overview">Security Overview §2</a>.
   </p>
 
   <h2>3. Ownership of your content</h2>
@@ -78,18 +82,20 @@
   <p>Security controls are summarized in our <a href="/api/trust-pack/security-overview">Security Overview (SEC-001)</a>. At a high level:</p>
   <ul>
     <li><strong>In transit:</strong> TLS 1.3</li>
-    <li><strong>At rest:</strong> AES-256 (Supabase infrastructure)</li>
-    <li><strong>Tenant isolation:</strong> Row-Level Security (RLS) on customer data tables</li>
-    <li><strong>AI processing:</strong> Third-party APIs (Google Gemini, optional AssemblyAI) configured for zero retention / no model training on your content</li>
+    <li><strong>At rest:</strong> AES-256 (Supabase infrastructure) for stored account data and saved analyses</li>
+    <li><strong>Tenant isolation:</strong> Row-Level Security (RLS) on customer data tables; signed-in saves are scoped to <code>user_id</code></li>
+    <li><strong>AI processing:</strong> Third-party APIs (Google Gemini, optional AssemblyAI) configured for zero retention / no model training on your content where available</li>
     <li><strong>Secrets:</strong> Service credentials stored server-side only — never in the browser</li>
   </ul>
 
   <h2>6. Retention and deletion</h2>
   <table class="legal-table">
     <tr><th>Data type</th><th>Default retention</th></tr>
+    <tr><td>Guest analysis runs</td><td>Not saved to an account; request processing is ephemeral aside from security/abuse logs</td></tr>
     <tr><td>Raw audio uploads</td><td>Processed in memory; not persisted by default</td></tr>
-    <tr><td>Transcript text</td><td>Configurable; default automatic purge/null after <strong>30 days</strong></td></tr>
-    <tr><td>Analysis outputs (JSON, scores)</td><td>Retained for audit unless deleted by customer or on termination</td></tr>
+    <tr><td>Transcript text (signed-in saves)</td><td>Configurable; default automatic purge/null after <strong>30 days</strong></td></tr>
+    <tr><td>Analysis outputs (JSON, scores)</td><td>Retained for signed-in accounts until deleted by the user, founder/ops support action, or contract termination</td></tr>
+    <tr><td>CRM link metadata</td><td>Retained with the linked saved analysis</td></tr>
     <tr><td>Rescue feedback (anonymous metadata)</td><td>Retained without transcript text for product improvement</td></tr>
     <tr><td>Account data</td><td>Until account deletion + reasonable backup window</td></tr>
   </table>
@@ -98,15 +104,16 @@
   <h2>7. Sub-processors</h2>
   <table class="legal-table">
     <tr><th>Provider</th><th>Function</th><th>Location</th></tr>
-    <tr><td>Supabase</td><td>Database hosting, authentication</td><td>North America (default)</td></tr>
+    <tr><td>Supabase</td><td>Database hosting, authentication, optional persistence</td><td>North America (default)</td></tr>
     <tr><td>Google (Gemini API)</td><td>LLM extraction (Layer 1 only; scoring is server-side)</td><td>United States</td></tr>
     <tr><td>AssemblyAI</td><td>Optional audio transcription</td><td>United States</td></tr>
+    <tr><td>WhiteWhale (when configured)</td><td>Optional account buying-signal / Why Now enrichment</td><td>Per WhiteWhale service region</td></tr>
     <tr><td>Google (Gmail / Meet APIs)</td><td>Optional read-only mailbox and meeting connect</td><td>United States</td></tr>
     <tr><td>Microsoft (Graph)</td><td>Optional read-only Outlook / Teams connect</td><td>United States / customer tenant region</td></tr>
     <tr><td>Zoom</td><td>Optional live meeting transcript stream (RTMS)</td><td>United States / customer Zoom region</td></tr>
     <tr><td>HubSpot</td><td>Optional read-only deals and notes import</td><td>United States / customer HubSpot region</td></tr>
   </table>
-  <p>Optional connectors process data only when the customer connects and uses them. Material sub-processor changes will be communicated per the DPA.</p>
+  <p>Optional connectors and enrichment run only when configured and used. Material sub-processor changes will be communicated per the DPA.</p>
 
   <h2>8. Your privacy rights</h2>
   <p>
@@ -132,7 +139,7 @@
     <strong>Startup disclosure:</strong> Suitable for early launch and pilot customers. Before annual
     contracts, regulated industries, or large-scale call processing, have legal counsel review this
     policy together with the <a href="/api/trust-pack/terms">Terms</a>, <a href="/api/trust-pack/dpa">DPA</a>, and
-    <a href="/api/trust-pack/security-overview">Security Overview</a>.
+    <a href="/api/trust-pack/security-overview">Security Overview</a>. Lazarus Deal Recovery is not SOC 2 certified today.
   </p>
 </body>
 </html>

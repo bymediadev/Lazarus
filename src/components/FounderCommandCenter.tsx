@@ -1,6 +1,8 @@
 import { useCallback, useEffect, useState } from "react";
+import { apiAuthHeaders } from "../lib/api";
 import {
   copyText,
+  fetchFounderApis,
   fetchFounderIssues,
   fetchFounderOverview,
   fetchFounderSystem,
@@ -9,9 +11,12 @@ import {
   founderPasswordReset,
   founderSaveNote,
   founderTestDigest,
+  type FounderApisInventory,
 } from "../lib/founderApi";
+import { isFounderUnlimitedEmail } from "../lib/guestUsage";
+import { trustPackUrl } from "../lib/trustPack";
 
-type Tab = "overview" | "issues" | "lookup" | "system";
+type Tab = "overview" | "apis" | "issues" | "lookup" | "system";
 
 type Props = {
   opsEmail: string | null;
@@ -33,6 +38,7 @@ export default function FounderCommandCenter({ opsEmail, onOpenProduct }: Props)
   const [system, setSystem] = useState<Awaited<ReturnType<typeof fetchFounderSystem>> | null>(
     null
   );
+  const [apis, setApis] = useState<FounderApisInventory | null>(null);
 
   const [lookupEmail, setLookupEmail] = useState("");
   const [lookup, setLookup] = useState<Awaited<ReturnType<typeof founderLookup>> | null>(null);
@@ -42,14 +48,16 @@ export default function FounderCommandCenter({ opsEmail, onOpenProduct }: Props)
     setLoading(true);
     setError(null);
     try {
-      const [ov, iss, sys] = await Promise.all([
+      const [ov, iss, sys, inv] = await Promise.all([
         fetchFounderOverview(),
         fetchFounderIssues(),
         fetchFounderSystem(),
+        fetchFounderApis().catch(() => null),
       ]);
       setOverview(ov);
       setIssues(iss.issues);
       setSystem(sys);
+      setApis(inv);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to load ops data");
     } finally {
@@ -64,6 +72,14 @@ export default function FounderCommandCenter({ opsEmail, onOpenProduct }: Props)
   const statusClass = (s: string | undefined) => {
     if (s === "critical") return "ops-status ops-status-critical";
     if (s === "warning") return "ops-status ops-status-warning";
+    return "ops-status ops-status-ok";
+  };
+
+  const providerStatusClass = (s: string) => {
+    if (s === "out" || s === "exhausted" || s === "critical") return "ops-status ops-status-critical";
+    if (s === "degraded" || s === "pay_soon" || s === "watch" || s === "warning")
+      return "ops-status ops-status-warning";
+    if (s === "not_configured" || s === "unknown" || s === "info") return "ops-status";
     return "ops-status ops-status-ok";
   };
 
@@ -91,18 +107,51 @@ export default function FounderCommandCenter({ opsEmail, onOpenProduct }: Props)
   };
 
   const maxPeak = Math.max(1, ...(overview?.peak_hours.map((p) => p.count) ?? [1]));
+  const maxDayTotal = Math.max(1, ...(apis?.usage.series.map((d) => d.total) ?? [1]));
+  const showBattlecard = isFounderUnlimitedEmail(opsEmail);
+
+  const openSecurityBattlecard = async () => {
+    setNotice(null);
+    setError(null);
+    try {
+      const res = await fetch(trustPackUrl("battlecard"), { headers: apiAuthHeaders() });
+      if (!res.ok) {
+        throw new Error(
+          res.status === 403
+            ? "Security Battlecard is limited to the founder account."
+            : `Failed to open battlecard (${res.status})`
+        );
+      }
+      const html = await res.text();
+      const url = URL.createObjectURL(new Blob([html], { type: "text/html" }));
+      window.open(url, "_blank", "noopener,noreferrer");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to open Security Battlecard");
+    }
+  };
 
   return (
     <div className="ops-console">
       <header className="ops-header">
         <div>
           <p className="ops-kicker">Ops Command Center</p>
-          <h1>Lazarus status &amp; hang-ups</h1>
+          <h1>Founder Ops Command Center</h1>
           <p className="ops-sub">
-            Signed in as {opsEmail ?? "ops"} — diagnose here, fix in Cursor.
+            Signed in as {opsEmail ?? "ops"} — under-the-hood view of the live database,
+            API health, hang-ups, and user accounts. Diagnose here, fix in Cursor.
           </p>
         </div>
         <div className="ops-header-actions">
+          {showBattlecard && (
+            <button
+              type="button"
+              className="btn-secondary"
+              onClick={() => void openSecurityBattlecard()}
+              title="Open founder Security Battlecard (SEC-002)"
+            >
+              Security Battlecard
+            </button>
+          )}
           <button type="button" className="btn-secondary" onClick={() => void refresh()}>
             Refresh
           </button>
@@ -116,6 +165,7 @@ export default function FounderCommandCenter({ opsEmail, onOpenProduct }: Props)
         {(
           [
             ["overview", "Overview"],
+            ["apis", "APIs & usage"],
             ["issues", "Issues"],
             ["lookup", "Lookup"],
             ["system", "System"],
@@ -144,6 +194,15 @@ export default function FounderCommandCenter({ opsEmail, onOpenProduct }: Props)
               System {overview.system_status} · checked {new Date(overview.checked_at).toLocaleString()}
             </span>
           </div>
+
+          {apis && (
+            <p className="ops-sub ops-apis-headline">
+              <button type="button" className="ops-inline-link" onClick={() => setTab("apis")}>
+                APIs &amp; usage
+              </button>
+              : {apis.headline}
+            </p>
+          )}
 
           <div className="ops-stat-grid">
             <div className="ops-stat">
@@ -223,6 +282,158 @@ export default function FounderCommandCenter({ opsEmail, onOpenProduct }: Props)
               ? ` · last alert ${overview.last_alert.severity} @ ${new Date(overview.last_alert.last_sent_at).toLocaleString()}`
               : ""}
           </p>
+        </section>
+      )}
+
+      {tab === "apis" && !apis && !loading && (
+        <section className="ops-section">
+          <p className="ops-error">Could not load APIs inventory. Restart the API and click Refresh.</p>
+        </section>
+      )}
+
+      {tab === "apis" && apis && (
+        <section className="ops-section">
+          <div className={statusClass(apis.status)}>
+            <strong>{apis.status.toUpperCase()}</strong>
+            <span>Checked {new Date(apis.checked_at).toLocaleString()}</span>
+          </div>
+          <p className="ops-sub">{apis.headline}</p>
+
+          <h2>What&apos;s out</h2>
+          {apis.outages.length === 0 ? (
+            <p className="ops-sub">Nothing out or degraded right now.</p>
+          ) : (
+            <ul className="ops-list">
+              {apis.outages.map((o) => (
+                <li key={o.id}>
+                  <strong>
+                    {o.label} — {o.status.toUpperCase()}
+                  </strong>
+                  <p className="ops-sub">{o.meaning}</p>
+                  <p className="ops-fix">{o.billing.detail}</p>
+                </li>
+              ))}
+            </ul>
+          )}
+
+          <h2>Need to pay / at the end of usage?</h2>
+          {apis.billing_alerts.length === 0 ? (
+            <p className="ops-sub">No billing or quota alerts. Usage looks fine.</p>
+          ) : (
+            <ul className="ops-list">
+              {apis.billing_alerts.map((a) => (
+                <li key={a.id}>
+                  <div
+                    className={providerStatusClass(
+                      a.severity === "critical" ? "out" : a.severity === "warning" ? "degraded" : "info"
+                    )}
+                  >
+                    <strong>{a.severity.toUpperCase()}</strong>
+                    <span>{a.title}</span>
+                  </div>
+                  <p className="ops-sub">{a.detail}</p>
+                  <p className="ops-fix">{a.action}</p>
+                </li>
+              ))}
+            </ul>
+          )}
+
+          <h2>Error mix — changed vs prior week?</h2>
+          <p className="ops-sub">
+            {apis.category_changed
+              ? "Yes — categorization shifted (AI / Auth / CRM / Quota / Network)."
+              : "No material change in failure categories vs the prior 7 days."}
+          </p>
+          <div className="ops-stat-grid">
+            {apis.category_shift.map((c) => (
+              <div key={c.category} className={`ops-stat${c.changed ? " ops-stat-changed" : ""}`}>
+                <span>{c.category}</span>
+                <strong>
+                  {c.current_7d}
+                  <span className="ops-delta">
+                    {" "}
+                    ({c.delta > 0 ? "+" : ""}
+                    {c.delta})
+                  </span>
+                </strong>
+                <span className="ops-stat-foot">prior {c.prior_7d}</span>
+              </div>
+            ))}
+          </div>
+
+          <h2>Usage (7d)</h2>
+          <div className="ops-stat-grid">
+            <div className="ops-stat">
+              <span>Analyses</span>
+              <strong>{apis.usage.analyses_7d}</strong>
+              <span className="ops-stat-foot">prior {apis.usage.analyses_prior_7d}</span>
+            </div>
+            <div className="ops-stat">
+              <span>API events</span>
+              <strong>{apis.usage.events_7d}</strong>
+            </div>
+            <div className="ops-stat">
+              <span>Errors</span>
+              <strong>{apis.usage.errors_7d}</strong>
+            </div>
+            <div className="ops-stat">
+              <span>Quota errors</span>
+              <strong>{apis.usage.quota_errors_7d}</strong>
+              <span className="ops-stat-foot">prior {apis.usage.quota_errors_prior_7d}</span>
+            </div>
+          </div>
+          {apis.usage.series.length > 0 && (
+            <div className="ops-peak ops-usage-bars">
+              {apis.usage.series.map((d) => (
+                <div
+                  key={d.day}
+                  className="ops-peak-bar-wrap"
+                  title={`${d.day}: ${d.total} events, ${d.errors} errors, ${d.quota_errors} quota`}
+                >
+                  <div
+                    className="ops-peak-bar"
+                    style={{ height: `${Math.max(4, (d.total / maxDayTotal) * 64)}px` }}
+                  />
+                  <span>{d.day.slice(5)}</span>
+                </div>
+              ))}
+            </div>
+          )}
+
+          <h2>Every provider (consolidated)</h2>
+          <ul className="ops-list">
+            {apis.providers.map((p) => (
+              <li key={p.id}>
+                <div className="ops-issue-row">
+                  <div>
+                    <strong>
+                      {p.label}{" "}
+                      <span className="ops-badge">{p.status}</span>{" "}
+                      <span className="ops-badge">{p.category}</span>{" "}
+                      <span className="ops-badge">bill:{p.billing.level}</span>
+                    </strong>
+                    <p className="ops-sub">{p.meaning}</p>
+                    <p className="ops-fix">
+                      {p.billing.detail}
+                      {p.billing.metric_label != null && p.billing.metric_value != null
+                        ? ` · ${p.billing.metric_label}=${p.billing.metric_value}`
+                        : ""}
+                      {p.error_count_7d > 0 ? ` · ${p.error_count_7d} related errors (7d)` : ""}
+                      {p.last_error_at
+                        ? ` · last fail ${new Date(p.last_error_at).toLocaleString()}`
+                        : ""}
+                    </p>
+                  </div>
+                </div>
+              </li>
+            ))}
+          </ul>
+
+          <div className="ops-lookup-actions">
+            <button type="button" className="btn-secondary" onClick={() => void refresh()}>
+              Reprobe APIs
+            </button>
+          </div>
         </section>
       )}
 
