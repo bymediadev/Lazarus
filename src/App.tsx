@@ -757,10 +757,13 @@ export default function App() {
       <header className="header">
         <div className="header-brand">
           <img src="/logo.png" alt="Lazarus Deal Recovery" className="header-logo" />
-          <span className="tag">Judgment Layer</span>
+          <div className="header-brand-copy">
+            <span className="header-product-name">Lazarus Deal Recovery</span>
+            <span className="tag">Forecast &amp; Deal Recovery</span>
+          </div>
         </div>
         <div className="header-right">
-          <span className="header-status">
+          <span className="header-status" aria-live="polite">
             {headerStatus}
             {apiOnline === false &&
               (API_BASE
@@ -782,23 +785,23 @@ export default function App() {
             <div className="header-auth-links">
               <button
                 type="button"
-                className="header-auth-link"
+                className="btn-secondary header-auth-login"
                 onClick={() => {
                   setLoginMode("signin");
                   setLoginOpen(true);
                 }}
               >
-                Login
+                Log In
               </button>
               <button
                 type="button"
-                className="btn-secondary header-logout"
+                className="btn-primary header-auth-signup"
                 onClick={() => {
                   setLoginMode("signup");
                   setLoginOpen(true);
                 }}
               >
-                Sign up
+                Sign Up
               </button>
             </div>
           )}
@@ -836,6 +839,47 @@ export default function App() {
               onLoadDemo={handleLoadDemoTranscript}
               onOpenGuide={() => setGuideOpen(true)}
             />
+
+            <div className="intake-run-cta" aria-label="Primary analysis action">
+              <button
+                className="run-button run-button-above-fold"
+                data-guide-target="guide-run-analysis"
+                onClick={() => void handleRun(false)}
+                disabled={loading || guestLocked}
+              >
+                {loading
+                  ? "Analyzing…"
+                  : guestLocked
+                    ? "Sign up to continue"
+                    : `Run Analysis${channelCount ? ` (${channelCount})` : ""}`}
+              </button>
+
+              {enforceGuestCap && !guestLocked && (
+                <p className="guest-usage-meta">
+                  Free analyses: {Math.max(0, GUEST_ANALYSIS_CAP - guestUsage)} of{" "}
+                  {GUEST_ANALYSIS_CAP} left
+                  {!auth.session && " · Sign up to save results"}
+                </p>
+              )}
+
+              {guestNearCap && (
+                <div className="warning-banner guest-usage-banner">
+                  <p>{guestNearCapMessage()}</p>
+                  <button type="button" className="btn-secondary" onClick={openSignupPortal}>
+                    Sign up
+                  </button>
+                </div>
+              )}
+
+              {guestLocked && (
+                <div className="error-banner guest-usage-lock">
+                  <p>{guestCapLockMessage(!!auth.session)}</p>
+                  <button type="button" className="run-button" onClick={openSignupPortal}>
+                    Sign up to continue
+                  </button>
+                </div>
+              )}
+            </div>
 
             <DealProfilePanel
               accountId={accountId}
@@ -1091,45 +1135,6 @@ export default function App() {
                     {liveSessionObjections.length} live objection(s)
                   </span>
                 )}
-              </div>
-            )}
-
-            <button
-              className="run-button"
-              data-guide-target="guide-run-analysis"
-              onClick={() => void handleRun(false)}
-              disabled={loading || guestLocked}
-            >
-              {loading
-                ? "Analyzing…"
-                : guestLocked
-                  ? "Sign up to continue"
-                  : `Run Analysis${channelCount ? ` (${channelCount})` : ""}`}
-            </button>
-
-            {enforceGuestCap && !guestLocked && (
-              <p className="guest-usage-meta">
-                Free analyses: {Math.max(0, GUEST_ANALYSIS_CAP - guestUsage)} of {GUEST_ANALYSIS_CAP}{" "}
-                left
-                {!auth.session && " · Sign up to save results"}
-              </p>
-            )}
-
-            {guestNearCap && (
-              <div className="warning-banner guest-usage-banner">
-                <p>{guestNearCapMessage()}</p>
-                <button type="button" className="btn-secondary" onClick={openSignupPortal}>
-                  Sign up
-                </button>
-              </div>
-            )}
-
-            {guestLocked && (
-              <div className="error-banner guest-usage-lock">
-                <p>{guestCapLockMessage(!!auth.session)}</p>
-                <button type="button" className="run-button" onClick={openSignupPortal}>
-                  Sign up to continue
-                </button>
               </div>
             )}
 

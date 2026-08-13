@@ -1311,7 +1311,8 @@ body {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 0.75rem 1.5rem;
+  gap: 1rem;
+  padding: 0.85rem 1.5rem;
   border-bottom: 1px solid var(--panel-border);
   background: var(--panel);
 }
@@ -1319,14 +1320,33 @@ body {
 .header-brand {
   display: flex;
   align-items: center;
-  gap: 0.75rem;
+  gap: 0.85rem;
+  min-width: 0;
 }
 
 .header-logo {
-  height: 56px;
+  height: 72px;
   width: auto;
   object-fit: contain;
-  border-radius: 4px;
+  border-radius: 6px;
+  flex-shrink: 0;
+}
+
+.header-brand-copy {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  min-width: 0;
+}
+
+.header-product-name {
+  font-family: var(--font);
+  font-size: 1.05rem;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+  color: var(--text);
+  line-height: 1.15;
+  white-space: nowrap;
 }
 
 .header-brand .tag {
@@ -1337,7 +1357,28 @@ body {
   color: var(--teal);
   border: 1px solid var(--teal);
   padding: 0.15rem 0.5rem;
+  width: fit-content;
   animation: pulse-tag 2s ease-in-out infinite;
+}
+
+@media (max-width: 720px) {
+  .header {
+    padding: 0.7rem 1rem;
+    flex-wrap: wrap;
+  }
+
+  .header-logo {
+    height: 56px;
+  }
+
+  .header-product-name {
+    font-size: 0.92rem;
+    white-space: normal;
+  }
+
+  .header-status {
+    display: none;
+  }
 }
 
 @keyframes pulse-tag {
@@ -1973,6 +2014,29 @@ body {
   cursor: pointer;
   transition: box-shadow 0.2s, opacity 0.2s, filter 0.2s;
   box-shadow: 0 0 20px var(--emerald-glow);
+}
+
+.intake-run-cta {
+  position: sticky;
+  top: 0;
+  z-index: 6;
+  margin: 0 0 1rem;
+  padding: 0.75rem 0.85rem 0.85rem;
+  border: 1px solid rgba(92, 219, 92, 0.4);
+  border-radius: 6px;
+  background: rgba(7, 11, 30, 0.96);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
+  backdrop-filter: blur(8px);
+}
+
+.intake-run-cta .run-button {
+  margin-top: 0;
+}
+
+.run-button-above-fold {
+  font-size: 0.92rem;
+  padding: 1.1rem 1.5rem;
+  letter-spacing: 0.14em;
 }
 
 .run-button:hover:not(:disabled) {
@@ -3960,7 +4024,8 @@ body {
 .header-right {
   display: flex;
   align-items: center;
-  gap: 0.65rem;
+  gap: 0.75rem;
+  flex-shrink: 0;
 }
 
 .header-ops-underhood {
@@ -3972,7 +4037,19 @@ body {
 .header-auth-links {
   display: flex;
   align-items: center;
-  gap: 0.45rem;
+  gap: 0.55rem;
+}
+
+.header-auth-login,
+.header-auth-signup {
+  padding: 0.65rem 1.15rem;
+  font-size: 0.78rem;
+  letter-spacing: 0.08em;
+  white-space: nowrap;
+}
+
+.header-auth-signup {
+  box-shadow: 0 0 22px var(--emerald-glow);
 }
 
 .header-auth-link {
