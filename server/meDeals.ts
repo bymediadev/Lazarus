@@ -1,6 +1,8 @@
 import type { Express, Request, Response, NextFunction } from "express";
 import { optionalAuthUserId } from "./authMiddleware.js";
 import { serviceRoleClient } from "./founderAuth.js";
+import { isFreemiumExempt } from "./guestRateLimit.js";
+import { getFeatureAccess, LIFECYCLE_REQUIRED_MESSAGE } from "./billing.js";
 
 export type LifecyclePhase =
   | "active"
@@ -63,6 +65,29 @@ function requireAuthUser(
       return;
     }
     (req as Request & { authUserId?: string }).authUserId = userId;
+    next();
+  })().catch(next);
+}
+
+function requireLifecycleAccess(req: Request, res: Response, next: NextFunction): void {
+  void (async () => {
+    if (await isFreemiumExempt(req)) {
+      next();
+      return;
+    }
+    const userId = (req as Request & { authUserId?: string }).authUserId;
+    if (!userId) {
+      res.status(401).json({ error: "Sign in required" });
+      return;
+    }
+    const access = await getFeatureAccess(userId);
+    if (!access.lifecycle) {
+      res.status(402).json({
+        error: LIFECYCLE_REQUIRED_MESSAGE,
+        code: "LIFECYCLE_REQUIRED",
+      });
+      return;
+    }
     next();
   })().catch(next);
 }
@@ -214,7 +239,7 @@ function improvementBetween(
 }
 
 export function registerMeDealRoutes(app: Express): void {
-  app.get("/api/me/deals", requireAuthUser, async (req, res) => {
+  app.get("/api/me/deals", requireAuthUser, requireLifecycleAccess, async (req, res) => {
     try {
       const userId = authUserId(req);
       const supabase = serviceRoleClient();
@@ -378,7 +403,7 @@ export function registerMeDealRoutes(app: Express): void {
     }
   });
 
-  app.get("/api/me/deals/:id", requireAuthUser, async (req, res) => {
+  app.get("/api/me/deals/:id", requireAuthUser, requireLifecycleAccess, async (req, res) => {
     try {
       const userId = authUserId(req);
       const dealId = String(req.params.id ?? "").trim();

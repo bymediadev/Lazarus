@@ -5,10 +5,16 @@ import {
   type DealThread,
   type MeDealsResponse,
 } from "../lib/meDealsApi";
+import { PricingPlanCards } from "./PricingGate";
+import type { CheckoutPlan } from "../lib/billing";
 
 type Props = {
   open: boolean;
+  locked?: boolean;
+  billingConfigured?: boolean;
+  checkoutBusy?: string | null;
   onClose: () => void;
+  onCheckout?: (plan: CheckoutPlan) => void;
   onOpenRun: (payload: {
     analysis: Record<string, unknown>;
     hubspotDealId?: string | null;
@@ -35,7 +41,15 @@ function improveClass(dir: string | undefined): string {
   return "deal-life-delta";
 }
 
-export default function DealLifecyclePanel({ open, onClose, onOpenRun }: Props) {
+export default function DealLifecyclePanel({
+  open,
+  locked = false,
+  billingConfigured = true,
+  checkoutBusy = null,
+  onClose,
+  onCheckout,
+  onOpenRun,
+}: Props) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [data, setData] = useState<MeDealsResponse | null>(null);
@@ -60,9 +74,9 @@ export default function DealLifecyclePanel({ open, onClose, onOpenRun }: Props) 
   }, []);
 
   useEffect(() => {
-    if (!open) return;
+    if (!open || locked) return;
     void refresh();
-  }, [open, refresh]);
+  }, [open, locked, refresh]);
 
   if (!open) return null;
 
@@ -110,19 +124,43 @@ export default function DealLifecyclePanel({ open, onClose, onOpenRun }: Props) 
             </p>
           </div>
           <div className="deal-life-header-actions">
-            <button type="button" className="btn-secondary" onClick={() => void refresh()}>
-              Refresh
-            </button>
+            {!locked && (
+              <button type="button" className="btn-secondary" onClick={() => void refresh()}>
+                Refresh
+              </button>
+            )}
             <button type="button" className="btn-secondary" onClick={onClose}>
               Close
             </button>
           </div>
         </header>
 
-        {error && <p className="deal-life-error">{error}</p>}
-        {loading && !data && <p className="deal-life-muted">Loading saved runs…</p>}
+        {locked ? (
+          <div className="deal-life-locked">
+            <p>
+              Deal lifecycle is on <strong>Entry ($99/mo)</strong> and{" "}
+              <strong>Team ($499/mo)</strong>. Your analyses stay saved on this account — subscribe
+              to see stalled vs unstuck over time.
+            </p>
+            {onCheckout && (
+              <PricingPlanCards
+                configured={billingConfigured}
+                signedIn
+                busy={checkoutBusy}
+                plans={["entry", "team"]}
+                onSignIn={() => undefined}
+                onCheckout={onCheckout}
+              />
+            )}
+          </div>
+        ) : (
+          <>
+            {error && <p className="deal-life-error">{error}</p>}
+            {loading && !data && <p className="deal-life-muted">Loading saved runs…</p>}
+          </>
+        )}
 
-        {data && (
+        {data && !locked && (
           <>
             <div className="deal-life-summary">
               <div>

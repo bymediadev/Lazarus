@@ -1,4 +1,5 @@
 import { apiAuthHeaders, API_BASE } from "./api";
+import type { BillingMe } from "./billing";
 
 async function founderFetch<T>(path: string, init?: RequestInit): Promise<T> {
   const res = await fetch(`${API_BASE}${path}`, {
@@ -138,6 +139,7 @@ export async function founderLookup(email: string) {
       post_mortem_id: string | null;
       updated_at: string;
     }>;
+    billing: BillingMe | null;
   }>(`/api/founder/lookup?email=${encodeURIComponent(email)}`);
 }
 

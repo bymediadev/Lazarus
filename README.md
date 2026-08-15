@@ -92,9 +92,9 @@ Legacy HTML paths (e.g. `/privacy.html`) 301 to the canonical URLs above.
 
 ---
 
-## Deploy (Render monolith)
+## Deploy (one Node process)
 
-One **Web Service**: `npm run build` → `dist/`, `npm start` → Express serves `/api/*` and the static UI. This is the only supported deploy path.
+`npm run build` then `npm start` serves the public site (`/`), login (`/login`), the tool (`/app`), and `/api/*`. Same command on Render or any Node VPS. PHP-only shared hosting will not run this app — see [`docs/hosting.md`](docs/hosting.md).
 
 | Setting | Value |
 |---------|-------|

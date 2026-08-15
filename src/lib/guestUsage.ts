@@ -118,11 +118,11 @@ export function shouldEnforceGuestCap(opts: {
 
 export function guestCapLockMessage(signedIn = false): string {
   if (signedIn) {
-    return `You’ve used your ${GUEST_ANALYSIS_CAP} free analyses. Paid plans come next — founder demos use the founder login.`;
+    return `You’ve used your ${GUEST_ANALYSIS_CAP} free analyses. Choose $10 per report, $99/mo for 20 analyses, or $499/mo unlimited.`;
   }
-  return `You’ve used your ${GUEST_ANALYSIS_CAP} free analyses. Sign up to save work — paid plans unlock more analyses.`;
+  return `You’ve used your ${GUEST_ANALYSIS_CAP} free analyses. Sign in to pay — $10 per report, $99/mo, or $499/mo unlimited.`;
 }
 
 export function guestNearCapMessage(): string {
-  return "1 free analysis left before the freemium lock.";
+  return "1 free analysis left. After that you’ll need $10 per report, $99/mo, or $499/mo unlimited.";
 }

@@ -51,11 +51,18 @@ import {
 import { registerAuthRoutes } from "./authRoutes.js";
 import { optionalAuthUserId } from "./authMiddleware.js";
 import {
-  guestServerLimitMessage,
   isAnonymousGuestRateLimited,
   isFreemiumExempt,
-  isSignedInFreemiumRateLimited,
 } from "./guestRateLimit.js";
+import {
+  getFeatureAccess,
+  isStripeConfigured,
+  PAYMENT_REQUIRED_MESSAGE,
+  releaseReservation,
+  reserveAnalysis,
+  type ConsumeKind,
+} from "./billing.js";
+import { registerBillingRoutes, registerBillingWebhook } from "./billingRoutes.js";
 import { apiEventsMiddleware, setApiErrorLocal } from "./apiEvents.js";
 import { registerFounderRoutes } from "./founderRoutes.js";
 import { registerMeDealRoutes } from "./meDeals.js";
@@ -131,6 +138,7 @@ app.use((_req, res, next) => {
 });
 
 registerZoomWebhook(app);
+registerBillingWebhook(app);
 
 app.use(express.json());
 app.use(apiEventsMiddleware);
@@ -150,6 +158,7 @@ app.get("/api/health", (_req, res) => {
     hubspot: isHubSpotConfigured(),
     salesforce: isSalesforceConfigured(),
     whitewhale: isWhiteWhaleConfigured(),
+    stripe: isStripeConfigured(),
   });
 });
 
@@ -205,24 +214,32 @@ function requireApiKey(req: express.Request, res: express.Response, next: expres
 }
 
 app.post("/api/post-mortem", requireApiKey, uploadFields, async (req, res) => {
+  let reservation: ConsumeKind | null = null;
+  let reservationUserId: string | undefined;
+  let committed = false;
   try {
     const authUserIdEarly = (await optionalAuthUserId(req)) ?? undefined;
     const freemiumExempt = await isFreemiumExempt(req);
     if (!freemiumExempt) {
       if (!authUserIdEarly) {
         if (isAnonymousGuestRateLimited(req)) {
-          res.status(429).json({
-            error: guestServerLimitMessage(),
-            code: "GUEST_USAGE_LIMIT",
+          res.status(402).json({
+            error: PAYMENT_REQUIRED_MESSAGE,
+            code: "PAYMENT_REQUIRED",
           });
           return;
         }
-      } else if (isSignedInFreemiumRateLimited(authUserIdEarly)) {
-        res.status(429).json({
-          error: guestServerLimitMessage(),
-          code: "GUEST_USAGE_LIMIT",
-        });
-        return;
+      } else {
+        const decision = await reserveAnalysis(authUserIdEarly);
+        if (!decision.ok) {
+          res.status(decision.status).json({
+            error: decision.error,
+            code: decision.code,
+          });
+          return;
+        }
+        reservation = decision.consume;
+        reservationUserId = authUserIdEarly;
       }
     }
 
@@ -314,7 +331,14 @@ app.post("/api/post-mortem", requireApiKey, uploadFields, async (req, res) => {
       return;
     }
 
-    const whitewhaleIntel = await lookupWhiteWhaleIntelForAccount(deepContext.accountId);
+    const whitewhaleAllowed =
+      freemiumExempt ||
+      (authUserIdEarly
+        ? (await getFeatureAccess(authUserIdEarly)).whitewhale
+        : false);
+    const whitewhaleIntel = whitewhaleAllowed
+      ? await lookupWhiteWhaleIntelForAccount(deepContext.accountId)
+      : null;
     if (whitewhaleIntel) {
       deepContext.whitewhaleContext = whitewhaleIntel;
     }
@@ -408,12 +432,17 @@ app.post("/api/post-mortem", requireApiKey, uploadFields, async (req, res) => {
       relevance,
       whitewhale_intel: whitewhaleIntel,
     });
+    committed = true;
   } catch (err) {
     console.error("Post-mortem error:", err);
     const raw = err instanceof Error ? err.message : "Post-mortem failed.";
     const friendly = formatApiError(raw);
     setApiErrorLocal(res, friendly);
     res.status(500).json({ error: friendly });
+  } finally {
+    if (!committed && reservation && reservationUserId) {
+      await releaseReservation(reservationUserId, reservation);
+    }
   }
 });
 
@@ -611,6 +640,7 @@ registerHubSpotRoutes(app);
 registerSalesforceRoutes(app);
 registerWhiteWhaleRoutes(app);
 registerAuthRoutes(app);
+registerBillingRoutes(app);
 registerFounderRoutes(app);
 registerMeDealRoutes(app);
 registerTrustPackRoutes(app, publicPath);

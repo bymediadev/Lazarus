@@ -56,14 +56,12 @@ If password-reset redirects fail, add your app origins under Supabase → Authen
 
 After the email link opens Lazarus, you should see a **Save new password** screen (not the main product). Request a fresh reset link after deploying this fix — older links may not include the reset hint.
 
-### Saved deals & lifecycle (signed-in)
+### Saved deals & lifecycle (Entry and Team)
 
-After login, **My deals** in the header opens past analyses on your account:
+After login, analyses are **saved** on the account at every plan (including free). **My deals** in the header is the lifecycle tracker:
 
-- Deal threads grouped by CRM link (HubSpot/Salesforce) or account + client name
-- Lifecycle phase (stalled vs unstuck/active/closed) without opening the CRM
-- Timeline of runs with viability/risk deltas so you can see improvement or slip
-- **Open this run** reloads the full Recovery Brief
+- **Entry ($99/mo) and Team ($499/mo):** deal threads, stalled vs unstuck, CRM hooks, timeline deltas
+- **Free and $10/report:** button still opens; UI asks them to subscribe. History is waiting after upgrade.
 
 Guests still analyze without persisting; sign in to save.
 

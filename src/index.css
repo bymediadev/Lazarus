@@ -1324,6 +1324,16 @@ body {
   min-width: 0;
 }
 
+button.header-brand {
+  background: none;
+  border: none;
+  padding: 0;
+  color: inherit;
+  cursor: pointer;
+  text-align: left;
+  font: inherit;
+}
+
 .header-logo {
   height: 72px;
   width: auto;
@@ -2095,6 +2105,108 @@ body {
 .guest-usage-banner .btn-secondary,
 .guest-usage-lock .run-button {
   justify-self: start;
+}
+
+.pricing-gate {
+  margin-top: 0.75rem;
+  display: grid;
+  gap: 0.75rem;
+}
+
+.pricing-plan-grid {
+  display: grid;
+  gap: 0.65rem;
+}
+
+@media (min-width: 720px) {
+  .pricing-plan-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+  .pricing-plan-grid-2 {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+.pricing-plan-card {
+  border: 1px solid var(--border, rgba(255, 255, 255, 0.12));
+  border-radius: 10px;
+  padding: 0.85rem 0.9rem;
+  display: grid;
+  gap: 0.35rem;
+  background: rgba(0, 0, 0, 0.12);
+}
+
+.pricing-plan-card-recommended {
+  border-color: var(--emerald, #3ecf8e);
+}
+
+.pricing-plan-card h3 {
+  margin: 0;
+  font-size: 0.92rem;
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  flex-wrap: wrap;
+}
+
+.pricing-plan-badge {
+  font-size: 0.65rem;
+  font-weight: 650;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  color: var(--emerald, #3ecf8e);
+}
+
+.pricing-plan-price {
+  margin: 0;
+  font-size: 1.15rem;
+  font-weight: 700;
+  color: var(--emerald, #3ecf8e);
+}
+
+.pricing-plan-detail {
+  margin: 0 0 0.4rem;
+  font-size: 0.78rem;
+  color: var(--muted);
+  line-height: 1.4;
+}
+
+.billing-invoice-list {
+  list-style: none;
+  margin: 0.45rem 0 0.7rem;
+  padding: 0;
+  display: grid;
+  gap: 0.3rem;
+  font-size: 0.78rem;
+}
+
+.billing-invoice-list a {
+  color: var(--emerald, #3ecf8e);
+}
+
+.ops-billing-snapshot {
+  margin: 0.75rem 0 1rem;
+  padding: 0.7rem 0.8rem;
+  border: 1px solid var(--border, rgba(255, 255, 255, 0.12));
+  border-radius: 8px;
+}
+
+.ops-billing-snapshot h3 {
+  margin: 0 0 0.35rem;
+  font-size: 0.85rem;
+}
+
+.deal-life-locked {
+  display: grid;
+  gap: 0.85rem;
+  padding: 0.25rem 0 1rem;
+}
+
+.deal-life-locked p {
+  margin: 0;
+  font-size: 0.88rem;
+  line-height: 1.45;
+  color: var(--muted);
 }
 
 .upload-consent {
@@ -4866,4 +4978,437 @@ body {
 .deal-life-timeline-card .btn-primary {
   align-self: flex-start;
   margin-top: 0.25rem;
+}
+
+.marketing-app {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+}
+
+.marketing-header {
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  background: rgba(10, 15, 40, 0.88);
+  backdrop-filter: blur(12px);
+  transition: box-shadow 0.25s ease, border-color 0.25s ease;
+}
+
+.marketing-band {
+  max-width: none;
+  padding: 2rem 1.5rem 2.5rem;
+  border-top: 1px solid var(--panel-border);
+  border-bottom: 1px solid var(--panel-border);
+  background: var(--panel);
+}
+
+.marketing-band .pricing-plan-grid {
+  max-width: 58rem;
+}
+
+#how,
+#pricing,
+#about,
+#what,
+#who,
+#layout,
+#questions,
+#objections {
+  scroll-margin-top: 6.5rem;
+}
+
+.marketing-qa {
+  margin: 1rem 0 0;
+}
+
+.marketing-qa > div {
+  padding: 0.85rem 0;
+  border-top: 1px solid var(--panel-border);
+  transition: padding-left 0.22s ease, border-color 0.22s ease;
+}
+
+.marketing-qa > div:hover {
+  padding-left: 0.45rem;
+  border-top-color: var(--teal);
+}
+
+.marketing-qa dt {
+  color: var(--text);
+  font-weight: 600;
+  margin-bottom: 0.35rem;
+}
+
+.marketing-qa dd {
+  color: var(--muted);
+  line-height: 1.6;
+  margin: 0;
+}
+
+.marketing-main {
+  flex: 1;
+  width: 100%;
+  max-width: 68rem;
+  margin: 0 auto;
+}
+
+.marketing-hero {
+  padding: 3.25rem 1.5rem 2.5rem;
+  max-width: 46rem;
+}
+
+.marketing-hero-title {
+  font-size: clamp(1.65rem, 3.4vw, 2.35rem);
+  font-weight: 700;
+  line-height: 1.2;
+  letter-spacing: -0.02em;
+  margin: 0.35rem 0 1rem;
+}
+
+.marketing-hero-body {
+  color: var(--muted);
+  font-size: 1.02rem;
+  line-height: 1.6;
+  max-width: 42rem;
+  margin-bottom: 1.35rem;
+}
+
+.marketing-hero-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.65rem;
+  align-items: center;
+}
+
+.marketing-hero-actions .run-button,
+.marketing-hero-actions .btn-secondary {
+  width: auto;
+  min-width: 10.5rem;
+  padding: 0.85rem 1.25rem;
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+}
+
+.marketing-hero-actions .run-button:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 0 28px var(--emerald-glow);
+}
+
+.marketing-app .pricing-plan-card {
+  transition: transform 0.25s ease, border-color 0.25s ease, box-shadow 0.25s ease;
+}
+
+.marketing-app .pricing-plan-card:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 10px 28px rgba(92, 219, 92, 0.1);
+}
+
+.marketing-product {
+  max-width: 68rem;
+}
+
+.marketing-product-caption {
+  margin-bottom: 0.85rem;
+}
+
+.marketing-product-frame {
+  margin: 0 0 1.1rem;
+  border: 1px solid var(--panel-border);
+  border-radius: 8px;
+  overflow: hidden;
+  background: var(--panel);
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.35);
+  transition: transform 0.35s ease, box-shadow 0.35s ease;
+}
+
+.marketing-product-frame:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 18px 48px rgba(92, 219, 92, 0.14);
+}
+
+.marketing-product-frame img {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+.marketing-video-frame {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  margin: 0 0 1.1rem;
+  border: 1px solid var(--panel-border);
+  border-radius: 8px;
+  overflow: hidden;
+  background: #0a0a0c;
+}
+
+.marketing-video-frame iframe {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  border: 0;
+}
+
+.marketing-hero-note {
+  margin-top: 0.9rem;
+  color: var(--label);
+  font-size: 0.82rem;
+}
+
+.marketing-steps {
+  padding: 0.5rem 1.5rem 1.75rem;
+  border-top: 1px solid var(--panel-border);
+}
+
+.marketing-step-grid {
+  list-style: none;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1rem;
+  margin-top: 0.85rem;
+}
+
+.marketing-step-grid li {
+  background: var(--panel);
+  border: 1px solid var(--panel-border);
+  border-radius: 6px;
+  padding: 1.1rem 1.15rem;
+  transition: transform 0.25s ease, border-color 0.25s ease, box-shadow 0.25s ease;
+}
+
+.marketing-step-grid li:hover {
+  transform: translateY(-3px);
+  border-color: var(--teal);
+  box-shadow: 0 10px 28px rgba(61, 214, 198, 0.12);
+}
+
+.marketing-step-grid span {
+  font-family: var(--mono);
+  font-size: 0.62rem;
+  letter-spacing: 0.16em;
+  color: var(--teal);
+}
+
+.marketing-step-grid h2 {
+  font-size: 1rem;
+  margin: 0.4rem 0 0.4rem;
+}
+
+.marketing-step-grid p {
+  color: var(--muted);
+  font-size: 0.86rem;
+  line-height: 1.5;
+}
+
+.marketing-pricing {
+  padding: 1.5rem 1.5rem 2rem;
+  border-top: 1px solid var(--panel-border);
+}
+
+.marketing-pricing h2 {
+  font-size: 1.2rem;
+  margin: 0.35rem 0 0.55rem;
+}
+
+.marketing-pricing-lead {
+  color: var(--muted);
+  max-width: 40rem;
+  margin-bottom: 1.15rem;
+  font-size: 0.92rem;
+}
+
+.marketing-nav {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.marketing-nav button {
+  background: none;
+  border: none;
+  color: var(--muted);
+  cursor: pointer;
+  font-family: var(--font);
+  font-size: 0.82rem;
+  font-weight: 600;
+  padding: 0.45rem 0.7rem;
+  position: relative;
+  transition: color 0.2s ease;
+}
+
+.marketing-nav button.active,
+.marketing-nav button:hover {
+  color: var(--text);
+}
+
+.marketing-nav button::after {
+  content: "";
+  position: absolute;
+  left: 0.7rem;
+  right: 0.7rem;
+  bottom: 0.15rem;
+  height: 1px;
+  background: var(--teal);
+  transform: scaleX(0);
+  transition: transform 0.22s ease;
+}
+
+.marketing-nav button:hover::after,
+.marketing-nav button.active::after {
+  transform: scaleX(1);
+}
+
+.marketing-simple,
+.marketing-page {
+  padding: 0.5rem 1.5rem 2.25rem;
+  max-width: 46rem;
+}
+
+.marketing-page {
+  padding-top: 2rem;
+}
+
+.marketing-simple h2,
+.marketing-page h1 {
+  font-size: 1.25rem;
+  margin-bottom: 0.7rem;
+}
+
+.marketing-page h1 {
+  font-size: clamp(1.45rem, 3vw, 2rem);
+  line-height: 1.25;
+}
+
+.marketing-simple p,
+.marketing-page p,
+.marketing-page-lead {
+  color: var(--muted);
+  line-height: 1.6;
+  margin-bottom: 0.85rem;
+}
+
+.marketing-plain-list {
+  margin: 0.4rem 0 1rem 1.15rem;
+  color: var(--muted);
+  line-height: 1.65;
+}
+
+.marketing-plain-list strong {
+  color: var(--text);
+}
+
+.marketing-price-points {
+  margin-bottom: 1.35rem;
+}
+
+.marketing-text-link {
+  background: none;
+  border: none;
+  color: var(--teal);
+  cursor: pointer;
+  font: inherit;
+  padding: 0;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+@media (max-width: 800px) {
+  .marketing-step-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .marketing-hero {
+    padding: 1.75rem 1rem 1.5rem;
+  }
+
+  .marketing-simple,
+  .marketing-page {
+    padding-left: 1rem;
+    padding-right: 1rem;
+  }
+
+  .marketing-app .header {
+    flex-wrap: wrap;
+  }
+
+  .marketing-nav {
+    order: 3;
+    width: 100%;
+  }
+}
+
+@keyframes marketing-fade-up {
+  from {
+    opacity: 0;
+    transform: translateY(16px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+.marketing-hero > * {
+  animation: marketing-fade-up 0.65s ease both;
+}
+
+.marketing-hero > *:nth-child(1) {
+  animation-delay: 0.04s;
+}
+.marketing-hero > *:nth-child(2) {
+  animation-delay: 0.12s;
+}
+.marketing-hero > *:nth-child(3) {
+  animation-delay: 0.2s;
+}
+.marketing-hero > *:nth-child(4) {
+  animation-delay: 0.28s;
+}
+.marketing-hero > *:nth-child(5) {
+  animation-delay: 0.36s;
+}
+
+.marketing-reveal {
+  opacity: 0;
+  transform: translateY(20px);
+  transition: opacity 0.65s ease, transform 0.65s ease;
+}
+
+.marketing-reveal.is-in {
+  opacity: 1;
+  transform: none;
+}
+
+.marketing-reveal.is-in .marketing-step-grid li:nth-child(1) {
+  animation: marketing-fade-up 0.55s ease 0.05s both;
+}
+.marketing-reveal.is-in .marketing-step-grid li:nth-child(2) {
+  animation: marketing-fade-up 0.55s ease 0.14s both;
+}
+.marketing-reveal.is-in .marketing-step-grid li:nth-child(3) {
+  animation: marketing-fade-up 0.55s ease 0.23s both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .marketing-hero > *,
+  .marketing-reveal,
+  .marketing-reveal.is-in .marketing-step-grid li {
+    animation: none !important;
+    opacity: 1;
+    transform: none;
+    transition: none;
+  }
+
+  .marketing-step-grid li:hover,
+  .marketing-product-frame:hover,
+  .marketing-app .pricing-plan-card:hover,
+  .marketing-hero-actions .run-button:hover {
+    transform: none;
+  }
 }

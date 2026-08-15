@@ -499,6 +499,30 @@ export default function FounderCommandCenter({ opsEmail, onOpenProduct }: Props)
                 {lookup.user.login_provider ? ` · ${lookup.user.login_provider}` : ""}
               </p>
 
+              {lookup.billing && (
+                <div className="ops-billing-snapshot">
+                  <h3>Billing</h3>
+                  <p>
+                    {lookup.billing.plan_label} · {lookup.billing.status} ·{" "}
+                    {lookup.billing.analyses_remaining_label}
+                  </p>
+                  {lookup.billing.period_end && (
+                    <p className="ops-sub">
+                      Period ends {new Date(lookup.billing.period_end).toLocaleDateString()}
+                    </p>
+                  )}
+                  {lookup.billing.stripe_customer_id && (
+                    <p className="ops-sub">Stripe customer {lookup.billing.stripe_customer_id}</p>
+                  )}
+                  {lookup.billing.invoices[0] && (
+                    <p className="ops-sub">
+                      Last invoice {new Date(lookup.billing.invoices[0].created).toLocaleDateString()}{" "}
+                      · {lookup.billing.invoices[0].status}
+                    </p>
+                  )}
+                </div>
+              )}
+
               <label className="ops-note-label">
                 Ops note
                 <textarea

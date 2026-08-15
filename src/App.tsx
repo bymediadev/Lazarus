@@ -31,7 +31,24 @@ import {
   isGuestUsageLocked,
   shouldEnforceGuestCap,
 } from "./lib/guestUsage";
+import {
+  claimGuestBillingCap,
+  fetchBillingMe,
+  startCheckout,
+  type BillingMe,
+  type CheckoutPlan,
+} from "./lib/billing";
+import PricingGate from "./components/PricingGate";
+import MarketingHome from "./components/MarketingHome";
+import MarketingShell from "./components/MarketingShell";
 import { fetchFounderMe } from "./lib/founderApi";
+import {
+  getAppRoute,
+  hasOAuthReturnParams,
+  isMarketingRoute,
+  navigateApp,
+  type AppRoute,
+} from "./lib/appRoute";
 import { publishOAuthComplete, subscribeOAuthComplete } from "./lib/oauthBridge";
 import {
   listPendingAnalyses,
@@ -108,10 +125,17 @@ export default function App() {
   const [dealsPortalOpen, setDealsPortalOpen] = useState(false);
   const [loginOpen, setLoginOpen] = useState(false);
   const [loginMode, setLoginMode] = useState<"signin" | "signup">("signin");
+  const [route, setRoute] = useState<AppRoute>(() =>
+    typeof window === "undefined" ? "home" : getAppRoute()
+  );
+  const [openedDealsOnLogin, setOpenedDealsOnLogin] = useState(false);
   const [guestUsage, setGuestUsage] = useState(() => {
     captureDemoBypassFromUrl();
     return getGuestUsage();
   });
+  const [billing, setBilling] = useState<BillingMe | null>(null);
+  const [checkoutBusy, setCheckoutBusy] = useState<string | null>(null);
+  const [billingError, setBillingError] = useState<string | null>(null);
   const [guideHighlight, setGuideHighlight] = useState<string | null>(null);
   const [linkedHubSpotDealId, setLinkedHubSpotDealId] = useState<string | null>(null);
   const [linkedSalesforceOppId, setLinkedSalesforceOppId] = useState<string | null>(null);
@@ -225,18 +249,107 @@ export default function App() {
     setGuestUsage(getGuestUsage());
   }, [auth.session?.access_token]);
 
+  const refreshBilling = useCallback(async () => {
+    if (!auth.session) {
+      setBilling(null);
+      return;
+    }
+    try {
+      let next = await fetchBillingMe();
+      if (getGuestUsage() >= GUEST_ANALYSIS_CAP) {
+        next = await claimGuestBillingCap();
+      }
+      setBilling(next);
+    } catch {
+      setBilling(null);
+    }
+  }, [auth.session]);
+
+  useEffect(() => {
+    void refreshBilling();
+  }, [refreshBilling]);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const params = new URLSearchParams(window.location.search);
+    const billingFlag = params.get("billing");
+    if (billingFlag !== "success" && billingFlag !== "cancel") return;
+    if (billingFlag === "success") {
+      setSyncNotice("Payment received — your analyses are unlocked.");
+      void refreshBilling();
+    }
+    params.delete("billing");
+    const next = `${window.location.pathname}${params.toString() ? `?${params}` : ""}${window.location.hash}`;
+    window.history.replaceState({}, "", next);
+  }, [refreshBilling]);
+
   const enforceGuestCap = shouldEnforceGuestCap({
     signedIn: !!auth.session,
     opsUser,
     email: auth.user?.email ?? null,
   });
   const guestLocked = enforceGuestCap && guestUsage >= GUEST_ANALYSIS_CAP;
-  const guestNearCap = enforceGuestCap && guestUsage === GUEST_ANALYSIS_CAP - 1;
+  const paywalled =
+    enforceGuestCap &&
+    (auth.session ? (billing ? billing.payment_required : guestLocked) : guestLocked);
+  const guestNearCap =
+    enforceGuestCap &&
+    !paywalled &&
+    (auth.session
+      ? billing
+        ? billing.free_remaining === 1 && billing.ppu_credits === 0 && !billing.unlimited
+        : guestUsage === GUEST_ANALYSIS_CAP - 1
+      : guestUsage === GUEST_ANALYSIS_CAP - 1);
+  const canLifecycle = !enforceGuestCap || billing?.can_lifecycle === true;
+
+  const goTo = useCallback((path: string) => {
+    navigateApp(path);
+    setRoute(getAppRoute());
+  }, []);
+
+  const openLogin = useCallback((mode: "signin" | "signup" = "signin") => {
+    setLoginMode(mode);
+    goTo(mode === "signup" ? "/login?mode=signup" : "/login");
+  }, [goTo]);
 
   const openSignupPortal = useCallback(() => {
     setLoginMode("signup");
-    setLoginOpen(true);
-  }, []);
+    if (route === "app") {
+      setLoginOpen(true);
+      return;
+    }
+    goTo("/login");
+  }, [goTo, route]);
+
+  const openTool = useCallback(
+    (opts?: { sample?: boolean; tab?: InputTab; platform?: "zoom" | "meet" | "teams" }) => {
+      const params = new URLSearchParams();
+      if (opts?.sample) params.set("sample", "1");
+      if (opts?.tab) params.set("tab", opts.tab);
+      if (opts?.platform) params.set("platform", opts.platform);
+      const qs = params.toString();
+      goTo(qs ? `/portal?${qs}` : "/portal");
+    },
+    [goTo]
+  );
+
+  const handleCheckout = useCallback(
+    async (plan: CheckoutPlan) => {
+      if (!auth.session) {
+        openSignupPortal();
+        return;
+      }
+      setCheckoutBusy(plan);
+      setBillingError(null);
+      try {
+        await startCheckout(plan);
+      } catch (err) {
+        setBillingError(err instanceof Error ? err.message : "Checkout failed");
+        setCheckoutBusy(null);
+      }
+    },
+    [auth.session, openSignupPortal]
+  );
 
   useEffect(() => {
     let cancelled = false;
@@ -377,6 +490,31 @@ export default function App() {
   }, []);
 
   useEffect(() => {
+    const onPop = () => setRoute(getAppRoute());
+    window.addEventListener("popstate", onPop);
+    return () => window.removeEventListener("popstate", onPop);
+  }, []);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const params = new URLSearchParams(window.location.search);
+    if (params.get("mode") === "signup") setLoginMode("signup");
+    if (params.get("mode") === "signin") setLoginMode("signin");
+  }, [route]);
+
+  useEffect(() => {
+    if (!auth.session || auth.passwordRecovery || isPasswordRecoveryPending()) return;
+    if (hasOAuthReturnParams()) return;
+    if (route === "home" || route === "login") {
+      goTo("/portal");
+    }
+    if (!openedDealsOnLogin) {
+      setDealsPortalOpen(true);
+      setOpenedDealsOnLogin(true);
+    }
+  }, [auth.session, auth.passwordRecovery, route, goTo, openedDealsOnLogin]);
+
+  useEffect(() => {
     const onOnline = () => {
       drainPendingQueue();
     };
@@ -513,6 +651,20 @@ export default function App() {
     }
   };
 
+  useEffect(() => {
+    if (route !== "app") return;
+    const params = new URLSearchParams(window.location.search);
+    const tab = params.get("tab");
+    if (tab === "call" || tab === "email" || tab === "field" || tab === "live") {
+      setActiveTab(tab);
+    }
+    if (params.get("sample") !== "1") return;
+    void handleLoadDemoTranscript();
+    params.delete("sample");
+    const next = `${window.location.pathname}${params.toString() ? `?${params}` : ""}`;
+    window.history.replaceState({}, "", next);
+  }, [route]);
+
   const handleRun = async (forceAnalysis = false) => {
     if (!hasAnyInput) {
       setError(
@@ -528,10 +680,10 @@ export default function App() {
         opsUser,
         email: auth.user?.email ?? null,
       }) &&
-      isGuestUsageLocked()
+      (auth.session ? billing?.payment_required === true : isGuestUsageLocked())
     ) {
       setError(guestCapLockMessage(!!auth.session));
-      openSignupPortal();
+      if (!auth.session) openSignupPortal();
       return;
     }
 
@@ -599,10 +751,23 @@ export default function App() {
           email: auth.user?.email ?? null,
         })
       ) {
-        const next = incrementGuestUsage();
-        setGuestUsage(next);
+        if (!auth.session) {
+          const next = incrementGuestUsage();
+          setGuestUsage(next);
+        } else {
+          await refreshBilling();
+          setSyncNotice(
+            canLifecycle
+              ? "Saved to your account — open My deals for timeline & CRM lifecycle."
+              : "Saved to your account. Deal lifecycle is on Entry ($99/mo) and Team ($499/mo)."
+          );
+        }
       } else if (auth.session) {
-        setSyncNotice("Saved to your account — open My deals for timeline & CRM lifecycle.");
+        setSyncNotice(
+          canLifecycle
+            ? "Saved to your account — open My deals for timeline & CRM lifecycle."
+            : "Saved to your account. Deal lifecycle is on Entry ($99/mo) and Team ($499/mo)."
+        );
       }
       if (fieldSessionId) {
         await clearSessionChunks(fieldSessionId);
@@ -612,9 +777,13 @@ export default function App() {
       if (err instanceof PostMortemApiError && err.code === "NOT_SALES_EVIDENCE") {
         setError(err.message);
         setRelevanceBlocked(true);
-      } else if (err instanceof PostMortemApiError && err.code === "GUEST_USAGE_LIMIT") {
+      } else if (
+        err instanceof PostMortemApiError &&
+        (err.code === "GUEST_USAGE_LIMIT" || err.code === "PAYMENT_REQUIRED")
+      ) {
         setError(err.message);
-        openSignupPortal();
+        if (!auth.session) openSignupPortal();
+        void refreshBilling();
       } else if (err instanceof TypeError) {
         setRelevanceBlocked(false);
         setError(
@@ -739,10 +908,18 @@ export default function App() {
     });
   }, [guideHighlight]);
 
+  const showSite = isMarketingRoute(route) && !auth.session && !auth.loading;
+  const showLoginPage = route === "login" && !auth.session;
+
   return (
     <div className={`app${guideHighlight ? ` guide-highlighting` : ""}`}>
+      {trustPack && <TrustPackModal slug={trustPack} onClose={() => setTrustPack(null)} />}
       {auth.session && (auth.passwordRecovery || isPasswordRecoveryPending()) ? (
         <PasswordRecoveryScreen />
+      ) : auth.loading && (isMarketingRoute(route) || route === "login") ? (
+        <div className="login-screen">
+          <p className="login-sub">Loading…</p>
+        </div>
       ) : auth.session && !opsChecked ? (
         <div className="login-screen">
           <p className="login-sub">Loading…</p>
@@ -750,18 +927,38 @@ export default function App() {
       ) : auth.session && opsUser && !forceProductConsole ? (
         <FounderCommandCenter
           opsEmail={auth.user?.email ?? null}
-          onOpenProduct={() => setForceProductConsole(true)}
+          onOpenProduct={() => {
+            setForceProductConsole(true);
+            goTo("/portal");
+          }}
         />
+      ) : showLoginPage ? (
+        <LoginScreen
+          initialMode={loginMode}
+          onClose={() => goTo("/")}
+        />
+      ) : showSite ? (
+        <MarketingShell
+          onHome={() => goTo("/")}
+          onPortal={() => openTool()}
+          onLogin={() => openLogin("signin")}
+        >
+          <MarketingHome
+            onTrySample={() => openTool({ sample: true })}
+            onSignup={() => openLogin("signup")}
+            onPortal={() => openTool()}
+          />
+        </MarketingShell>
       ) : (
         <>
       <header className="header">
-        <div className="header-brand">
+        <button type="button" className="header-brand" onClick={() => goTo(auth.session ? "/portal" : "/")}>
           <img src="/logo.png" alt="Lazarus Deal Recovery" className="header-logo" />
           <div className="header-brand-copy">
             <span className="header-product-name">Lazarus Deal Recovery</span>
             <span className="tag">Forecast &amp; Deal Recovery</span>
           </div>
-        </div>
+        </button>
         <div className="header-right">
           <span className="header-status" aria-live="polite">
             {headerStatus}
@@ -809,9 +1006,21 @@ export default function App() {
             <>
               <button
                 type="button"
+                className="btn-secondary header-ops-underhood"
+                onClick={() => setDealsPortalOpen(false)}
+                title="Start a new deal analysis"
+              >
+                New analysis
+              </button>
+              <button
+                type="button"
                 className="btn-primary header-ops-underhood"
                 onClick={() => setDealsPortalOpen(true)}
-                title="Saved runs, CRM hooks, and deal lifecycle"
+                title={
+                  canLifecycle
+                    ? "Saved runs, CRM hooks, and deal lifecycle"
+                    : "Deal lifecycle is on Entry and Team plans"
+                }
               >
                 My deals
               </button>
@@ -845,19 +1054,20 @@ export default function App() {
                 className="run-button run-button-above-fold"
                 data-guide-target="guide-run-analysis"
                 onClick={() => void handleRun(false)}
-                disabled={loading || guestLocked}
+                disabled={loading || paywalled}
               >
                 {loading
                   ? "Analyzing…"
-                  : guestLocked
-                    ? "Sign up to continue"
+                  : paywalled
+                    ? "Payment required"
                     : `Run Analysis${channelCount ? ` (${channelCount})` : ""}`}
               </button>
 
-              {enforceGuestCap && !guestLocked && (
+              {enforceGuestCap && !paywalled && (
                 <p className="guest-usage-meta">
-                  Free analyses: {Math.max(0, GUEST_ANALYSIS_CAP - guestUsage)} of{" "}
-                  {GUEST_ANALYSIS_CAP} left
+                  {auth.session && billing
+                    ? billing.analyses_remaining_label
+                    : `Free analyses: ${Math.max(0, GUEST_ANALYSIS_CAP - guestUsage)} of ${GUEST_ANALYSIS_CAP} left`}
                   {!auth.session && " · Sign up to save results"}
                 </p>
               )}
@@ -865,19 +1075,25 @@ export default function App() {
               {guestNearCap && (
                 <div className="warning-banner guest-usage-banner">
                   <p>{guestNearCapMessage()}</p>
-                  <button type="button" className="btn-secondary" onClick={openSignupPortal}>
-                    Sign up
-                  </button>
+                  {!auth.session && (
+                    <button type="button" className="btn-secondary" onClick={openSignupPortal}>
+                      Sign up
+                    </button>
+                  )}
                 </div>
               )}
 
-              {guestLocked && (
-                <div className="error-banner guest-usage-lock">
-                  <p>{guestCapLockMessage(!!auth.session)}</p>
-                  <button type="button" className="run-button" onClick={openSignupPortal}>
-                    Sign up to continue
-                  </button>
-                </div>
+              {paywalled && (
+                <PricingGate
+                  signedIn={!!auth.session}
+                  configured={billing?.configured !== false}
+                  pastDue={billing?.past_due === true}
+                  message={guestCapLockMessage(!!auth.session)}
+                  busy={checkoutBusy}
+                  error={billingError}
+                  onSignIn={openSignupPortal}
+                  onCheckout={(plan) => void handleCheckout(plan)}
+                />
               )}
             </div>
 
@@ -1168,7 +1384,7 @@ export default function App() {
                     type="button"
                     className="btn-secondary relevance-override-btn"
                     onClick={() => void handleRun(true)}
-                    disabled={loading || guestLocked}
+                    disabled={loading || paywalled}
                   >
                     Analyze anyway
                   </button>
@@ -1232,8 +1448,6 @@ export default function App() {
 
       <SiteFooter />
 
-      {trustPack && <TrustPackModal slug={trustPack} onClose={() => setTrustPack(null)} />}
-
       <LazarusGuide
         open={guideOpen}
         onClose={() => {
@@ -1247,7 +1461,11 @@ export default function App() {
       <AccountPortal open={accountPortalOpen} onClose={() => setAccountPortalOpen(false)} />
       <DealLifecyclePanel
         open={dealsPortalOpen}
+        locked={!canLifecycle}
+        billingConfigured={billing?.configured !== false}
+        checkoutBusy={checkoutBusy}
         onClose={() => setDealsPortalOpen(false)}
+        onCheckout={(plan) => void handleCheckout(plan)}
         onOpenRun={({ analysis, hubspotDealId, salesforceOppId }) => {
           setResult(
             normalizeResult({

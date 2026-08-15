@@ -10,6 +10,7 @@ import {
 import { runCriticalAlertPass, runDigestAlert, isDigestHour } from "./founderAlerts.js";
 import { buildSystemStatus, classifyIssue } from "./founderSystem.js";
 import { buildApisInventory } from "./founderApis.js";
+import { getBillingSnapshot } from "./billing.js";
 import { resolveFrontendOrigin } from "./integrations/oauthShared.js";
 
 async function writeAudit(
@@ -371,6 +372,13 @@ export function registerFounderRoutes(app: Express): void {
         };
       });
 
+      let billing = null;
+      try {
+        billing = await getBillingSnapshot(userId, { includeStripeIds: true });
+      } catch (err) {
+        console.warn("Lookup billing snapshot failed:", err instanceof Error ? err.message : err);
+      }
+
       res.json({
         user: userMeta,
         note: noteRow?.note ?? "",
@@ -378,6 +386,7 @@ export function registerFounderRoutes(app: Express): void {
         deals: deals ?? [],
         issues,
         crm_links: crmLinks ?? [],
+        billing,
       });
     } catch (err) {
       res.status(500).json({ error: err instanceof Error ? err.message : "Lookup failed" });

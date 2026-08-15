@@ -7,7 +7,7 @@ WhiteWhale is **account/domain** intelligence (not contact/person enrichment). P
 ## What you get in Lazarus
 
 1. Enter a **company domain** as Deal Profile **Account ID** (e.g. `acme.com`).
-2. **Run Analysis** — when WhiteWhale is configured, the server auto-looks up buying signals for that domain.
+2. **Run Analysis** — when WhiteWhale is configured **and the account is on Team ($499/mo)** (or founder/ops/demo bypass), the server looks up buying signals for that domain. Free, $10, and Entry plans skip the lookup so WhiteWhale credits are not spent.
 3. Signals appear in the **report** as **Why Now / Buying Signals** (summary, score, positive signals with sources). They are also passed into Gemini as market-timing context for forecastability / recoverable-vs-flat-no judgment — not as CRM notes.
 4. Soft-fail: missing config, non-domain Account ID, no WhiteWhale account, or API errors → analysis continues without the section.
 

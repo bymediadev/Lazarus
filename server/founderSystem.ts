@@ -204,6 +204,12 @@ export function classifyIssue(route: string, statusCode: number, errorCode: stri
   const err = (errorCode ?? "").toLowerCase();
   const r = route.toLowerCase();
 
+  if (statusCode === 402 || err.includes("payment_required")) {
+    return {
+      category: "Other",
+      likely_fix: "Customer hit the paid gate — check their plan on Lookup / Stripe.",
+    };
+  }
   if (statusCode === 429 || err.includes("quota") || err.includes("429")) {
     return {
       category: "Quota",

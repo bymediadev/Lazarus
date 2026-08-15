@@ -1,5 +1,14 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useAuth } from "./AuthProvider";
+import { PricingPlanCards } from "./PricingGate";
+import {
+  fetchBillingMe,
+  formatInvoiceAmount,
+  startBillingPortal,
+  startCheckout,
+  type BillingMe,
+  type CheckoutPlan,
+} from "../lib/billing";
 
 interface Props {
   open: boolean;
@@ -13,6 +22,30 @@ export default function AccountPortal({ open, onClose }: Props) {
   const [busy, setBusy] = useState(false);
   const [notice, setNotice] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [billing, setBilling] = useState<BillingMe | null>(null);
+  const [billingBusy, setBillingBusy] = useState<string | null>(null);
+  const [billingError, setBillingError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!open || !auth.session) {
+      setBilling(null);
+      return;
+    }
+    let cancelled = false;
+    void (async () => {
+      try {
+        const next = await fetchBillingMe();
+        if (!cancelled) setBilling(next);
+      } catch (err) {
+        if (!cancelled) {
+          setBillingError(err instanceof Error ? err.message : "Could not load billing");
+        }
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [open, auth.session]);
 
   if (!open) return null;
 
@@ -36,6 +69,35 @@ export default function AccountPortal({ open, onClose }: Props) {
     }
   };
 
+  const onCheckout = async (plan: CheckoutPlan) => {
+    setBillingBusy(plan);
+    setBillingError(null);
+    try {
+      await startCheckout(plan);
+    } catch (err) {
+      setBillingError(err instanceof Error ? err.message : "Checkout failed");
+      setBillingBusy(null);
+    }
+  };
+
+  const onPortal = async () => {
+    setBillingBusy("portal");
+    setBillingError(null);
+    try {
+      await startBillingPortal();
+    } catch (err) {
+      setBillingError(err instanceof Error ? err.message : "Could not open billing portal");
+      setBillingBusy(null);
+    }
+  };
+
+  const showUpgrade =
+    !billing ||
+    billing.plan === "free" ||
+    billing.plan === "ppu" ||
+    billing.status === "canceled" ||
+    billing.payment_required;
+
   return (
     <div className="account-portal-overlay" role="dialog" aria-modal="true" aria-label="Account">
       <button type="button" className="guide-backdrop" aria-label="Close account" onClick={onClose} />
@@ -57,6 +119,78 @@ export default function AccountPortal({ open, onClose }: Props) {
         </section>
 
         <section className="account-portal-section">
+          <h3>Billing</h3>
+          {billing?.past_due && (
+            <div className="warning-banner">
+              <p>Payment is past due. Update your card to keep running analyses.</p>
+            </div>
+          )}
+          {billing ? (
+            <>
+              <p className="account-email">{billing.plan_label}</p>
+              <p className="meta-line">Status: {billing.status}</p>
+              <p className="meta-line">Analyses: {billing.analyses_remaining_label}</p>
+              {billing.period_end && (billing.plan === "entry" || billing.plan === "team") && (
+                <p className="meta-line">
+                  Next renewal: {new Date(billing.period_end).toLocaleDateString()}
+                </p>
+              )}
+              {billing.invoices.length > 0 && (
+                <ul className="billing-invoice-list">
+                  {billing.invoices.map((inv) => (
+                    <li key={inv.id}>
+                      {inv.hosted_invoice_url ? (
+                        <a href={inv.hosted_invoice_url} target="_blank" rel="noreferrer">
+                          {new Date(inv.created).toLocaleDateString()} · {formatInvoiceAmount(inv)} ·{" "}
+                          {inv.status}
+                        </a>
+                      ) : (
+                        <span>
+                          {new Date(inv.created).toLocaleDateString()} · {formatInvoiceAmount(inv)} ·{" "}
+                          {inv.status}
+                        </span>
+                      )}
+                    </li>
+                  ))}
+                </ul>
+              )}
+              {billing.can_manage_portal && (
+                <button
+                  type="button"
+                  className="btn-secondary"
+                  disabled={!!billingBusy}
+                  onClick={() => void onPortal()}
+                >
+                  {billingBusy === "portal" ? "Opening…" : "Manage billing"}
+                </button>
+              )}
+              {showUpgrade && (
+                <PricingPlanCards
+                  configured={billing.configured}
+                  signedIn
+                  busy={billingBusy}
+                  onSignIn={() => undefined}
+                  onCheckout={(plan) => void onCheckout(plan)}
+                />
+              )}
+              {billing.plan === "entry" && billing.status === "active" && !billing.payment_required && (
+                <button
+                  type="button"
+                  className="run-button"
+                  disabled={!!billingBusy || !billing.configured}
+                  onClick={() => void onCheckout("team")}
+                >
+                  {billingBusy === "team" ? "Redirecting…" : "Upgrade to Team · $499/mo unlimited"}
+                </button>
+              )}
+            </>
+          ) : (
+            <p className="meta-line">Loading billing…</p>
+          )}
+          {billingError && <div className="error-banner">{billingError}</div>}
+        </section>
+
+        <section className="account-portal-section">
           <h3>Change password</h3>
           <label className="login-field">
             <span>New password</span>
@@ -69,7 +203,7 @@ export default function AccountPortal({ open, onClose }: Props) {
             />
           </label>
           <label className="login-field">
-            <span>Confirm new password</span>
+            <span>Confirm password</span>
             <input
               type="password"
               value={confirm}
@@ -93,8 +227,9 @@ export default function AccountPortal({ open, onClose }: Props) {
         <section className="account-portal-section">
           <h3>Saved deals</h3>
           <p className="meta-line">
-            Use <strong>My deals</strong> in the header for past runs, CRM links, and lifecycle
-            (stalled vs getting unstuck).
+            Analyses on this account are saved automatically. The <strong>My deals</strong> lifecycle
+            tracker (stalled vs unstuck over time) is on Entry ($99/mo) and Team ($499/mo). WhiteWhale
+            Why Now signals are on Team.
           </p>
         </section>
 

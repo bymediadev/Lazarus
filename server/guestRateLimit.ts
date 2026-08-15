@@ -85,5 +85,5 @@ export function isDemoUsageBypassAllowed(req: Request): boolean {
 }
 
 export function guestServerLimitMessage(): string {
-  return `Free analyses are limited for today. Paid plans come next — founder demos use the founder login.`;
+  return `You’ve used your 5 free analyses. Choose $10 per report, $99/mo for 20 analyses, or $499/mo unlimited.`;
 }
