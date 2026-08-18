@@ -89,7 +89,10 @@ export default function MarketingHome({ onTrySample, onSignup, onPortal }: Props
           <li>
             <span>1</span>
             <h2>Add evidence</h2>
-            <p>A recording, transcript, email thread, or field notes. One deal at a time.</p>
+            <p>
+              A recording, transcript, email thread, or notes from your CRM. Compile them in one
+              run for a full picture of the deal.
+            </p>
           </li>
           <li>
             <span>2</span>
@@ -126,8 +129,8 @@ export default function MarketingHome({ onTrySample, onSignup, onPortal }: Props
         </div>
         <ul className="marketing-plain-list">
           <li>
-            <strong>Left — Deal evidence.</strong> Upload, live, mailbox, or field notes. Run
-            Analysis.
+            <strong>Left — Deal evidence.</strong> Recording, transcript, email, or CRM notes —
+            together in one run. Then Run Analysis.
           </li>
           <li>
             <strong>Right — Recovery brief.</strong> Score, blocker, and the plan.
