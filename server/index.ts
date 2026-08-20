@@ -129,7 +129,7 @@ app.use((_req, res, next) => {
       "img-src 'self' data: https:",
       "font-src 'self' data:",
       "connect-src 'self' https: wss:",
-      "frame-src 'self' https://*.zoom.us",
+      "frame-src 'self' https://*.zoom.us https://www.loom.com https://*.loom.com",
       "object-src 'none'",
       "base-uri 'self'",
       "form-action 'self' https://zoom.us https://*.zoom.us",
