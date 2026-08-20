@@ -64,6 +64,7 @@ import {
 } from "./billing.js";
 import { resolveModelTierForUser } from "./modelForPlan.js";
 import { registerBillingRoutes, registerBillingWebhook } from "./billingRoutes.js";
+import { registerFeedbackRoutes } from "./feedback.js";
 import { apiEventsMiddleware, setApiErrorLocal } from "./apiEvents.js";
 import { registerFounderRoutes } from "./founderRoutes.js";
 import { registerMeDealRoutes } from "./meDeals.js";
@@ -662,6 +663,7 @@ registerSalesforceRoutes(app);
 registerWhiteWhaleRoutes(app);
 registerAuthRoutes(app);
 registerBillingRoutes(app);
+registerFeedbackRoutes(app);
 registerFounderRoutes(app);
 registerMeDealRoutes(app);
 registerTrustPackRoutes(app, publicPath);

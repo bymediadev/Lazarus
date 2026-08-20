@@ -5512,3 +5512,121 @@ button.header-brand {
     transform: none;
   }
 }
+
+.feedback-widget {
+  position: fixed;
+  right: 1.15rem;
+  bottom: 1.15rem;
+  z-index: 40;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 0.65rem;
+}
+
+.feedback-launch {
+  border: 1px solid var(--teal);
+  background: var(--panel);
+  color: var(--teal);
+  font: inherit;
+  font-size: 0.82rem;
+  font-weight: 650;
+  letter-spacing: 0.04em;
+  padding: 0.65rem 1.05rem;
+  border-radius: 999px;
+  cursor: pointer;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
+}
+
+.feedback-launch:hover {
+  background: rgba(61, 214, 198, 0.12);
+}
+
+.feedback-panel {
+  width: min(22rem, calc(100vw - 2rem));
+  padding: 1rem 1.05rem 1.1rem;
+  border: 1px solid var(--panel-border);
+  border-radius: 12px;
+  background: var(--panel);
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.45);
+}
+
+.feedback-panel-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin-bottom: 0.45rem;
+}
+
+.feedback-panel-head h2 {
+  margin: 0;
+  font-size: 1rem;
+}
+
+.feedback-close {
+  background: none;
+  border: none;
+  color: var(--muted);
+  font-size: 1.4rem;
+  line-height: 1;
+  cursor: pointer;
+  padding: 0 0.15rem;
+}
+
+.feedback-lead,
+.feedback-thanks {
+  margin: 0 0 0.75rem;
+  color: var(--muted);
+  font-size: 0.9rem;
+  line-height: 1.45;
+}
+
+.feedback-panel form {
+  display: grid;
+  gap: 0.7rem;
+}
+
+.feedback-panel label {
+  display: grid;
+  gap: 0.3rem;
+  font-size: 0.78rem;
+  color: var(--muted);
+}
+
+.feedback-panel textarea,
+.feedback-panel input[type="email"] {
+  width: 100%;
+  font: inherit;
+  color: var(--text);
+  background: #070b1c;
+  border: 1px solid var(--panel-border);
+  border-radius: 8px;
+  padding: 0.55rem 0.65rem;
+}
+
+.feedback-panel textarea:focus,
+.feedback-panel input[type="email"]:focus {
+  outline: 2px solid var(--teal);
+  outline-offset: 1px;
+}
+
+.feedback-error {
+  margin: 0;
+  color: #f0a0a0;
+  font-size: 0.82rem;
+}
+
+.feedback-honeypot {
+  position: absolute;
+  left: -9999px;
+  height: 0;
+  overflow: hidden;
+}
+
+@media (max-width: 800px) {
+  .feedback-widget {
+    right: 0.85rem;
+    bottom: 0.85rem;
+  }
+}

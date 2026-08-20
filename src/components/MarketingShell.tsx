@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 import { scrollToSection } from "../lib/appRoute";
 import { PORTAL_ENTRY_CTA } from "../lib/cta";
+import FeedbackButton from "./FeedbackButton";
 import SiteFooter from "./SiteFooter";
 
 type Props = {
@@ -51,6 +52,7 @@ export default function MarketingShell({
       </header>
       <main className="marketing-main">{children}</main>
       <SiteFooter />
+      <FeedbackButton />
     </div>
   );
 }
