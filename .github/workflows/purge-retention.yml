@@ -12,5 +12,19 @@ jobs:
     steps:
       - name: Purge expired transcripts
         run: |
-          curl -sf -X POST "${{ secrets.LAZARUS_API_URL }}/api/admin/purge-retention" \
-            -H "x-cron-secret: ${{ secrets.PURGE_CRON_SECRET }}"
+          set -euo pipefail
+          url="${{ secrets.LAZARUS_API_URL }}/api/admin/purge-retention"
+          out="/tmp/purge-body.txt"
+          for i in 1 2 3 4 5; do
+            code=$(curl -sS --max-time 45 -o "$out" -w "%{http_code}" -X POST "$url" \
+              -H "x-cron-secret: ${{ secrets.PURGE_CRON_SECRET }}" || true)
+            if [ "$code" = "200" ]; then
+              cat "$out"
+              exit 0
+            fi
+            echo "Attempt $i: HTTP ${code:-000}"
+            cat "$out" 2>/dev/null || true
+            sleep $((i * 8))
+          done
+          echo "Purge retention failed after retries"
+          exit 1
