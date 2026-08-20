@@ -1,4 +1,10 @@
-import { CHECKOUT_PLANS, type CheckoutPlan } from "../lib/billing";
+import {
+  CHECKOUT_PLANS,
+  PRICING_CARDS,
+  PRICING_USAGE_FOOTNOTE,
+  type CheckoutPlan,
+  type PricingCard,
+} from "../lib/billing";
 
 type Props = {
   signedIn: boolean;
@@ -11,6 +17,15 @@ type Props = {
   onCheckout: (plan: CheckoutPlan) => void;
 };
 
+function checkoutCta(card: PricingCard, signedIn: boolean, configured: boolean, busy: string | null) {
+  if (busy === card.id) return "Redirecting…";
+  if (card.id === "free") return "Start with 5 free";
+  if (!signedIn) return "Sign in to buy";
+  if (!configured) return "Billing not configured";
+  if (card.checkout === "ppu") return "Buy 1 report";
+  return "Subscribe";
+}
+
 export function PricingPlanCards({
   configured,
   signedIn,
@@ -18,49 +33,73 @@ export function PricingPlanCards({
   onSignIn,
   onCheckout,
   plans,
+  includeFree = false,
+  onStartFree,
 }: Pick<Props, "configured" | "signedIn" | "busy" | "onSignIn" | "onCheckout"> & {
   plans?: CheckoutPlan[];
+  includeFree?: boolean;
+  onStartFree?: () => void;
 }) {
-  const visible = plans
-    ? CHECKOUT_PLANS.filter((plan) => plans.includes(plan.id))
-    : CHECKOUT_PLANS;
+  const visible = includeFree
+    ? PRICING_CARDS
+    : CHECKOUT_PLANS.filter((plan) => (plans ? plans.includes(plan.checkout) : true));
+  const gridClass =
+    visible.length === 4
+      ? " pricing-plan-grid-4"
+      : visible.length === 2
+        ? " pricing-plan-grid-2"
+        : "";
+
   return (
-    <div className={`pricing-plan-grid${visible.length === 2 ? " pricing-plan-grid-2" : ""}`}>
-      {visible.map((plan) => (
-        <article
-          key={plan.id}
-          className={`pricing-plan-card${plan.recommended ? " pricing-plan-card-recommended" : ""}`}
-        >
-          <p className="pricing-plan-price">{plan.price}</p>
-          <h3>
-            {plan.title}
-            {plan.recommended ? <span className="pricing-plan-badge">Recommended</span> : null}
-          </h3>
-          <p className="pricing-plan-detail">{plan.detail}</p>
-          <button
-            type="button"
-            className="run-button"
-            disabled={!!busy || (signedIn && !configured)}
-            onClick={() => {
-              if (!signedIn) {
-                onSignIn();
-                return;
-              }
-              onCheckout(plan.id);
-            }}
-          >
-            {busy === plan.id
-              ? "Redirecting…"
-              : !signedIn
-                ? "Sign in to buy"
-                : !configured
-                  ? "Billing not configured"
-                  : plan.id === "ppu"
-                    ? "Buy 1 report"
-                    : "Subscribe"}
-          </button>
-        </article>
-      ))}
+    <div className="pricing-plan-block">
+      <div className={`pricing-plan-grid${gridClass}`}>
+        {visible.map((plan) => {
+          const checkoutId = plan.checkout;
+          return (
+            <article
+              key={plan.id}
+              className={`pricing-plan-card${plan.recommended ? " pricing-plan-card-recommended" : ""}`}
+            >
+              <p className="pricing-plan-price">{plan.price}</p>
+              <h3>
+                {plan.title}
+                {plan.recommended ? <span className="pricing-plan-badge">Recommended</span> : null}
+              </h3>
+              <p className="pricing-plan-usage">{plan.usage}</p>
+              {plan.unitCost ? <p className="pricing-plan-unit">{plan.unitCost}</p> : null}
+              <p className="pricing-plan-quality">
+                <span>{plan.quality}</span>
+                {plan.qualityDetail}
+              </p>
+              <p className="pricing-plan-detail">{plan.detail}</p>
+              <ul className="pricing-plan-features">
+                {plan.features.map((feature) => (
+                  <li key={feature}>{feature}</li>
+                ))}
+              </ul>
+              <button
+                type="button"
+                className="run-button"
+                disabled={!!busy || (signedIn && !configured && plan.id !== "free")}
+                onClick={() => {
+                  if (plan.id === "free") {
+                    onStartFree?.();
+                    return;
+                  }
+                  if (!signedIn) {
+                    onSignIn();
+                    return;
+                  }
+                  if (checkoutId) onCheckout(checkoutId);
+                }}
+              >
+                {checkoutCta(plan, signedIn, configured, busy)}
+              </button>
+            </article>
+          );
+        })}
+      </div>
+      <p className="pricing-plan-footnote">{PRICING_USAGE_FOOTNOTE}</p>
     </div>
   );
 }

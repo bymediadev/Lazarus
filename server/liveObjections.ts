@@ -1,10 +1,11 @@
-import { GoogleGenerativeAI } from "@google/generative-ai";
+import { generateGeminiText, type ModelTier } from "./modelForPlan.js";
 
 export type LiveObjectionStatus = "open" | "answered" | "dismissed";
 
 export interface LiveObjectionScanRequest {
   full_transcript: string;
   existing_objections?: { id: string; text: string; status: LiveObjectionStatus }[];
+  modelTier?: ModelTier;
 }
 
 export interface LiveObjectionScanResponse {
@@ -26,11 +27,6 @@ function parseJsonBlock(raw: string): LiveObjectionScanResponse {
 export async function scanLiveObjections(
   body: LiveObjectionScanRequest
 ): Promise<LiveObjectionScanResponse> {
-  const apiKey = process.env.GEMINI_API_KEY;
-  if (!apiKey) {
-    throw new Error("GEMINI_API_KEY is not set. Add it to your .env file.");
-  }
-
   const transcript = body.full_transcript.trim();
   if (transcript.length < 40) {
     return { new_objections: [], resolved_ids: [] };
@@ -63,9 +59,6 @@ ${openList || "(none)"}
 TRANSCRIPT:
 ${transcript.slice(-12000)}`;
 
-  const genAI = new GoogleGenerativeAI(apiKey);
-  const model = process.env.GEMINI_MODEL?.trim() || "gemini-2.5-flash";
-  const result = await genAI.getGenerativeModel({ model }).generateContent(prompt);
-  const text = result.response.text();
+  const text = await generateGeminiText(prompt, body.modelTier ?? "free");
   return parseJsonBlock(text);
 }

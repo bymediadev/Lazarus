@@ -29,6 +29,7 @@ export default function IntakeHowTo({
     <aside className="intake-how-to" data-guide-target="guide-intake" aria-label="How to run Lazarus Deal Recovery">
       <div>
         <h2 className="intake-how-to-title">Deal evidence</h2>
+        <p className="intake-how-to-entry">This is the left pane — add the stalled deal here.</p>
         <p className="intake-how-to-hint">
           Add a recording, transcript, email thread, or notes from your CRM. Compile them in one
           run for a full picture of the deal.

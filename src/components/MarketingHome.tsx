@@ -1,3 +1,4 @@
+import { HERO_PRIMARY_CTA, PORTAL_ENTRY_CTA } from "../lib/cta";
 import { BOOKING_URL, WALKTHROUGH_EMBED_URL } from "../lib/site";
 import { scrollToSection } from "../lib/appRoute";
 import { useReveal } from "../lib/useReveal";
@@ -30,21 +31,19 @@ export default function MarketingHome({ onTrySample, onSignup, onPortal }: Props
     <>
       <section className="marketing-hero">
         <p className="hero-trust-eyebrow">For sales managers and VPs</p>
-        <h1 className="marketing-hero-title">
-          Know which deals will close — and which are a flat no.
-        </h1>
-        <p className="marketing-hero-body">
-          Lazarus Deal Recovery sits on top of the calls you already run. You bring the evidence. It
-          tells you what the deal is, what’s blocking it, and what to do next.
-        </p>
+        <h1 className="marketing-hero-title">Win back closed-lost sales pipeline</h1>
+        <h2 className="marketing-hero-sub">
+          Stop losing high-value sales. Lazarus uses AI to analyze dead B2B deals and build
+          actionable recovery playbooks you can run.
+        </h2>
         <div className="marketing-hero-actions">
-          <button type="button" className="run-button" onClick={onPortal}>
-            Go to portal
+          <button type="button" className="run-button run-button-above-fold" onClick={onPortal}>
+            {HERO_PRIMARY_CTA}
           </button>
           <BookLookButton />
         </div>
         <p className="marketing-hero-note">
-          Five free analyses in the portal.{" "}
+          Five free analyses in the workspace.{" "}
           <button type="button" className="marketing-text-link" onClick={onTrySample}>
             Try a sample
           </button>
@@ -107,13 +106,15 @@ export default function MarketingHome({ onTrySample, onSignup, onPortal }: Props
         </ol>
       </section>
 
-      <section className="marketing-simple marketing-product marketing-reveal" id="layout" aria-label="The portal">
-        <h2>The portal</h2>
-        <p className="marketing-product-caption">This is the portal — evidence in, brief out.</p>
+      <section className="marketing-simple marketing-product marketing-reveal" id="layout" aria-label="The workspace">
+        <h2>The workspace</h2>
+        <p className="marketing-product-caption">
+          Evidence on the left. Brief on the right. Enter here.
+        </p>
         <figure className="marketing-product-frame">
           <img
             src="/landing-portal.png"
-            alt="Lazarus Deal Recovery portal: deal evidence on the left, recovery brief on the right"
+            alt="Lazarus Deal Recovery workspace: drop evidence on the left, recovery brief on the right"
             width={1600}
             height={900}
           />
@@ -129,11 +130,12 @@ export default function MarketingHome({ onTrySample, onSignup, onPortal }: Props
         </div>
         <ul className="marketing-plain-list">
           <li>
-            <strong>Left — Deal evidence.</strong> Recording, transcript, email, or CRM notes —
-            together in one run. Then Run Analysis.
+            <strong>Left — Drop the evidence.</strong> Call recording, transcript, email thread, or
+            CRM notes — together in one run.
           </li>
           <li>
-            <strong>Right — Recovery brief.</strong> Score, blocker, and the plan.
+            <strong>Right — Recovery brief.</strong> Closable vs a flat no, the blocker, and a 0–90
+            day plan.
           </li>
         </ul>
       </section>
@@ -199,12 +201,15 @@ export default function MarketingHome({ onTrySample, onSignup, onPortal }: Props
         <h2>Simple plans. Price per analysis — not per seat.</h2>
         <p className="marketing-page-lead">
           Start with five free runs. Sign in to save them. Pay only when you want to keep going.
+          $99 uses a stronger model. $499 uses the strongest.
         </p>
         <PricingPlanCards
           configured
           signedIn={false}
           busy={null}
+          includeFree
           onSignIn={onSignup}
+          onStartFree={onPortal}
           onCheckout={() => onSignup()}
         />
       </section>
@@ -227,7 +232,7 @@ export default function MarketingHome({ onTrySample, onSignup, onPortal }: Props
         </p>
         <div className="marketing-hero-actions">
           <button type="button" className="run-button" onClick={onPortal}>
-            Go to portal
+            {PORTAL_ENTRY_CTA}
           </button>
           <BookLookButton />
         </div>

@@ -557,7 +557,7 @@ export async function buildApisInventory(): Promise<ApisInventory> {
         detail: p.billing.detail,
         action:
           p.id === "gemini"
-            ? "Open Google AI Studio → raise quota or enable billing."
+            ? "Open Google AI Studio → raise quota or enable billing. Team analyses use Gemini 3.1 Pro, which has no free tier."
             : p.id === "whitewhale"
               ? "Top up WhiteWhale credits or pause active monitors."
               : "Upgrade the provider plan or wait for reset.",
@@ -587,7 +587,7 @@ export async function buildApisInventory(): Promise<ApisInventory> {
       severity: quota7 >= 10 ? "critical" : "warning",
       title: "Quota errors showing up in Lazarus telemetry",
       detail: `${quota7} quota-classified failures in the last 7 days (was ${quotaPrior} prior week).`,
-      action: "Usually Gemini free-tier — set GEMINI_MODEL=gemini-2.5-flash or enable billing.",
+      action: "Usually Gemini free-tier — Team uses Gemini 3.1 Pro, which needs Google billing enabled.",
     });
   }
 

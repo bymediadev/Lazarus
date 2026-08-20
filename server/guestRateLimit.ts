@@ -85,5 +85,5 @@ export function isDemoUsageBypassAllowed(req: Request): boolean {
 }
 
 export function guestServerLimitMessage(): string {
-  return `You’ve used your 5 free analyses. Choose $10 per report, $99/mo for 20 analyses, or $499/mo unlimited.`;
+  return `You’ve used your 5 free analyses. Choose $10 per report, $99/mo for 20 with deeper reasoning, or $499/mo unlimited with the highest-reasoning model.`;
 }

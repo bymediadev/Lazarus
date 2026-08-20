@@ -213,7 +213,7 @@ export function classifyIssue(route: string, statusCode: number, errorCode: stri
   if (statusCode === 429 || err.includes("quota") || err.includes("429")) {
     return {
       category: "Quota",
-      likely_fix: "Gemini/API quota — wait a few minutes or switch GEMINI_MODEL; check AI Studio quotas.",
+      likely_fix: "Gemini/API quota — wait, enable Google billing (required for Team / Gemini 3.1 Pro), or switch GEMINI_MODEL; check AI Studio quotas.",
     };
   }
   if (

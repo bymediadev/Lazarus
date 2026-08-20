@@ -30,6 +30,11 @@ import {
   type ProprietaryIndices,
   type ScoringForce,
 } from "./scoring.js";
+import {
+  isRetryableGeminiError,
+  modelCandidatesForTier,
+  type ModelTier,
+} from "./modelForPlan.js";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
@@ -222,13 +227,6 @@ export interface EnterpriseAnalysis {
   immediate_remediation?: string[];
 }
 
-const FALLBACK_MODELS = [
-  "gemini-2.5-flash",
-  "gemini-2.5-flash-lite",
-  "gemini-flash-latest",
-  "gemini-3.1-flash-lite",
-];
-
 const VALID_STATUSES: EnterpriseDealStatus[] = [
   "ACTIVE",
   "STALLED — RECOVERABLE",
@@ -250,20 +248,9 @@ function loadSystemPrompt(): string {
   return core;
 }
 
-function modelCandidates(): string[] {
-  const preferred = process.env.GEMINI_MODEL?.trim();
-  const chain = preferred ? [preferred, ...FALLBACK_MODELS] : FALLBACK_MODELS;
-  return [...new Set(chain)];
-}
-
-function isRetryableGeminiError(err: unknown): boolean {
-  const msg = err instanceof Error ? err.message : String(err);
-  return msg.includes("429") || msg.includes("404") || msg.includes("503");
-}
-
 function quotaErrorMessage(lastError: unknown): string {
   const base =
-    "Gemini quota exceeded. Wait a few minutes or set GEMINI_MODEL=gemini-2.5-flash in .env.";
+    "Gemini quota exceeded. Wait a few minutes, enable Google billing for Team (Gemini 3.1 Pro), or set GEMINI_MODEL=gemini-2.5-flash in .env.";
   if (lastError instanceof Error && lastError.message) {
     return `${base}\n\nLast error: ${lastError.message.split("\n")[0]}`;
   }
@@ -829,6 +816,7 @@ ${transcript}`;
 export interface AnalyzeTranscriptOptions {
   dealValue: number;
   deepContext?: DeepContextInput;
+  modelTier?: ModelTier;
 }
 
 async function generateWithModel(
@@ -859,9 +847,9 @@ async function generateWithModel(
 async function extractWithModels(
   apiKey: string,
   systemPrompt: string,
-  userMessage: string
+  userMessage: string,
+  candidates: string[]
 ): Promise<EnterpriseAnalysis> {
-  const candidates = modelCandidates();
   let lastError: unknown;
 
   for (const modelName of candidates) {
@@ -932,6 +920,7 @@ export async function analyzeTranscript(
       : dealValueOrOptions;
   const dealValue = options.dealValue;
   const deepContext = options.deepContext;
+  const candidates = modelCandidatesForTier(options.modelTier ?? "free");
 
   const apiKey = process.env.GEMINI_API_KEY;
   if (!apiKey) {
@@ -941,7 +930,7 @@ export async function analyzeTranscript(
   const systemPrompt = loadSystemPrompt();
   let userMessage = buildExtractionMessage(transcript, dealValue, deepContext);
 
-  let analysis = await extractWithModels(apiKey, systemPrompt, userMessage);
+  let analysis = await extractWithModels(apiKey, systemPrompt, userMessage, candidates);
   let audit = auditTranscriptGrounding({
     transcript,
     dealValue,
@@ -954,7 +943,7 @@ export async function analyzeTranscript(
   if (!audit.pass) {
     console.warn("Grounding audit failed — retrying with correction prompt", audit);
     userMessage = buildGroundingRetryMessage(transcript, dealValue, audit, deepContext);
-    analysis = await extractWithModels(apiKey, systemPrompt, userMessage);
+    analysis = await extractWithModels(apiKey, systemPrompt, userMessage, candidates);
     audit = auditTranscriptGrounding({
       transcript,
       dealValue,

@@ -62,8 +62,8 @@ export const GUIDE_STEPS: Record<string, GuideStep> = {
   },
   "fa-3": {
     id: "fa-3",
-    title: "Run Analysis",
-    body: "Click Run Analysis. Lazarus extracts evidence, scores recoverable vs flat no, and builds the recovery brief on the right.",
+    title: "Raise this deal from the dead",
+    body: "Click Raise this deal from the dead. Lazarus extracts evidence, scores recoverable vs flat no, and builds the recovery brief on the right.",
     target: "guide-run-analysis",
     prev: "fa-2",
     next: "fa-4",

@@ -62,6 +62,7 @@ import type { LiveObjection } from "./lib/liveObjections";
 import { fetchLiveTriage, type LiveTriageResult } from "./lib/liveTriage";
 import type { MeetingPlatformId } from "./lib/meetingPlatforms";
 import { loadDemoSalesTranscript } from "./lib/demoTranscript";
+import { RUN_DEAL_CTA } from "./lib/cta";
 
 const ACCEPTED_EXT = [".mp3", ".wav", ".mp4", ".m4a", ".webm", ".mpeg", ".mpga"];
 const ACCEPT_ATTR = ".mp3,.wav,.mp4,.m4a,.webm,audio/*,video/mp4,video/webm";
@@ -1060,7 +1061,7 @@ export default function App() {
                   ? "Analyzing…"
                   : paywalled
                     ? "Payment required"
-                    : `Run Analysis${channelCount ? ` (${channelCount})` : ""}`}
+                    : `${RUN_DEAL_CTA}${channelCount ? ` (${channelCount})` : ""}`}
               </button>
 
               {enforceGuestCap && !paywalled && (

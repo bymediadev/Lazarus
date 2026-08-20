@@ -1,4 +1,5 @@
 import { GoogleGenerativeAI } from "@google/generative-ai";
+import { modelCandidatesForTier } from "./modelForPlan.js";
 
 export type RelevanceLabel = "sales_deal" | "not_sales";
 export type RelevanceConfidence = "low" | "medium" | "high";
@@ -94,7 +95,7 @@ ${sample.slice(0, SAMPLE_CHARS)}`;
 
   try {
     const genAI = new GoogleGenerativeAI(apiKey);
-    const modelName = process.env.GEMINI_MODEL?.trim() || "gemini-2.5-flash";
+    const modelName = modelCandidatesForTier("free")[0];
     const model = genAI.getGenerativeModel({
       model: modelName,
       generationConfig: {

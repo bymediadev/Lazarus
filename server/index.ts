@@ -62,6 +62,7 @@ import {
   reserveAnalysis,
   type ConsumeKind,
 } from "./billing.js";
+import { resolveModelTierForUser } from "./modelForPlan.js";
 import { registerBillingRoutes, registerBillingWebhook } from "./billingRoutes.js";
 import { apiEventsMiddleware, setApiErrorLocal } from "./apiEvents.js";
 import { registerFounderRoutes } from "./founderRoutes.js";
@@ -171,7 +172,7 @@ function formatApiError(message: string): string {
     return "GEMINI_API_KEY was rejected by Google (401). Create a new key at https://aistudio.google.com/apikey — AIza or AQ. format both work. Restart npm run dev after updating .env.";
   }
   if (message.includes("429") || message.includes("quota")) {
-    return "Gemini API quota exceeded. Wait a few minutes and retry, or set GEMINI_MODEL=gemini-2.5-flash in .env.";
+    return "Gemini API quota exceeded. Wait a few minutes and retry, enable Google billing for Team (Gemini 3.1 Pro), or set GEMINI_MODEL=gemini-2.5-flash in .env.";
   }
   if (message.includes("GEMINI_API_KEY")) {
     return "GEMINI_API_KEY is missing. Add it to your .env file.";
@@ -343,7 +344,15 @@ app.post("/api/post-mortem", requireApiKey, uploadFields, async (req, res) => {
       deepContext.whitewhaleContext = whitewhaleIntel;
     }
 
-    const result = await analyzeTranscript(transcript, { dealValue, deepContext });
+    const result = await analyzeTranscript(transcript, {
+      dealValue,
+      deepContext,
+      modelTier: await resolveModelTierForUser({
+        userId: authUserIdEarly,
+        consume: reservation,
+        exempt: freemiumExempt,
+      }),
+    });
 
     const recurringVetoHolders = deepContext.historicalCrmContext?.length
       ? detectRecurringVetoHolders(deepContext.historicalCrmContext)
@@ -523,9 +532,15 @@ app.post("/api/live/objections", requireApiKey, async (req, res) => {
     const existing_objections = Array.isArray(req.body?.existing_objections)
       ? req.body.existing_objections
       : [];
+    const userId = (await optionalAuthUserId(req)) ?? undefined;
+    const modelTier = await resolveModelTierForUser({
+      userId,
+      exempt: await isFreemiumExempt(req),
+    });
     const result = await scanLiveObjectionsServer({
       full_transcript,
       existing_objections,
+      modelTier,
     });
     res.json(result);
   } catch (err) {
@@ -537,6 +552,11 @@ app.post("/api/live/objections", requireApiKey, async (req, res) => {
 
 app.post("/api/live/triage", requireApiKey, async (req, res) => {
   try {
+    const userId = (await optionalAuthUserId(req)) ?? undefined;
+    const modelTier = await resolveModelTierForUser({
+      userId,
+      exempt: await isFreemiumExempt(req),
+    });
     const result = await runLiveTriage({
       full_transcript: String(req.body?.full_transcript ?? ""),
       platform: String(req.body?.platform ?? "live"),
@@ -547,6 +567,7 @@ app.post("/api/live/triage", requireApiKey, async (req, res) => {
       open_objections: Array.isArray(req.body?.open_objections)
         ? req.body.open_objections.map(String)
         : [],
+      modelTier,
     });
     res.json(result);
   } catch (err) {

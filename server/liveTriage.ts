@@ -1,5 +1,5 @@
-import { GoogleGenerativeAI } from "@google/generative-ai";
 import { classifySalesRelevance } from "./relevanceGate.js";
+import { generateGeminiText, type ModelTier } from "./modelForPlan.js";
 
 export type LiveTriageTier = "LOW" | "MODERATE" | "HIGH" | "CRITICAL";
 export type LiveTriageMomentum = "improving" | "stalling" | "slipping" | "unclear";
@@ -9,6 +9,7 @@ export interface LiveTriageRequest {
   platform?: string;
   deal_value?: number;
   open_objections?: string[];
+  modelTier?: ModelTier;
 }
 
 export interface LiveTriageResult {
@@ -60,11 +61,6 @@ function parseJsonBlock(raw: string): Omit<LiveTriageResult, "updated_at"> {
 
 /** Light mid-call triage — not a full DRI autopsy. Grounded in rolling transcript only. */
 export async function runLiveTriage(body: LiveTriageRequest): Promise<LiveTriageResult> {
-  const apiKey = process.env.GEMINI_API_KEY;
-  if (!apiKey) {
-    throw new Error("GEMINI_API_KEY is not set. Add it to your .env file.");
-  }
-
   const transcript = body.full_transcript.trim();
   if (transcript.length < 60) {
     return {
@@ -122,9 +118,7 @@ ${objections.length ? `- Already tracked open objections:\n${objections.map((o) 
 TRANSCRIPT (rolling):
 ${transcript.slice(-14000)}`;
 
-  const genAI = new GoogleGenerativeAI(apiKey);
-  const model = process.env.GEMINI_MODEL?.trim() || "gemini-2.5-flash";
-  const result = await genAI.getGenerativeModel({ model }).generateContent(prompt);
-  const parsed = parseJsonBlock(result.response.text());
+  const raw = await generateGeminiText(prompt, body.modelTier ?? "free");
+  const parsed = parseJsonBlock(raw);
   return { ...parsed, updated_at: new Date().toISOString() };
 }

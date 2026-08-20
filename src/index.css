@@ -1647,6 +1647,13 @@ button.header-brand {
   color: var(--text);
 }
 
+.intake-how-to-entry {
+  margin: 0 0 0.35rem;
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--teal, #3dd6c6);
+}
+
 .intake-how-to-hint {
   color: var(--muted);
   font-size: 0.76rem;
@@ -2133,6 +2140,15 @@ button.header-brand {
   .pricing-plan-grid-2 {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
+  .pricing-plan-grid-4 {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (min-width: 1100px) {
+  .pricing-plan-grid-4 {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
 }
 
 .pricing-plan-card {
@@ -2142,6 +2158,7 @@ button.header-brand {
   display: grid;
   gap: 0.35rem;
   background: rgba(0, 0, 0, 0.12);
+  align-content: start;
 }
 
 .pricing-plan-card-recommended {
@@ -2172,11 +2189,70 @@ button.header-brand {
   color: var(--emerald, #3ecf8e);
 }
 
+.pricing-plan-usage,
+.pricing-plan-unit {
+  margin: 0;
+  font-size: 0.78rem;
+  font-weight: 650;
+  color: var(--text);
+}
+
+.pricing-plan-unit {
+  color: var(--teal, #3dd6c6);
+}
+
+.pricing-plan-quality {
+  margin: 0.1rem 0 0;
+  font-size: 0.74rem;
+  color: var(--muted);
+  line-height: 1.4;
+}
+
+.pricing-plan-quality span {
+  display: inline-block;
+  margin-right: 0.4rem;
+  margin-bottom: 0.15rem;
+  padding: 0.12rem 0.4rem;
+  border: 1px solid var(--emerald, #3ecf8e);
+  border-radius: 999px;
+  font-size: 0.65rem;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  color: var(--emerald, #3ecf8e);
+}
+
 .pricing-plan-detail {
-  margin: 0 0 0.4rem;
+  margin: 0;
   font-size: 0.78rem;
   color: var(--muted);
   line-height: 1.4;
+}
+
+.pricing-plan-features {
+  margin: 0.15rem 0 0.35rem;
+  padding: 0 0 0 1.05rem;
+  display: grid;
+  gap: 0.22rem;
+  font-size: 0.74rem;
+  color: var(--muted);
+  line-height: 1.4;
+}
+
+.pricing-plan-features li::marker {
+  color: var(--emerald, #3ecf8e);
+}
+
+.pricing-plan-card .run-button {
+  margin-top: auto;
+}
+
+.pricing-plan-footnote {
+  margin: 0.85rem 0 0;
+  font-size: 0.75rem;
+  color: var(--muted);
+  line-height: 1.45;
+  max-width: 42rem;
 }
 
 .billing-invoice-list {
@@ -4172,6 +4248,14 @@ button.header-brand {
   box-shadow: 0 0 22px var(--emerald-glow);
 }
 
+.marketing-entry-cta {
+  white-space: normal;
+  letter-spacing: 0.04em;
+  line-height: 1.25;
+  max-width: 13.5rem;
+  text-align: center;
+}
+
 .header-auth-link {
   background: none;
   border: none;
@@ -5013,7 +5097,7 @@ button.header-brand {
 }
 
 .marketing-band .pricing-plan-grid {
-  max-width: 58rem;
+  max-width: 72rem;
 }
 
 #how,
@@ -5074,12 +5158,20 @@ button.header-brand {
   margin: 0.35rem 0 1rem;
 }
 
-.marketing-hero-body {
+.marketing-hero-body,
+.marketing-hero-sub {
   color: var(--muted);
-  font-size: 1.02rem;
+  font-size: 1.08rem;
+  font-weight: 500;
   line-height: 1.6;
   max-width: 42rem;
-  margin-bottom: 1.35rem;
+  margin: 0 0 1.5rem;
+  letter-spacing: 0;
+}
+
+.marketing-hero-actions .run-button-above-fold {
+  min-width: 16rem;
+  box-shadow: 0 0 28px var(--emerald-glow);
 }
 
 .marketing-hero-actions {

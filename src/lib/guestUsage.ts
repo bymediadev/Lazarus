@@ -118,11 +118,11 @@ export function shouldEnforceGuestCap(opts: {
 
 export function guestCapLockMessage(signedIn = false): string {
   if (signedIn) {
-    return `You’ve used your ${GUEST_ANALYSIS_CAP} free analyses. Choose $10 per report, $99/mo for 20 analyses, or $499/mo unlimited.`;
+    return `You’ve used your ${GUEST_ANALYSIS_CAP} free analyses. Choose $10 per report, $99/mo for 20 with deeper reasoning, or $499/mo unlimited with the highest-reasoning model.`;
   }
-  return `You’ve used your ${GUEST_ANALYSIS_CAP} free analyses. Sign in to pay — $10 per report, $99/mo, or $499/mo unlimited.`;
+  return `You’ve used your ${GUEST_ANALYSIS_CAP} free analyses. Sign in to pay — $10 per report, $99/mo with deeper reasoning, or $499/mo unlimited with the highest-reasoning model.`;
 }
 
 export function guestNearCapMessage(): string {
-  return "1 free analysis left. After that you’ll need $10 per report, $99/mo, or $499/mo unlimited.";
+  return "1 free analysis left. After that you’ll need $10 per report, $99/mo with deeper reasoning, or $499/mo unlimited.";
 }

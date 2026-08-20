@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 import { scrollToSection } from "../lib/appRoute";
+import { PORTAL_ENTRY_CTA } from "../lib/cta";
 import SiteFooter from "./SiteFooter";
 
 type Props = {
@@ -43,8 +44,8 @@ export default function MarketingShell({
           <button type="button" className="btn-secondary header-auth-login" onClick={onLogin}>
             Log In
           </button>
-          <button type="button" className="btn-primary header-auth-signup" onClick={onPortal}>
-            Go to portal
+          <button type="button" className="btn-primary header-auth-signup marketing-entry-cta" onClick={onPortal}>
+            {PORTAL_ENTRY_CTA}
           </button>
         </div>
       </header>

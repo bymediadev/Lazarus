@@ -4,13 +4,21 @@ Paid gate after **5 free deal analyses**. USD prices (canonical — do not inven
 
 | Plan | Price | Included | Packaging |
 |------|-------|----------|-----------|
-| Free | $0 | 5 analyses (keep this offer) | Evaluation |
-| Pay-per-use | $10 one-time | 1 analysis credit (brief only) | One ugly deal this week |
-| Entry | **$99 / month** | 20 analyses + **deal lifecycle tracker** | Default close / intro plan |
-| Team | **$499 / month** | Unlimited + lifecycle + **WhiteWhale Why Now** | Larger unlimited / multi-manager SKU |
+| Free | $0 | 5 analyses · **Gemini 2.5 Flash** | Evaluation |
+| Pay-per-use | $10 one-time | 1 analysis credit (brief only) · **Gemini 2.5 Flash** | One ugly deal this week |
+| Entry | **$99 / month** | 20 analyses + **deal lifecycle tracker** · **Gemini 2.5 Pro** | Default close / intro plan |
+| Team | **$499 / month** | Unlimited + lifecycle + **WhiteWhale Why Now** · **Gemini 3.1 Pro** | Larger unlimited / multi-manager SKU |
 | Enterprise | $1,500+ / month | Custom | Deferred until traction — no Stripe Price, no checkout |
 
 **Do not add** a second intro price ($79 was discussed; live Entry is **$99**). **Do not** put Enterprise on the paywall. Team is high for a 5–20 AE team — lead sales with Entry; Team is the stretch plan, not the first close. Customer copy should not apologize for the Team price.
+
+Paid plans buy a **better model**, not just more volume:
+
+- Free / $10 → `gemini-2.5-flash` (`GEMINI_MODEL`)
+- Entry → `gemini-2.5-pro` (`GEMINI_MODEL_ENTRY`)
+- Team (and founder-exempt) → `gemini-3.1-pro-preview` (`GEMINI_MODEL_TEAM`), then Pro, then Flash
+
+Gemini 3.1 Pro Preview has **no AI Studio free tier**. Enable Google billing or Team quality falls back to Pro/Flash. Relevance gate and product guide stay on Flash.
 
 Feature split (do not put both extras on every paid SKU):
 

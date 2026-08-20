@@ -1,4 +1,5 @@
 import { ENTRY_PERIOD_CAP, evaluateCanAnalyze, featureAccessFromRow, FREE_ANALYSIS_CAP } from "../server/billing.ts";
+import { modelCandidatesForTier, modelTierFromConsume } from "../server/modelForPlan.ts";
 
 function row(partial) {
   return {
@@ -47,4 +48,23 @@ assert(featureAccessFromRow(row({ plan: "entry", status: "active" })).lifecycle 
 assert(featureAccessFromRow(row({ plan: "entry", status: "active" })).whitewhale === false, "entry has no whitewhale");
 assert(featureAccessFromRow(row({ plan: "team", status: "active" })).whitewhale === true, "team has whitewhale");
 assert(featureAccessFromRow(row({ plan: "team", status: "past_due" })).lifecycle === false, "past due no lifecycle");
+
+assert(modelTierFromConsume("free") === "free", "free consume uses flash tier");
+assert(modelTierFromConsume("ppu") === "free", "ppu consume uses flash tier");
+assert(modelTierFromConsume("entry") === "entry", "entry consume uses pro tier");
+assert(modelTierFromConsume("team") === "team", "team consume uses 3.1 pro tier");
+assert(modelTierFromConsume("exempt") === "team", "exempt consume uses team tier");
+assert(
+  modelCandidatesForTier("free")[0] === (process.env.GEMINI_MODEL?.trim() || "gemini-2.5-flash"),
+  "free primary is flash"
+);
+assert(
+  modelCandidatesForTier("entry")[0] === (process.env.GEMINI_MODEL_ENTRY?.trim() || "gemini-2.5-pro"),
+  "entry primary is 2.5 pro"
+);
+assert(
+  modelCandidatesForTier("team")[0] === (process.env.GEMINI_MODEL_TEAM?.trim() || "gemini-3.1-pro-preview"),
+  "team primary is 3.1 pro"
+);
+assert(modelCandidatesForTier("team").includes("gemini-2.5-pro"), "team falls back to 2.5 pro");
 console.log("billing entitlement checks passed");

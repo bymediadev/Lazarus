@@ -1,4 +1,4 @@
-import { GoogleGenerativeAI } from "@google/generative-ai";
+import { generateGeminiText } from "./modelForPlan.js";
 import { buildGuideGroundingText, matchGuideOffline } from "../shared/guideContent.js";
 
 export interface GuideChatMessage {
@@ -12,13 +12,6 @@ export interface GuideChatResult {
   /** true when answered from static guide without calling Gemini */
   offline?: boolean;
 }
-
-const GUIDE_MODELS = [
-  "gemini-2.5-flash",
-  "gemini-2.5-flash-lite",
-  "gemini-flash-latest",
-  "gemini-3.1-flash-lite",
-];
 
 function parseGuideResponse(raw: string): GuideChatResult {
   const trimmed = raw.trim();
@@ -42,17 +35,6 @@ function parseGuideResponse(raw: string): GuideChatResult {
     answer: trimmed.slice(0, 1200),
     steps: lines.length > 1 ? lines.slice(0, 6) : [],
   };
-}
-
-function modelCandidates(): string[] {
-  const preferred = process.env.GEMINI_MODEL?.trim();
-  const chain = preferred ? [preferred, ...GUIDE_MODELS] : GUIDE_MODELS;
-  return [...new Set(chain)];
-}
-
-function isRetryableGeminiError(err: unknown): boolean {
-  const msg = err instanceof Error ? err.message : String(err);
-  return /\b(429|404|503)\b/.test(msg) || /high demand|unavailable|overloaded/i.test(msg);
 }
 
 /** Product-help Q&A only — grounded on static guide content, never deal analysis. */
@@ -103,33 +85,22 @@ ${grounding}
 ${prior ? `RECENT:\n${prior}\n` : ""}
 USER QUESTION: ${q}`;
 
-  const genAI = new GoogleGenerativeAI(apiKey);
-  let lastError: unknown;
-
-  for (const modelName of modelCandidates()) {
-    try {
-      const model = genAI.getGenerativeModel({ model: modelName });
-      const result = await model.generateContent(prompt);
-      return parseGuideResponse(result.response.text());
-    } catch (err) {
-      lastError = err;
-      if (!isRetryableGeminiError(err)) break;
-      console.warn(`[guide] model ${modelName} failed, trying next:`, err instanceof Error ? err.message : err);
-    }
+  try {
+    const raw = await generateGeminiText(prompt, "free");
+    return parseGuideResponse(raw);
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    const demand = /503|high demand|unavailable|quota/i.test(msg);
+    return {
+      answer: demand
+        ? "Guide AI is temporarily busy. Use the workflows above (Copy CRM-ready notes / Add HubSpot deal history), or retry in a minute."
+        : "Guide AI could not answer that right now. Try the step-by-step workflows above, or ask again shortly.",
+      steps: [
+        "Open a workflow on the left (e.g. Copy CRM-ready notes).",
+        "Follow Back / Next for the exact clicks.",
+        "Retry Ask a how-to question in a minute if you still need free-form help.",
+      ],
+      offline: true,
+    };
   }
-
-  // Last resort: any weak offline match already returned; give actionable product help.
-  const msg = lastError instanceof Error ? lastError.message : String(lastError);
-  const demand = /503|high demand|unavailable/i.test(msg);
-  return {
-    answer: demand
-      ? "Guide AI is temporarily busy. Use the workflows above (Copy CRM-ready notes / Add HubSpot deal history), or retry in a minute."
-      : "Guide AI could not answer that right now. Try the step-by-step workflows above, or ask again shortly.",
-    steps: [
-      "Open a workflow on the left (e.g. Copy CRM-ready notes).",
-      "Follow Back / Next for the exact clicks.",
-      "Retry Ask a how-to question in a minute if you still need free-form help.",
-    ],
-    offline: true,
-  };
 }
