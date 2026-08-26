@@ -8,7 +8,6 @@ import TrustPackLink from "./TrustPackLink";
 import type { CheckoutPlan } from "../lib/billing";
 
 type Props = {
-  onTrySample: () => void;
   onSignup: () => void;
   onPortal: () => void;
   onCheckout: (plan: CheckoutPlan) => void;
@@ -30,7 +29,6 @@ function BookLookButton({ className }: { className?: string }) {
 }
 
 export default function MarketingHome({
-  onTrySample,
   onSignup,
   onPortal,
   onCheckout,
@@ -56,10 +54,6 @@ export default function MarketingHome({
         </div>
         <p className="marketing-hero-note">
           Five free analyses in the workspace.{" "}
-          <button type="button" className="marketing-text-link" onClick={onTrySample}>
-            Try a sample
-          </button>
-          {" · "}
           <button type="button" className="marketing-text-link" onClick={onSignup}>
             Create an account
           </button>

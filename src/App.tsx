@@ -1019,7 +1019,6 @@ export default function App() {
           onLogin={() => openLogin("signin")}
         >
           <MarketingHome
-            onTrySample={() => openTool({ sample: true })}
             onSignup={() => openLogin("signup")}
             onPortal={() => openTool()}
             onCheckout={(plan) => void handleCheckout(plan)}
