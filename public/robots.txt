@@ -1,0 +1,14 @@
+User-agent: *
+Allow: /
+Allow: /api/trust-pack/privacy
+Allow: /api/trust-pack/terms
+Allow: /api/trust-pack/dpa
+Allow: /api/trust-pack/security-overview
+Disallow: /app
+Disallow: /app/
+Disallow: /portal
+Disallow: /portal/
+Disallow: /login
+Disallow: /api/
+
+Sitemap: https://www.getldr.ca/sitemap.xml

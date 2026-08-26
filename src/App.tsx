@@ -63,6 +63,7 @@ import { fetchLiveTriage, type LiveTriageResult } from "./lib/liveTriage";
 import type { MeetingPlatformId } from "./lib/meetingPlatforms";
 import { loadDemoSalesTranscript } from "./lib/demoTranscript";
 import { RUN_DEAL_CTA } from "./lib/cta";
+import { applyDocumentMeta, SITE_DESCRIPTION, SITE_TITLE } from "./lib/site";
 
 const ACCEPTED_EXT = [".mp3", ".wav", ".mp4", ".m4a", ".webm", ".mpeg", ".mpga"];
 const ACCEPT_ATTR = ".mp3,.wav,.mp4,.m4a,.webm,audio/*,video/mp4,video/webm";
@@ -249,6 +250,19 @@ export default function App() {
     captureDemoBypassFromUrl();
     setGuestUsage(getGuestUsage());
   }, [auth.session?.access_token]);
+
+  useEffect(() => {
+    const marketingHome = route === "home" && !auth.session;
+    if (marketingHome) {
+      applyDocumentMeta({ title: SITE_TITLE, description: SITE_DESCRIPTION, robots: "index" });
+      return;
+    }
+    if (route === "login") {
+      applyDocumentMeta({ title: "Log in | Lazarus Deal Recovery", robots: "noindex" });
+      return;
+    }
+    applyDocumentMeta({ title: "Deal Recovery Portal | Lazarus Deal Recovery", robots: "noindex" });
+  }, [route, auth.session]);
 
   const refreshBilling = useCallback(async () => {
     if (!auth.session) {

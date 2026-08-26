@@ -5171,7 +5171,8 @@ button.header-brand {
 
 .marketing-hero-actions .run-button-above-fold {
   min-width: 16rem;
-  box-shadow: 0 0 28px var(--emerald-glow);
+  background: linear-gradient(180deg, #7dff7d 0%, var(--emerald) 42%, var(--emerald-dark) 100%);
+  box-shadow: 0 0 32px var(--emerald-glow), 0 0 56px rgba(92, 219, 92, 0.28);
 }
 
 .marketing-hero-actions {
@@ -5185,6 +5186,7 @@ button.header-brand {
 .marketing-hero-actions .btn-secondary {
   width: auto;
   min-width: 10.5rem;
+  margin-top: 0;
   padding: 0.85rem 1.25rem;
   text-decoration: none;
   display: inline-flex;

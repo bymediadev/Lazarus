@@ -73,6 +73,20 @@ const distPath = path.join(__dirname, "../dist");
 const publicPath = path.join(__dirname, "../public");
 
 const app = express();
+app.set("trust proxy", 1);
+
+const CANONICAL_HOST = "www.getldr.ca";
+const APEX_HOST = "getldr.ca";
+
+app.use((req, res, next) => {
+  const host = (req.hostname || "").toLowerCase();
+  if (host === APEX_HOST && req.method === "GET" && !req.path.startsWith("/api")) {
+    res.redirect(301, `https://${CANONICAL_HOST}${req.originalUrl}`);
+    return;
+  }
+  next();
+});
+
 const upload = multer({
   storage: multer.memoryStorage(),
   limits: { fileSize: 100 * 1024 * 1024 },
@@ -685,6 +699,16 @@ if (process.env.NODE_ENV === "production" || existsSync(distPath)) {
     if (/\.css$/i.test(req.path) && existsSync(trustFile)) {
       res.sendFile(trustFile);
       return;
+    }
+    const p = req.path;
+    if (
+      p === "/app" ||
+      p.startsWith("/app/") ||
+      p === "/portal" ||
+      p.startsWith("/portal/") ||
+      p === "/login"
+    ) {
+      res.setHeader("X-Robots-Tag", "noindex, nofollow");
     }
     res.sendFile(path.join(distPath, "index.html"));
   });

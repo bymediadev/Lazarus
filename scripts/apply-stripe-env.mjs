@@ -183,8 +183,8 @@ try {
     await stripe.billingPortal.configurations.update(portals.data[0].id, {
       business_profile: {
         headline: "Lazarus Deal Recovery billing",
-        privacy_policy_url: "https://www.getldr.com",
-        terms_of_service_url: "https://www.getldr.com",
+        privacy_policy_url: "https://www.getldr.ca",
+        terms_of_service_url: "https://www.getldr.ca",
       },
       features: {
         customer_update: { enabled: true, allowed_updates: ["email", "address"] },
