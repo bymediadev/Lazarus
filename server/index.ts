@@ -38,9 +38,6 @@ import { isTeamsConfigured } from "./integrations/teams/config.js";
 import { registerHubSpotRoutes } from "./integrations/hubspot/routes.js";
 import { isHubSpotConfigured } from "./integrations/hubspot/config.js";
 import { registerSalesforceRoutes } from "./integrations/salesforce/routes.js";
-import { registerWhiteWhaleRoutes } from "./integrations/whitewhale/routes.js";
-import { isWhiteWhaleConfigured } from "./integrations/whitewhale/config.js";
-import { lookupWhiteWhaleIntelForAccount } from "./integrations/whitewhale/lookup.js";
 import { isSalesforceConfigured } from "./integrations/salesforce/config.js";
 import { answerGuideQuestion } from "./guide.js";
 import {
@@ -55,7 +52,6 @@ import {
   isFreemiumExempt,
 } from "./guestRateLimit.js";
 import {
-  getFeatureAccess,
   isStripeConfigured,
   PAYMENT_REQUIRED_MESSAGE,
   releaseReservation,
@@ -175,7 +171,7 @@ app.get("/api/health", (_req, res) => {
     teams: isTeamsConfigured(),
     hubspot: isHubSpotConfigured(),
     salesforce: isSalesforceConfigured(),
-    whitewhale: isWhiteWhaleConfigured(),
+    whitewhale: false,
     stripe: isStripeConfigured(),
     contact: isContactConfigured(),
   });
@@ -351,18 +347,6 @@ app.post("/api/post-mortem", requireApiKey, uploadFields, async (req, res) => {
       return;
     }
 
-    const whitewhaleAllowed =
-      freemiumExempt ||
-      (authUserIdEarly
-        ? (await getFeatureAccess(authUserIdEarly)).whitewhale
-        : false);
-    const whitewhaleIntel = whitewhaleAllowed
-      ? await lookupWhiteWhaleIntelForAccount(deepContext.accountId)
-      : null;
-    if (whitewhaleIntel) {
-      deepContext.whitewhaleContext = whitewhaleIntel;
-    }
-
     const result = await analyzeTranscript(transcript, {
       dealValue,
       deepContext,
@@ -397,7 +381,6 @@ app.post("/api/post-mortem", requireApiKey, uploadFields, async (req, res) => {
           analysisJson: JSON.stringify({
             ...result,
             processed_at: processedAt,
-            whitewhale_intel: whitewhaleIntel,
           }),
           ...(ingestMetadata ? { ingestMetadata: ingestMetadata as Record<string, unknown> } : {}),
           dealMemorySummary: dealMemorySummary as Record<string, unknown>,
@@ -458,7 +441,6 @@ app.post("/api/post-mortem", requireApiKey, uploadFields, async (req, res) => {
       audio_meta: audioMeta ?? null,
       warnings,
       relevance,
-      whitewhale_intel: whitewhaleIntel,
     });
     committed = true;
   } catch (err) {
@@ -680,7 +662,6 @@ registerGoogleMeetRoutes(app);
 registerTeamsRoutes(app);
 registerHubSpotRoutes(app);
 registerSalesforceRoutes(app);
-registerWhiteWhaleRoutes(app);
 registerAuthRoutes(app);
 registerBillingRoutes(app);
 registerContactRoutes(app);

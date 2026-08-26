@@ -41,7 +41,6 @@
     <tr><th>Category</th><th>Examples</th><th>Purpose</th></tr>
     <tr><td>Account data</td><td>Email, name, organization (when you create or use a login)</td><td>Authentication, support, billing readiness, account-scoped saves</td></tr>
     <tr><td>Customer content</td><td>Call recordings (processed in memory), transcripts, documents, mailbox threads you attach, live session turns, field capture, HubSpot notes</td><td>Per-deal analysis and optional storage of outputs for signed-in users</td></tr>
-    <tr><td>Account buying signals (optional)</td><td>Company-domain signal summaries when WhiteWhale enrichment is configured</td><td>Deal-context &ldquo;Why Now&rdquo; enrichment on reports — not used to train public AI models</td></tr>
     <tr><td>Connector account data</td><td>OAuth tokens and connected account email when you link Gmail, Outlook, Zoom, HubSpot, or similar</td><td>Read-only evidence import; disconnect clears tokens</td></tr>
     <tr><td>Saved analyses &amp; CRM link metadata</td><td>Scores, reports, optional HubSpot/Salesforce deal IDs linked to a saved analysis</td><td>Account history and deal lifecycle features for signed-in users</td></tr>
     <tr><td>Usage / freemium telemetry</td><td>Analysis counts, IP/user-agent soft limits for guests and non-founder accounts</td><td>Abuse prevention and free-tier enforcement</td></tr>
@@ -111,7 +110,6 @@
     <tr><td>Supabase</td><td>Database hosting, authentication, optional persistence</td><td>North America (default)</td></tr>
     <tr><td>Google (Gemini API)</td><td>LLM extraction (Layer 1 only; scoring is server-side)</td><td>United States</td></tr>
     <tr><td>AssemblyAI</td><td>Optional audio transcription</td><td>United States</td></tr>
-    <tr><td>WhiteWhale (when configured)</td><td>Optional account buying-signal / Why Now enrichment</td><td>Per WhiteWhale service region</td></tr>
     <tr><td>Google (Gmail / Meet APIs)</td><td>Optional read-only mailbox and meeting connect</td><td>United States</td></tr>
     <tr><td>Microsoft (Graph)</td><td>Optional read-only Outlook / Teams connect</td><td>United States / customer tenant region</td></tr>
     <tr><td>Zoom</td><td>Optional live meeting transcript stream (RTMS)</td><td>United States / customer Zoom region</td></tr>

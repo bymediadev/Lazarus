@@ -87,7 +87,6 @@ export function registerBillingRoutes(app: Express): void {
       }
       if (isOpsUser(user) || isFounderUnlimitedEmail(user.email)) {
         billing.can_lifecycle = true;
-        billing.can_whitewhale = true;
         billing.unlimited = true;
       }
       res.json(billing);

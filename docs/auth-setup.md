@@ -109,9 +109,9 @@ FOUNDER_ALERT_HOURS=8,13,20
 
 In Ops HQ, open **APIs & usage** for a single consolidated view:
 
-- Which providers are **out / degraded** (live probes for Gemini, AssemblyAI, WhiteWhale + config for CRM/DB)
+- Which providers are **out / degraded** (live probes for Gemini, AssemblyAI + config for CRM/DB)
 - Whether failure **categories shifted** vs the prior week (AI / Auth / CRM / Quota / Network)
-- **Billing / end-of-usage** signals (WhiteWhale credits, Gemini 429s, volume spikes)
+- **Billing / end-of-usage** signals (Gemini 429s, volume spikes)
 - 7-day usage series and per-provider status
 
 GitHub Actions workflows `founder-ops-digests.yml` and `founder-ops-critical.yml` call `/api/founder/alerts/digest` and `/api/founder/alerts/run` with the same `PURGE_CRON_SECRET` / `LAZARUS_API_URL` secrets as retention purge.

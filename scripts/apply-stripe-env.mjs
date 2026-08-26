@@ -100,7 +100,7 @@ const plans = [
     env: "STRIPE_PRICE_TEAM",
     plan: "team",
     name: "Lazarus Team",
-    description: "Unlimited analyses, lifecycle, and WhiteWhale Why Now.",
+    description: "Unlimited analyses and deal lifecycle.",
     unitAmount: 49900,
     recurring: { interval: "month" },
   },

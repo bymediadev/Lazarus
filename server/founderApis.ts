@@ -215,7 +215,7 @@ async function probeWhiteWhale(): Promise<{
   if (!isWhiteWhaleConfigured()) {
     return {
       status: "not_configured",
-      meaning: "WhiteWhale not configured (optional signals).",
+      meaning: "WhiteWhale is paused until Lazarus has a license.",
       billing: { level: "ok", detail: "No credits consumed until configured." },
     };
   }
@@ -425,7 +425,7 @@ export async function buildApisInventory(): Promise<ApisInventory> {
     },
     {
       id: "whitewhale",
-      label: "WhiteWhale (signals)",
+      label: "WhiteWhale (paused)",
       category: "Signals",
       status: whitewhale.status,
       configured: isWhiteWhaleConfigured(),

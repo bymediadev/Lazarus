@@ -246,8 +246,7 @@ export default function AccountPortal({ open, onClose }: Props) {
           <h3>Saved deals</h3>
           <p className="meta-line">
             Analyses on this account are saved automatically. The <strong>My deals</strong> lifecycle
-            tracker (stalled vs unstuck over time) is on Entry ($99/mo) and Team ($499/mo). WhiteWhale
-            Why Now signals are on Team.
+            tracker (stalled vs unstuck over time) is on Entry ($99/mo) and Team ($499/mo).
           </p>
         </section>
 

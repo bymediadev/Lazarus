@@ -106,8 +106,7 @@ export default function DealProfilePanel({
       <summary>CRM import + deal history (optional)</summary>
       <p className="console-tab-hint">
         Import HubSpot or Salesforce notes, or paste prior deal history. Use a company domain as
-        Account ID (e.g. acme.com) so Why Now / buying signals can appear in the Recovery Brief.
-        Push updates after analysis are human-confirmed.
+        Account ID (e.g. acme.com) when you have one. Push updates after analysis are human-confirmed.
       </p>
 
       <HubSpotDealControls

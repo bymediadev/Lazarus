@@ -170,8 +170,7 @@
   <div class="vs">
     <strong>Lazarus Deal Recovery only analyzes what you authorize for that deal.</strong>
     You upload files, paste transcripts, search a mailbox for a specific thread, start a live meeting
-    session, record a short field note, or import HubSpot notes. Optional WhiteWhale enrichment adds
-    account buying signals when configured. Guests can try freemium analyses (not saved); signed-in
+    session, record a short field note, or import HubSpot notes. Guests can try freemium analyses (not saved); signed-in
     users may persist reports to their account. There is no silent always-on inbox scrape and no secret
     CRM write pipe. Every score traces back to evidence you attached for that run.
   </div>
@@ -183,7 +182,6 @@
     <tr><td>Live meeting</td><td>Zoom RTMS (and Meet / Teams where configured)</td><td>Customer starts a live session</td></tr>
     <tr><td>Field capture</td><td>Short in-person audio note</td><td>Customer records in browser (offline-capable)</td></tr>
     <tr><td>HubSpot notes</td><td>Read-only deal notes import</td><td>Customer connects HubSpot (optional)</td></tr>
-    <tr><td>WhiteWhale signals (optional)</td><td>Account buying / Why Now enrichment on the report</td><td>Configured server-side; domain lookup for the deal account</td></tr>
     <tr><td>Historical CRM context</td><td>Past objections, veto-holders, dated notes (JSON)</td><td>Customer paste / API — optional</td></tr>
     <tr><td>Deal value</td><td>Estimated pipeline amount</td><td>Customer enters in UI</td></tr>
   </table>
@@ -198,7 +196,6 @@
     <tr><td>Google Gemini API</td><td>Layer 1 — reads text, extracts names, quotes, objections</td><td>Transcript / stitched text per request (ephemeral)</td></tr>
     <tr><td>AssemblyAI</td><td>Speech-to-text when audio is uploaded</td><td>Audio buffer per request (optional; paste transcript to skip)</td></tr>
     <tr><td>Supabase (PostgreSQL + Auth)</td><td>Optional login; persistence for signed-in users; RLS</td><td>Analysis JSON, transcript text if save enabled — not raw audio. Guests do not persist.</td></tr>
-    <tr><td>WhiteWhale (optional)</td><td>Account buying-signal enrichment</td><td>Company domain / account identifiers when configured</td></tr>
     <tr><td>Google / Microsoft / Zoom / HubSpot</td><td>Optional read-only evidence connectors</td><td>Only when the customer connects and pulls or starts a session</td></tr>
   </table>
   <p>API keys and database admin credentials stay on the server. They are never shipped to the browser.</p>
@@ -293,7 +290,7 @@
     <tr><th>&ldquo;AI makes things up.&rdquo;</th><td>We check quotes against the transcript. Fakes get stripped, you get a warning banner, then we score what&rsquo;s left.</td></tr>
     <tr><th>&ldquo;You purge data — how do you remember?&rdquo;</th><td>Recordings go away. Deal scores, people, and blockers stay for the life of the deal.</td></tr>
     <tr><th>&ldquo;Where did this score come from?&rdquo;</th><td>Your evidence → Gemini extracts → server grounds quotes → <code>scoring.ts</code> computes DRI. Formula shown in report.</td></tr>
-    <tr><th>&ldquo;What systems touch our data?&rdquo;</th><td>Lazarus Deal Recovery API, Gemini (extract), AssemblyAI (if audio), optional Google/Microsoft/Zoom/HubSpot connectors, optional WhiteWhale signals, Supabase (if signed-in save). Full table in this battlecard + SEC-001.</td></tr>
+    <tr><th>&ldquo;What systems touch our data?&rdquo;</th><td>Lazarus Deal Recovery API, Gemini (extract), AssemblyAI (if audio), optional Google/Microsoft/Zoom/HubSpot connectors, Supabase (if signed-in save). Full table in this battlecard + SEC-001.</td></tr>
     <tr><th>&ldquo;Is our data safe?&rdquo;</th><td>Encryption, contracts, purge options, no public AI training, audio not stored as the system of record. Guests don&rsquo;t persist; signed-in saves are RLS-scoped.</td></tr>
     <tr><th>&ldquo;SOC 2?&rdquo;</th><td>Not yet. See Security Overview for the roadmap. Good fit for pilot and mid-market today.</td></tr>
     <tr><th>&ldquo;Do I need an account?&rdquo;</th><td>No for a free try. Sign in if you want analyses saved to your account.</td></tr>

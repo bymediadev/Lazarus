@@ -89,7 +89,7 @@ export function featureAccessFromRow(row: BillingRow): FeatureAccess {
   const subscribed = row.status === "active" && (row.plan === "entry" || row.plan === "team");
   return {
     lifecycle: subscribed,
-    whitewhale: row.status === "active" && row.plan === "team",
+    whitewhale: false,
   };
 }
 

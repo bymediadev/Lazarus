@@ -46,7 +46,7 @@ assert(featureAccessFromRow(row({ plan: "free" })).lifecycle === false, "free ha
 assert(featureAccessFromRow(row({ plan: "ppu", status: "active" })).lifecycle === false, "ppu has no lifecycle");
 assert(featureAccessFromRow(row({ plan: "entry", status: "active" })).lifecycle === true, "entry has lifecycle");
 assert(featureAccessFromRow(row({ plan: "entry", status: "active" })).whitewhale === false, "entry has no whitewhale");
-assert(featureAccessFromRow(row({ plan: "team", status: "active" })).whitewhale === true, "team has whitewhale");
+assert(featureAccessFromRow(row({ plan: "team", status: "active" })).whitewhale === false, "team has no whitewhale until licensed");
 assert(featureAccessFromRow(row({ plan: "team", status: "past_due" })).lifecycle === false, "past due no lifecycle");
 
 assert(modelTierFromConsume("free") === "free", "free consume uses flash tier");

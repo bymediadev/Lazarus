@@ -7,7 +7,7 @@ Paid gate after **5 free deal analyses**. USD prices (canonical — do not inven
 | Free | $0 | 5 analyses · **Gemini 2.5 Flash** | Evaluation |
 | Pay-per-use | $10 one-time | 1 analysis credit (brief only) · **Gemini 2.5 Flash** | One ugly deal this week |
 | Entry | **$99 / month** | 20 analyses + **deal lifecycle tracker** · **Gemini 2.5 Pro** | Default close / intro plan |
-| Team | **$499 / month** | Unlimited + lifecycle + **WhiteWhale Why Now** · **Gemini 3.1 Pro** | Larger unlimited / multi-manager SKU |
+| Team | **$499 / month** | Unlimited + lifecycle · **Gemini 3.1 Pro** | Larger unlimited / multi-manager SKU |
 | Enterprise | $1,500+ / month | Custom | Deferred until traction — no Stripe Price, no checkout |
 
 **Do not add** a second intro price ($79 was discussed; live Entry is **$99**). **Do not** put Enterprise on the paywall. Team is high for a 5–20 AE team — lead sales with Entry; Team is the stretch plan, not the first close. Customer copy should not apologize for the Team price.
@@ -23,7 +23,6 @@ Gemini 3.1 Pro Preview has **no AI Studio free tier**. Enable Google billing or 
 Feature split (do not put both extras on every paid SKU):
 
 - **Lifecycle (My deals):** Entry and Team only. Free/$10 still save runs; the tracker UI stays locked until they subscribe.
-- **WhiteWhale:** Team only. Lookup is skipped on free / $10 / Entry so it does not burn WhiteWhale credits.
 
 Cards never touch Lazarus. Checkout and Customer Portal are hosted by Stripe.
 
