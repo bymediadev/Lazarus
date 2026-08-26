@@ -69,6 +69,7 @@ import { registerFounderRoutes } from "./founderRoutes.js";
 import { registerMeDealRoutes } from "./meDeals.js";
 import { registerTelemetryRoutes } from "./telemetry.js";
 import { getRuntimeConfig, rejectIfAnalysesBlocked } from "./runtimeConfig.js";
+import { isContactConfigured, registerContactRoutes } from "./contact.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const distPath = path.join(__dirname, "../dist");
@@ -176,6 +177,7 @@ app.get("/api/health", (_req, res) => {
     salesforce: isSalesforceConfigured(),
     whitewhale: isWhiteWhaleConfigured(),
     stripe: isStripeConfigured(),
+    contact: isContactConfigured(),
   });
 });
 
@@ -681,6 +683,7 @@ registerSalesforceRoutes(app);
 registerWhiteWhaleRoutes(app);
 registerAuthRoutes(app);
 registerBillingRoutes(app);
+registerContactRoutes(app);
 registerFounderRoutes(app);
 registerMeDealRoutes(app);
 registerTelemetryRoutes(app);

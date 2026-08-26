@@ -3,6 +3,7 @@ import { BOOKING_URL, WALKTHROUGH_EMBED_URL } from "../lib/site";
 import { scrollToSection } from "../lib/appRoute";
 import { useReveal } from "../lib/useReveal";
 import { PricingPlanCards } from "./PricingGate";
+import ContactSection from "./ContactSection";
 import TrustPackLink from "./TrustPackLink";
 import type { CheckoutPlan } from "../lib/billing";
 
@@ -248,6 +249,8 @@ export default function MarketingHome({
           <BookLookButton />
         </div>
       </section>
+
+      <ContactSection />
     </>
   );
 }

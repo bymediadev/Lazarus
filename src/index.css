@@ -5462,6 +5462,46 @@ button.header-brand {
   color: var(--text);
 }
 
+.marketing-contact-form {
+  max-width: 28rem;
+}
+
+.marketing-contact-form select,
+.marketing-contact-form textarea,
+.marketing-contact-form input {
+  width: 100%;
+  padding: 0.55rem 0.65rem;
+  border-radius: 4px;
+  border: 1px solid rgba(61, 214, 198, 0.28);
+  background: rgba(0, 0, 0, 0.25);
+  color: inherit;
+  font-family: inherit;
+  font-size: 0.92rem;
+}
+
+.marketing-contact-form textarea {
+  resize: vertical;
+  min-height: 7rem;
+}
+
+.marketing-contact-hint {
+  color: var(--muted);
+  font-size: 0.78rem;
+}
+
+.marketing-contact-thanks {
+  color: var(--text);
+  font-size: 0.95rem;
+}
+
+.marketing-contact-hp {
+  position: absolute;
+  left: -10000px;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+}
+
 .marketing-price-points {
   margin-bottom: 1.35rem;
 }
