@@ -654,34 +654,6 @@ body {
   padding: 0.25rem 0 !important;
 }
 
-.whitewhale-why-now {
-  margin: 0.45rem 0 0.35rem;
-  font-size: 0.82rem;
-  line-height: 1.45;
-  color: var(--text);
-}
-
-.whitewhale-report .whitewhale-why-now {
-  margin-top: 0.55rem;
-}
-
-.whitewhale-signal-list {
-  margin: 0.35rem 0 0;
-  padding-left: 1.1rem;
-  font-size: 0.78rem;
-  color: var(--muted);
-}
-
-.whitewhale-signal-list li {
-  margin: 0.15rem 0;
-}
-
-.whitewhale-signal-source {
-  color: var(--muted);
-  font-size: 0.72rem;
-}
-
-
 .meeting-transcript-preview pre {
   max-height: 120px;
   overflow: auto;
@@ -5505,9 +5477,17 @@ button.header-brand {
   font-size: 0.78rem;
 }
 
+.marketing-contact-book {
+  margin: 0 0 0.85rem;
+}
+
 .marketing-contact-thanks {
   color: var(--text);
   font-size: 0.95rem;
+}
+
+.marketing-contact-thanks p {
+  margin: 0 0 0.75rem;
 }
 
 .marketing-contact-hp {

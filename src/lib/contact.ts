@@ -4,7 +4,7 @@ export type ContactTopic = "feedback" | "sales" | "technical" | "support";
 
 export const CONTACT_TOPICS: { id: ContactTopic; label: string; hint: string }[] = [
   { id: "feedback", label: "Feedback", hint: "Product notes for the founder." },
-  { id: "sales", label: "Sales", hint: "Pricing, pilots, and demos." },
+  { id: "sales", label: "Sales", hint: "Pricing, pilots, and demos. Book a 30-minute look below." },
   { id: "technical", label: "Technical", hint: "Integrations and setup." },
   { id: "support", label: "Support", hint: "Account and billing." },
 ];

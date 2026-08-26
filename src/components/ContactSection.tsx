@@ -1,5 +1,6 @@
 import { FormEvent, useState } from "react";
 import { CONTACT_TOPICS, sendContactNote, type ContactTopic } from "../lib/contact";
+import { BOOKING_URL } from "../lib/site";
 
 export default function ContactSection() {
   const [topic, setTopic] = useState<ContactTopic>("sales");
@@ -12,6 +13,7 @@ export default function ContactSection() {
   const [sent, setSent] = useState(false);
 
   const hint = CONTACT_TOPICS.find((t) => t.id === topic)?.hint;
+  const showBooking = topic === "sales";
 
   const onSubmit = async (e: FormEvent) => {
     e.preventDefault();
@@ -35,9 +37,19 @@ export default function ContactSection() {
         Sales, support, a technical question, or product feedback. We’ll reply.
       </p>
       {sent ? (
-        <p className="marketing-contact-thanks" role="status">
-          Received. We’ll get back to you.
-        </p>
+        <div className="marketing-contact-thanks" role="status">
+          <p>Received. We’ll get back to you.</p>
+          {showBooking && (
+            <a
+              className="btn-secondary"
+              href={BOOKING_URL}
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              Book a 30-minute look
+            </a>
+          )}
+        </div>
       ) : (
         <form className="marketing-contact-form" onSubmit={(e) => void onSubmit(e)}>
           <label className="login-field">
@@ -57,6 +69,18 @@ export default function ContactSection() {
               {hint}
             </span>
           </label>
+          {showBooking && (
+            <p className="marketing-contact-book">
+              <a
+                className="btn-secondary"
+                href={BOOKING_URL}
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                Book a 30-minute look
+              </a>
+            </p>
+          )}
           <label className="login-field">
             <span>Name</span>
             <input
