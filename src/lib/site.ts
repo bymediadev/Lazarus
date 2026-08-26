@@ -8,12 +8,12 @@ export const SITE_ORIGIN = "https://www.getldr.ca";
 export const SITE_TITLE = "Lazarus Deal Recovery | Win Back Closed-Lost Sales Pipeline";
 
 export const SITE_DESCRIPTION =
-  "Stop losing high-value sales. Lazarus uses AI to analyze dead B2B deals and build actionable recovery playbooks. Run your first 5 reports for free.";
+  "Stop chasing stalled B2B pipeline. Lazarus reads the recording, transcript, and email thread, then names the blocker and a 0–90 day CRM plan. No meeting bot. Five free analyses.";
 
 export const OG_TITLE = "Lazarus Deal Recovery | Win Back Closed-Lost Sales";
 
 export const OG_DESCRIPTION =
-  "Turn dead pipeline into won revenue. Lazarus builds AI-assisted playbooks to rescue lost B2B sales.";
+  "Stop chasing stalled B2B pipeline. Lazarus names the blocker and a 0–90 day plan you can paste into the CRM. No meeting bot. Five free analyses.";
 
 const ROBOTS_INDEX = "index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1";
 const ROBOTS_NOINDEX = "noindex, nofollow";

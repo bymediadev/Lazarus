@@ -43,8 +43,8 @@ export default function MarketingHome({
         <p className="hero-trust-eyebrow">Deal recovery for sales managers and VPs</p>
         <h1 className="marketing-hero-title">Win back closed-lost sales pipeline</h1>
         <h2 className="marketing-hero-sub">
-          Stop losing high-value sales. Lazarus uses AI to analyze dead B2B deals and build
-          actionable recovery playbooks. Run your first 5 reports for free.
+          Stop chasing stalled B2B pipeline. Lazarus reads the recording, transcript, and email
+          thread, then names the blocker and a 0–90 day plan you can paste into the CRM.
         </h2>
         <div className="marketing-hero-actions">
           <button type="button" className="run-button run-button-above-fold" onClick={onPortal}>
@@ -53,7 +53,7 @@ export default function MarketingHome({
           <BookLookButton />
         </div>
         <p className="marketing-hero-note">
-          Five free analyses in the workspace.{" "}
+          No meeting bot. Five free analyses in the workspace.{" "}
           <button type="button" className="marketing-text-link" onClick={onSignup}>
             Create an account
           </button>
@@ -68,18 +68,19 @@ export default function MarketingHome({
         <h2>Who it’s for</h2>
         <p>
           Sales managers and VPs who own the forecast call. Mid-market B2B. HubSpot or Salesforce.
+          About 44% of B2B deals get pushed back — know which of yours are recoverable vs a flat no.
         </p>
         <p>
-          <strong>Not for</strong> anyone shopping for an AI SDR, an autonomous closer, or a Gong
-          replacement. Keep your recorder. Lazarus is the judgment layer on top.
+          <strong>Not for</strong> anyone shopping for an AI SDR, an autonomous closer, a meeting
+          bot, or a Gong replacement. Keep your recorder. Lazarus is the judgment layer on top.
         </p>
       </section>
 
       <section className="marketing-simple marketing-reveal" id="what" aria-label="What it is">
         <h2>What it is</h2>
         <p>
-          Deal recovery for the manager running the call. Not a recorder. Not an AI salesperson.
-          You keep Meet, Teams, or Zoom.
+          Deal recovery for the manager running the call. Not a recorder. Not an AI salesperson. Not
+          a meeting bot. You keep Meet, Teams, or Zoom — Lazarus never joins the call.
         </p>
         <ul className="marketing-plain-list">
           <li>Which rep-owned deals are actually going to close</li>
@@ -154,6 +155,13 @@ export default function MarketingHome({
           footer.
         </p>
         <dl className="marketing-qa">
+          <div>
+            <dt>We don’t want another bot on the call.</dt>
+            <dd>
+              There isn’t one. Lazarus never joins the meeting. You drop the recording, transcript,
+              or email after. Keep your stack.
+            </dd>
+          </div>
           <div>
             <dt>We already have Meet, Teams, or a recorder.</dt>
             <dd>
