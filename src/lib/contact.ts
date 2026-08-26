@@ -3,10 +3,10 @@ import { API_BASE, apiAuthHeaders } from "./api";
 export type ContactTopic = "feedback" | "sales" | "technical" | "support";
 
 export const CONTACT_TOPICS: { id: ContactTopic; label: string; hint: string }[] = [
-  { id: "feedback", label: "Feedback", hint: "Goes to Joshua" },
-  { id: "sales", label: "Sales", hint: "Goes to sales@getldr.ca" },
-  { id: "technical", label: "Technical", hint: "Goes to support@getldr.ca" },
-  { id: "support", label: "Support", hint: "Goes to support@getldr.ca" },
+  { id: "feedback", label: "Feedback", hint: "Product notes for the founder." },
+  { id: "sales", label: "Sales", hint: "Pricing, pilots, and demos." },
+  { id: "technical", label: "Technical", hint: "Integrations and setup." },
+  { id: "support", label: "Support", hint: "Account and billing." },
 ];
 
 export async function sendContactNote(input: {

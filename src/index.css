@@ -5466,7 +5466,6 @@ button.header-brand {
   max-width: 28rem;
 }
 
-.marketing-contact-form select,
 .marketing-contact-form textarea,
 .marketing-contact-form input {
   width: 100%;
@@ -5477,6 +5476,23 @@ button.header-brand {
   color: inherit;
   font-family: inherit;
   font-size: 0.92rem;
+}
+
+.marketing-contact-form select {
+  width: 100%;
+  padding: 0.55rem 0.65rem;
+  border-radius: 4px;
+  border: 1px solid rgba(61, 214, 198, 0.28);
+  background: #ffffff;
+  color: #0b1220;
+  font-family: inherit;
+  font-size: 0.92rem;
+  color-scheme: light;
+}
+
+.marketing-contact-form option {
+  background: #ffffff;
+  color: #0b1220;
 }
 
 .marketing-contact-form textarea {

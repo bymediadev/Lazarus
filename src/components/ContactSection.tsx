@@ -32,12 +32,11 @@ export default function ContactSection() {
       <p className="hero-trust-eyebrow">Contact</p>
       <h2>Talk to a person</h2>
       <p className="marketing-page-lead">
-        Pick a topic. Feedback goes to Joshua. Sales, support, and technical land in the matching
-        inbox.
+        Sales, support, a technical question, or product feedback. We’ll reply.
       </p>
       {sent ? (
         <p className="marketing-contact-thanks" role="status">
-          Received. We’ll reply from the inbox that matches your topic.
+          Received. We’ll get back to you.
         </p>
       ) : (
         <form className="marketing-contact-form" onSubmit={(e) => void onSubmit(e)}>
