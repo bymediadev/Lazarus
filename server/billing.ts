@@ -75,7 +75,7 @@ const PLANS: BillingPlan[] = ["free", "ppu", "entry", "team"];
 const STATUSES: BillingStatus[] = ["none", "active", "past_due", "canceled"];
 
 export const PAYMENT_REQUIRED_MESSAGE =
-  "You’ve used your 5 free analyses. Choose $10 per report, $99/mo for 20 with deeper reasoning, or $499/mo unlimited with the highest-reasoning model.";
+  "You’ve used your 5 free analyses. If you need more, $10 per extra report or a monthly plan is in your account.";
 
 export const PAST_DUE_MESSAGE =
   "Your subscription payment is past due. Update billing on your account to run more analyses.";

@@ -63,13 +63,13 @@ export const PRICING_CARDS: PricingCard[] = [
     price: "$0",
     title: "Free",
     usage: "5 analyses",
-    quality: "Standard model",
-    qualityDetail: "Gemini 2.5 Flash",
-    detail: "Then pay to continue.",
+    quality: "Start here",
+    qualityDetail: "Five runs to try a stalled deal",
+    detail: "Sign in to save. No card required.",
     features: [
-      "Standard analysis — same model as $10",
-      "Brief only — no deal lifecycle",
+      "Forecast brief on one deal",
       "Sign in to save results",
+      "No subscription",
     ],
   },
   {
@@ -78,11 +78,11 @@ export const PRICING_CARDS: PricingCard[] = [
     title: "Per report",
     usage: "1 extra analysis",
     unitCost: "$10 per deal",
-    quality: "Standard model",
-    qualityDetail: "Gemini 2.5 Flash",
-    detail: "One stalled deal this week — no subscription.",
+    quality: "As needed",
+    qualityDetail: "Same brief as Free — no subscription",
+    detail: "One extra stalled deal. Available when you outgrow the free five.",
     features: [
-      "Standard analysis — same model as Free",
+      "Same analysis as Free",
       "Brief only — no deal lifecycle",
     ],
     checkout: "ppu",
@@ -93,11 +93,11 @@ export const PRICING_CARDS: PricingCard[] = [
     title: "Entry",
     usage: "20 analyses / month",
     unitCost: "~$5 per deal",
-    quality: "Stronger model",
-    qualityDetail: "Gemini 2.5 Pro — deeper reasoning than Free / $10",
-    detail: "Default close. Better judgment on every run, not just more volume.",
+    quality: "Volume",
+    qualityDetail: "Lifecycle tracker on saved deals",
+    detail: "For a manager inspecting a real pipeline — not a trial.",
     features: [
-      "Stronger model than Free and $10 (Gemini 2.5 Pro)",
+      "Twenty analyses a month",
       "Deal lifecycle tracker",
       "Saved deals on this account",
     ],
@@ -109,11 +109,11 @@ export const PRICING_CARDS: PricingCard[] = [
     price: "$499/mo",
     title: "Team",
     usage: "Unlimited analyses",
-    quality: "Strongest model",
-    qualityDetail: "Gemini 3.1 Pro — strongest reasoning we ship",
-    detail: "Best model in the lineup. For teams inspecting many deals.",
+    quality: "Scale",
+    qualityDetail: "Unlimited runs + Why Now signals",
+    detail: "For more than one manager inspecting deals together.",
     features: [
-      "Strongest model — better than $99 Entry (Gemini 3.1 Pro)",
+      "Unlimited analyses",
       "Deal lifecycle tracker",
       "WhiteWhale Why Now",
     ],
@@ -126,7 +126,7 @@ export const CHECKOUT_PLANS = PRICING_CARDS.filter(
 );
 
 export const PRICING_USAGE_FOOTNOTE =
-  "One analysis = one deal run. A recording, transcript, email thread, and docs in the same run still count as one. Free and $10 use the standard model. $99/mo uses a stronger model. $499/mo uses the strongest model.";
+  "One analysis = one deal run. A recording, transcript, email thread, and docs in the same run still count as one. The public offer is five free analyses. Paid plans stay in the product for when you outgrow that.";
 
 async function billingFetch<T>(path: string, init?: RequestInit): Promise<T> {
   const res = await fetch(`${API_BASE}${path}`, {

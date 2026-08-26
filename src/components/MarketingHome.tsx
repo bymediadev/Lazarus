@@ -30,11 +30,11 @@ export default function MarketingHome({ onTrySample, onSignup, onPortal }: Props
   return (
     <>
       <section className="marketing-hero">
-        <p className="hero-trust-eyebrow">For sales managers and VPs</p>
+        <p className="hero-trust-eyebrow">Deal recovery for sales managers and VPs</p>
         <h1 className="marketing-hero-title">Win back closed-lost sales pipeline</h1>
         <h2 className="marketing-hero-sub">
           Stop losing high-value sales. Lazarus uses AI to analyze dead B2B deals and build
-          actionable recovery playbooks you can run.
+          actionable recovery playbooks. Run your first 5 reports for free.
         </h2>
         <div className="marketing-hero-actions">
           <button type="button" className="run-button run-button-above-fold" onClick={onPortal}>
@@ -72,7 +72,7 @@ export default function MarketingHome({ onTrySample, onSignup, onPortal }: Props
       <section className="marketing-simple marketing-reveal" id="what" aria-label="What it is">
         <h2>What it is</h2>
         <p>
-          A forecast tool for the manager running the call. Not a recorder. Not an AI salesperson.
+          Deal recovery for the manager running the call. Not a recorder. Not an AI salesperson.
           You keep Meet, Teams, or Zoom.
         </p>
         <ul className="marketing-plain-list">
@@ -198,10 +198,10 @@ export default function MarketingHome({ onTrySample, onSignup, onPortal }: Props
 
       <section className="marketing-page marketing-band marketing-reveal" id="pricing">
         <p className="hero-trust-eyebrow">Pricing</p>
-        <h2>Simple plans. Price per analysis — not per seat.</h2>
+        <h2>Five free analyses. Paid plans wait until you need them.</h2>
         <p className="marketing-page-lead">
-          Start with five free runs. Sign in to save them. Pay only when you want to keep going.
-          $99 uses a stronger model. $499 uses the strongest.
+          Sign in to save your runs. Price is per analysis, not per seat. We are not pushing
+          subscriptions until there is real use.
         </p>
         <PricingPlanCards
           configured
