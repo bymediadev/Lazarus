@@ -63,7 +63,36 @@ export async function fetchFounderSystem() {
   return founderFetch<{
     status: "ok" | "warning" | "critical";
     checked_at: string;
-    deploy: { git_sha: string | null; boot_time: string };
+    deploy: {
+      git_sha: string | null;
+      git_branch: string | null;
+      boot_time: string;
+      render_service: string | null;
+      hotfix: string;
+    };
+    runtime: {
+      analyses_paused: boolean;
+      pause_message: string;
+      daily_analysis_cap: number | null;
+      updated_at: string | null;
+    };
+    spend: {
+      guest_cap: number;
+      guest_daily_limit: number;
+      global_daily_cap: number | null;
+      analyses_today: number;
+      gemini_model: string;
+      llm_fails_at_zero: string;
+    };
+    restore: {
+      last_snapshot: {
+        id: string;
+        created_at: string;
+        counts: Record<string, number | null>;
+        note: string | null;
+      } | null;
+      runbook: string[];
+    };
     integrations: Array<{
       id: string;
       label: string;
@@ -228,6 +257,64 @@ export type FounderApisInventory = {
 
 export async function fetchFounderApis(): Promise<FounderApisInventory> {
   return founderFetch<FounderApisInventory>("/api/founder/apis");
+}
+
+export async function fetchFounderCrashes() {
+  return founderFetch<{
+    crashes: Array<{
+      id: string;
+      created_at: string;
+      message: string;
+      stack: string | null;
+      page_url: string | null;
+      user_agent: string | null;
+      release_sha: string | null;
+      user_email: string | null;
+      diagnosis_packet: string;
+    }>;
+  }>("/api/founder/crashes");
+}
+
+export async function founderSetKillSwitch(analysesPaused: boolean, pauseMessage?: string) {
+  return founderFetch<{
+    ok: boolean;
+    runtime: {
+      analyses_paused: boolean;
+      pause_message: string;
+      daily_analysis_cap: number | null;
+    };
+  }>("/api/founder/kill-switch", {
+    method: "POST",
+    body: JSON.stringify({
+      analyses_paused: analysesPaused,
+      ...(pauseMessage !== undefined ? { pause_message: pauseMessage } : {}),
+    }),
+  });
+}
+
+export async function founderSetSpendCap(dailyAnalysisCap: number | null) {
+  return founderFetch<{
+    ok: boolean;
+    runtime: { daily_analysis_cap: number | null };
+  }>("/api/founder/spend-cap", {
+    method: "POST",
+    body: JSON.stringify({ daily_analysis_cap: dailyAnalysisCap }),
+  });
+}
+
+export async function founderRestoreSnapshot(note?: string) {
+  return founderFetch<{
+    ok: boolean;
+    snapshot: {
+      id: string;
+      created_at: string;
+      counts: Record<string, number | null>;
+      note: string | null;
+    };
+  }>("/api/founder/restore-snapshot", {
+    method: "POST",
+    body: JSON.stringify({ note: note ?? "Pre-restore drill snapshot" }),
+  });
 }
 
 export async function copyText(text: string): Promise<void> {

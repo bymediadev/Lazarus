@@ -344,6 +344,19 @@ export async function signOut(): Promise<void> {
   await sb.auth.signOut();
 }
 
+export async function deleteOwnAccount(): Promise<void> {
+  const res = await fetch(`${API_BASE}/api/auth/delete-account`, {
+    method: "POST",
+    headers: apiAuthHeaders(true),
+    body: JSON.stringify({ confirm: "DELETE" }),
+  });
+  const data = (await res.json().catch(() => ({}))) as { error?: string };
+  if (!res.ok) {
+    throw new Error(data.error || `Could not delete account (${res.status})`);
+  }
+  await signOut();
+}
+
 export async function getSession(): Promise<Session | null> {
   await ensureAuthConfig();
   const sb = getSupabaseBrowserClient();

@@ -655,3 +655,20 @@ export async function handleStripeWebhookEvent(rawBody: Buffer, signature: strin
     await patchBilling(userId, { entry_used_this_period: 0 });
   }
 }
+
+/** Best-effort Stripe cancel before auth user delete. Never throws. */
+export async function cancelBillingOnAccountDelete(userId: string): Promise<void> {
+  try {
+    const row = await ensureBillingCustomer(userId);
+    const stripe = getStripe();
+    const subId = row?.stripe_subscription_id?.trim();
+    if (stripe && subId) {
+      await stripe.subscriptions.cancel(subId);
+    }
+  } catch (err) {
+    console.warn(
+      "[billing] cancel on account delete failed:",
+      err instanceof Error ? err.message : err
+    );
+  }
+}

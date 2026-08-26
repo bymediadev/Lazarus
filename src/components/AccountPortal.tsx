@@ -25,10 +25,14 @@ export default function AccountPortal({ open, onClose }: Props) {
   const [billing, setBilling] = useState<BillingMe | null>(null);
   const [billingBusy, setBillingBusy] = useState<string | null>(null);
   const [billingError, setBillingError] = useState<string | null>(null);
+  const [deleteConfirm, setDeleteConfirm] = useState(false);
+  const [deleteTyped, setDeleteTyped] = useState("");
 
   useEffect(() => {
     if (!open || !auth.session) {
       setBilling(null);
+      setDeleteConfirm(false);
+      setDeleteTyped("");
       return;
     }
     let cancelled = false;
@@ -88,6 +92,20 @@ export default function AccountPortal({ open, onClose }: Props) {
     } catch (err) {
       setBillingError(err instanceof Error ? err.message : "Could not open billing portal");
       setBillingBusy(null);
+    }
+  };
+
+  const onDeleteAccount = async () => {
+    setBusy(true);
+    setError(null);
+    setNotice(null);
+    try {
+      await auth.deleteAccount();
+      onClose();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Could not delete account");
+    } finally {
+      setBusy(false);
     }
   };
 
@@ -231,6 +249,62 @@ export default function AccountPortal({ open, onClose }: Props) {
             tracker (stalled vs unstuck over time) is on Entry ($99/mo) and Team ($499/mo). WhiteWhale
             Why Now signals are on Team.
           </p>
+        </section>
+
+        <section className="account-portal-section">
+          <h3>Delete account</h3>
+          <p className="meta-line">
+            Permanently removes this login, saved analyses, and billing records. This cannot be
+            undone.
+          </p>
+          {!deleteConfirm ? (
+            <button
+              type="button"
+              className="btn-secondary account-delete-btn"
+              disabled={busy}
+              onClick={() => {
+                setError(null);
+                setNotice(null);
+                setDeleteConfirm(true);
+              }}
+            >
+              Delete my account…
+            </button>
+          ) : (
+            <div className="account-delete-confirm">
+              <label className="login-field">
+                <span>Type DELETE to confirm</span>
+                <input
+                  type="text"
+                  value={deleteTyped}
+                  onChange={(e) => setDeleteTyped(e.target.value)}
+                  autoComplete="off"
+                  placeholder="DELETE"
+                />
+              </label>
+              <div className="account-delete-actions">
+                <button
+                  type="button"
+                  className="btn-secondary"
+                  disabled={busy}
+                  onClick={() => {
+                    setDeleteConfirm(false);
+                    setDeleteTyped("");
+                  }}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  className="account-delete-btn"
+                  disabled={busy || deleteTyped.trim() !== "DELETE"}
+                  onClick={() => void onDeleteAccount()}
+                >
+                  {busy ? "Deleting…" : "Delete account forever"}
+                </button>
+              </div>
+            </div>
+          )}
         </section>
 
         <section className="account-portal-section">

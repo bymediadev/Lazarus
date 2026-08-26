@@ -9,15 +9,57 @@ import { loadHubSpotTokens } from "./integrations/hubspot/tokens.js";
 import { isSalesforceConfigured } from "./integrations/salesforce/config.js";
 import { loadSalesforceTokens } from "./integrations/salesforce/tokens.js";
 import { serviceRoleClient } from "./founderAuth.js";
+import { FREE_ANALYSIS_CAP } from "./billing.js";
+import { guestDailyLimit } from "./guestRateLimit.js";
+import { countAnalysesTodayUtc, getRuntimeConfig } from "./runtimeConfig.js";
+import { latestRestoreSnapshot, RESTORE_RUNBOOK, type RestoreSnapshot } from "./opsRestore.js";
 
 const bootTime = new Date().toISOString();
+
+async function loadLastPurge(): Promise<SystemStatus["last_purge"]> {
+  const supabase = serviceRoleClient();
+  if (!supabase) return null;
+  const { data } = await supabase
+    .from("purge_audit_log")
+    .select("created_at, rows_affected, retention_days")
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  if (!data) return null;
+  return {
+    created_at: data.created_at,
+    rows_affected: data.rows_affected,
+    retention_days: data.retention_days,
+  };
+}
 
 export type SystemStatus = {
   status: "ok" | "warning" | "critical";
   checked_at: string;
   deploy: {
     git_sha: string | null;
+    git_branch: string | null;
     boot_time: string;
+    render_service: string | null;
+    hotfix: string;
+  };
+  runtime: {
+    analyses_paused: boolean;
+    pause_message: string;
+    daily_analysis_cap: number | null;
+    updated_at: string | null;
+  };
+  spend: {
+    guest_cap: number;
+    guest_daily_limit: number;
+    global_daily_cap: number | null;
+    analyses_today: number;
+    gemini_model: string;
+    llm_fails_at_zero: string;
+  };
+  restore: {
+    last_snapshot: RestoreSnapshot | null;
+    runbook: string[];
   };
   integrations: Array<{
     id: string;
@@ -144,23 +186,12 @@ export async function buildSystemStatus(): Promise<SystemStatus> {
   const zoom = integrations.find((i) => i.id === "zoom");
   if (zoom) zoom.ok = true;
 
-  let lastPurge: SystemStatus["last_purge"] = null;
-  const supabase = serviceRoleClient();
-  if (supabase) {
-    const { data } = await supabase
-      .from("purge_audit_log")
-      .select("created_at, rows_affected, retention_days")
-      .order("created_at", { ascending: false })
-      .limit(1)
-      .maybeSingle();
-    if (data) {
-      lastPurge = {
-        created_at: data.created_at,
-        rows_affected: data.rows_affected,
-        retention_days: data.retention_days,
-      };
-    }
-  }
+  const [lastPurge, runtime, analysesToday, lastSnapshot] = await Promise.all([
+    loadLastPurge(),
+    getRuntimeConfig(),
+    countAnalysesTodayUtc(),
+    latestRestoreSnapshot(),
+  ]);
 
   const keys = {
     gemini: !!geminiKey,
@@ -177,19 +208,44 @@ export async function buildSystemStatus(): Promise<SystemStatus> {
 
   const status: SystemStatus["status"] = criticalFail
     ? "critical"
-    : warningFail
+    : warningFail || runtime.analyses_paused
       ? "warning"
       : "ok";
+
+  const gitSha =
+    (process.env.RENDER_GIT_COMMIT ?? process.env.GIT_COMMIT ?? process.env.COMMIT_SHA ?? "")
+      .trim()
+      .slice(0, 12) || null;
 
   return {
     status,
     checked_at: new Date().toISOString(),
     deploy: {
-      git_sha:
-        (process.env.RENDER_GIT_COMMIT ?? process.env.GIT_COMMIT ?? process.env.COMMIT_SHA ?? "")
-          .trim()
-          .slice(0, 12) || null,
+      git_sha: gitSha,
+      git_branch: (process.env.RENDER_GIT_BRANCH ?? "").trim() || null,
       boot_time: bootTime,
+      render_service: (process.env.RENDER_SERVICE_NAME ?? "").trim() || null,
+      hotfix:
+        "Web hotfix is a git push to main. Render auto-deploys; refresh this page until the SHA changes.",
+    },
+    runtime: {
+      analyses_paused: runtime.analyses_paused,
+      pause_message: runtime.pause_message,
+      daily_analysis_cap: runtime.daily_analysis_cap,
+      updated_at: runtime.updated_at,
+    },
+    spend: {
+      guest_cap: FREE_ANALYSIS_CAP,
+      guest_daily_limit: guestDailyLimit(),
+      global_daily_cap: runtime.daily_analysis_cap,
+      analyses_today: analysesToday,
+      gemini_model: (process.env.GEMINI_MODEL ?? "gemini-2.5-flash").trim() || "gemini-2.5-flash",
+      llm_fails_at_zero:
+        "Gemini Flash fails hard (HTTP 429) when quota is gone — analyses error in the product, they do not silently skip.",
+    },
+    restore: {
+      last_snapshot: lastSnapshot,
+      runbook: RESTORE_RUNBOOK,
     },
     integrations,
     keys,

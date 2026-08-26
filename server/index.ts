@@ -67,6 +67,8 @@ import { registerBillingRoutes, registerBillingWebhook } from "./billingRoutes.j
 import { apiEventsMiddleware, setApiErrorLocal } from "./apiEvents.js";
 import { registerFounderRoutes } from "./founderRoutes.js";
 import { registerMeDealRoutes } from "./meDeals.js";
+import { registerTelemetryRoutes } from "./telemetry.js";
+import { getRuntimeConfig, rejectIfAnalysesBlocked } from "./runtimeConfig.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const distPath = path.join(__dirname, "../dist");
@@ -233,6 +235,7 @@ app.post("/api/post-mortem", requireApiKey, uploadFields, async (req, res) => {
   let reservationUserId: string | undefined;
   let committed = false;
   try {
+    if (await rejectIfAnalysesBlocked(req, res)) return;
     const authUserIdEarly = (await optionalAuthUserId(req)) ?? undefined;
     const freemiumExempt = await isFreemiumExempt(req);
     if (!freemiumExempt) {
@@ -542,6 +545,7 @@ app.post("/api/guide/chat", requireApiKey, async (req, res) => {
 
 app.post("/api/live/objections", requireApiKey, async (req, res) => {
   try {
+    if (await rejectIfAnalysesBlocked(req, res)) return;
     const full_transcript = String(req.body?.full_transcript ?? "");
     const existing_objections = Array.isArray(req.body?.existing_objections)
       ? req.body.existing_objections
@@ -566,6 +570,7 @@ app.post("/api/live/objections", requireApiKey, async (req, res) => {
 
 app.post("/api/live/triage", requireApiKey, async (req, res) => {
   try {
+    if (await rejectIfAnalysesBlocked(req, res)) return;
     const userId = (await optionalAuthUserId(req)) ?? undefined;
     const modelTier = await resolveModelTierForUser({
       userId,
@@ -678,7 +683,22 @@ registerAuthRoutes(app);
 registerBillingRoutes(app);
 registerFounderRoutes(app);
 registerMeDealRoutes(app);
+registerTelemetryRoutes(app);
 registerTrustPackRoutes(app, publicPath);
+
+app.get("/api/runtime", async (_req, res) => {
+  try {
+    const cfg = await getRuntimeConfig();
+    res.json({
+      analyses_paused: cfg.analyses_paused,
+      pause_message: cfg.pause_message,
+    });
+  } catch (err) {
+    res.status(500).json({
+      error: err instanceof Error ? err.message : "Runtime status failed",
+    });
+  }
+});
 
 /** Public assets (logo, legal-shared.css). Trust-pack HTML only via /api/trust-pack/:slug. */
 app.use(express.static(publicPath, { index: false }));

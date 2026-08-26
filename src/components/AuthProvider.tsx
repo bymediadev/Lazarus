@@ -20,6 +20,7 @@ import {
   signOut,
   signUpWithPassword,
   updatePassword,
+  deleteOwnAccount,
   type LazarusLoginProvider,
   type Session,
   type User,
@@ -46,6 +47,7 @@ interface AuthContextValue {
   startProviderLogin: (provider: LazarusLoginProvider) => Promise<void>;
   completeProviderLogin: (provider: LazarusLoginProvider) => Promise<void>;
   logout: () => Promise<void>;
+  deleteAccount: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextValue | null>(null);
@@ -161,6 +163,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       startProviderLogin,
       completeProviderLogin,
       logout: signOut,
+      deleteAccount: deleteOwnAccount,
     }),
     [
       configured,

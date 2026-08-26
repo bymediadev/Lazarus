@@ -14,7 +14,8 @@ const TRACKED_PREFIXES = [
 
 function shouldTrack(path: string): boolean {
   if (path.startsWith("/api/founder")) return false;
-  if (path === "/api/health") return false;
+  if (path.startsWith("/api/telemetry")) return false;
+  if (path === "/api/health" || path === "/api/runtime") return false;
   return TRACKED_PREFIXES.some((p) => path === p || path.startsWith(`${p}/`));
 }
 

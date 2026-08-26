@@ -1,6 +1,8 @@
 import type { Express } from "express";
 import { createClient } from "@supabase/supabase-js";
+import { deleteAccountCascade } from "./accountDelete.js";
 import { isSupabaseAuthConfigured } from "./authMiddleware.js";
+import { resolveAuthUser } from "./founderAuth.js";
 import { isGoogleMeetConfigured } from "./integrations/google/config.js";
 import { loadGoogleTokens } from "./integrations/google/tokens.js";
 import { isHubSpotConfigured } from "./integrations/hubspot/config.js";
@@ -429,6 +431,28 @@ export function registerAuthRoutes(app: Express): void {
       console.error("[auth-email]", err);
       res.status(500).json({
         error: err instanceof Error ? err.message : "Could not start email sign-in",
+      });
+    }
+  });
+
+  app.post("/api/auth/delete-account", async (req, res) => {
+    const user = await resolveAuthUser(req);
+    if (!user) {
+      res.status(401).json({ error: "Sign in to delete your account." });
+      return;
+    }
+    const confirm = String(req.body?.confirm ?? "").trim();
+    if (confirm !== "DELETE") {
+      res.status(400).json({ error: "Type DELETE to confirm account deletion." });
+      return;
+    }
+    try {
+      const result = await deleteAccountCascade(user.id);
+      res.json(result);
+    } catch (err) {
+      console.error("[delete-account]", err);
+      res.status(500).json({
+        error: err instanceof Error ? err.message : "Could not delete account",
       });
     }
   });

@@ -12,6 +12,8 @@ import { buildSystemStatus, classifyIssue } from "./founderSystem.js";
 import { buildApisInventory } from "./founderApis.js";
 import { getBillingSnapshot } from "./billing.js";
 import { resolveFrontendOrigin } from "./integrations/oauthShared.js";
+import { saveRuntimeConfig } from "./runtimeConfig.js";
+import { captureRestoreSnapshot } from "./opsRestore.js";
 
 async function writeAudit(
   actorUserId: string | null,
@@ -583,6 +585,110 @@ export function registerFounderRoutes(app: Express): void {
       res.json({ ok: true, ...result });
     } catch (err) {
       res.status(500).json({ error: err instanceof Error ? err.message : "Test digest failed" });
+    }
+  });
+
+  app.get("/api/founder/crashes", requireOps, async (req, res) => {
+    try {
+      const supabase = serviceRoleClient();
+      if (!supabase) {
+        res.status(503).json({ error: "Supabase not configured" });
+        return;
+      }
+      const limit = Math.min(80, parseInt(String(req.query.limit ?? "40"), 10) || 40);
+      const since = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
+      const { data, error } = await supabase
+        .from("client_crashes")
+        .select("id, created_at, message, stack, page_url, user_agent, release_sha, user_id")
+        .gte("created_at", since)
+        .order("created_at", { ascending: false })
+        .limit(limit);
+      if (error) {
+        res.status(500).json({ error: error.message });
+        return;
+      }
+      const crashes = [];
+      for (const row of data ?? []) {
+        const userEmail = row.user_id ? await emailForUserId(row.user_id) : null;
+        const packet = buildDiagnosisPacket({
+          When: row.created_at,
+          User: userEmail ?? row.user_id,
+          Message: row.message,
+          URL: row.page_url,
+          Release: row.release_sha,
+          Stack: row.stack ? String(row.stack).slice(0, 800) : null,
+        });
+        crashes.push({
+          ...row,
+          user_email: userEmail,
+          diagnosis_packet: packet,
+        });
+      }
+      res.json({ crashes });
+    } catch (err) {
+      res.status(500).json({ error: err instanceof Error ? err.message : "Crashes failed" });
+    }
+  });
+
+  app.post("/api/founder/kill-switch", requireOps, async (req: Request, res: Response) => {
+    try {
+      const paused = !!req.body?.analyses_paused;
+      const message =
+        typeof req.body?.pause_message === "string" ? req.body.pause_message : undefined;
+      const actor = getOpsUser(req);
+      const runtime = await saveRuntimeConfig(
+        {
+          analyses_paused: paused,
+          ...(message !== undefined ? { pause_message: message } : {}),
+        },
+        actor?.id ?? null
+      );
+      await writeAudit(actor?.id ?? null, "kill_switch", null, null, {
+        analyses_paused: runtime.analyses_paused,
+      });
+      res.json({ ok: true, runtime });
+    } catch (err) {
+      res.status(500).json({ error: err instanceof Error ? err.message : "Kill switch failed" });
+    }
+  });
+
+  app.post("/api/founder/spend-cap", requireOps, async (req: Request, res: Response) => {
+    try {
+      const raw = req.body?.daily_analysis_cap;
+      let cap: number | null;
+      if (raw === null || raw === "" || raw === undefined) {
+        cap = null;
+      } else {
+        const n = Number(raw);
+        if (!Number.isFinite(n) || n < 1) {
+          res.status(400).json({ error: "daily_analysis_cap must be a positive number or empty." });
+          return;
+        }
+        cap = Math.floor(n);
+      }
+      const actor = getOpsUser(req);
+      const runtime = await saveRuntimeConfig({ daily_analysis_cap: cap }, actor?.id ?? null);
+      await writeAudit(actor?.id ?? null, "spend_cap", null, null, {
+        daily_analysis_cap: runtime.daily_analysis_cap,
+      });
+      res.json({ ok: true, runtime });
+    } catch (err) {
+      res.status(500).json({ error: err instanceof Error ? err.message : "Spend cap failed" });
+    }
+  });
+
+  app.post("/api/founder/restore-snapshot", requireOps, async (req: Request, res: Response) => {
+    try {
+      const actor = getOpsUser(req);
+      const note = typeof req.body?.note === "string" ? req.body.note : undefined;
+      const snapshot = await captureRestoreSnapshot(actor?.id ?? null, note);
+      await writeAudit(actor?.id ?? null, "restore_snapshot", null, null, {
+        snapshot_id: snapshot.id,
+        counts: snapshot.counts as unknown as Record<string, unknown>,
+      });
+      res.json({ ok: true, snapshot });
+    } catch (err) {
+      res.status(500).json({ error: err instanceof Error ? err.message : "Snapshot failed" });
     }
   });
 }

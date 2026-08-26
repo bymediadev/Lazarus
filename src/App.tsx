@@ -125,6 +125,7 @@ export default function App() {
   const [guideOpen, setGuideOpen] = useState(false);
   const [accountPortalOpen, setAccountPortalOpen] = useState(false);
   const [dealsPortalOpen, setDealsPortalOpen] = useState(false);
+  const [runtimePause, setRuntimePause] = useState<string | null>(null);
   const [loginOpen, setLoginOpen] = useState(false);
   const [loginMode, setLoginMode] = useState<"signin" | "signup">("signin");
   const [route, setRoute] = useState<AppRoute>(() =>
@@ -250,6 +251,29 @@ export default function App() {
     captureDemoBypassFromUrl();
     setGuestUsage(getGuestUsage());
   }, [auth.session?.access_token]);
+
+  useEffect(() => {
+    let cancelled = false;
+    const load = async () => {
+      try {
+        const res = await fetch(`${API_BASE}/api/runtime`);
+        const data = (await res.json()) as {
+          analyses_paused?: boolean;
+          pause_message?: string;
+        };
+        if (cancelled) return;
+        setRuntimePause(data.analyses_paused ? data.pause_message || "Analyses are paused." : null);
+      } catch {
+        if (!cancelled) setRuntimePause(null);
+      }
+    };
+    void load();
+    const timer = window.setInterval(() => void load(), 60_000);
+    return () => {
+      cancelled = true;
+      window.clearInterval(timer);
+    };
+  }, []);
 
   useEffect(() => {
     const marketingHome = route === "home" && !auth.session;
@@ -928,6 +952,11 @@ export default function App() {
 
   return (
     <div className={`app${guideHighlight ? ` guide-highlighting` : ""}`}>
+      {runtimePause && (
+        <div className="warning-banner ops-runtime-banner" role="status">
+          <p>{runtimePause}</p>
+        </div>
+      )}
       {trustPack && <TrustPackModal slug={trustPack} onClose={() => setTrustPack(null)} />}
       {auth.session && (auth.passwordRecovery || isPasswordRecoveryPending()) ? (
         <PasswordRecoveryScreen />

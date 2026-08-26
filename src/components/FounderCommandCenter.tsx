@@ -3,20 +3,24 @@ import { apiAuthHeaders } from "../lib/api";
 import {
   copyText,
   fetchFounderApis,
+  fetchFounderCrashes,
   fetchFounderIssues,
   fetchFounderOverview,
   fetchFounderSystem,
   founderDeleteDeal,
   founderLookup,
   founderPasswordReset,
+  founderRestoreSnapshot,
   founderSaveNote,
+  founderSetKillSwitch,
+  founderSetSpendCap,
   founderTestDigest,
   type FounderApisInventory,
 } from "../lib/founderApi";
 import { isFounderUnlimitedEmail } from "../lib/guestUsage";
 import { trustPackUrl } from "../lib/trustPack";
 
-type Tab = "overview" | "apis" | "issues" | "lookup" | "system";
+type Tab = "overview" | "apis" | "issues" | "lookup" | "system" | "controls";
 
 type Props = {
   opsEmail: string | null;
@@ -39,25 +43,33 @@ export default function FounderCommandCenter({ opsEmail, onOpenProduct }: Props)
     null
   );
   const [apis, setApis] = useState<FounderApisInventory | null>(null);
-
+  const [crashes, setCrashes] = useState<
+    Awaited<ReturnType<typeof fetchFounderCrashes>>["crashes"]
+  >([]);
   const [lookupEmail, setLookupEmail] = useState("");
   const [lookup, setLookup] = useState<Awaited<ReturnType<typeof founderLookup>> | null>(null);
   const [noteDraft, setNoteDraft] = useState("");
+  const [capDraft, setCapDraft] = useState("");
+  const [pauseDraft, setPauseDraft] = useState("");
 
   const refresh = useCallback(async () => {
     setLoading(true);
     setError(null);
     try {
-      const [ov, iss, sys, inv] = await Promise.all([
+      const [ov, iss, sys, inv, crash] = await Promise.all([
         fetchFounderOverview(),
         fetchFounderIssues(),
         fetchFounderSystem(),
         fetchFounderApis().catch(() => null),
+        fetchFounderCrashes().catch(() => ({ crashes: [] })),
       ]);
       setOverview(ov);
       setIssues(iss.issues);
       setSystem(sys);
       setApis(inv);
+      setCrashes(crash.crashes);
+      setCapDraft(sys.spend.global_daily_cap != null ? String(sys.spend.global_daily_cap) : "");
+      setPauseDraft(sys.runtime.pause_message);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to load ops data");
     } finally {
@@ -165,6 +177,7 @@ export default function FounderCommandCenter({ opsEmail, onOpenProduct }: Props)
         {(
           [
             ["overview", "Overview"],
+            ["controls", "Controls"],
             ["apis", "APIs & usage"],
             ["issues", "Issues"],
             ["lookup", "Lookup"],
@@ -472,6 +485,36 @@ export default function FounderCommandCenter({ opsEmail, onOpenProduct }: Props)
               ))}
             </ul>
           )}
+
+          <h2>Browser crashes</h2>
+          {crashes.length === 0 ? (
+            <p className="ops-sub">No client crashes reported in the last 7 days.</p>
+          ) : (
+            <ul className="ops-list">
+              {crashes.map((crash) => (
+                <li key={crash.id}>
+                  <div className="ops-issue-row">
+                    <div>
+                      <strong>{crash.message}</strong>
+                      <p className="ops-sub">
+                        {new Date(crash.created_at).toLocaleString()}
+                        {crash.user_email ? ` · ${crash.user_email}` : ""}
+                        {crash.page_url ? ` · ${crash.page_url}` : ""}
+                        {crash.release_sha ? ` · ${crash.release_sha}` : ""}
+                      </p>
+                    </div>
+                    <button
+                      type="button"
+                      className="btn-primary"
+                      onClick={() => void onCopy(crash.diagnosis_packet)}
+                    >
+                      Copy diagnosis packet
+                    </button>
+                  </div>
+                </li>
+              ))}
+            </ul>
+          )}
         </section>
       )}
 
@@ -635,6 +678,170 @@ export default function FounderCommandCenter({ opsEmail, onOpenProduct }: Props)
         </section>
       )}
 
+      {tab === "controls" && system && (
+        <section className="ops-section">
+          <div className={statusClass(system.runtime.analyses_paused ? "critical" : system.status)}>
+            <strong>{system.runtime.analyses_paused ? "PAUSED" : "LIVE"}</strong>
+            <span>
+              {system.runtime.analyses_paused
+                ? system.runtime.pause_message
+                : "Analyses are running. Founder/ops accounts still work if you pause."}
+            </span>
+          </div>
+
+          <h2>Kill switch</h2>
+          <p className="ops-sub">
+            Turns off post-mortem, live triage, and live objections for everyone except founder/ops.
+            Use this instead of waiting on a deploy.
+          </p>
+          <label className="ops-note-label">
+            Pause message
+            <input
+              type="text"
+              value={pauseDraft}
+              onChange={(e) => setPauseDraft(e.target.value)}
+              maxLength={280}
+            />
+          </label>
+          <div className="ops-lookup-actions">
+            <button
+              type="button"
+              className="btn-secondary"
+              onClick={async () => {
+                if (
+                  !confirm(
+                    "Pause analyses for everyone except founder/ops? They will see your pause message."
+                  )
+                ) {
+                  return;
+                }
+                try {
+                  await founderSetKillSwitch(true, pauseDraft);
+                  setNotice("Analyses paused for non-ops users.");
+                  await refresh();
+                } catch (err) {
+                  setError(err instanceof Error ? err.message : "Kill switch failed");
+                }
+              }}
+            >
+              Pause analyses
+            </button>
+            <button
+              type="button"
+              className="btn-primary"
+              onClick={async () => {
+                try {
+                  await founderSetKillSwitch(false, pauseDraft);
+                  setNotice("Analyses resumed.");
+                  await refresh();
+                } catch (err) {
+                  setError(err instanceof Error ? err.message : "Resume failed");
+                }
+              }}
+            >
+              Resume analyses
+            </button>
+          </div>
+
+          <h2>Spend fuses</h2>
+          <p className="ops-sub">
+            Product caps — not Google&apos;s dollar budget. Guest {system.spend.guest_cap} per
+            browser · IP daily {system.spend.guest_daily_limit} · analyses today{" "}
+            {system.spend.analyses_today}
+            {system.spend.global_daily_cap != null
+              ? ` · global daily cap ${system.spend.global_daily_cap}`
+              : " · no extra global daily cap"}
+            .
+          </p>
+          <label className="ops-note-label">
+            Global daily analysis cap (empty = off)
+            <input
+              type="number"
+              min={1}
+              value={capDraft}
+              onChange={(e) => setCapDraft(e.target.value)}
+              placeholder="e.g. 40"
+            />
+          </label>
+          <div className="ops-lookup-actions">
+            <button
+              type="button"
+              className="btn-secondary"
+              onClick={async () => {
+                try {
+                  const n = capDraft.trim() === "" ? null : Number(capDraft);
+                  await founderSetSpendCap(n);
+                  setNotice(
+                    n == null ? "Global daily cap cleared." : `Global daily cap set to ${n}.`
+                  );
+                  await refresh();
+                } catch (err) {
+                  setError(err instanceof Error ? err.message : "Spend cap failed");
+                }
+              }}
+            >
+              Save daily cap
+            </button>
+          </div>
+
+          <h2>LLM credit / quota</h2>
+          <p className="ops-sub">
+            Model {system.spend.gemini_model}. {system.spend.llm_fails_at_zero}
+          </p>
+          {apis && (
+            <p className="ops-fix">
+              Gemini {apis.providers.find((p) => p.id === "gemini")?.status ?? "unknown"} · quota
+              errors 7d {apis.usage.quota_errors_7d} · {apis.providers.find((p) => p.id === "gemini")?.billing.detail}
+            </p>
+          )}
+
+          <h2>Hotfix path</h2>
+          <p className="ops-sub">
+            SHA {system.deploy.git_sha ?? "unknown"}
+            {system.deploy.git_branch ? ` · ${system.deploy.git_branch}` : ""}
+            {system.deploy.render_service ? ` · ${system.deploy.render_service}` : ""} · boot{" "}
+            {new Date(system.deploy.boot_time).toLocaleString()}
+          </p>
+          <p className="ops-fix">{system.deploy.hotfix}</p>
+
+          <h2>Database restore drill</h2>
+          {system.restore.last_snapshot ? (
+            <p className="ops-sub">
+              Last snapshot {new Date(system.restore.last_snapshot.created_at).toLocaleString()} ·{" "}
+              {Object.entries(system.restore.last_snapshot.counts)
+                .map(([k, v]) => `${k}=${v ?? "—"}`)
+                .join(" · ")}
+            </p>
+          ) : (
+            <p className="ops-sub">No snapshot yet. Take one before you touch Backups.</p>
+          )}
+          <ol className="ops-runbook">
+            {system.restore.runbook.map((step) => (
+              <li key={step}>{step}</li>
+            ))}
+          </ol>
+          <div className="ops-lookup-actions">
+            <button
+              type="button"
+              className="btn-secondary"
+              onClick={async () => {
+                try {
+                  const r = await founderRestoreSnapshot();
+                  setNotice(
+                    `Snapshot saved (${r.snapshot.counts.call_post_mortems ?? 0} analyses).`
+                  );
+                  await refresh();
+                } catch (err) {
+                  setError(err instanceof Error ? err.message : "Snapshot failed");
+                }
+              }}
+            >
+              Snapshot counts now
+            </button>
+          </div>
+        </section>
+      )}
+
       {tab === "system" && system && (
         <section className="ops-section">
           <div className={statusClass(system.status)}>
@@ -642,9 +849,11 @@ export default function FounderCommandCenter({ opsEmail, onOpenProduct }: Props)
             <span>Checked {new Date(system.checked_at).toLocaleString()}</span>
           </div>
           <p className="ops-sub">
-            Deploy {system.deploy.git_sha ?? "unknown"} · process boot{" "}
+            Deploy {system.deploy.git_sha ?? "unknown"}
+            {system.deploy.git_branch ? ` · ${system.deploy.git_branch}` : ""} · process boot{" "}
             {new Date(system.deploy.boot_time).toLocaleString()}
           </p>
+          <p className="ops-fix">{system.deploy.hotfix}</p>
 
           <ul className="ops-list">
             {system.integrations.map((i) => (

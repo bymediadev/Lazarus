@@ -12,9 +12,13 @@ const DAY_MS = 24 * 60 * 60 * 1000;
 /** Founder demo account — the only hard-coded unlimited email. */
 const FOUNDER_UNLIMITED_EMAILS = new Set(["joshua.bennett003@gmail.com"]);
 
-function dailyLimit(): number {
+export function guestDailyLimit(): number {
   const n = Number((process.env.GUEST_ANALYSIS_DAILY_LIMIT ?? "10").trim());
   return Number.isFinite(n) && n > 0 ? Math.floor(n) : 10;
+}
+
+function dailyLimit(): number {
+  return guestDailyLimit();
 }
 
 function clientKey(req: Request): string {
