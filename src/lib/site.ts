@@ -8,12 +8,12 @@ export const SITE_ORIGIN = "https://www.getldr.ca";
 export const SITE_TITLE = "Lazarus Deal Recovery | Win Back Closed-Lost Sales Pipeline";
 
 export const SITE_DESCRIPTION =
-  "Stop chasing stalled B2B pipeline. Lazarus reads the recording, transcript, and email thread, then names the blocker and a 0–90 day CRM plan. No meeting bot. Five free analyses.";
+  "Lazarus reads the recording, transcript, and HubSpot notes, then names the blocker and a 0–90 day plan you paste into HubSpot. No meeting bot. Five free analyses.";
 
 export const OG_TITLE = "Lazarus Deal Recovery | Win Back Closed-Lost Sales";
 
 export const OG_DESCRIPTION =
-  "Stop chasing stalled B2B pipeline. Lazarus names the blocker and a 0–90 day plan you can paste into the CRM. No meeting bot. Five free analyses.";
+  "Lazarus names the blocker and a 0–90 day plan you paste into HubSpot notes. No meeting bot. Connect with OAuth. Five free analyses.";
 
 const ROBOTS_INDEX = "index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1";
 const ROBOTS_NOINDEX = "noindex, nofollow";

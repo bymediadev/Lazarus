@@ -5136,7 +5136,8 @@ button.header-brand {
 #who,
 #layout,
 #questions,
-#objections {
+#objections,
+#brief {
   scroll-margin-top: 6.5rem;
 }
 
@@ -5290,6 +5291,52 @@ button.header-brand {
   margin-top: 0.9rem;
   color: var(--label);
   font-size: 0.82rem;
+}
+
+.marketing-brief-preview {
+  max-width: 36rem;
+  margin-top: 1.1rem;
+  padding: 1.15rem 1.25rem 1.05rem;
+  border: 1px solid rgba(61, 214, 198, 0.28);
+  border-radius: 8px;
+  background: var(--panel);
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.28);
+}
+
+.marketing-brief-kicker {
+  margin: 0 0 0.65rem;
+  color: var(--teal);
+  font-family: var(--mono);
+  font-size: 0.68rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.marketing-brief-preview h3 {
+  margin: 0.85rem 0 0.35rem;
+  font-size: 0.92rem;
+}
+
+.marketing-brief-preview p,
+.marketing-brief-preview li {
+  color: var(--muted);
+  line-height: 1.55;
+  font-size: 0.92rem;
+}
+
+.marketing-brief-preview ol {
+  margin: 0.35rem 0 0 1.1rem;
+}
+
+.marketing-brief-preview li {
+  margin: 0.25rem 0;
+}
+
+.marketing-brief-foot {
+  margin: 0.95rem 0 0;
+  color: var(--label);
+  font-size: 0.78rem;
 }
 
 .marketing-steps {

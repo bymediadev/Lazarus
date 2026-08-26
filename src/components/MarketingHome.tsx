@@ -43,8 +43,8 @@ export default function MarketingHome({
         <p className="hero-trust-eyebrow">Deal recovery for sales managers and VPs</p>
         <h1 className="marketing-hero-title">Win back closed-lost sales pipeline</h1>
         <h2 className="marketing-hero-sub">
-          Stop chasing stalled B2B pipeline. Lazarus reads the recording, transcript, and email
-          thread, then names the blocker and a 0–90 day plan you can paste into the CRM.
+          Lazarus reads the recording, transcript, and email thread — plus HubSpot notes when you
+          connect. It names the blocker and a 0–90 day plan you paste into HubSpot notes.
         </h2>
         <div className="marketing-hero-actions">
           <button type="button" className="run-button run-button-above-fold" onClick={onPortal}>
@@ -53,7 +53,8 @@ export default function MarketingHome({
           <BookLookButton />
         </div>
         <p className="marketing-hero-note">
-          No meeting bot. Five free analyses in the workspace.{" "}
+          No credit card. No meeting bot. Connect HubSpot with OAuth when you want deal notes — no
+          engineering team. Salesforce works the same way.{" "}
           <button type="button" className="marketing-text-link" onClick={onSignup}>
             Create an account
           </button>
@@ -85,8 +86,31 @@ export default function MarketingHome({
         <ul className="marketing-plain-list">
           <li>Which rep-owned deals are actually going to close</li>
           <li>Which stalled deals are recoverable vs a flat no</li>
-          <li>The blocker, and a 0–90 day plan you can paste into the CRM</li>
+          <li>The blocker, and a 0–90 day plan you paste into HubSpot notes</li>
         </ul>
+      </section>
+
+      <section className="marketing-simple marketing-reveal" id="brief" aria-label="Example brief">
+        <p className="hero-trust-eyebrow">Example brief</p>
+        <h2>What you take into HubSpot</h2>
+        <p>
+          An example of the output. Your deals, your evidence — the blocker, recoverable vs a flat
+          no, and the next 90 days, ready to paste into HubSpot notes.
+        </p>
+        <article className="marketing-brief-preview">
+          <p className="marketing-brief-kicker">Recoverable</p>
+          <h3>The real blocker</h3>
+          <p>
+            Procurement wants a security review. The champion has not scheduled it. The deal is
+            still alive — it is not a flat no.
+          </p>
+          <h3>0–90 day plan</h3>
+          <ol>
+            <li>Get the champion to book the security review this week.</li>
+            <li>Multi-thread to finance so procurement is not the only gate.</li>
+          </ol>
+          <p className="marketing-brief-foot">Paste into HubSpot notes before the forecast call.</p>
+        </article>
       </section>
 
       <section className="marketing-steps marketing-reveal" id="how" aria-label="How it works">
@@ -108,7 +132,9 @@ export default function MarketingHome({
           <li>
             <span>3</span>
             <h2>Use the brief</h2>
-            <p>Take the recovery plan into forecast. Push a short note to HubSpot or Salesforce.</p>
+            <p>
+              Take the recovery plan into forecast. Paste a short note into HubSpot — or Salesforce.
+            </p>
           </li>
         </ol>
       </section>
@@ -142,7 +168,7 @@ export default function MarketingHome({
           </li>
           <li>
             <strong>Right — Recovery brief.</strong> Closable vs a flat no, the blocker, and a 0–90
-            day plan.
+            day plan for HubSpot notes.
           </li>
         </ul>
       </section>
@@ -236,9 +262,9 @@ export default function MarketingHome({
           stalled deals.
         </p>
         <p>
-          You already have a recorder and a CRM. What you do not have is a clear call on which deals
-          are still winnable. Lazarus reads the evidence you already have and returns a brief you
-          can defend in the room.
+          You already have a recorder and HubSpot. What you do not have is a clear call on which
+          deals are still winnable. Lazarus reads the evidence you already have and returns a brief
+          you can defend in the room.
         </p>
         <p>
           A person still runs the deal. Lazarus does not sell, write outreach, or replace your team.
