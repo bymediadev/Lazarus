@@ -40,6 +40,7 @@ Cards never touch Lazarus. Checkout and Customer Portal are hosted by Stripe.
    - Events: `checkout.session.completed`, `customer.subscription.created`, `customer.subscription.updated`, `customer.subscription.deleted`, `invoice.paid`
 5. Copy the webhook signing secret (`whsec_...`).
 6. Settings → Billing → Customer portal: enable payment method update, invoice history, and cancel.
+7. Settings → Public details: set **Business name** to Lazarus Deal Recovery, website `https://www.getldr.ca`, Privacy policy `https://www.getldr.ca/privacy`, Terms of service `https://www.getldr.ca/terms`. Stripe does not have fields for the DPA or Security Overview; those live at `/dpa` and `/security-overview`.
 
 ## 2. Environment (Render + local `.env`)
 
@@ -51,7 +52,7 @@ STRIPE_PRICE_ENTRY=price_...
 STRIPE_PRICE_TEAM=price_...
 ```
 
-Success/cancel URLs use `FRONTEND_ORIGIN` (first origin) or `PUBLIC_API_URL`.
+Success/cancel URLs use `FRONTEND_ORIGIN` (first origin) or `PUBLIC_API_URL`. Guest checkout success returns to `/login?mode=signup` with the Checkout `session_id` so the paid plan can attach after they create an account. Signed-in checkout still returns to the app.
 
 Until these are set, the paywall still appears after 5 free runs, but checkout buttons show **Billing not configured**.
 

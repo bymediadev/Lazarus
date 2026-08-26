@@ -17,10 +17,9 @@ type Props = {
   onCheckout: (plan: CheckoutPlan) => void;
 };
 
-function checkoutCta(card: PricingCard, signedIn: boolean, configured: boolean, busy: string | null) {
+function checkoutCta(card: PricingCard, _signedIn: boolean, configured: boolean, busy: string | null) {
   if (busy === card.id) return "Redirecting…";
   if (card.id === "free") return "Start with 5 free";
-  if (!signedIn) return "Sign in to buy";
   if (!configured) return "Billing not configured";
   if (card.checkout === "ppu") return "Buy 1 report";
   return "Subscribe";
@@ -30,7 +29,7 @@ export function PricingPlanCards({
   configured,
   signedIn,
   busy,
-  onSignIn,
+  onSignIn: _onSignIn,
   onCheckout,
   plans,
   includeFree = false,
@@ -80,14 +79,10 @@ export function PricingPlanCards({
               <button
                 type="button"
                 className="run-button"
-                disabled={!!busy || (signedIn && !configured && plan.id !== "free")}
+                disabled={!!busy || (!configured && plan.id !== "free")}
                 onClick={() => {
                   if (plan.id === "free") {
                     onStartFree?.();
-                    return;
-                  }
-                  if (!signedIn) {
-                    onSignIn();
                     return;
                   }
                   if (checkoutId) onCheckout(checkoutId);
@@ -111,7 +106,7 @@ export default function PricingGate({
   message,
   busy,
   error,
-  onSignIn,
+  onSignIn: _onSignIn,
   onCheckout,
 }: Props) {
   return (
@@ -125,16 +120,15 @@ export default function PricingGate({
           <p>{message}</p>
         </div>
       )}
-      {!signedIn && (
-        <button type="button" className="btn-secondary" onClick={onSignIn}>
-          Sign in to pay
-        </button>
-      )}
+      <p className="pricing-plan-footnote">
+        Paid plans open Stripe Checkout. Create or sign in to your Lazarus account after payment to
+        unlock analyses.
+      </p>
       <PricingPlanCards
         configured={configured}
         signedIn={signedIn}
         busy={busy}
-        onSignIn={onSignIn}
+        onSignIn={_onSignIn}
         onCheckout={onCheckout}
       />
       {error && <div className="error-banner">{error}</div>}

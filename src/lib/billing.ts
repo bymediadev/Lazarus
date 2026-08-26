@@ -154,6 +154,70 @@ export async function claimGuestBillingCap(): Promise<BillingMe> {
   });
 }
 
+export const CHECKOUT_SESSION_STORAGE_KEY = "lazarus_checkout_session";
+
+export function stashCheckoutSessionId(sessionId: string | null | undefined): void {
+  const id = (sessionId ?? "").trim();
+  if (!id.startsWith("cs_")) return;
+  try {
+    sessionStorage.setItem(CHECKOUT_SESSION_STORAGE_KEY, id);
+  } catch {
+    /* ignore */
+  }
+}
+
+export function peekCheckoutSessionId(): string | null {
+  try {
+    const id = sessionStorage.getItem(CHECKOUT_SESSION_STORAGE_KEY)?.trim() ?? "";
+    return id.startsWith("cs_") ? id : null;
+  } catch {
+    return null;
+  }
+}
+
+export function clearCheckoutSessionId(): void {
+  try {
+    sessionStorage.removeItem(CHECKOUT_SESSION_STORAGE_KEY);
+  } catch {
+    /* ignore */
+  }
+}
+
+export function captureCheckoutSessionFromUrl(search = window.location.search): string | null {
+  const params = new URLSearchParams(search);
+  const fromQuery = params.get("session_id");
+  stashCheckoutSessionId(fromQuery);
+  return peekCheckoutSessionId();
+}
+
+export type CheckoutPreview = {
+  email: string | null;
+  plan: CheckoutPlan | null;
+  plan_label: string | null;
+  paid: boolean;
+};
+
+export async function fetchCheckoutPreview(sessionId: string): Promise<CheckoutPreview | null> {
+  const res = await fetch(
+    `${API_BASE}/api/billing/checkout-preview?session_id=${encodeURIComponent(sessionId)}`
+  );
+  if (!res.ok) return null;
+  return (await res.json()) as CheckoutPreview;
+}
+
+export async function claimCheckoutSession(sessionId?: string | null): Promise<BillingMe | null> {
+  const id = (sessionId ?? peekCheckoutSessionId())?.trim() || "";
+  const data = await billingFetch<{
+    claimed?: boolean;
+    billing?: BillingMe;
+  }>("/api/billing/claim", {
+    method: "POST",
+    body: JSON.stringify({ session_id: id || undefined }),
+  });
+  if (data.claimed) clearCheckoutSessionId();
+  return data.billing ?? null;
+}
+
 export async function startCheckout(plan: CheckoutPlan): Promise<void> {
   const data = await billingFetch<{ url: string }>("/api/billing/checkout", {
     method: "POST",

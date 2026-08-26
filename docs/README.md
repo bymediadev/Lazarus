@@ -28,7 +28,7 @@ Do not commit secrets — use `.env.example` and host/GitHub secret stores.
 |-----|----------|
 | [security-live-channels-framework.md](./security-live-channels-framework.md) | InfoSec / demo talking points for live evidence channels |
 
-Customer-facing Trust Pack HTML lives in `public/` and is served at `/api/trust-pack/*` (see root README).
+Customer-facing Trust Pack HTML lives in `public/` and is served at `/privacy`, `/terms`, `/dpa`, and `/security-overview` (see root README).
 
 ---
 

@@ -28,9 +28,10 @@ export const TRUST_PACK_LABELS: Record<TrustPackSlug, string> = {
 
 export const FOUNDER_ONLY_TRUST_PACK = new Set<TrustPackSlug>(["battlecard"]);
 
-/** Served by API — works through Vite /api proxy and in production. */
+/** Public docs at /privacy, /terms, /dpa, /security-overview. Battlecard stays API-gated. */
 export function trustPackUrl(slug: TrustPackSlug): string {
-  return `/api/trust-pack/${slug}`;
+  if (FOUNDER_ONLY_TRUST_PACK.has(slug)) return `/api/trust-pack/${slug}`;
+  return `/${slug}`;
 }
 
 export const TRUST_PACK_OPEN_EVENT = "lazarus:trust-pack-open";

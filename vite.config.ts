@@ -14,11 +14,19 @@ const TRUST_PACK_FILES: Record<string, string> = {
   dpa: "dpa.html",
 };
 
+const PUBLIC_TRUST_PACK_SLUGS = new Set(["privacy", "terms", "dpa", "security-overview"]);
+
+function canonicalTrustPackPath(slug: string): string {
+  if (slug === "battlecard") return `/api/trust-pack/${slug}`;
+  if (PUBLIC_TRUST_PACK_SLUGS.has(slug)) return `/${slug}`;
+  return `/api/trust-pack/${slug}`;
+}
+
 const LEGACY_TRUST_PACK_HTML: Record<string, string> = Object.fromEntries(
-  Object.entries(TRUST_PACK_FILES).map(([slug, file]) => [`/${file}`, `/api/trust-pack/${slug}`])
+  Object.entries(TRUST_PACK_FILES).map(([slug, file]) => [`/${file}`, canonicalTrustPackPath(slug)])
 );
 
-/** Serve Trust Pack HTML via /api/trust-pack; redirect legacy *.html paths. */
+/** Serve Trust Pack HTML via /privacy, /terms, /dpa, /security-overview; keep /api/trust-pack aliases. */
 function attachTrustPackMiddleware(server: { middlewares: { use: Function } }) {
   server.middlewares.use((req: { url?: string }, res: { statusCode: number; setHeader: Function; end: Function }, next: () => void) => {
     const pathname = req.url?.split("?")[0] ?? "";
@@ -30,17 +38,19 @@ function attachTrustPackMiddleware(server: { middlewares: { use: Function } }) {
       return;
     }
 
-    const match = req.url?.match(/^\/api\/trust-pack\/([\w-]+)(?:\?.*)?$/);
-    if (!match) {
+    const prettyMatch = pathname.match(/^\/(privacy|terms|dpa|security-overview)\/?$/);
+    const apiMatch = req.url?.match(/^\/api\/trust-pack\/([\w-]+)(?:\?.*)?$/);
+    const slug = prettyMatch?.[1] ?? apiMatch?.[1];
+    if (!slug) {
       next();
       return;
     }
     // Battlecard is founder-gated on the Express API — do not serve from Vite.
-    if (match[1] === "battlecard") {
+    if (slug === "battlecard") {
       next();
       return;
     }
-    const file = TRUST_PACK_FILES[match[1]];
+    const file = TRUST_PACK_FILES[slug];
     if (!file) {
       res.statusCode = 404;
       res.end("Trust pack document not found");

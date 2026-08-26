@@ -32,8 +32,11 @@ import {
   shouldEnforceGuestCap,
 } from "./lib/guestUsage";
 import {
+  captureCheckoutSessionFromUrl,
+  claimCheckoutSession,
   claimGuestBillingCap,
   fetchBillingMe,
+  peekCheckoutSessionId,
   startCheckout,
   type BillingMe,
   type CheckoutPlan,
@@ -139,6 +142,7 @@ export default function App() {
   const [billing, setBilling] = useState<BillingMe | null>(null);
   const [checkoutBusy, setCheckoutBusy] = useState<string | null>(null);
   const [billingError, setBillingError] = useState<string | null>(null);
+  const [stripeConfigured, setStripeConfigured] = useState(false);
   const [guideHighlight, setGuideHighlight] = useState<string | null>(null);
   const [linkedHubSpotDealId, setLinkedHubSpotDealId] = useState<string | null>(null);
   const [linkedSalesforceOppId, setLinkedSalesforceOppId] = useState<string | null>(null);
@@ -309,18 +313,44 @@ export default function App() {
   }, [refreshBilling]);
 
   useEffect(() => {
+    if (!auth.session) return;
+    const sessionId = captureCheckoutSessionFromUrl() || peekCheckoutSessionId();
+    if (!sessionId) return;
+    let cancelled = false;
+    void claimCheckoutSession(sessionId)
+      .then((next) => {
+        if (cancelled || !next) return;
+        setBilling(next);
+        setSyncNotice("Payment received — your analyses are unlocked.");
+      })
+      .catch((err) => {
+        if (cancelled) return;
+        setBillingError(err instanceof Error ? err.message : "Could not attach payment to this account.");
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [auth.session]);
+
+  useEffect(() => {
     if (typeof window === "undefined") return;
     const params = new URLSearchParams(window.location.search);
     const billingFlag = params.get("billing");
+    captureCheckoutSessionFromUrl(window.location.search);
     if (billingFlag !== "success" && billingFlag !== "cancel") return;
+    const onLogin = window.location.pathname.replace(/\/+$/, "") === "/login";
     if (billingFlag === "success") {
+      if (onLogin || !auth.session) {
+        setLoginMode("signup");
+        return;
+      }
       setSyncNotice("Payment received — your analyses are unlocked.");
       void refreshBilling();
     }
     params.delete("billing");
     const next = `${window.location.pathname}${params.toString() ? `?${params}` : ""}${window.location.hash}`;
     window.history.replaceState({}, "", next);
-  }, [refreshBilling]);
+  }, [refreshBilling, auth.session]);
 
   const enforceGuestCap = shouldEnforceGuestCap({
     signedIn: !!auth.session,
@@ -374,10 +404,6 @@ export default function App() {
 
   const handleCheckout = useCallback(
     async (plan: CheckoutPlan) => {
-      if (!auth.session) {
-        openSignupPortal();
-        return;
-      }
       setCheckoutBusy(plan);
       setBillingError(null);
       try {
@@ -387,7 +413,7 @@ export default function App() {
         setCheckoutBusy(null);
       }
     },
-    [auth.session, openSignupPortal]
+    []
   );
 
   useEffect(() => {
@@ -463,7 +489,12 @@ export default function App() {
   useEffect(() => {
     const check = () => {
       fetch(`${API_BASE}/api/health`)
-        .then((r) => setApiOnline(r.ok))
+        .then(async (r) => {
+          setApiOnline(r.ok);
+          if (!r.ok) return;
+          const data = (await r.json().catch(() => ({}))) as { stripe?: boolean };
+          setStripeConfigured(data.stripe === true);
+        })
         .catch(() => setApiOnline(false));
     };
     check();
@@ -991,6 +1022,9 @@ export default function App() {
             onTrySample={() => openTool({ sample: true })}
             onSignup={() => openLogin("signup")}
             onPortal={() => openTool()}
+            onCheckout={(plan) => void handleCheckout(plan)}
+            stripeConfigured={stripeConfigured}
+            checkoutBusy={checkoutBusy}
           />
         </MarketingShell>
       ) : (
@@ -1130,7 +1164,7 @@ export default function App() {
               {paywalled && (
                 <PricingGate
                   signedIn={!!auth.session}
-                  configured={billing?.configured !== false}
+                  configured={auth.session ? billing?.configured !== false : stripeConfigured}
                   pastDue={billing?.past_due === true}
                   message={guestCapLockMessage(!!auth.session)}
                   busy={checkoutBusy}

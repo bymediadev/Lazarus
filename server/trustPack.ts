@@ -17,7 +17,22 @@ export const TRUST_PACK_FILES: Record<string, string> = {
 /** Founder sales enablement — not a public customer Trust Pack doc. */
 export const FOUNDER_ONLY_TRUST_PACK = new Set(["battlecard"]);
 
+/** Customer-facing docs at /privacy, /terms, /dpa, /security-overview. */
+export const PUBLIC_TRUST_PACK_SLUGS = ["privacy", "terms", "dpa", "security-overview"] as const;
+
 const TRUST_PACK_HTML = new Set(Object.values(TRUST_PACK_FILES));
+
+export function canonicalTrustPackPath(slug: string): string {
+  if (FOUNDER_ONLY_TRUST_PACK.has(slug)) return `/api/trust-pack/${slug}`;
+  if ((PUBLIC_TRUST_PACK_SLUGS as readonly string[]).includes(slug)) return `/${slug}`;
+  return `/api/trust-pack/${slug}`;
+}
+
+export function publicTrustPackSlugFromPath(reqPath: string): string | undefined {
+  const slug = reqPath.replace(/\/+$/, "").replace(/^\//, "").split("?")[0];
+  if ((PUBLIC_TRUST_PACK_SLUGS as readonly string[]).includes(slug)) return slug;
+  return undefined;
+}
 
 export function trustPackSlugFromPath(reqPath: string): string | undefined {
   const file = reqPath.replace(/^\//, "").split("?")[0];
@@ -40,7 +55,7 @@ export function redirectLegacyTrustPack(req: Request, res: Response, next: NextF
   }
   const slug = trustPackSlugFromPath(req.path);
   if (slug) {
-    res.redirect(301, `/api/trust-pack/${slug}`);
+    res.redirect(301, canonicalTrustPackPath(slug));
     return;
   }
   next();
@@ -69,15 +84,28 @@ async function authorizeFounderTrustPack(req: Request, res: Response): Promise<b
 export function registerTrustPackRoutes(app: Express, publicPath: string): void {
   app.use(redirectLegacyTrustPack);
 
+  for (const slug of PUBLIC_TRUST_PACK_SLUGS) {
+    app.get(`/${slug}`, (_req, res) => {
+      const file = TRUST_PACK_FILES[slug];
+      const filePath = path.join(publicPath, file);
+      if (!existsSync(filePath)) {
+        res.status(404).type("html").send("Trust pack file missing on server");
+        return;
+      }
+      res.type("html").sendFile(filePath);
+    });
+  }
+
   app.get("/api/trust-pack/:slug", (req, res) => {
     void (async () => {
-      const file = TRUST_PACK_FILES[req.params.slug];
+      const slug = req.params.slug;
+      const file = TRUST_PACK_FILES[slug];
       if (!file) {
         res.status(404).json({ error: "Trust pack document not found" });
         return;
       }
 
-      if (FOUNDER_ONLY_TRUST_PACK.has(req.params.slug)) {
+      if (FOUNDER_ONLY_TRUST_PACK.has(slug)) {
         const ok = await authorizeFounderTrustPack(req, res);
         if (!ok) return;
       }

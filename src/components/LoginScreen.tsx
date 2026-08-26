@@ -3,6 +3,10 @@ import { fetchAuthStatus } from "../lib/auth";
 import { fetchGoogleMeetStatus } from "../lib/googleMeetIntegration";
 import { subscribeOAuthComplete } from "../lib/oauthBridge";
 import { useAuth } from "./AuthProvider";
+import {
+  captureCheckoutSessionFromUrl,
+  fetchCheckoutPreview,
+} from "../lib/billing";
 
 type Mode = "signin" | "signup" | "reset";
 type ProviderId = "google" | "hubspot" | "salesforce";
@@ -22,6 +26,7 @@ export default function LoginScreen({ onClose, initialMode = "signin" }: LoginSc
   const [busy, setBusy] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [billingNotice, setBillingNotice] = useState<string | null>(null);
   const [providers, setProviders] = useState<{
     google?: boolean;
     hubspot?: boolean;
@@ -35,6 +40,26 @@ export default function LoginScreen({ onClose, initialMode = "signin" }: LoginSc
   useEffect(() => {
     setMode(initialMode);
   }, [initialMode]);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const params = new URLSearchParams(window.location.search);
+    const sessionId = captureCheckoutSessionFromUrl();
+    if (params.get("billing") !== "success" && !sessionId) return;
+    setMode("signup");
+    if (!sessionId) {
+      setBillingNotice("Payment received — create your account to unlock analyses.");
+      return;
+    }
+    void fetchCheckoutPreview(sessionId).then((preview) => {
+      if (preview?.email) setEmail(preview.email);
+      setBillingNotice(
+        preview?.paid
+          ? `Payment received${preview.plan_label ? ` (${preview.plan_label})` : ""}. Create your account to unlock analyses.`
+          : "Payment received — create your account to unlock analyses."
+      );
+    });
+  }, []);
 
   // Close the modal once a session exists (email/password or OAuth finished).
   useEffect(() => {
@@ -180,7 +205,9 @@ export default function LoginScreen({ onClose, initialMode = "signin" }: LoginSc
     <div className="login-card">
       <img src="/logo.png" alt="Lazarus Deal Recovery" className="login-logo" />
       <p className="login-sub">
-        {mode === "signup"
+        {billingNotice
+          ? billingNotice
+          : mode === "signup"
           ? "Create your Lazarus account — email and password are stored securely in your auth database."
           : mode === "reset"
             ? "We’ll email a password reset link if mail delivery is configured."

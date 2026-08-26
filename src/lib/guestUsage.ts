@@ -120,7 +120,7 @@ export function guestCapLockMessage(signedIn = false): string {
   if (signedIn) {
     return `You’ve used your ${GUEST_ANALYSIS_CAP} free analyses. If you need more, $10 per extra report or a monthly plan is in your account.`;
   }
-  return `You’ve used your ${GUEST_ANALYSIS_CAP} free analyses. Sign in if you want to keep going — $10 per extra report, or a monthly plan when volume shows up.`;
+  return `You’ve used your ${GUEST_ANALYSIS_CAP} free analyses. Pay on Stripe for another report or a monthly plan, then create your account to unlock it.`;
 }
 
 export function guestNearCapMessage(): string {

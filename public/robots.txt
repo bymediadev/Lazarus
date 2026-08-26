@@ -1,5 +1,9 @@
 User-agent: *
 Allow: /
+Allow: /privacy
+Allow: /terms
+Allow: /dpa
+Allow: /security-overview
 Allow: /api/trust-pack/privacy
 Allow: /api/trust-pack/terms
 Allow: /api/trust-pack/dpa

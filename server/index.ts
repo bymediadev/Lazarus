@@ -23,7 +23,7 @@ import { normalizeEmailThread, normalizeManualTranscript } from "./normalize.js"
 import { scanLiveObjections as scanLiveObjectionsServer } from "./liveObjections.js";
 import { runLiveTriage } from "./liveTriage.js";
 import { classifySalesRelevance } from "./relevanceGate.js";
-import { registerTrustPackRoutes, trustPackSlugFromPath } from "./trustPack.js";
+import { canonicalTrustPackPath, registerTrustPackRoutes, trustPackSlugFromPath } from "./trustPack.js";
 import {
   mapHubSpotDealToDeepContext,
   verifyHubSpotWebhookSecret,
@@ -700,7 +700,7 @@ app.get("/api/runtime", async (_req, res) => {
   }
 });
 
-/** Public assets (logo, legal-shared.css). Trust-pack HTML only via /api/trust-pack/:slug. */
+/** Public assets (logo, legal-shared.css). Trust-pack HTML via /privacy, /terms, /dpa, /security-overview. */
 app.use(express.static(publicPath, { index: false }));
 
 if (process.env.NODE_ENV === "production" || existsSync(distPath)) {
@@ -712,7 +712,7 @@ if (process.env.NODE_ENV === "production" || existsSync(distPath)) {
     }
     const legacySlug = trustPackSlugFromPath(req.path);
     if (legacySlug && /\.html$/i.test(req.path)) {
-      res.redirect(301, `/api/trust-pack/${legacySlug}`);
+      res.redirect(301, canonicalTrustPackPath(legacySlug));
       return;
     }
     const trustFile = path.join(publicPath, req.path.replace(/^\//, ""));

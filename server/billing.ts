@@ -466,33 +466,95 @@ async function ensureStripeCustomer(user: User): Promise<string> {
   return customer.id;
 }
 
+function checkoutPriceId(plan: CheckoutPlan): string {
+  const prices = priceIds();
+  const price = plan === "ppu" ? prices.ppu : plan === "entry" ? prices.entry : prices.team;
+  if (!price) throw new Error("Missing Stripe price ID for that plan.");
+  return price;
+}
+
+function sessionIsPaid(session: Stripe.Checkout.Session): boolean {
+  return session.payment_status === "paid" || session.status === "complete";
+}
+
+function sessionEmail(session: Stripe.Checkout.Session): string | null {
+  const fromDetails = session.customer_details?.email?.trim().toLowerCase();
+  if (fromDetails) return fromDetails;
+  const fromSession = session.customer_email?.trim().toLowerCase();
+  return fromSession || null;
+}
+
+function sessionPlan(session: Stripe.Checkout.Session): CheckoutPlan | null {
+  const raw = session.metadata?.plan;
+  if (raw === "ppu" || raw === "entry" || raw === "team") return raw;
+  return null;
+}
+
+export type CheckoutPreview = {
+  email: string | null;
+  plan: CheckoutPlan | null;
+  plan_label: string | null;
+  paid: boolean;
+};
+
+export async function previewCheckoutSession(sessionId: string): Promise<CheckoutPreview | null> {
+  const id = sessionId.trim();
+  if (!id.startsWith("cs_")) return null;
+  const stripe = getStripe();
+  if (!stripe) return null;
+  try {
+    const session = await stripe.checkout.sessions.retrieve(id);
+    const plan = sessionPlan(session);
+    return {
+      email: sessionEmail(session),
+      plan,
+      plan_label: plan ? planMeta(plan).label : null,
+      paid: sessionIsPaid(session),
+    };
+  } catch {
+    return null;
+  }
+}
+
 export async function createCheckoutSession(
-  user: User,
-  plan: CheckoutPlan
+  plan: CheckoutPlan,
+  user?: User | null
 ): Promise<{ url: string }> {
   if (!isStripeConfigured()) {
     throw new Error("Billing is not configured yet.");
   }
   const stripe = getStripe();
   if (!stripe) throw new Error("Billing is not configured yet.");
-  const prices = priceIds();
-  const price =
-    plan === "ppu" ? prices.ppu : plan === "entry" ? prices.entry : prices.team;
-  if (!price) throw new Error("Missing Stripe price ID for that plan.");
-
-  const customer = await ensureStripeCustomer(user);
+  const price = checkoutPriceId(plan);
   const origin = publicAppOrigin();
+  const mode = plan === "ppu" ? "payment" : "subscription";
+
+  if (user) {
+    const customer = await ensureStripeCustomer(user);
+    const session = await stripe.checkout.sessions.create({
+      mode,
+      customer,
+      client_reference_id: user.id,
+      line_items: [{ price, quantity: 1 }],
+      success_url: `${origin}/?billing=success`,
+      cancel_url: `${origin}/?billing=cancel`,
+      metadata: { user_id: user.id, plan },
+      ...(plan !== "ppu"
+        ? { subscription_data: { metadata: { user_id: user.id, plan } } }
+        : {}),
+    });
+    if (!session.url) throw new Error("Stripe did not return a checkout URL.");
+    return { url: session.url };
+  }
+
   const session = await stripe.checkout.sessions.create({
-    mode: plan === "ppu" ? "payment" : "subscription",
-    customer,
-    client_reference_id: user.id,
+    mode,
+    ...(plan === "ppu" ? { customer_creation: "always" as const } : {}),
     line_items: [{ price, quantity: 1 }],
-    success_url: `${origin}/?billing=success`,
-    cancel_url: `${origin}/?billing=cancel`,
-    metadata: { user_id: user.id, plan },
-    ...(plan !== "ppu"
-      ? { subscription_data: { metadata: { user_id: user.id, plan } } }
-      : {}),
+    success_url: `${origin}/login?mode=signup&billing=success&session_id={CHECKOUT_SESSION_ID}`,
+    cancel_url: `${origin}/?billing=cancel#pricing`,
+    metadata: { plan, guest: "1" },
+    ...(plan !== "ppu" ? { subscription_data: { metadata: { plan, guest: "1" } } } : {}),
   });
   if (!session.url) throw new Error("Stripe did not return a checkout URL.");
   return { url: session.url };
@@ -511,6 +573,140 @@ export async function createPortalSession(user: User): Promise<{ url: string }> 
     return_url: `${origin}/`,
   });
   return { url: session.url };
+}
+
+async function tagCustomerForClaim(
+  stripe: Stripe,
+  customerId: string,
+  session: Stripe.Checkout.Session,
+  userId?: string
+): Promise<void> {
+  const plan = sessionPlan(session) ?? "";
+  try {
+    await stripe.customers.update(customerId, {
+      metadata: {
+        lazarus_plan: plan,
+        lazarus_checkout_session: session.id,
+        ...(userId ? { lazarus_user_id: userId } : { lazarus_guest: "1" }),
+      },
+    });
+  } catch (err) {
+    console.warn(
+      "[billing] customer metadata tag failed:",
+      err instanceof Error ? err.message : err
+    );
+  }
+}
+
+async function attachCheckoutToUser(
+  userId: string,
+  session: Stripe.Checkout.Session
+): Promise<void> {
+  const stripe = getStripe();
+  const customerId =
+    typeof session.customer === "string" ? session.customer : session.customer?.id ?? undefined;
+  const owner = customerId ? await findUserIdForCustomer(customerId) : null;
+  const claimed = session.metadata?.lazarus_claimed_user_id?.trim();
+  if ((owner && owner !== userId) || (claimed && claimed !== userId)) {
+    throw new Error("This payment is already linked to another Lazarus account.");
+  }
+
+  await ensureBillingCustomer(userId);
+  if (customerId) {
+    await patchBilling(userId, { stripe_customer_id: customerId });
+  }
+
+  const alreadyOnUser = owner === userId || claimed === userId;
+  if (!alreadyOnUser) {
+    if (session.mode === "payment") {
+      await applyPpuPurchase(userId, customerId);
+    } else if (session.mode === "subscription" && session.subscription) {
+      if (!stripe) throw new Error("Stripe is not configured.");
+      const subId =
+        typeof session.subscription === "string" ? session.subscription : session.subscription.id;
+      const sub = await stripe.subscriptions.retrieve(subId);
+      await applySubscription(userId, sub);
+    }
+  }
+
+  if (stripe) {
+    const plan = sessionPlan(session) ?? session.metadata?.plan ?? "";
+    try {
+      await stripe.checkout.sessions.update(session.id, {
+        metadata: {
+          plan,
+          guest: session.metadata?.guest ?? "",
+          lazarus_claimed_user_id: userId,
+          ...(session.metadata?.user_id ? { user_id: session.metadata.user_id } : {}),
+        },
+      });
+    } catch (err) {
+      console.warn(
+        "[billing] session claim metadata failed:",
+        err instanceof Error ? err.message : err
+      );
+    }
+    if (customerId) {
+      await tagCustomerForClaim(stripe, customerId, session, userId);
+    }
+  }
+}
+
+async function findUnclaimedPaidSessionForEmail(
+  email: string
+): Promise<Stripe.Checkout.Session | null> {
+  const stripe = getStripe();
+  if (!stripe) return null;
+  const customers = await stripe.customers.list({ email, limit: 10 });
+  for (const customer of customers.data) {
+    const owner = await findUserIdForCustomer(customer.id);
+    if (owner) continue;
+    const sessions = await stripe.checkout.sessions.list({ customer: customer.id, limit: 10 });
+    const paid = sessions.data.find(
+      (s) => sessionIsPaid(s) && s.metadata?.lazarus_claimed_user_id !== owner
+    );
+    const unclaimed = sessions.data.find(
+      (s) => sessionIsPaid(s) && !s.metadata?.lazarus_claimed_user_id
+    );
+    if (unclaimed) return unclaimed;
+    if (paid && !owner) return paid;
+  }
+  return null;
+}
+
+export async function claimPaidCheckout(
+  user: { id: string; email?: string | null },
+  opts: { sessionId?: string | null } = {}
+): Promise<{ claimed: boolean; reason?: string }> {
+  if (!isStripeConfigured()) return { claimed: false, reason: "not_configured" };
+  const stripe = getStripe();
+  if (!stripe) return { claimed: false, reason: "not_configured" };
+
+  const sessionId = (opts.sessionId ?? "").trim();
+  try {
+    if (sessionId.startsWith("cs_")) {
+      const session = await stripe.checkout.sessions.retrieve(sessionId);
+      if (!sessionIsPaid(session)) {
+        return { claimed: false, reason: "unpaid" };
+      }
+      await attachCheckoutToUser(user.id, session);
+      return { claimed: true };
+    }
+
+    const email = (user.email ?? "").trim().toLowerCase();
+    if (!email || !email.includes("@")) {
+      return { claimed: false, reason: "no_session" };
+    }
+    const session = await findUnclaimedPaidSessionForEmail(email);
+    if (!session) return { claimed: false, reason: "not_found" };
+    await attachCheckoutToUser(user.id, session);
+    return { claimed: true };
+  } catch (err) {
+    const message = err instanceof Error ? err.message : "Claim failed";
+    if (/already linked/i.test(message)) throw err;
+    console.warn("[billing] claim failed:", message);
+    return { claimed: false, reason: "error" };
+  }
 }
 
 function subscriptionStatus(status: Stripe.Subscription.Status): BillingStatus {
@@ -611,6 +807,9 @@ export async function handleStripeWebhookEvent(rawBody: Buffer, signature: strin
     const userId =
       session.metadata?.user_id || session.client_reference_id || undefined;
     const customerId = typeof session.customer === "string" ? session.customer : undefined;
+    if (customerId) {
+      await tagCustomerForClaim(stripe, customerId, session, userId);
+    }
     if (!userId) return;
     await ensureBillingCustomer(userId);
     if (customerId) {

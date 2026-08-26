@@ -89,5 +89,5 @@ export function isDemoUsageBypassAllowed(req: Request): boolean {
 }
 
 export function guestServerLimitMessage(): string {
-  return "You’ve used your 5 free analyses. Sign in if you want to keep going — $10 per extra report, or a monthly plan when volume shows up.";
+  return "You’ve used your 5 free analyses. Pay on Stripe for another report or a monthly plan, then create your account to unlock it.";
 }

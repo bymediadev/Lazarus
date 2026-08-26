@@ -3,19 +3,47 @@ import { resolveAuthUser, isOpsUser } from "./founderAuth.js";
 import { isFounderUnlimitedEmail } from "./guestRateLimit.js";
 import {
   claimGuestCap,
+  claimPaidCheckout,
   createCheckoutSession,
   createPortalSession,
   getBillingSnapshot,
   handleStripeWebhookEvent,
   isStripeConfigured,
+  previewCheckoutSession,
   type CheckoutPlan,
 } from "./billing.js";
 
 const CHECKOUT_PLANS = new Set<CheckoutPlan>(["ppu", "entry", "team"]);
+const GUEST_CHECKOUT_LIMIT = 8;
+const GUEST_CHECKOUT_WINDOW_MS = 60 * 60 * 1000;
+const guestCheckoutHits = new Map<string, { count: number; resetAt: number }>();
 
 function asCheckoutPlan(value: unknown): CheckoutPlan | null {
   const v = String(value ?? "");
   return CHECKOUT_PLANS.has(v as CheckoutPlan) ? (v as CheckoutPlan) : null;
+}
+
+function clientIp(req: Request): string {
+  const xf = (req.headers["x-forwarded-for"] as string | undefined)?.split(",")[0]?.trim();
+  return xf || req.socket.remoteAddress || "unknown";
+}
+
+function isGuestCheckoutRateLimited(req: Request): boolean {
+  const now = Date.now();
+  if (guestCheckoutHits.size > 2000) {
+    for (const [key, bucket] of guestCheckoutHits) {
+      if (bucket.resetAt <= now) guestCheckoutHits.delete(key);
+    }
+  }
+  const ip = clientIp(req);
+  let bucket = guestCheckoutHits.get(ip);
+  if (!bucket || bucket.resetAt <= now) {
+    bucket = { count: 0, resetAt: now + GUEST_CHECKOUT_WINDOW_MS };
+    guestCheckoutHits.set(ip, bucket);
+  }
+  if (bucket.count >= GUEST_CHECKOUT_LIMIT) return true;
+  bucket.count += 1;
+  return false;
 }
 
 /** Must be registered before express.json() so the signature is computed on the raw body. */
@@ -85,11 +113,6 @@ export function registerBillingRoutes(app: Express): void {
 
   app.post("/api/billing/checkout", async (req, res) => {
     try {
-      const user = await resolveAuthUser(req);
-      if (!user) {
-        res.status(401).json({ error: "Sign in to pay." });
-        return;
-      }
       if (!isStripeConfigured()) {
         res.status(503).json({ error: "Billing not configured" });
         return;
@@ -99,10 +122,54 @@ export function registerBillingRoutes(app: Express): void {
         res.status(400).json({ error: "Choose ppu, entry, or team." });
         return;
       }
-      const session = await createCheckoutSession(user, plan);
+      const user = await resolveAuthUser(req);
+      if (!user && isGuestCheckoutRateLimited(req)) {
+        res.status(429).json({ error: "Too many checkout attempts. Wait a bit and try again." });
+        return;
+      }
+      const session = await createCheckoutSession(plan, user);
       res.json(session);
     } catch (err) {
       res.status(500).json({ error: err instanceof Error ? err.message : "Checkout failed" });
+    }
+  });
+
+  app.get("/api/billing/checkout-preview", async (req, res) => {
+    try {
+      const sessionId = String(req.query.session_id ?? "").trim();
+      if (!sessionId) {
+        res.status(400).json({ error: "Missing session_id." });
+        return;
+      }
+      const preview = await previewCheckoutSession(sessionId);
+      if (!preview) {
+        res.status(404).json({ error: "Checkout session not found." });
+        return;
+      }
+      res.json(preview);
+    } catch (err) {
+      res.status(500).json({ error: err instanceof Error ? err.message : "Preview failed" });
+    }
+  });
+
+  app.post("/api/billing/claim", async (req, res) => {
+    try {
+      const user = await resolveAuthUser(req);
+      if (!user) {
+        res.status(401).json({ error: "Sign in required." });
+        return;
+      }
+      const sessionId = String(req.body?.session_id ?? "").trim() || null;
+      const result = await claimPaidCheckout(
+        { id: user.id, email: user.email ?? null },
+        { sessionId }
+      );
+      const billing = await getBillingSnapshot(user.id);
+      res.json({ ...result, billing });
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Could not attach payment";
+      const status = /already linked/i.test(message) ? 409 : 500;
+      res.status(status).json({ error: message });
     }
   });
 

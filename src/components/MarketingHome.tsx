@@ -4,11 +4,15 @@ import { scrollToSection } from "../lib/appRoute";
 import { useReveal } from "../lib/useReveal";
 import { PricingPlanCards } from "./PricingGate";
 import TrustPackLink from "./TrustPackLink";
+import type { CheckoutPlan } from "../lib/billing";
 
 type Props = {
   onTrySample: () => void;
   onSignup: () => void;
   onPortal: () => void;
+  onCheckout: (plan: CheckoutPlan) => void;
+  stripeConfigured?: boolean;
+  checkoutBusy?: string | null;
 };
 
 function BookLookButton({ className }: { className?: string }) {
@@ -24,7 +28,14 @@ function BookLookButton({ className }: { className?: string }) {
   );
 }
 
-export default function MarketingHome({ onTrySample, onSignup, onPortal }: Props) {
+export default function MarketingHome({
+  onTrySample,
+  onSignup,
+  onPortal,
+  onCheckout,
+  stripeConfigured = false,
+  checkoutBusy = null,
+}: Props) {
   useReveal();
 
   return (
@@ -200,17 +211,17 @@ export default function MarketingHome({ onTrySample, onSignup, onPortal }: Props
         <p className="hero-trust-eyebrow">Pricing</p>
         <h2>Five free analyses. Paid plans wait until you need them.</h2>
         <p className="marketing-page-lead">
-          Sign in to save your runs. Price is per analysis, not per seat. We are not pushing
-          subscriptions until there is real use.
+          Sign in to save your runs. Price is per analysis, not per seat. Paid plans open Stripe
+          Checkout first; you create an account after payment.
         </p>
         <PricingPlanCards
-          configured
+          configured={stripeConfigured}
           signedIn={false}
-          busy={null}
+          busy={checkoutBusy}
           includeFree
           onSignIn={onSignup}
           onStartFree={onPortal}
-          onCheckout={() => onSignup()}
+          onCheckout={onCheckout}
         />
       </section>
 

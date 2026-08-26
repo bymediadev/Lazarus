@@ -162,7 +162,17 @@ export async function signUpWithPassword(email: string, password: string): Promi
   const res = await fetch(`${API_BASE}/api/auth/signup`, {
     method: "POST",
     headers: apiAuthHeaders(true),
-    body: JSON.stringify({ email: trimmed, password }),
+    body: JSON.stringify({
+      email: trimmed,
+      password,
+      session_id: (() => {
+        try {
+          return sessionStorage.getItem("lazarus_checkout_session") || undefined;
+        } catch {
+          return undefined;
+        }
+      })(),
+    }),
   });
   const data = (await res.json()) as { error?: string; ok?: boolean };
   if (!res.ok) throw new Error(data.error ?? "Could not create account");

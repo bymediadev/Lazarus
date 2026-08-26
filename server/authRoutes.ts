@@ -10,6 +10,7 @@ import { loadHubSpotTokens } from "./integrations/hubspot/tokens.js";
 import { isSalesforceConfigured } from "./integrations/salesforce/config.js";
 import { loadSalesforceTokens } from "./integrations/salesforce/tokens.js";
 import { resolveFrontendOrigin } from "./integrations/oauthShared.js";
+import { claimPaidCheckout } from "./billing.js";
 
 type AuthProviderId = "google" | "hubspot" | "salesforce";
 
@@ -26,6 +27,21 @@ function emailForProvider(provider: AuthProviderId): string | null {
   if (provider === "google") return loadGoogleTokens()?.account_email?.trim() || null;
   if (provider === "hubspot") return loadHubSpotTokens()?.account_email?.trim() || null;
   return loadSalesforceTokens()?.account_email?.trim() || null;
+}
+
+async function claimBillingBestEffort(
+  userId: string,
+  email: string | null | undefined,
+  sessionId?: string | null
+): Promise<void> {
+  try {
+    await claimPaidCheckout({ id: userId, email: email ?? null }, { sessionId });
+  } catch (err) {
+    console.warn(
+      "[auth-billing-claim]",
+      err instanceof Error ? err.message : err
+    );
+  }
 }
 
 /** Create/find auth user and return hashes the Lazarus UI uses to open a session. */
@@ -50,6 +66,8 @@ async function mintSessionPayload(email: string, provider: AuthProviderId) {
     }
     userId = created.data.user.id;
   }
+
+  await claimBillingBestEffort(userId, email);
 
   const redirectTo = resolveFrontendOrigin();
   const link = await admin.auth.admin.generateLink({
@@ -162,6 +180,9 @@ export function registerAuthRoutes(app: Express): void {
         }
         throw created.error ?? new Error(msg);
       }
+
+      const sessionId = String(req.body?.session_id ?? "").trim() || null;
+      await claimBillingBestEffort(created.data.user.id, email, sessionId);
 
       res.json({ ok: true, user_id: created.data.user.id, email });
     } catch (err) {
@@ -356,8 +377,8 @@ export function registerAuthRoutes(app: Express): void {
       const redirectTo = resolveFrontendOrigin();
       const listed = await admin.auth.admin.listUsers({ page: 1, perPage: 200 });
       const users = (listed.data?.users ?? []) as Array<{ id: string; email?: string | null }>;
-      const found = users.find((u) => u.email?.toLowerCase() === email);
-      if (!found) {
+      let userId = users.find((u) => u.email?.toLowerCase() === email)?.id;
+      if (!userId) {
         const created = await admin.auth.admin.createUser({
           email,
           email_confirm: true,
@@ -366,6 +387,10 @@ export function registerAuthRoutes(app: Express): void {
         if (created.error && !/already/i.test(created.error.message)) {
           throw created.error;
         }
+        userId = created.data.user?.id ?? userId;
+      }
+      if (userId) {
+        await claimBillingBestEffort(userId, email);
       }
 
       const link = await admin.auth.admin.generateLink({

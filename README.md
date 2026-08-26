@@ -77,10 +77,10 @@ Customer-facing legal/security pages (source in `public/`):
 
 | ID | Doc | Path |
 |----|-----|------|
-| PP-001 | Privacy Policy | `/api/trust-pack/privacy` |
-| ToS-001 | Terms of Service | `/api/trust-pack/terms` |
-| DPA-001 | Data Processing Addendum | `/api/trust-pack/dpa` |
-| SEC-001 | Security Overview | `/api/trust-pack/security-overview` |
+| PP-001 | Privacy Policy | `/privacy` |
+| ToS-001 | Terms of Service | `/terms` |
+| DPA-001 | Data Processing Addendum | `/dpa` |
+| SEC-001 | Security Overview | `/security-overview` |
 
 Founder-only sales enablement (owner: `joshua.bennett003@gmail.com`; Bearer auth required; open from Founder Ops):
 
@@ -88,7 +88,7 @@ Founder-only sales enablement (owner: `joshua.bennett003@gmail.com`; Bearer auth
 |----|-----|------|
 | SEC-002 | Security Battlecard | `/api/trust-pack/battlecard` |
 
-Legacy HTML paths (e.g. `/privacy.html`) 301 to the canonical URLs above.
+Legacy HTML paths (e.g. `/privacy.html`) and `/api/trust-pack/{privacy,terms,dpa,security-overview}` still work; HTML paths 301 to the canonical URLs above.
 
 ---
 
