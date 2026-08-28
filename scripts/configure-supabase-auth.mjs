@@ -26,10 +26,14 @@ if (!token) {
   process.exit(1);
 }
 
-const siteUrl =
-  (process.env.AUTH_SITE_URL ?? "").trim() ||
-  (process.env.PUBLIC_API_URL ?? "").trim() ||
-  "https://lazarus-4uxi.onrender.com";
+const siteUrl = (process.env.AUTH_SITE_URL ?? "").trim() || "https://www.getldr.ca";
+
+const extraOrigins = [
+  siteUrl,
+  "https://www.getldr.ca",
+  "https://getldr.ca",
+  "https://lazarus-4uxi.onrender.com",
+];
 
 const redirectUrls = [
   "http://localhost:5173",
@@ -38,9 +42,12 @@ const redirectUrls = [
   "http://127.0.0.1:5173",
   "http://127.0.0.1:5173/**",
   "http://127.0.0.1:5173/?lazarus_reset=1",
-  siteUrl,
-  `${siteUrl.replace(/\/$/, "")}/**`,
-  `${siteUrl.replace(/\/$/, "")}/?lazarus_reset=1`,
+  ...new Set(
+    extraOrigins.flatMap((origin) => {
+      const base = origin.replace(/\/$/, "");
+      return [base, `${base}/**`, `${base}/?lazarus_reset=1`];
+    })
+  ),
 ].join(",");
 
 const body = {

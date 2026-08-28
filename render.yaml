@@ -1,5 +1,7 @@
-# Lazarus — Render Blueprint (monolith: Vite UI + Express API)
+# Lazarus — Render Blueprint (API). Public site is GitHub Pages at www.getldr.ca.
 # Manual deploy: New Web Service → build `npm install && npm run build`, start `npm start`, health `/api/health`
+# After DNS cutover to Pages, remove www.getldr.ca / getldr.ca from `domains` so Render is API-only
+# at https://lazarus-4uxi.onrender.com. FRONTEND_ORIGIN should include https://www.getldr.ca first.
 services:
   - type: web
     name: lazarus

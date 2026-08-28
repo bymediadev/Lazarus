@@ -9,6 +9,7 @@
     "dev:client": "vite",
     "dev:server": "node --use-system-ca -r ./server/preload-ca.cjs ./node_modules/tsx/dist/cli.mjs watch server/index.ts",
     "build": "vite build",
+    "build:pages": "vite build && node scripts/prepare-github-pages.mjs",
     "start": "node --use-system-ca -r ./server/preload-ca.cjs ./node_modules/tsx/dist/cli.mjs server/index.ts",
     "start:prod": "npm run build && npm start",
     "preview": "vite preview",

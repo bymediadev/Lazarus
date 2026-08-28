@@ -38,10 +38,10 @@ GOOGLE_CLIENT_SECRET=...
 
 Restart `npm run dev` after changing `VITE_*`.
 
-### Render
+### GitHub Pages + Render
 
-Server already has `SUPABASE_URL` / keys. After deploy, the UI loads anon credentials from
-`GET /api/auth/public-config` (no rebuild required for `VITE_*`).
+Server already has `SUPABASE_URL` / keys. The Pages UI can bake `VITE_SUPABASE_*` at build time, or load anon credentials from
+`GET /api/auth/public-config` on the Render API.
 
 | Key | Notes |
 |-----|--------|
@@ -52,7 +52,7 @@ Server already has `SUPABASE_URL` / keys. After deploy, the UI loads anon creden
 
 ### Optional URL allow-list
 
-If password-reset redirects fail, add your app origins under Supabase → Authentication → URL Configuration (Site URL + Redirect URLs), including `http://localhost:5173/?lazarus_reset=1` and your production origin with `/?lazarus_reset=1`. Users still never log into that dashboard.
+If password-reset redirects fail, add your app origins under Supabase → Authentication → URL Configuration (Site URL + Redirect URLs), including `http://localhost:5173/?lazarus_reset=1` and `https://www.getldr.ca/?lazarus_reset=1`. Users still never log into that dashboard.
 
 After the email link opens Lazarus, you should see a **Save new password** screen (not the main product). Request a fresh reset link after deploying this fix — older links may not include the reset hint.
 

@@ -15,6 +15,7 @@ import {
   verifyZoomWebhookSignature,
   zoomWebhookValidationResponse,
 } from "./rtmsHub.js";
+import { resolveFrontendOrigin } from "../oauthShared.js";
 
 const oauthStates = new Set<string>();
 
@@ -82,26 +83,6 @@ async function handleZoomWebhook(req: Request, res: Response, rawBody: string): 
   }
 
   res.json({ ok: true });
-}
-
-function resolveFrontendOrigin(): string {
-  const fromEnv = (process.env.FRONTEND_ORIGIN ?? "")
-    .split(",")
-    .map((o) => o.trim())
-    .filter(Boolean);
-
-  const httpsPublic = fromEnv.find(
-    (o) => o.startsWith("https://") && !/localhost|127\.0\.0\.1/i.test(o)
-  );
-  if (httpsPublic) return httpsPublic.replace(/\/$/, "");
-
-  const publicApi = (process.env.PUBLIC_API_URL ?? "").trim().replace(/\/$/, "");
-  if (publicApi.startsWith("https://")) return publicApi;
-
-  const anyNonLocal = fromEnv.find((o) => !/localhost|127\.0\.0\.1/i.test(o));
-  if (anyNonLocal) return anyNonLocal.replace(/\/$/, "");
-
-  return (fromEnv[0] ?? "http://localhost:5173").replace(/\/$/, "");
 }
 
 export function registerZoomRoutes(app: Express): void {
