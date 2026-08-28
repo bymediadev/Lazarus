@@ -2,7 +2,7 @@
 
 Operator and product docs for Lazarus Deal Recovery. Root overview: [`../README.md`](../README.md)
 
-Deploy path: **one Node process** serves the public site, `/app` tool, and `/api`. Render is the managed default; any Node VPS works. See [hosting.md](./hosting.md). PHP-only shared hosting (typical Bluehost cPanel) will not run this app.
+Deploy path: **GitHub Pages** serves the public site at `www.getldr.ca`; **Render** serves `/api` at `https://lazarus-4uxi.onrender.com`. Locally, one Node process still serves both. See [hosting.md](./hosting.md). PHP-only shared hosting (typical Bluehost cPanel) will not run the API.
 
 Do not commit secrets — use `.env.example` and host/GitHub secret stores.
 
@@ -18,7 +18,7 @@ Do not commit secrets — use `.env.example` and host/GitHub secret stores.
 | [hubspot-setup.md](./hubspot-setup.md) | HubSpot public OAuth app + Lazarus Connect (see also `hubspot-app/`) |
 | [auth-setup.md](./auth-setup.md) | Login: email magic link, Google, HubSpot/Salesforce bridge + Render Vite env |
 | [billing-setup.md](./billing-setup.md) | Stripe paywall after 5 free analyses ($10 / $99 / $499) |
-| [hosting.md](./hosting.md) | Upload the whole site+API to Render or a Node VPS |
+| [hosting.md](./hosting.md) | GitHub Pages (site) + Render (API); DNS cutover |
 
 ---
 

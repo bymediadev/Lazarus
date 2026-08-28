@@ -858,7 +858,7 @@ export default function App() {
         setRelevanceBlocked(false);
         setError(
           API_BASE
-            ? `Cannot reach Railway API (${apiTargetLabel()}). Check the URL and CORS settings.`
+                        ? `Cannot reach API (${apiTargetLabel()}). Check VITE_API_URL and CORS.`
             : "Cannot reach API server. Run npm run dev and try again."
         );
       } else {

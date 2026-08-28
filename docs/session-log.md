@@ -6,6 +6,18 @@ Two-sentence handoff notes for each build session. Append newest entries at the 
 
 ---
 
+## 2026-08-28 — GitHub Pages frontend + Render API
+
+**Built:** Split production: static Vite site on GitHub Pages (`www.getldr.ca`) calling the existing Render API; CORS and OAuth/Stripe return URLs prefer the custom domain. Render still serves the old monolith until DNS is switched.
+
+**Files:** `server/integrations/oauthShared.ts`, `server/index.ts`, `server/billing.ts`, `server/integrations/zoom/routes.ts`, `.github/workflows/test.yml`, `scripts/prepare-github-pages.mjs`, `public/CNAME`, `docs/hosting.md`, `README.md`
+
+**Verified:** `npm test` + `npm run build:pages` (local)
+
+**Mess / later:** Point DNS at GitHub Pages after the first green Pages deploy; add GitHub secrets `VITE_LAZARUS_API_KEY` / `VITE_SUPABASE_*`; set Render `FRONTEND_ORIGIN=https://www.getldr.ca,...`.
+
+---
+
 ## 2026-07-14 — Google Meet + Microsoft Teams OAuth scaffolds
 
 **Built:** Connect Google Meet and Connect Teams (Entra/Graph) with status/callback/disconnect; shared live Recovery Brief pipe (mic/paste until auto-ingest).

@@ -66,6 +66,7 @@ import { registerMeDealRoutes } from "./meDeals.js";
 import { registerTelemetryRoutes } from "./telemetry.js";
 import { getRuntimeConfig, rejectIfAnalysesBlocked } from "./runtimeConfig.js";
 import { isContactConfigured, registerContactRoutes } from "./contact.js";
+import { corsAllowedOrigins } from "./integrations/oauthShared.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const distPath = path.join(__dirname, "../dist");
@@ -103,18 +104,11 @@ function firstUploadedFile(
   return files[field]?.[0];
 }
 
-const allowedOrigins = (
-  process.env.FRONTEND_ORIGIN ??
-  "http://localhost:5173,http://localhost:3001,http://127.0.0.1:5173"
-)
-  .split(",")
-  .map((o) => o.trim())
-  .filter(Boolean);
-
 app.use(
   cors({
     origin(origin, callback) {
-      if (!origin || allowedOrigins.includes("*") || allowedOrigins.includes(origin)) {
+      const allowed = corsAllowedOrigins();
+      if (!origin || allowed.includes("*") || allowed.includes(origin)) {
         callback(null, true);
         return;
       }
@@ -718,9 +712,9 @@ if (process.env.NODE_ENV === "production" || existsSync(distPath)) {
   });
 }
 
-const PORT = process.env.PORT ?? 3001;
-app.listen(PORT, () => {
-  console.log(`Lazarus Deal Recovery API running on http://localhost:${PORT}`);
+const PORT = Number(process.env.PORT ?? 3001);
+app.listen(PORT, "0.0.0.0", () => {
+  console.log(`Lazarus Deal Recovery API running on http://0.0.0.0:${PORT}`);
   if (existsSync(distPath)) {
     console.log(`Serving frontend from ${distPath}`);
   }

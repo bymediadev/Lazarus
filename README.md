@@ -92,20 +92,23 @@ Legacy HTML paths (e.g. `/privacy.html`) and `/api/trust-pack/{privacy,terms,dpa
 
 ---
 
-## Deploy (one Node process)
+## Deploy (GitHub Pages + Render API)
 
-`npm run build` then `npm start` serves the public site (`/`), login (`/login`), the tool (`/app`), and `/api/*`. Same command on Render or any Node VPS. PHP-only shared hosting will not run this app — see [`docs/hosting.md`](docs/hosting.md).
+The public site is a static Vite build on **GitHub Pages** (`www.getldr.ca`). The Express API stays on **Render** (`https://lazarus-4uxi.onrender.com`). Push to `main` runs tests, then deploys `dist/` to Pages. PHP-only shared hosting will not run the API — see [`docs/hosting.md`](docs/hosting.md).
 
-| Setting | Value |
-|---------|-------|
-| Build | `npm install && npm run build` |
-| Start | `npm start` |
-| Health | `/api/health` |
-| Blueprint | `render.yaml` (optional) |
+`npm run build` then `npm start` still serves site + API from one Node process (local, VPS, or Render fallback).
 
-Required env (copy from local `.env`): `GEMINI_API_KEY`, `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, `PURGE_CRON_SECRET`, `DATA_RETENTION_DAYS`, `NODE_ENV=production`, `FRONTEND_ORIGIN`, `LAZARUS_API_KEY`, `VITE_LAZARUS_API_KEY` (same random string as `LAZARUS_API_KEY`). Leave `VITE_API_URL` unset — UI calls same-origin `/api`.
+| Layer | Setting | Value |
+|-------|---------|-------|
+| **Pages** (site) | Build | `npm run build:pages` with `VITE_API_URL` + `VITE_*` secrets |
+| **Render** (API) | Build | `npm install && npm run build` |
+| **Render** (API) | Start | `npm start` |
+| **Render** (API) | Health | `/api/health` |
+| **Render** (API) | Blueprint | `render.yaml` (optional) |
 
-Free tier sleeps after ~15 min idle — hit `/api/health` before demos.
+Required env (copy from local `.env`): `GEMINI_API_KEY`, `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, `PURGE_CRON_SECRET`, `DATA_RETENTION_DAYS`, `NODE_ENV=production`, `FRONTEND_ORIGIN` (include `https://www.getldr.ca`), `PUBLIC_API_URL`, `LAZARUS_API_KEY`. GitHub Pages bakes `VITE_API_URL=https://lazarus-4uxi.onrender.com` plus `VITE_LAZARUS_API_KEY` / `VITE_SUPABASE_*` at build time. Local `npm run dev` leaves `VITE_API_URL` unset (Vite proxies `/api`).
+
+The marketing pages stay up on GitHub Pages. The Render free API still sleeps after ~15 min idle — hit `/api/health` (or run an analysis) before demos so the first request is not a cold start.
 
 ---
 
@@ -142,7 +145,7 @@ Not claimed as bidirectional CRM sync. Meet/Teams share the same Live Meeting �
 
 ### Still open (ops)
 
-- [ ] Set `FRONTEND_ORIGIN` to the real production domain (keep localhost for local)
+- [ ] Point `www.getldr.ca` DNS at GitHub Pages and set Render `FRONTEND_ORIGIN=https://www.getldr.ca,https://getldr.ca,http://localhost:5173`
 - [ ] Legal counsel review of Trust Pack
 - [ ] Supabase PITR + EU region if GDPR required
 - [ ] Supabase Auth + `user_id` on saves for RLS

@@ -4,6 +4,42 @@ import crypto from "crypto";
 
 const OAUTH_STATE_TTL_MS = 15 * 60 * 1000;
 
+/** Public marketing + app origin (GitHub Pages). API stays on Render. */
+export const CANONICAL_SITE_ORIGIN = "https://www.getldr.ca";
+export const CANONICAL_SITE_ORIGINS = [
+  "https://www.getldr.ca",
+  "https://getldr.ca",
+] as const;
+
+const LOCAL_DEV_ORIGINS = [
+  "http://localhost:5173",
+  "http://localhost:3001",
+  "http://127.0.0.1:5173",
+] as const;
+
+function stripSlash(origin: string): string {
+  return origin.replace(/\/$/, "");
+}
+
+export function listedFrontendOrigins(): string[] {
+  return (process.env.FRONTEND_ORIGIN ?? "")
+    .split(",")
+    .map((o) => stripSlash(o.trim()))
+    .filter(Boolean);
+}
+
+/** Browser origins allowed to call the Render API (GitHub Pages + local + env). */
+export function corsAllowedOrigins(): string[] {
+  return [
+    ...new Set([
+      ...listedFrontendOrigins(),
+      ...CANONICAL_SITE_ORIGINS,
+      ...LOCAL_DEV_ORIGINS,
+      "https://bymediadev.github.io",
+    ]),
+  ];
+}
+
 function stateSecret(fallback: string): string {
   return (
     (process.env.OAUTH_STATE_SECRET ?? "").trim() ||
@@ -48,35 +84,24 @@ export function verifySignedOAuthState(
 }
 
 export function resolveFrontendOrigin(): string {
-  const fromEnv = (process.env.FRONTEND_ORIGIN ?? "")
-    .split(",")
-    .map((o) => o.trim())
-    .filter(Boolean);
+  const fromEnv = listedFrontendOrigins();
+  const isProd = process.env.NODE_ENV === "production";
 
   // Local OAuth popups must land on localhost so postMessage can reach the opener tab.
-  const isProd = process.env.NODE_ENV === "production";
   if (!isProd) {
     const local = fromEnv.find((o) => /localhost|127\.0\.0\.1/i.test(o));
-    if (local) return local.replace(/\/$/, "");
+    if (local) return local;
+    return "http://localhost:5173";
   }
 
-  const httpsPublic = fromEnv.find(
-    (o) => o.startsWith("https://") && !/localhost|127\.0\.0\.1/i.test(o)
+  const listedCanonical = fromEnv.find((o) =>
+    (CANONICAL_SITE_ORIGINS as readonly string[]).includes(o)
   );
-  if (httpsPublic) return httpsPublic.replace(/\/$/, "");
-
-  // Production monolith: PUBLIC_API_URL is often the same origin as the UI.
-  const publicApi = (process.env.PUBLIC_API_URL ?? "").trim().replace(/\/$/, "");
-  if (isProd && publicApi.startsWith("https://")) return publicApi;
-
-  if (isProd) {
-    return "https://lazarus-4uxi.onrender.com";
+  if (listedCanonical) {
+    return listedCanonical === "https://getldr.ca" ? CANONICAL_SITE_ORIGIN : listedCanonical;
   }
 
-  const anyNonLocal = fromEnv.find((o) => !/localhost|127\.0\.0\.1/i.test(o));
-  if (anyNonLocal) return anyNonLocal.replace(/\/$/, "");
-
-  return (fromEnv[0] ?? "http://localhost:5173").replace(/\/$/, "");
+  return CANONICAL_SITE_ORIGIN;
 }
 
 export function publicApiBase(): string {

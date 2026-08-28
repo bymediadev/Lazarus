@@ -51,7 +51,7 @@ STRIPE_PRICE_ENTRY=price_...
 STRIPE_PRICE_TEAM=price_...
 ```
 
-Success/cancel URLs use `FRONTEND_ORIGIN` (first origin) or `PUBLIC_API_URL`. Guest checkout success returns to `/login?mode=signup` with the Checkout `session_id` so the paid plan can attach after they create an account. Signed-in checkout still returns to the app.
+Success/cancel URLs use the canonical site origin (`https://www.getldr.ca` in production). Guest checkout success returns to `/login?mode=signup` with the Checkout `session_id` so the paid plan can attach after they create an account. Signed-in checkout still returns to the app.
 
 Until these are set, the paywall still appears after 5 free runs, but checkout buttons show **Billing not configured**.
 

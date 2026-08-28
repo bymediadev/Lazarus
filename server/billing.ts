@@ -1,6 +1,7 @@
 import type { User } from "@supabase/supabase-js";
 import Stripe from "stripe";
 import { serviceRoleClient } from "./founderAuth.js";
+import { resolveFrontendOrigin } from "./integrations/oauthShared.js";
 
 export const FREE_ANALYSIS_CAP = 5;
 export const ENTRY_PERIOD_CAP = 20;
@@ -124,14 +125,7 @@ export function planMeta(plan: BillingPlan): { label: string; price_usd: number 
 }
 
 export function publicAppOrigin(): string {
-  const front = (process.env.FRONTEND_ORIGIN ?? "")
-    .split(",")
-    .map((o) => o.trim())
-    .find((o) => o && o !== "*");
-  if (front) return front.replace(/\/$/, "");
-  const pub = (process.env.PUBLIC_API_URL ?? "").trim().replace(/\/$/, "");
-  if (pub) return pub;
-  return "http://localhost:5173";
+  return resolveFrontendOrigin();
 }
 
 function getStripe(): Stripe | null {

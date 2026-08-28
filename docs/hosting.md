@@ -1,73 +1,100 @@
-# Host the whole Lazarus site in one folder
+# Host Lazarus Deal Recovery
 
-The marketing site, login, saved-deal workspace, and analysis API are **one Node app**. After `npm run build`, `npm start` serves everything from a single process. Upload this repo (or a git clone) to a **Node.js** host — not PHP-only shared hosting.
+Production is a **split**: GitHub Pages serves the website; Render runs the API. Locally, `npm run dev` still runs both together.
 
-## What will not work
+## Production
 
-**Bluehost / GoDaddy / HostGator shared (cPanel + PHP)** cannot run this stack. There is no PHP backend to FTP up.
+| Piece | Host | URL |
+|-------|------|-----|
+| Marketing site, login, `/portal` | GitHub Pages | `https://www.getldr.ca` |
+| `/api/*` (Gemini, Stripe, OAuth callbacks, contact) | Render | `https://lazarus-4uxi.onrender.com` |
 
-Use one of these instead:
+PHP-only shared hosting (Bluehost / GoDaddy cPanel) cannot run the API.
 
-| Host | Why it fits |
-|------|-------------|
-| **Render** (current production) | Git push; build + start; already used at `lazarus-4uxi.onrender.com` |
-| **Railway / Fly.io / DigitalOcean App Platform** | Same Node start command |
-| **Bluehost VPS / Cloud / any VPS** | You install Node, upload the folder, run `npm start` behind nginx |
-| **Static-only CDN** | Frontend files only — the API still needs Node somewhere |
+The Pages site does not sleep. The Render **free** API still spins down after about 15 minutes idle — open `/api/health` once before a demo.
 
-## One-time upload (VPS or any Node box)
+### GitHub secrets (Pages build)
 
-On the server, with Node 20+:
+Repo → Settings → Secrets and variables → Actions:
 
-```bash
-# 1. Put the project on the machine (git clone or unzip)
-cd Lazarus
-cp .env.example .env   # fill secrets — never commit .env
+| Secret | Value |
+|--------|--------|
+| `VITE_API_URL` | Optional — workflow defaults to `https://lazarus-4uxi.onrender.com` |
+| `VITE_LAZARUS_API_KEY` | Same string as Render `LAZARUS_API_KEY` (required if that key is set on Render) |
+| `VITE_SUPABASE_URL` | Same as `SUPABASE_URL` |
+| `VITE_SUPABASE_ANON_KEY` | Same as `SUPABASE_ANON_KEY` (public anon key) |
 
-# 2. Install and build the website + API together
-npm install
-npm run build
+Push to `main` runs tests, then `npm run build:pages` and deploys `dist/`.
 
-# 3. Serve marketing + /app + /api on one port
-NODE_ENV=production npm start
+### Render env
+
+Keep existing API secrets. Set:
+
+```
+FRONTEND_ORIGIN=https://www.getldr.ca,https://getldr.ca,http://localhost:5173
+PUBLIC_API_URL=https://lazarus-4uxi.onrender.com
 ```
 
-`npm start` listens on `PORT` (default `3001`). Point the host’s public URL at that port.
+Leave `VITE_API_URL` unset on Render. CORS also allows `www.getldr.ca` in code even if this env is stale.
+
+OAuth callback URLs stay on the Render host (already registered). After login/Stripe, users return to `https://www.getldr.ca`.
+
+### DNS cutover (custom domain)
+
+Do this **after** a green Pages deploy. Until then, leave DNS on Render so the live site stays up.
+
+At your DNS host, replace Render records with:
+
+| Host | Type | Value |
+|------|------|--------|
+| `www` | CNAME | `bymediadev.github.io` |
+| `@` (apex `getldr.ca`) | A | `185.199.108.153` |
+| `@` | A | `185.199.109.153` |
+| `@` | A | `185.199.110.153` |
+| `@` | A | `185.199.111.153` |
+
+Remove Render/CNAME-to-onrender records for `www` and the apex. Then in GitHub → repo → Settings → Pages: confirm custom domain `www.getldr.ca` and **Enforce HTTPS**.
+
+Supabase Auth → URL configuration: Site URL `https://www.getldr.ca`, plus redirect `https://www.getldr.ca/?lazarus_reset=1`.
+
+After HTTPS works on Pages, you can drop `www.getldr.ca` / `getldr.ca` from the Render custom-domain list (`render.yaml` `domains:`) so Render is API-only.
+
+## Local
+
+```bash
+cp .env.example .env   # add GEMINI_API_KEY (AIza… or AQ.… format)
+npm install
+npm run dev            # UI http://localhost:5173 · API http://localhost:3001
+```
+
+Leave `VITE_API_URL` unset so Vite proxies `/api` to port 3001.
 
 | Path | What visitors get |
 |------|-------------------|
 | `/` | Public landing page |
 | `/login` | Sign in / create account |
 | `/portal` or `/app` | Lazarus Deal Recovery tool |
-| `/api/*` | Backend |
+| `/api/*` | Backend (Render in production) |
+
+## One-process fallback (Render or any Node box)
+
+`npm run build` then `npm start` still serves the UI from `dist/` and `/api` from the same process. Useful as a rollback if Pages/DNS is wrong. Bind `0.0.0.0:$PORT`.
+
+```bash
+npm install
+npm run build
+NODE_ENV=production npm start
+```
+
+On a VPS, put nginx in front for HTTPS and proxy to `127.0.0.1:3001`.
 
 ## Environment
 
-Copy [`.env.example`](../.env.example) on the host. Minimum for a usable site:
+Copy [`.env.example`](../.env.example). Minimum for a usable API:
 
 - `GEMINI_API_KEY`
 - `SUPABASE_URL`, `SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY`
-- `FRONTEND_ORIGIN` = your public https origin (comma-separate localhost if you still develop locally)
+- `FRONTEND_ORIGIN` = `https://www.getldr.ca` plus localhost for local OAuth
+- `PUBLIC_API_URL` = `https://lazarus-4uxi.onrender.com`
 
 Stripe, Zoom, HubSpot, etc. stay optional until you need those features. See [auth-setup.md](./auth-setup.md) and [billing-setup.md](./billing-setup.md).
-
-## Render (easiest managed path)
-
-Keep the existing Render web service:
-
-- **Build:** `npm install && npm run build`
-- **Start:** `npm start`
-- Env vars from `.env.example` in the Render dashboard
-
-That is the same “upload once, everything loads” model — git is the upload.
-
-## Process manager on a VPS
-
-```bash
-# example — keep the site up after SSH disconnects
-npm install -g pm2
-NODE_ENV=production pm2 start npm --name lazarus -- start
-pm2 save
-```
-
-Put nginx (or Caddy) in front for HTTPS and proxy to `127.0.0.1:3001`.

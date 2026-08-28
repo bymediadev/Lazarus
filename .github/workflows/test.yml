@@ -20,3 +20,42 @@ jobs:
       - run: npm ci
       - run: npm test
       - run: npm run build
+
+  deploy-pages:
+    needs: test
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+
+      - run: npm ci
+
+      - name: Build static site for GitHub Pages
+        env:
+          VITE_API_URL: https://lazarus-4uxi.onrender.com
+          VITE_LAZARUS_API_KEY: ${{ secrets.VITE_LAZARUS_API_KEY }}
+          VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
+          VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
+          VITE_GIT_SHA: ${{ github.sha }}
+        run: npm run build:pages
+
+      - uses: actions/configure-pages@v5
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: ./dist
+
+      - id: deployment
+        uses: actions/deploy-pages@v4
