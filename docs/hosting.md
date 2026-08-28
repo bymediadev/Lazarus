@@ -39,25 +39,36 @@ Leave `VITE_API_URL` unset on Render. CORS also allows `www.getldr.ca` in code e
 
 OAuth callback URLs stay on the Render host (already registered). After login/Stripe, users return to `https://www.getldr.ca`.
 
-### DNS cutover (custom domain)
+### DNS cutover (GoDaddy)
 
 Do this **after** a green Pages deploy. Until then, leave DNS on Render so the live site stays up.
 
-At your DNS host, replace Render records with:
+Nameservers are GoDaddy (`ns67` / `ns68.domaincontrol.com`). Today `www` is a CNAME to `lazarus-4uxi.onrender.com` and the apex `A` record is Render (`216.24.57.1`).
 
-| Host | Type | Value |
-|------|------|--------|
-| `www` | CNAME | `bymediadev.github.io` |
-| `@` (apex `getldr.ca`) | A | `185.199.108.153` |
-| `@` | A | `185.199.109.153` |
-| `@` | A | `185.199.110.153` |
-| `@` | A | `185.199.111.153` |
+**Do not touch MX, TXT, or Zoho verify CNAMEs** — those are email.
 
-Remove Render/CNAME-to-onrender records for `www` and the apex. Then in GitHub → repo → Settings → Pages: confirm custom domain `www.getldr.ca` and **Enforce HTTPS**.
+1. Sign in at [GoDaddy](https://www.godaddy.com) → **My Products** → **Domains** → `getldr.ca` → **DNS** (DNS Records).
+2. Find the **www** CNAME (currently `lazarus-4uxi.onrender.com`). Click **Edit**. Set:
+   - Type: `CNAME`
+   - Name: `www`
+   - Value: `bymediadev.github.io`
+   - TTL: 1 Hour  
+   Save. Do **not** put `https://` or `/Lazarus` in the value.
+3. Find every **A** record whose Name is `@` (the one pointing at `216.24.57.1` / Render). Delete extras, then add **four** A records:
+
+| Type | Name | Value | TTL |
+|------|------|--------|-----|
+| A | `@` | `185.199.108.153` | 1 Hour |
+| A | `@` | `185.199.109.153` | 1 Hour |
+| A | `@` | `185.199.110.153` | 1 Hour |
+| A | `@` | `185.199.111.153` | 1 Hour |
+
+4. If GoDaddy has **Forwarding** on `getldr.ca` or `www`, turn it off. GitHub handles `getldr.ca` → `www.getldr.ca`.
+5. Wait 5–30 minutes (sometimes up to 24 hours). Then GitHub → Lazarus repo → **Settings → Pages**: custom domain `www.getldr.ca` should verify. Check **Enforce HTTPS**.
 
 Supabase Auth → URL configuration: Site URL `https://www.getldr.ca`, plus redirect `https://www.getldr.ca/?lazarus_reset=1`.
 
-After HTTPS works on Pages, you can drop `www.getldr.ca` / `getldr.ca` from the Render custom-domain list (`render.yaml` `domains:`) so Render is API-only.
+After HTTPS works on Pages, drop `www.getldr.ca` / `getldr.ca` from Render custom domains so Render is API-only.
 
 ## Local
 
