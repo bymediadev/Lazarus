@@ -39,12 +39,28 @@ function destinationFor(topic: ContactTopic): string {
   return "support@getldr.ca";
 }
 
+const DEFAULT_FROM = "Lazarus Deal Recovery <support@getldr.ca>";
+const SANDBOX_FROM = "Lazarus Deal Recovery <onboarding@resend.dev>";
+
 function fromAddress(): string {
   return (
     (process.env.CONTACT_FROM ?? "").trim() ||
     (process.env.FOUNDER_ALERT_FROM ?? "").trim() ||
-    "Lazarus Deal Recovery <onboarding@resend.dev>"
+    DEFAULT_FROM
   );
+}
+
+function fromCandidates(): string[] {
+  const primary = fromAddress();
+  const seen = new Set<string>();
+  const list: string[] = [];
+  for (const addr of [primary, DEFAULT_FROM, SANDBOX_FROM]) {
+    const key = addr.toLowerCase();
+    if (seen.has(key)) continue;
+    seen.add(key);
+    list.push(addr);
+  }
+  return list;
 }
 
 function clientIp(req: Request): string {
@@ -151,32 +167,35 @@ export function registerContactRoutes(app: Express): void {
         const recipients = [to];
         if (fallback && fallback !== to.toLowerCase()) recipients.push(fallback);
 
-        for (const dest of recipients) {
-          const sent = await fetch("https://api.resend.com/emails", {
-            method: "POST",
-            headers: {
-              Authorization: `Bearer ${apiKey}`,
-              "Content-Type": "application/json",
-            },
-            body: JSON.stringify({
-              from: fromAddress(),
-              to: [dest],
-              reply_to: email,
-              subject: `[${label}] Lazarus contact from ${who}`,
-              text,
-            }),
-          });
-          if (sent.ok) {
-            emailed = true;
-            break;
-          }
-          const body = await sent.text();
-          console.error("[contact] Resend", dest, sent.status, body.slice(0, 200));
-          const allowed = body.match(
-            /your own email address \(([^)]+@[^)]+)\)/i
-          )?.[1];
-          if (allowed && !recipients.some((r) => r.toLowerCase() === allowed.toLowerCase())) {
-            recipients.push(allowed);
+        const froms = fromCandidates();
+        destLoop: for (const dest of recipients) {
+          for (const from of froms) {
+            const sent = await fetch("https://api.resend.com/emails", {
+              method: "POST",
+              headers: {
+                Authorization: `Bearer ${apiKey}`,
+                "Content-Type": "application/json",
+              },
+              body: JSON.stringify({
+                from,
+                to: [dest],
+                reply_to: email,
+                subject: `[${label}] Lazarus contact from ${who}`,
+                text,
+              }),
+            });
+            if (sent.ok) {
+              emailed = true;
+              break destLoop;
+            }
+            const body = await sent.text();
+            console.error("[contact] Resend", from, dest, sent.status, body.slice(0, 200));
+            const allowed = body.match(
+              /your own email address \(([^)]+@[^)]+)\)/i
+            )?.[1];
+            if (allowed && !recipients.some((r) => r.toLowerCase() === allowed.toLowerCase())) {
+              recipients.push(allowed);
+            }
           }
         }
       }
