@@ -147,25 +147,37 @@ export function registerContactRoutes(app: Express): void {
       const apiKey = (process.env.RESEND_API_KEY ?? "").trim();
       let emailed = false;
       if (apiKey) {
-        const sent = await fetch("https://api.resend.com/emails", {
-          method: "POST",
-          headers: {
-            Authorization: `Bearer ${apiKey}`,
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            from: fromAddress(),
-            to: [to],
-            reply_to: email,
-            subject: `[${label}] Lazarus contact from ${who}`,
-            text,
-          }),
-        });
-        if (sent.ok) {
-          emailed = true;
-        } else {
+        const fallback = (process.env.CONTACT_EMAIL_FALLBACK ?? "").trim().toLowerCase();
+        const recipients = [to];
+        if (fallback && fallback !== to.toLowerCase()) recipients.push(fallback);
+
+        for (const dest of recipients) {
+          const sent = await fetch("https://api.resend.com/emails", {
+            method: "POST",
+            headers: {
+              Authorization: `Bearer ${apiKey}`,
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              from: fromAddress(),
+              to: [dest],
+              reply_to: email,
+              subject: `[${label}] Lazarus contact from ${who}`,
+              text,
+            }),
+          });
+          if (sent.ok) {
+            emailed = true;
+            break;
+          }
           const body = await sent.text();
-          console.error("[contact] Resend", sent.status, body.slice(0, 200));
+          console.error("[contact] Resend", dest, sent.status, body.slice(0, 200));
+          const allowed = body.match(
+            /your own email address \(([^)]+@[^)]+)\)/i
+          )?.[1];
+          if (allowed && !recipients.some((r) => r.toLowerCase() === allowed.toLowerCase())) {
+            recipients.push(allowed);
+          }
         }
       }
 
