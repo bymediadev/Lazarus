@@ -38,6 +38,7 @@ import {
   fetchBillingMe,
   peekCheckoutSessionId,
   startCheckout,
+  directCheckoutReady,
   type BillingMe,
   type CheckoutPlan,
 } from "./lib/billing";
@@ -407,13 +408,16 @@ export default function App() {
       setCheckoutBusy(plan);
       setBillingError(null);
       try {
-        await startCheckout(plan);
+        await startCheckout(plan, {
+          email: auth.user?.email,
+          userId: auth.user?.id,
+        });
       } catch (err) {
         setBillingError(err instanceof Error ? err.message : "Checkout failed");
         setCheckoutBusy(null);
       }
     },
-    []
+    [auth.user?.email, auth.user?.id]
   );
 
   useEffect(() => {
@@ -1026,7 +1030,7 @@ export default function App() {
             onSignup={() => openLogin("signup")}
             onPortal={() => openTool()}
             onCheckout={(plan) => void handleCheckout(plan)}
-            stripeConfigured={stripeConfigured}
+            stripeConfigured={directCheckoutReady() || stripeConfigured}
             checkoutBusy={checkoutBusy}
             checkoutError={billingError}
           />
@@ -1168,13 +1172,20 @@ export default function App() {
               {paywalled && (
                 <PricingGate
                   signedIn={!!auth.session}
-                  configured={auth.session ? billing?.configured !== false : stripeConfigured}
+                  configured={
+                    directCheckoutReady() ||
+                    (auth.session ? billing?.configured !== false : stripeConfigured)
+                  }
                   pastDue={billing?.past_due === true}
                   message={guestCapLockMessage(!!auth.session)}
                   busy={checkoutBusy}
                   error={billingError}
                   onSignIn={openSignupPortal}
                   onCheckout={(plan) => void handleCheckout(plan)}
+                  checkoutContext={{
+                    email: auth.user?.email,
+                    userId: auth.user?.id,
+                  }}
                 />
               )}
             </div>
@@ -1544,7 +1555,7 @@ export default function App() {
       <DealLifecyclePanel
         open={dealsPortalOpen}
         locked={!canLifecycle}
-        billingConfigured={billing?.configured !== false}
+        billingConfigured={directCheckoutReady() || billing?.configured !== false}
         checkoutBusy={checkoutBusy}
         onClose={() => setDealsPortalOpen(false)}
         onCheckout={(plan) => void handleCheckout(plan)}

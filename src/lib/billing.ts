@@ -1,4 +1,5 @@
 import { API_BASE, apiAuthHeaders } from "./api";
+import { STRIPE_PAYMENT_LINKS } from "./site";
 
 export type BillingPlan = "free" | "ppu" | "entry" | "team";
 export type BillingStatus = "none" | "active" | "past_due" | "canceled";
@@ -218,7 +219,52 @@ export async function claimCheckoutSession(sessionId?: string | null): Promise<B
   return data.billing ?? null;
 }
 
-export async function startCheckout(plan: CheckoutPlan): Promise<void> {
+export type CheckoutContext = {
+  email?: string | null;
+  userId?: string | null;
+};
+
+function envPaymentLink(plan: CheckoutPlan): string {
+  const viteEnv = (
+    import.meta as ImportMeta & {
+      env?: Record<string, string | undefined>;
+    }
+  ).env;
+  const key =
+    plan === "ppu"
+      ? "VITE_STRIPE_PAYMENT_LINK_PPU"
+      : plan === "entry"
+        ? "VITE_STRIPE_PAYMENT_LINK_ENTRY"
+        : "VITE_STRIPE_PAYMENT_LINK_TEAM";
+  return (viteEnv?.[key] ?? "").trim();
+}
+
+export function paymentLinkFor(plan: CheckoutPlan): string | null {
+  const url = envPaymentLink(plan) || STRIPE_PAYMENT_LINKS[plan];
+  return url.startsWith("https://buy.stripe.com/") ? url : null;
+}
+
+export function directCheckoutReady(): boolean {
+  return (["ppu", "entry", "team"] as const).every((plan) => !!paymentLinkFor(plan));
+}
+
+export function checkoutUrlFor(plan: CheckoutPlan, ctx?: CheckoutContext): string | null {
+  const base = paymentLinkFor(plan);
+  if (!base) return null;
+  const url = new URL(base);
+  const email = (ctx?.email ?? "").trim();
+  if (email.includes("@")) url.searchParams.set("prefilled_email", email);
+  const userId = (ctx?.userId ?? "").trim();
+  if (userId) url.searchParams.set("client_reference_id", userId);
+  return url.toString();
+}
+
+export async function startCheckout(plan: CheckoutPlan, ctx?: CheckoutContext): Promise<void> {
+  const direct = checkoutUrlFor(plan, ctx);
+  if (direct) {
+    window.location.assign(direct);
+    return;
+  }
   const data = await billingFetch<{ url: string }>("/api/billing/checkout", {
     method: "POST",
     body: JSON.stringify({ plan }),

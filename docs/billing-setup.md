@@ -24,7 +24,9 @@ Feature split (do not put both extras on every paid SKU):
 
 - **Lifecycle (My deals):** Entry and Team only. Free/$10 still save runs; the tracker UI stays locked until they subscribe.
 
-Cards never touch Lazarus. Checkout and Customer Portal are hosted by Stripe. The Lazarus API that *starts* those sessions must stay awake: Render **Free** spins down after 15 minutes idle. Production uses a paid instance (`starter` or higher).
+Cards never touch Lazarus. Public **Buy** / **Subscribe** buttons are Stripe Payment Links (`buy.stripe.com`) baked into the GitHub Pages site, so checkout does not wait on the Render API. After payment, Stripe sends the buyer back to create an account; a webhook (and `/api/billing/claim`) attach the plan. Webhooks still retry if Render is asleep.
+
+Customer Portal (**Manage billing**) still needs the API.
 
 ## 1. Stripe Dashboard
 
@@ -34,12 +36,13 @@ Cards never touch Lazarus. Checkout and Customer Portal are hosted by Stripe. Th
    - **Entry** — recurring monthly **$99 USD**
    - **Team** — recurring monthly **$499 USD**
 3. Copy each Price ID (`price_...`) into env.
-4. Developers → Webhooks → Add endpoint:
+4. Payment Links (live): `npm run stripe:payment-links` creates or reuses links with `metadata.plan` and a success redirect to `https://www.getldr.ca/login?mode=signup&billing=success&session_id={CHECKOUT_SESSION_ID}`. Public URLs live in `src/lib/site.ts` (`STRIPE_PAYMENT_LINKS`).
+5. Developers → Webhooks → Add endpoint:
    - URL: `https://<your-render-host>/api/billing/webhook`
    - Events: `checkout.session.completed`, `customer.subscription.created`, `customer.subscription.updated`, `customer.subscription.deleted`, `invoice.paid`
-5. Copy the webhook signing secret (`whsec_...`).
-6. Settings → Billing → Customer portal: enable payment method update, invoice history, and cancel.
-7. Settings → Public details: set **Business name** to Lazarus Deal Recovery, website `https://www.getldr.ca`, Privacy policy `https://www.getldr.ca/privacy`, Terms of service `https://www.getldr.ca/terms`. Stripe does not have fields for the DPA or Security Overview; those live at `/dpa` and `/security-overview`.
+6. Copy the webhook signing secret (`whsec_...`).
+7. Settings → Billing → Customer portal: enable payment method update, invoice history, and cancel.
+8. Settings → Public details: set **Business name** to Lazarus Deal Recovery, website `https://www.getldr.ca`, Privacy policy `https://www.getldr.ca/privacy`, Terms of service `https://www.getldr.ca/terms`. Stripe does not have fields for the DPA or Security Overview; those live at `/dpa` and `/security-overview`.
 
 ## 2. Environment (Render + local `.env`)
 
@@ -51,9 +54,9 @@ STRIPE_PRICE_ENTRY=price_...
 STRIPE_PRICE_TEAM=price_...
 ```
 
-Success/cancel URLs use the canonical site origin (`https://www.getldr.ca` in production). Guest checkout success returns to `/login?mode=signup` with the Checkout `session_id` so the paid plan can attach after they create an account. Signed-in checkout still returns to the app.
+Success/cancel for Payment Links return to `/login?mode=signup` with the Checkout `session_id` so the paid plan can attach after they create an account. Signed-in buyers get `client_reference_id` on the same links.
 
-Until these are set, the paywall still appears after 5 free runs, but checkout buttons show **Billing not configured**.
+Until Payment Links (or env price IDs for the API fallback) are set, paid CTAs show **Billing not configured**.
 
 ## 3. Local webhook testing
 

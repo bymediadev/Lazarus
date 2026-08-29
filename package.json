@@ -23,6 +23,7 @@
     "test:document-email": "node --import tsx scripts/test-document-email-regression.mjs",
     "test:hubspot": "node --import tsx scripts/test-hubspot-regression.mjs",
     "test:billing": "node --import tsx scripts/test-billing-entitlement.mjs",
+    "stripe:payment-links": "node --env-file=.env scripts/ensure-stripe-payment-links.mjs",
     "test:hubspot:live": "node --import tsx scripts/test-hubspot-live-smoke.mjs",
     "hubspot:env": "node scripts/apply-hubspot-env.mjs",
     "test:stress-deep-context": "node --use-system-ca scripts/test-stress-deep-context.mjs",

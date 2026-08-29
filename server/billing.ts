@@ -481,7 +481,10 @@ function sessionEmail(session: Stripe.Checkout.Session): string | null {
 function sessionPlan(session: Stripe.Checkout.Session): CheckoutPlan | null {
   const raw = session.metadata?.plan;
   if (raw === "ppu" || raw === "entry" || raw === "team") return raw;
-  return null;
+  const item = session.line_items?.data?.[0];
+  const price = item?.price;
+  const priceId = typeof price === "string" ? price : price?.id;
+  return planFromPriceId(priceId);
 }
 
 export type CheckoutPreview = {
@@ -497,7 +500,9 @@ export async function previewCheckoutSession(sessionId: string): Promise<Checkou
   const stripe = getStripe();
   if (!stripe) return null;
   try {
-    const session = await stripe.checkout.sessions.retrieve(id);
+    const session = await stripe.checkout.sessions.retrieve(id, {
+      expand: ["line_items"],
+    });
     const plan = sessionPlan(session);
     return {
       email: sessionEmail(session),

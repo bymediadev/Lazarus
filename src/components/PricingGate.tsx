@@ -2,6 +2,8 @@ import {
   CHECKOUT_PLANS,
   PRICING_CARDS,
   PRICING_USAGE_FOOTNOTE,
+  checkoutUrlFor,
+  type CheckoutContext,
   type CheckoutPlan,
   type PricingCard,
 } from "../lib/billing";
@@ -15,6 +17,7 @@ type Props = {
   error?: string | null;
   onSignIn: () => void;
   onCheckout: (plan: CheckoutPlan) => void;
+  checkoutContext?: CheckoutContext;
 };
 
 function checkoutCta(card: PricingCard, _signedIn: boolean, configured: boolean, busy: string | null) {
@@ -32,10 +35,14 @@ export function PricingPlanCards({
   onSignIn: _onSignIn,
   onCheckout,
   error,
+  checkoutContext,
   plans,
   includeFree = false,
   onStartFree,
-}: Pick<Props, "configured" | "signedIn" | "busy" | "error" | "onSignIn" | "onCheckout"> & {
+}: Pick<
+  Props,
+  "configured" | "signedIn" | "busy" | "error" | "onSignIn" | "onCheckout" | "checkoutContext"
+> & {
   plans?: CheckoutPlan[];
   includeFree?: boolean;
   onStartFree?: () => void;
@@ -55,6 +62,9 @@ export function PricingPlanCards({
       <div className={`pricing-plan-grid${gridClass}`}>
         {visible.map((plan) => {
           const checkoutId = plan.checkout;
+          const href = checkoutId ? checkoutUrlFor(checkoutId, checkoutContext) : null;
+          const canPay = configured || !!href;
+          const label = checkoutCta(plan, signedIn, canPay, busy);
           return (
             <article
               key={plan.id}
@@ -77,20 +87,26 @@ export function PricingPlanCards({
                   <li key={feature}>{feature}</li>
                 ))}
               </ul>
-              <button
-                type="button"
-                className="run-button"
-                disabled={!!busy || (!configured && plan.id !== "free")}
-                onClick={() => {
-                  if (plan.id === "free") {
-                    onStartFree?.();
-                    return;
-                  }
-                  if (checkoutId) onCheckout(checkoutId);
-                }}
-              >
-                {checkoutCta(plan, signedIn, configured, busy)}
-              </button>
+              {plan.id === "free" || !href ? (
+                <button
+                  type="button"
+                  className="run-button"
+                  disabled={!!busy || (!canPay && plan.id !== "free")}
+                  onClick={() => {
+                    if (plan.id === "free") {
+                      onStartFree?.();
+                      return;
+                    }
+                    if (checkoutId) onCheckout(checkoutId);
+                  }}
+                >
+                  {label}
+                </button>
+              ) : (
+                <a className="run-button" href={href}>
+                  {label}
+                </a>
+              )}
             </article>
           );
         })}
@@ -110,6 +126,7 @@ export default function PricingGate({
   error,
   onSignIn: _onSignIn,
   onCheckout,
+  checkoutContext,
 }: Props) {
   return (
     <div className="pricing-gate" role="region" aria-label="Paid plans">
@@ -131,6 +148,7 @@ export default function PricingGate({
         signedIn={signedIn}
         busy={busy}
         error={error}
+        checkoutContext={checkoutContext}
         onSignIn={_onSignIn}
         onCheckout={onCheckout}
       />

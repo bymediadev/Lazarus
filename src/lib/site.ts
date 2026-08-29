@@ -1,5 +1,12 @@
 export const BOOKING_URL = "https://calendly.com/getldr-sales/30min";
 
+/** Hosted Stripe Payment Links — pricing CTAs skip the Render API. */
+export const STRIPE_PAYMENT_LINKS = {
+  ppu: "https://buy.stripe.com/28EcN7bns3Ph6m4c9x4Ja00",
+  entry: "https://buy.stripe.com/fZu9AVgHMbhJ25OflJ4Ja01",
+  team: "https://buy.stripe.com/4gM14p1MSgC3bGo6Pd4Ja02",
+} as const;
+
 export const WALKTHROUGH_EMBED_URL =
   "https://www.loom.com/embed/a4fb54eb44d54202bbbbcac771c8ec59";
 

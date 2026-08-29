@@ -11,7 +11,7 @@ Production is a **split**: GitHub Pages serves the website; Render runs the API.
 
 PHP-only shared hosting (Bluehost / GoDaddy cPanel) cannot run the API.
 
-The Pages site does not sleep. The API must stay on a **paid** Render instance (`starter` or higher in `render.yaml`). Free instances spin down after 15 minutes idle, which takes Stripe checkout and webhooks down with them. Paid instances stay up.
+The Pages site does not sleep. Public checkout is Stripe Payment Links, so **Buy** / **Subscribe** do not wait on Render. The API on Free still spins down after 15 minutes idle — analyses, OAuth, webhooks, and attaching a paid plan after signup can wait on a cold start until you move this service to a paid instance.
 
 ### GitHub secrets (Pages build)
 

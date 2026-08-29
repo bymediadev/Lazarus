@@ -6,6 +6,7 @@ import {
   formatInvoiceAmount,
   startBillingPortal,
   startCheckout,
+  directCheckoutReady,
   type BillingMe,
   type CheckoutPlan,
 } from "../lib/billing";
@@ -77,7 +78,10 @@ export default function AccountPortal({ open, onClose }: Props) {
     setBillingBusy(plan);
     setBillingError(null);
     try {
-      await startCheckout(plan);
+      await startCheckout(plan, {
+        email: auth.user?.email,
+        userId: auth.user?.id,
+      });
     } catch (err) {
       setBillingError(err instanceof Error ? err.message : "Checkout failed");
       setBillingBusy(null);
@@ -184,9 +188,13 @@ export default function AccountPortal({ open, onClose }: Props) {
               )}
               {showUpgrade && (
                 <PricingPlanCards
-                  configured={billing.configured}
+                  configured={billing.configured || directCheckoutReady()}
                   signedIn
                   busy={billingBusy}
+                  checkoutContext={{
+                    email: auth.user?.email,
+                    userId: auth.user?.id,
+                  }}
                   onSignIn={() => undefined}
                   onCheckout={(plan) => void onCheckout(plan)}
                 />
@@ -195,7 +203,7 @@ export default function AccountPortal({ open, onClose }: Props) {
                 <button
                   type="button"
                   className="run-button"
-                  disabled={!!billingBusy || !billing.configured}
+                  disabled={!!billingBusy || !(billing.configured || directCheckoutReady())}
                   onClick={() => void onCheckout("team")}
                 >
                   {billingBusy === "team" ? "Redirecting…" : "Upgrade to Team · $499/mo unlimited"}

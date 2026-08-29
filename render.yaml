@@ -3,13 +3,14 @@
 # After DNS cutover to Pages, remove www.getldr.ca / getldr.ca from `domains` so Render is API-only
 # at https://lazarus-4uxi.onrender.com. FRONTEND_ORIGIN should include https://www.getldr.ca first.
 #
-# plan must stay paid (starter or higher). Free web services spin down after 15 min idle —
-# that takes Stripe checkout, webhooks, and OAuth with them. Do not ping-to-keep-alive.
+# Public Buy/Subscribe buttons are Stripe Payment Links (do not wait on this service).
+# Free still sleeps after 15 min idle — that delays analyses, OAuth, webhooks, and plan claim.
+# Paid starter (or higher) if you want the API itself always on. Do not ping-to-keep-alive.
 services:
   - type: web
     name: lazarus
     runtime: node
-    plan: starter
+    plan: free
     buildCommand: npm install && npm run build
     startCommand: npm start
     healthCheckPath: /api/health
