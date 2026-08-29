@@ -2,11 +2,14 @@
 # Manual deploy: New Web Service → build `npm install && npm run build`, start `npm start`, health `/api/health`
 # After DNS cutover to Pages, remove www.getldr.ca / getldr.ca from `domains` so Render is API-only
 # at https://lazarus-4uxi.onrender.com. FRONTEND_ORIGIN should include https://www.getldr.ca first.
+#
+# plan must stay paid (starter or higher). Free web services spin down after 15 min idle —
+# that takes Stripe checkout, webhooks, and OAuth with them. Do not ping-to-keep-alive.
 services:
   - type: web
     name: lazarus
     runtime: node
-    plan: free
+    plan: starter
     buildCommand: npm install && npm run build
     startCommand: npm start
     healthCheckPath: /api/health
@@ -20,7 +23,7 @@ services:
         value: production
       - key: DATA_RETENTION_DAYS
         value: "30"
-      # Render injects PORT — do not set it. UI is same-origin /api (monolith).
+      # Render injects PORT — do not set it. Public site is GitHub Pages; this service is API-only.
       - key: GEMINI_API_KEY
         sync: false
       - key: FRONTEND_ORIGIN

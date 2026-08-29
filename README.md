@@ -108,7 +108,7 @@ The public site is a static Vite build on **GitHub Pages** (`www.getldr.ca`). Th
 
 Required env (copy from local `.env`): `GEMINI_API_KEY`, `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, `PURGE_CRON_SECRET`, `DATA_RETENTION_DAYS`, `NODE_ENV=production`, `FRONTEND_ORIGIN` (include `https://www.getldr.ca`), `PUBLIC_API_URL`, `LAZARUS_API_KEY`. GitHub Pages bakes `VITE_API_URL=https://lazarus-4uxi.onrender.com` plus `VITE_LAZARUS_API_KEY` / `VITE_SUPABASE_*` at build time. Local `npm run dev` leaves `VITE_API_URL` unset (Vite proxies `/api`).
 
-The marketing pages stay up on GitHub Pages. The Render free API still sleeps after ~15 min idle — hit `/api/health` (or run an analysis) before demos so the first request is not a cold start.
+The marketing pages stay up on GitHub Pages. The Render API must be on a **paid** instance (Starter or higher) so checkout and webhooks never wait on a cold start. Do not run this API on Render Free.
 
 ---
 

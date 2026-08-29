@@ -24,7 +24,7 @@ Feature split (do not put both extras on every paid SKU):
 
 - **Lifecycle (My deals):** Entry and Team only. Free/$10 still save runs; the tracker UI stays locked until they subscribe.
 
-Cards never touch Lazarus. Checkout and Customer Portal are hosted by Stripe.
+Cards never touch Lazarus. Checkout and Customer Portal are hosted by Stripe. The Lazarus API that *starts* those sessions must stay awake: Render **Free** spins down after 15 minutes idle. Production uses a paid instance (`starter` or higher).
 
 ## 1. Stripe Dashboard
 
