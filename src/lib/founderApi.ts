@@ -317,6 +317,19 @@ export async function founderRestoreSnapshot(note?: string) {
   });
 }
 
+export type ContactInquiry = {
+  id: string;
+  created_at: string;
+  topic: string;
+  name: string;
+  email: string;
+  message: string;
+};
+
+export async function fetchFounderContactInquiries(): Promise<{ inquiries: ContactInquiry[] }> {
+  return founderFetch<{ inquiries: ContactInquiry[] }>("/api/founder/contact-inquiries");
+}
+
 export async function copyText(text: string): Promise<void> {
   await navigator.clipboard.writeText(text);
 }

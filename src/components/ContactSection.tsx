@@ -1,5 +1,11 @@
 import { FormEvent, useState } from "react";
-import { CONTACT_TOPICS, sendContactNote, type ContactTopic } from "../lib/contact";
+import {
+  CONTACT_TOPICS,
+  contactInboxEmail,
+  contactMailto,
+  sendContactNote,
+  type ContactTopic,
+} from "../lib/contact";
 import { BOOKING_URL } from "../lib/site";
 
 export default function ContactSection() {
@@ -124,10 +130,23 @@ export default function ContactSection() {
               placeholder="What do you need?"
             />
           </label>
-          {error && <div className="error-banner">{error}</div>}
+          {error && (
+            <div className="error-banner">
+              <p>{error}</p>
+              <p>
+                <a href={contactMailto({ topic, name, email, message })}>
+                  Open your email app instead
+                </a>
+              </p>
+            </div>
+          )}
           <button type="submit" className="run-button" disabled={busy}>
             {busy ? "Sending…" : "Send"}
           </button>
+          <p className="marketing-contact-hint">
+            Or email{" "}
+            <a href={`mailto:${contactInboxEmail(topic)}`}>{contactInboxEmail(topic)}</a>
+          </p>
         </form>
       )}
     </section>

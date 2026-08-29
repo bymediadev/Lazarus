@@ -1019,6 +1019,7 @@ export default function App() {
         <LoginScreen
           initialMode={loginMode}
           onClose={() => goTo("/")}
+          onContinueGuest={() => goTo("/portal")}
         />
       ) : showSite ? (
         <MarketingShell
@@ -1577,6 +1578,7 @@ export default function App() {
         <LoginScreen
           initialMode={loginMode}
           onClose={() => setLoginOpen(false)}
+          onContinueGuest={() => setLoginOpen(false)}
         />
       )}
         </>

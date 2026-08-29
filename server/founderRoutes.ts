@@ -282,6 +282,28 @@ export function registerFounderRoutes(app: Express): void {
     }
   });
 
+  app.get("/api/founder/contact-inquiries", requireOps, async (_req, res) => {
+    try {
+      const supabase = serviceRoleClient();
+      if (!supabase) {
+        res.status(503).json({ error: "Supabase not configured" });
+        return;
+      }
+      const { data, error } = await supabase
+        .from("contact_inquiries")
+        .select("id, created_at, topic, name, email, message")
+        .order("created_at", { ascending: false })
+        .limit(40);
+      if (error) {
+        res.status(500).json({ error: error.message });
+        return;
+      }
+      res.json({ inquiries: data ?? [] });
+    } catch (err) {
+      res.status(500).json({ error: err instanceof Error ? err.message : "Contact inbox failed" });
+    }
+  });
+
   app.get("/api/founder/lookup", requireOps, async (req, res) => {
     try {
       const email = String(req.query.email ?? "")

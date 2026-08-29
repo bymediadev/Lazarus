@@ -2392,6 +2392,15 @@ a.run-button:hover {
   margin: 0;
 }
 
+.error-banner p + p {
+  margin-top: 0.4rem;
+}
+
+.error-banner a {
+  color: inherit;
+  text-decoration: underline;
+}
+
 .relevance-override-btn {
   margin-top: 0.65rem;
 }
@@ -4767,6 +4776,10 @@ a.run-button:hover {
 .ops-fix {
   margin: 0.35rem 0 0;
   font-size: 0.85rem;
+}
+
+.ops-inbox {
+  margin-bottom: 1.25rem;
 }
 
 .ops-lookup-row {

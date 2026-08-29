@@ -1,4 +1,5 @@
 import type { Express, Request } from "express";
+import { serviceRoleClient } from "./founderAuth.js";
 
 export const CONTACT_TOPICS = ["feedback", "sales", "technical", "support"] as const;
 export type ContactTopic = (typeof CONTACT_TOPICS)[number];
@@ -19,7 +20,7 @@ function isContactTopic(value: unknown): value is ContactTopic {
 }
 
 export function isContactConfigured(): boolean {
-  return !!(process.env.RESEND_API_KEY ?? "").trim();
+  return !!(process.env.RESEND_API_KEY ?? "").trim() || !!serviceRoleClient();
 }
 
 function destinationFor(topic: ContactTopic): string {
@@ -127,28 +128,52 @@ export function registerContactRoutes(app: Express): void {
         message,
       ].join("\n");
 
+      const supabase = serviceRoleClient();
+      let stored = false;
+      if (supabase) {
+        const { error: insertError } = await supabase.from("contact_inquiries").insert({
+          topic,
+          name,
+          email,
+          message,
+        });
+        if (insertError) {
+          console.error("[contact] store", insertError.message);
+        } else {
+          stored = true;
+        }
+      }
+
       const apiKey = (process.env.RESEND_API_KEY ?? "").trim();
-      const sent = await fetch("https://api.resend.com/emails", {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${apiKey}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          from: fromAddress(),
-          to: [to],
-          reply_to: email,
-          subject: `[${label}] Lazarus contact from ${who}`,
-          text,
-        }),
-      });
-      if (!sent.ok) {
-        const body = await sent.text();
-        console.error("[contact] Resend", sent.status, body.slice(0, 200));
+      let emailed = false;
+      if (apiKey) {
+        const sent = await fetch("https://api.resend.com/emails", {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${apiKey}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            from: fromAddress(),
+            to: [to],
+            reply_to: email,
+            subject: `[${label}] Lazarus contact from ${who}`,
+            text,
+          }),
+        });
+        if (sent.ok) {
+          emailed = true;
+        } else {
+          const body = await sent.text();
+          console.error("[contact] Resend", sent.status, body.slice(0, 200));
+        }
+      }
+
+      if (!stored && !emailed) {
         res.status(502).json({ error: "Could not send that note. Email support@getldr.ca." });
         return;
       }
-      res.json({ ok: true });
+      res.json({ ok: true, stored, emailed });
     } catch (err) {
       console.error("[contact]", err);
       res.status(500).json({ error: err instanceof Error ? err.message : "Could not send that note." });

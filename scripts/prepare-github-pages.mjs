@@ -20,6 +20,12 @@ if (!existsSync(indexHtml)) {
 copyFileSync(indexHtml, join(dist, "404.html"));
 writeFileSync(join(dist, ".nojekyll"), "");
 
+for (const slug of ["login", "portal"]) {
+  mkdirSync(join(dist, slug), { recursive: true });
+  copyFileSync(indexHtml, join(dist, slug, "index.html"));
+  copyFileSync(indexHtml, join(dist, `${slug}.html`));
+}
+
 const trustPack = ["privacy", "terms", "dpa", "security-overview"];
 for (const slug of trustPack) {
   const src = join(dist, `${slug}.html`);
@@ -32,4 +38,4 @@ for (const slug of trustPack) {
   copyFileSync(src, join(dir, "index.html"));
 }
 
-console.log("GitHub Pages dist ready (404.html, Trust Pack folders, .nojekyll)");
+console.log("GitHub Pages dist ready (404.html, /login, /portal, Trust Pack folders, .nojekyll)");

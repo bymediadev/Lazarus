@@ -3,6 +3,7 @@ import { fetchAuthStatus } from "../lib/auth";
 import { fetchGoogleMeetStatus } from "../lib/googleMeetIntegration";
 import { subscribeOAuthComplete } from "../lib/oauthBridge";
 import { useAuth } from "./AuthProvider";
+import { navigateApp } from "../lib/appRoute";
 import {
   captureCheckoutSessionFromUrl,
   fetchCheckoutPreview,
@@ -14,10 +15,16 @@ type ProviderId = "google" | "hubspot" | "salesforce";
 export type LoginScreenProps = {
   /** When set, render as a dismissible overlay over the product. */
   onClose?: () => void;
+  /** Guest path into the workspace (defaults to /portal). */
+  onContinueGuest?: () => void;
   initialMode?: Exclude<Mode, "reset">;
 };
 
-export default function LoginScreen({ onClose, initialMode = "signin" }: LoginScreenProps) {
+export default function LoginScreen({
+  onClose,
+  onContinueGuest,
+  initialMode = "signin",
+}: LoginScreenProps) {
   const auth = useAuth();
   const [mode, setMode] = useState<Mode>(initialMode);
   const [email, setEmail] = useState("");
@@ -370,11 +377,19 @@ export default function LoginScreen({ onClose, initialMode = "signin" }: LoginSc
       {notice && <p className="demo-transcript-notice">{notice}</p>}
       {error && <div className="error-banner">{error}</div>}
 
-      {onClose && (
-        <button type="button" className="login-text-link login-continue-guest" onClick={onClose}>
-          Continue without an account
-        </button>
-      )}
+      <button
+        type="button"
+        className="login-text-link login-continue-guest"
+        onClick={() => {
+          if (onContinueGuest) {
+            onContinueGuest();
+            return;
+          }
+          navigateApp("/portal");
+        }}
+      >
+        Continue without an account
+      </button>
     </div>
   );
 

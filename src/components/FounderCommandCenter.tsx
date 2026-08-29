@@ -15,6 +15,8 @@ import {
   founderSetKillSwitch,
   founderSetSpendCap,
   founderTestDigest,
+  fetchFounderContactInquiries,
+  type ContactInquiry,
   type FounderApisInventory,
 } from "../lib/founderApi";
 import { isFounderUnlimitedEmail } from "../lib/guestUsage";
@@ -51,23 +53,26 @@ export default function FounderCommandCenter({ opsEmail, onOpenProduct }: Props)
   const [noteDraft, setNoteDraft] = useState("");
   const [capDraft, setCapDraft] = useState("");
   const [pauseDraft, setPauseDraft] = useState("");
+  const [inquiries, setInquiries] = useState<ContactInquiry[]>([]);
 
   const refresh = useCallback(async () => {
     setLoading(true);
     setError(null);
     try {
-      const [ov, iss, sys, inv, crash] = await Promise.all([
+      const [ov, iss, sys, inv, crash, inbox] = await Promise.all([
         fetchFounderOverview(),
         fetchFounderIssues(),
         fetchFounderSystem(),
         fetchFounderApis().catch(() => null),
         fetchFounderCrashes().catch(() => ({ crashes: [] })),
+        fetchFounderContactInquiries().catch(() => ({ inquiries: [] as ContactInquiry[] })),
       ]);
       setOverview(ov);
       setIssues(iss.issues);
       setSystem(sys);
       setApis(inv);
       setCrashes(crash.crashes);
+      setInquiries(inbox.inquiries);
       setCapDraft(sys.spend.global_daily_cap != null ? String(sys.spend.global_daily_cap) : "");
       setPauseDraft(sys.runtime.pause_message);
     } catch (err) {
@@ -521,6 +526,38 @@ export default function FounderCommandCenter({ opsEmail, onOpenProduct }: Props)
       {tab === "lookup" && (
         <section className="ops-section">
           <h2>Lookup (when someone contacts you)</h2>
+          <div className="ops-inbox">
+            <h3>Website contact form</h3>
+            {inquiries.length === 0 ? (
+              <p className="ops-sub">No inbound notes yet. New submissions land here even without Resend.</p>
+            ) : (
+              <ul className="ops-list">
+                {inquiries.map((note) => (
+                  <li key={note.id}>
+                    <div className="ops-issue-row">
+                      <div>
+                        <strong>
+                          {note.topic} · {note.email}
+                        </strong>
+                        <p className="ops-sub">
+                          {note.name ? `${note.name} · ` : ""}
+                          {new Date(note.created_at).toLocaleString()}
+                        </p>
+                        <p className="ops-sub">{note.message}</p>
+                      </div>
+                      <button
+                        type="button"
+                        className="btn-secondary"
+                        onClick={() => setLookupEmail(note.email)}
+                      >
+                        Use this email
+                      </button>
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
           <div className="ops-lookup-row">
             <input
               type="email"
