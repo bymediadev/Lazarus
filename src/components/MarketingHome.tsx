@@ -13,6 +13,7 @@ type Props = {
   onCheckout: (plan: CheckoutPlan) => void;
   stripeConfigured?: boolean;
   checkoutBusy?: string | null;
+  checkoutError?: string | null;
 };
 
 function BookLookButton({ className }: { className?: string }) {
@@ -32,8 +33,9 @@ export default function MarketingHome({
   onSignup,
   onPortal,
   onCheckout,
-  stripeConfigured = false,
+  stripeConfigured = true,
   checkoutBusy = null,
+  checkoutError = null,
 }: Props) {
   useReveal();
 
@@ -247,6 +249,7 @@ export default function MarketingHome({
           configured={stripeConfigured}
           signedIn={false}
           busy={checkoutBusy}
+          error={checkoutError}
           includeFree
           onSignIn={onSignup}
           onStartFree={onPortal}

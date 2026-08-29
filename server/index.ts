@@ -77,10 +77,17 @@ app.set("trust proxy", 1);
 
 const CANONICAL_HOST = "www.getldr.ca";
 const APEX_HOST = "getldr.ca";
+const RENDER_PUBLIC_HOST = (
+  process.env.RENDER_EXTERNAL_HOSTNAME || "lazarus-4uxi.onrender.com"
+).toLowerCase();
 
 app.use((req, res, next) => {
   const host = (req.hostname || "").toLowerCase();
-  if (host === APEX_HOST && req.method === "GET" && !req.path.startsWith("/api")) {
+  const sendToCanonical =
+    req.method === "GET" &&
+    !req.path.startsWith("/api") &&
+    (host === APEX_HOST || host === RENDER_PUBLIC_HOST);
+  if (sendToCanonical) {
     res.redirect(301, `https://${CANONICAL_HOST}${req.originalUrl}`);
     return;
   }

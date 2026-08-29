@@ -31,10 +31,11 @@ export function PricingPlanCards({
   busy,
   onSignIn: _onSignIn,
   onCheckout,
+  error,
   plans,
   includeFree = false,
   onStartFree,
-}: Pick<Props, "configured" | "signedIn" | "busy" | "onSignIn" | "onCheckout"> & {
+}: Pick<Props, "configured" | "signedIn" | "busy" | "error" | "onSignIn" | "onCheckout"> & {
   plans?: CheckoutPlan[];
   includeFree?: boolean;
   onStartFree?: () => void;
@@ -95,6 +96,7 @@ export function PricingPlanCards({
         })}
       </div>
       <p className="pricing-plan-footnote">{PRICING_USAGE_FOOTNOTE}</p>
+      {error ? <div className="error-banner">{error}</div> : null}
     </div>
   );
 }
@@ -128,10 +130,10 @@ export default function PricingGate({
         configured={configured}
         signedIn={signedIn}
         busy={busy}
+        error={error}
         onSignIn={_onSignIn}
         onCheckout={onCheckout}
       />
-      {error && <div className="error-banner">{error}</div>}
     </div>
   );
 }

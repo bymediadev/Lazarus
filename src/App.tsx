@@ -142,7 +142,7 @@ export default function App() {
   const [billing, setBilling] = useState<BillingMe | null>(null);
   const [checkoutBusy, setCheckoutBusy] = useState<string | null>(null);
   const [billingError, setBillingError] = useState<string | null>(null);
-  const [stripeConfigured, setStripeConfigured] = useState(false);
+  const [stripeConfigured, setStripeConfigured] = useState(true);
   const [guideHighlight, setGuideHighlight] = useState<string | null>(null);
   const [linkedHubSpotDealId, setLinkedHubSpotDealId] = useState<string | null>(null);
   const [linkedSalesforceOppId, setLinkedSalesforceOppId] = useState<string | null>(null);
@@ -493,7 +493,11 @@ export default function App() {
           setApiOnline(r.ok);
           if (!r.ok) return;
           const data = (await r.json().catch(() => ({}))) as { stripe?: boolean };
-          setStripeConfigured(data.stripe === true);
+          // Only disable paid CTAs when health explicitly says Stripe is off.
+          // Stay enabled while the API is cold or unreachable so the first paint
+          // is not "Billing not configured".
+          if (data.stripe === false) setStripeConfigured(false);
+          else if (data.stripe === true) setStripeConfigured(true);
         })
         .catch(() => setApiOnline(false));
     };
@@ -1024,6 +1028,7 @@ export default function App() {
             onCheckout={(plan) => void handleCheckout(plan)}
             stripeConfigured={stripeConfigured}
             checkoutBusy={checkoutBusy}
+            checkoutError={billingError}
           />
         </MarketingShell>
       ) : (
