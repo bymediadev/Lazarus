@@ -17,7 +17,7 @@ export const MEETING_PLATFORMS: MeetingPlatform[] = [
     id: "meet",
     label: "Google Meet",
     connectNote:
-      "Connect Google for Meet/Workspace. Live caption ingest next — mic + paste feeds the same Recovery Brief today.",
+      "Install the Lazarus Meet captions extension, turn on Captions in Meet, then Start. Mic + paste stays as fallback.",
   },
   {
     id: "teams",

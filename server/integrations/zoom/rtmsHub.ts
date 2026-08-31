@@ -1,6 +1,13 @@
 import crypto from "crypto";
+import { secretsEqual } from "../../cryptoSecrets.js";
 import { getZoomConfig } from "./config.js";
-import { publishToActiveZoomSessions, type LiveTranscriptChunk } from "./transcriptBus.js";
+import {
+  bindZoomRtmsToSession,
+  publishToZoomRtms,
+  unbindZoomRtms,
+  type LiveTranscriptChunk,
+} from "./transcriptBus.js";
+import { findZoomUserIdByAccount } from "./tokens.js";
 
 type RtmsClient = {
   onTranscriptData: (
@@ -30,7 +37,13 @@ function formatTimestamp(ts: number): string {
   return `${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`;
 }
 
-function publishChunk(speaker: string, dialogue: string, timestamp: number): void {
+function publishChunk(
+  streamId: string,
+  meetingId: string,
+  speaker: string,
+  dialogue: string,
+  timestamp: number
+): void {
   const text = dialogue.trim();
   if (!text) return;
   const chunk: LiveTranscriptChunk = {
@@ -39,7 +52,7 @@ function publishChunk(speaker: string, dialogue: string, timestamp: number): voi
     timestamp: formatTimestamp(timestamp),
     source: "zoom_rtms",
   };
-  publishToActiveZoomSessions(chunk);
+  publishToZoomRtms(streamId, meetingId, chunk);
 }
 
 async function loadRtmsModule(): Promise<RtmsModule | null> {
@@ -53,6 +66,33 @@ async function loadRtmsModule(): Promise<RtmsModule | null> {
   }
 }
 
+function stringField(value: unknown): string {
+  return typeof value === "string" ? value.trim() : "";
+}
+
+function ownerUserIdFromRtmsPayload(payload: Record<string, unknown>): string | null {
+  const obj =
+    payload.object && typeof payload.object === "object"
+      ? (payload.object as Record<string, unknown>)
+      : {};
+  const operator =
+    payload.operator && typeof payload.operator === "object"
+      ? (payload.operator as Record<string, unknown>)
+      : {};
+  const email =
+    stringField(payload.host_email) ||
+    stringField(payload.email) ||
+    stringField(obj.host_email) ||
+    stringField(operator.email);
+  const accountId =
+    stringField(payload.operator_id) ||
+    stringField(payload.host_id) ||
+    stringField(payload.user_id) ||
+    stringField(obj.host_id) ||
+    stringField(operator.id);
+  return findZoomUserIdByAccount(email || undefined, accountId || undefined);
+}
+
 export async function handleZoomRtmsStarted(payload: Record<string, unknown>): Promise<void> {
   const rtms = await loadRtmsModule();
   if (!rtms) {
@@ -62,13 +102,38 @@ export async function handleZoomRtmsStarted(payload: Record<string, unknown>): P
     return;
   }
 
-  const streamId = String(payload.rtms_stream_id ?? payload.meeting_uuid ?? Date.now());
+  const ownerUserId = ownerUserIdFromRtmsPayload(payload);
+  if (!ownerUserId) {
+    console.warn("[zoom-rtms] dropping stream — could not map meeting to a connected Lazarus user");
+    return;
+  }
+
+  const obj =
+    payload.object && typeof payload.object === "object"
+      ? (payload.object as Record<string, unknown>)
+      : {};
+  const meetingId =
+    stringField(payload.meeting_uuid) ||
+    stringField(obj.uuid) ||
+    stringField(payload.meeting_id) ||
+    stringField(obj.id);
+  const streamId =
+    stringField(payload.rtms_stream_id) || meetingId || String(Date.now());
+
+  const boundSessionId = bindZoomRtmsToSession(ownerUserId, meetingId, streamId);
+  if (!boundSessionId) {
+    console.warn(
+      "[zoom-rtms] dropping stream — no Lazarus Zoom live session to bind (start a live session first)"
+    );
+    return;
+  }
+
   const existing = activeClients.get(streamId);
   existing?.leave?.();
 
   const client = new rtms.default.Client();
   client.onTranscriptData((data, _size, timestamp, metadata) => {
-    publishChunk(metadata?.userName ?? "Speaker", decodeTranscript(data), timestamp);
+    publishChunk(streamId, meetingId, metadata?.userName ?? "Speaker", decodeTranscript(data), timestamp);
   });
 
   try {
@@ -81,13 +146,22 @@ export async function handleZoomRtmsStarted(payload: Record<string, unknown>): P
 }
 
 export function handleZoomRtmsStopped(payload: Record<string, unknown>): void {
-  const streamId = String(payload.rtms_stream_id ?? payload.meeting_uuid ?? "");
+  const obj =
+    payload.object && typeof payload.object === "object"
+      ? (payload.object as Record<string, unknown>)
+      : {};
+  const meetingId =
+    stringField(payload.meeting_uuid) ||
+    stringField(obj.uuid) ||
+    stringField(payload.meeting_id);
+  const streamId = stringField(payload.rtms_stream_id) || meetingId;
   const client = activeClients.get(streamId);
   if (client) {
     client.leave?.();
     activeClients.delete(streamId);
     console.log("[zoom-rtms] left stream", streamId);
   }
+  unbindZoomRtms(streamId, meetingId);
 }
 
 /** Zoom endpoint.url_validation challenge. */
@@ -108,7 +182,7 @@ export function verifyZoomWebhookSignature(
   if (!signature || !timestamp || !secret) return false;
   const message = `v0:${timestamp}:${rawBody}`;
   const hash = crypto.createHmac("sha256", secret).update(message).digest("hex");
-  return signature === `v0=${hash}`;
+  return secretsEqual(signature, `v0=${hash}`);
 }
 
 export function rtmsPlatformNote(): string {

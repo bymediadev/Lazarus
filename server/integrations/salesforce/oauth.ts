@@ -43,7 +43,7 @@ async function fetchUserEmail(
   }
 }
 
-export async function exchangeSalesforceCode(code: string): Promise<SalesforceTokenRecord> {
+export async function exchangeSalesforceCode(code: string, userId?: string): Promise<SalesforceTokenRecord> {
   const cfg = getSalesforceConfig();
   if (!cfg) throw new Error("Salesforce OAuth is not configured");
 
@@ -67,7 +67,7 @@ export async function exchangeSalesforceCode(code: string): Promise<SalesforceTo
     );
   }
 
-  const existing = loadSalesforceTokens();
+  const existing = userId ? loadSalesforceTokens(userId) : null;
   const email = await fetchUserEmail(data.instance_url, data.access_token);
   const record: SalesforceTokenRecord = {
     access_token: data.access_token,
@@ -77,16 +77,16 @@ export async function exchangeSalesforceCode(code: string): Promise<SalesforceTo
     account_email: email ?? existing?.account_email,
     connected_at: new Date().toISOString(),
   };
-  saveSalesforceTokens(record);
+  if (userId) saveSalesforceTokens(userId, record);
   return record;
 }
 
-export async function getValidSalesforceAccessToken(): Promise<{
+export async function getValidSalesforceAccessToken(userId: string): Promise<{
   accessToken: string;
   instanceUrl: string;
 } | null> {
   const cfg = getSalesforceConfig();
-  const stored = loadSalesforceTokens();
+  const stored = loadSalesforceTokens(userId);
   if (!cfg || !stored?.access_token || !stored.instance_url) return null;
 
   if (Date.now() < new Date(stored.expires_at).getTime() - 60_000) {
@@ -119,6 +119,6 @@ export async function getValidSalesforceAccessToken(): Promise<{
     refresh_token: data.refresh_token ?? stored.refresh_token,
     expires_at: new Date(Date.now() + 2 * 60 * 60 * 1000).toISOString(),
   };
-  saveSalesforceTokens(record);
+  saveSalesforceTokens(userId, record);
   return { accessToken: record.access_token, instanceUrl: record.instance_url };
 }

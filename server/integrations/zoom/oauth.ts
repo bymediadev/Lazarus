@@ -29,7 +29,7 @@ export function buildZoomAuthorizeUrl(state: string): string {
   return `${ZOOM_AUTH_URL}?${params.toString()}`;
 }
 
-export async function exchangeZoomCode(code: string): Promise<ZoomTokenRecord> {
+export async function exchangeZoomCode(code: string, userId?: string): Promise<ZoomTokenRecord> {
   const cfg = getZoomConfig();
   if (!cfg) throw new Error("Zoom OAuth is not configured");
 
@@ -54,13 +54,15 @@ export async function exchangeZoomCode(code: string): Promise<ZoomTokenRecord> {
   }
 
   let account_email: string | undefined;
+  let account_id: string | undefined;
   try {
     const userRes = await fetch(ZOOM_USER_URL, {
       headers: { Authorization: `Bearer ${data.access_token}` },
     });
     if (userRes.ok) {
-      const user = (await userRes.json()) as { email?: string };
+      const user = (await userRes.json()) as { email?: string; id?: string };
       account_email = user.email;
+      account_id = user.id;
     }
   } catch {
     /* optional */
@@ -71,15 +73,16 @@ export async function exchangeZoomCode(code: string): Promise<ZoomTokenRecord> {
     refresh_token: data.refresh_token,
     expires_at: new Date(Date.now() + data.expires_in * 1000).toISOString(),
     account_email,
+    account_id,
     connected_at: new Date().toISOString(),
   };
-  saveZoomTokens(record);
+  if (userId) saveZoomTokens(userId, record);
   return record;
 }
 
-export async function getValidZoomAccessToken(): Promise<string | null> {
+export async function getValidZoomAccessToken(userId: string): Promise<string | null> {
   const cfg = getZoomConfig();
-  const stored = loadZoomTokens();
+  const stored = loadZoomTokens(userId);
   if (!cfg || !stored?.access_token) return null;
 
   const expiresAt = new Date(stored.expires_at).getTime();
@@ -113,6 +116,6 @@ export async function getValidZoomAccessToken(): Promise<string | null> {
     refresh_token: data.refresh_token ?? stored.refresh_token,
     expires_at: new Date(Date.now() + data.expires_in * 1000).toISOString(),
   };
-  saveZoomTokens(record);
+  saveZoomTokens(userId, record);
   return record.access_token;
 }

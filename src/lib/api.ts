@@ -92,6 +92,8 @@ export interface PostMortemPayload {
   hubspotDealId?: string;
   /** Linked Salesforce opportunity id. */
   salesforceOpportunityId?: string;
+  /** Cloudflare Turnstile token — required in production before analysis. */
+  captchaToken?: string;
 }
 
 export async function runPostMortem(payload: PostMortemPayload): Promise<PostMortemResponse> {
@@ -153,10 +155,17 @@ export async function runPostMortem(payload: PostMortemPayload): Promise<PostMor
     formData.append("salesforce_opportunity_id", payload.salesforceOpportunityId);
   }
 
+  const captchaToken = payload.captchaToken?.trim();
+  if (captchaToken) {
+    formData.append("captcha_token", captchaToken);
+  }
+
   const url = `${API_BASE}/api/post-mortem`;
+  const headers = postMortemHeaders();
+  if (captchaToken) headers["X-Captcha-Token"] = captchaToken;
   const res = await fetch(url, {
     method: "POST",
-    headers: postMortemHeaders(),
+    headers,
     body: formData,
   });
 

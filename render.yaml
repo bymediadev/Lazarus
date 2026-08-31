@@ -95,6 +95,16 @@ services:
         sync: false
       - key: OAUTH_STATE_SECRET
         sync: false
+      - key: TOKEN_ENCRYPTION_KEY
+        sync: false
+      - key: AUTH_REQUIRE_EMAIL_DELIVERY
+        value: "true"
+      - key: TURNSTILE_SITE_KEY
+        sync: false
+      - key: TURNSTILE_SECRET_KEY
+        sync: false
+      - key: CAPTCHA_REQUIRED
+        value: "true"
       - key: SUPABASE_ACCESS_TOKEN
         sync: false
       - key: STRIPE_SECRET_KEY

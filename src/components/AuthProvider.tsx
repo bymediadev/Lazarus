@@ -45,7 +45,7 @@ interface AuthContextValue {
   clearPasswordRecovery: () => void;
   resetPasswordEmail: (email: string) => Promise<void>;
   startProviderLogin: (provider: LazarusLoginProvider) => Promise<void>;
-  completeProviderLogin: (provider: LazarusLoginProvider) => Promise<void>;
+  completeProviderLogin: (loginCode?: string | null) => Promise<void>;
   logout: () => Promise<void>;
   deleteAccount: () => Promise<void>;
 }
@@ -125,10 +125,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     await openProviderConnectPopup(provider);
   }, []);
 
-  const completeProviderLogin = useCallback(async (provider: LazarusLoginProvider) => {
+  const completeProviderLogin = useCallback(async (loginCode?: string | null) => {
     clearPasswordRecoveryState();
     setPasswordRecovery(false);
-    await completeProviderSignIn(provider);
+    await completeProviderSignIn(loginCode);
   }, []);
 
   const signInPassword = useCallback(async (email: string, password: string) => {

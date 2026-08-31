@@ -27,7 +27,7 @@ export function buildTeamsAuthorizeUrl(state: string): string {
   return `${authBase(cfg.tenantId)}/authorize?${params.toString()}`;
 }
 
-export async function exchangeTeamsCode(code: string): Promise<TeamsTokenRecord> {
+export async function exchangeTeamsCode(code: string, userId?: string): Promise<TeamsTokenRecord> {
   const cfg = getTeamsConfig();
   if (!cfg) throw new Error("Teams OAuth is not configured");
 
@@ -64,7 +64,7 @@ export async function exchangeTeamsCode(code: string): Promise<TeamsTokenRecord>
     /* optional */
   }
 
-  const existing = loadTeamsTokens();
+  const existing = userId ? loadTeamsTokens(userId) : null;
   const record: TeamsTokenRecord = {
     access_token: data.access_token,
     refresh_token: data.refresh_token ?? existing?.refresh_token ?? "",
@@ -72,13 +72,13 @@ export async function exchangeTeamsCode(code: string): Promise<TeamsTokenRecord>
     account_email,
     connected_at: new Date().toISOString(),
   };
-  saveTeamsTokens(record);
+  if (userId) saveTeamsTokens(userId, record);
   return record;
 }
 
-export async function getValidTeamsAccessToken(): Promise<string | null> {
+export async function getValidTeamsAccessToken(userId: string): Promise<string | null> {
   const cfg = getTeamsConfig();
-  const stored = loadTeamsTokens();
+  const stored = loadTeamsTokens(userId);
   if (!cfg || !stored?.access_token) return null;
 
   if (Date.now() < new Date(stored.expires_at).getTime() - 60_000) {
@@ -111,6 +111,6 @@ export async function getValidTeamsAccessToken(): Promise<string | null> {
     refresh_token: data.refresh_token ?? stored.refresh_token,
     expires_at: new Date(Date.now() + data.expires_in * 1000).toISOString(),
   };
-  saveTeamsTokens(record);
+  saveTeamsTokens(userId, record);
   return record.access_token;
 }

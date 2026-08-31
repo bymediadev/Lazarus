@@ -64,6 +64,20 @@ export async function savePostMortem(input: SavePostMortemInput): Promise<string
   return data.id;
 }
 
+export async function getPostMortemUserId(id: string): Promise<string | null> {
+  const url = process.env.SUPABASE_URL;
+  const key = process.env.SUPABASE_SERVICE_ROLE_KEY ?? process.env.SUPABASE_ANON_KEY;
+  if (!url || !key || !id) return null;
+  const supabase = createClient(url, key);
+  const { data, error } = await supabase
+    .from("call_post_mortems")
+    .select("user_id")
+    .eq("id", id)
+    .maybeSingle();
+  if (error || !data?.user_id) return null;
+  return String(data.user_id);
+}
+
 /** Null out transcript_text older than retention window. Keeps analysis_json for audit. */
 async function insertPurgeAuditLog(
   supabase: ReturnType<typeof createClient>,

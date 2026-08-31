@@ -16,7 +16,12 @@ import {
   detectRecurringVetoHolders,
 } from "./deepContext.js";
 import { extractDocumentText, DOCUMENT_MAX_BYTES } from "./documents.js";
-import { savePostMortem, purgeExpiredTranscripts, saveRescueOutcome } from "./supabase.js";
+import {
+  savePostMortem,
+  purgeExpiredTranscripts,
+  saveRescueOutcome,
+  getPostMortemUserId,
+} from "./supabase.js";
 import { buildAnalysisTranscript } from "./transcript.js";
 import { stripOutcomeMetadata } from "./sanitize.js";
 import { normalizeEmailThread, normalizeManualTranscript } from "./normalize.js";
@@ -33,6 +38,7 @@ import { registerZoomRoutes, registerZoomWebhook } from "./integrations/zoom/rou
 import { isZoomConfigured } from "./integrations/zoom/config.js";
 import { registerGoogleMeetRoutes } from "./integrations/google/routes.js";
 import { isGoogleMeetConfigured } from "./integrations/google/config.js";
+import { hydrateGoogleTokens } from "./integrations/google/tokens.js";
 import { registerTeamsRoutes } from "./integrations/teams/routes.js";
 import { isTeamsConfigured } from "./integrations/teams/config.js";
 import { registerHubSpotRoutes } from "./integrations/hubspot/routes.js";
@@ -67,6 +73,14 @@ import { registerTelemetryRoutes } from "./telemetry.js";
 import { getRuntimeConfig, rejectIfAnalysesBlocked } from "./runtimeConfig.js";
 import { isContactConfigured, registerContactRoutes } from "./contact.js";
 import { corsAllowedOrigins } from "./integrations/oauthShared.js";
+import { secretsEqual } from "./cryptoSecrets.js";
+import { rateLimit, skipPublicAndWebhooks } from "./rateLimit.js";
+import {
+  captchaConfigured,
+  enforceCaptcha,
+  publicCaptchaConfig,
+} from "./captcha.js";
+import { requireAuthUser, getAuthUserId } from "./requireUser.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const distPath = path.join(__dirname, "../dist");
@@ -125,6 +139,16 @@ app.use(
   })
 );
 
+app.use(
+  "/api",
+  rateLimit({
+    windowMs: 60_000,
+    max: 180,
+    name: "api",
+    skip: skipPublicAndWebhooks,
+  })
+);
+
 /**
  * Zoom Apps require these OWASP Secure Headers on text/html Home URL responses.
  * Meta tags are not enough — they must be HTTP response headers.
@@ -138,12 +162,12 @@ app.use((_req, res, next) => {
     "Content-Security-Policy",
     [
       "default-src 'self'",
-      "script-src 'self' 'unsafe-inline' https://appssdk.zoom.us https://*.zoom.us",
+      "script-src 'self' 'unsafe-inline' https://appssdk.zoom.us https://*.zoom.us https://challenges.cloudflare.com",
       "style-src 'self' 'unsafe-inline'",
       "img-src 'self' data: https:",
       "font-src 'self' data:",
       "connect-src 'self' https: wss:",
-      "frame-src 'self' https://*.zoom.us https://www.loom.com https://*.loom.com",
+      "frame-src 'self' https://*.zoom.us https://www.loom.com https://*.loom.com https://challenges.cloudflare.com",
       "object-src 'none'",
       "base-uri 'self'",
       "form-action 'self' https://zoom.us https://*.zoom.us",
@@ -175,6 +199,7 @@ app.get("/api/health", (_req, res) => {
     whitewhale: false,
     stripe: isStripeConfigured(),
     contact: isContactConfigured(),
+    captcha: captchaConfigured(),
   });
 });
 
@@ -222,19 +247,29 @@ function requireApiKey(req: express.Request, res: express.Response, next: expres
   const provided =
     (req.headers["x-api-key"] as string | undefined)?.trim() ??
     req.headers.authorization?.replace(/^Bearer\s+/i, "")?.trim();
-  if (provided !== expected) {
+  if (!secretsEqual(provided, expected)) {
     res.status(401).json({ error: "Unauthorized — invalid or missing API key" });
     return;
   }
   next();
 }
 
-app.post("/api/post-mortem", requireApiKey, uploadFields, async (req, res) => {
+app.post(
+  "/api/post-mortem",
+  rateLimit({ windowMs: 60_000, max: 12, name: "post-mortem" }),
+  requireApiKey,
+  uploadFields,
+  async (req, res) => {
   let reservation: ConsumeKind | null = null;
   let reservationUserId: string | undefined;
   let committed = false;
   try {
     if (await rejectIfAnalysesBlocked(req, res)) return;
+    const captcha = await enforceCaptcha(req);
+    if (!captcha.ok) {
+      res.status(captcha.status).json({ error: captcha.error, code: captcha.code });
+      return;
+    }
     const authUserIdEarly = (await optionalAuthUserId(req)) ?? undefined;
     const freemiumExempt = await isFreemiumExempt(req);
     if (!freemiumExempt) {
@@ -464,7 +499,7 @@ app.post("/api/webhooks/hubspot", async (req, res) => {
     (req.headers["x-hubspot-signature"] as string | undefined) ??
     (req.headers["x-webhook-secret"] as string | undefined);
 
-  if (!verifyHubSpotWebhookSecret(providedSecret, expectedSecret || undefined)) {
+  if (!expectedSecret || !verifyHubSpotWebhookSecret(providedSecret, expectedSecret)) {
     res.status(401).json({ error: "Unauthorized — invalid HubSpot webhook secret" });
     return;
   }
@@ -479,22 +514,13 @@ app.post("/api/webhooks/hubspot", async (req, res) => {
     let linkId: string | null = null;
     if (externalId) {
       const existing = await getCrmDealLinkByExternalId("hubspot", externalId);
-      if (existing) {
+      if (existing?.user_id) {
         await updateCrmDealLinkContext(existing.id, {
           historical_crm_context: mapped.historical_crm_context,
           sales_cycle_days: mapped.sales_cycle_days,
           last_inbound_at: new Date().toISOString(),
         });
         linkId = existing.id;
-      } else {
-        linkId = await upsertCrmDealLink({
-          provider: "hubspot",
-          externalDealId: externalId,
-          accountId: mapped.account_id,
-          salesCycleDays: mapped.sales_cycle_days,
-          historicalCrmContext: mapped.historical_crm_context,
-          lastInboundAt: new Date().toISOString(),
-        });
       }
     }
     res.json({ ok: true, mapped, link_id: linkId, synced: !!linkId });
@@ -528,7 +554,11 @@ app.post("/api/guide/chat", requireApiKey, async (req, res) => {
   }
 });
 
-app.post("/api/live/objections", requireApiKey, async (req, res) => {
+app.post(
+  "/api/live/objections",
+  rateLimit({ windowMs: 60_000, max: 30, name: "live-ai" }),
+  requireApiKey,
+  async (req, res) => {
   try {
     if (await rejectIfAnalysesBlocked(req, res)) return;
     const full_transcript = String(req.body?.full_transcript ?? "");
@@ -553,7 +583,11 @@ app.post("/api/live/objections", requireApiKey, async (req, res) => {
   }
 });
 
-app.post("/api/live/triage", requireApiKey, async (req, res) => {
+app.post(
+  "/api/live/triage",
+  rateLimit({ windowMs: 60_000, max: 20, name: "live-triage" }),
+  requireApiKey,
+  async (req, res) => {
   try {
     if (await rejectIfAnalysesBlocked(req, res)) return;
     const userId = (await optionalAuthUserId(req)) ?? undefined;
@@ -581,8 +615,12 @@ app.post("/api/live/triage", requireApiKey, async (req, res) => {
   }
 });
 
-/** Record rescue loop outcome — anonymous metadata only, no transcript. */
-app.post("/api/post-mortem/:id/rescue-outcome", requireApiKey, async (req, res) => {
+/** Record rescue loop outcome — owner of the saved analysis only. */
+app.post(
+  "/api/post-mortem/:id/rescue-outcome",
+  requireApiKey,
+  requireAuthUser,
+  async (req, res) => {
   const outcome = String(req.body?.outcome ?? "").trim() as
     | "closed_won"
     | "still_stalled"
@@ -612,8 +650,15 @@ app.post("/api/post-mortem/:id/rescue-outcome", requireApiKey, async (req, res) 
   }
 
   try {
+    const ownerId = await getPostMortemUserId(req.params.id);
+    const userId = getAuthUserId(req);
+    if (!ownerId || !userId || ownerId !== userId) {
+      res.status(403).json({ error: "Not allowed to record an outcome for this analysis." });
+      return;
+    }
     const savedId = await saveRescueOutcome({
       postMortemId: req.params.id,
+      userId,
       rescueActionTaken,
       outcome,
       proprietaryIndices: indices,
@@ -636,8 +681,9 @@ app.post("/api/post-mortem/:id/rescue-outcome", requireApiKey, async (req, res) 
 
 /** Cron-only: purge transcript_text past retention window. Requires PURGE_CRON_SECRET header. */
 app.post("/api/admin/purge-retention", async (req, res) => {
-  const secret = process.env.PURGE_CRON_SECRET;
-  if (!secret || req.headers["x-cron-secret"] !== secret) {
+  const secret = (process.env.PURGE_CRON_SECRET ?? "").trim();
+  const provided = (req.headers["x-cron-secret"] as string | undefined)?.trim();
+  if (!secret || !secretsEqual(provided, secret)) {
     res.status(401).json({ error: "Unauthorized" });
     return;
   }
@@ -677,6 +723,7 @@ app.get("/api/runtime", async (_req, res) => {
     res.json({
       analyses_paused: cfg.analyses_paused,
       pause_message: cfg.pause_message,
+      captcha: publicCaptchaConfig(),
     });
   } catch (err) {
     res.status(500).json({
@@ -720,6 +767,9 @@ if (process.env.NODE_ENV === "production" || existsSync(distPath)) {
 }
 
 const PORT = Number(process.env.PORT ?? 3001);
+void hydrateGoogleTokens().catch((err) => {
+  console.warn("[google-tokens] hydrate failed:", err instanceof Error ? err.message : err);
+});
 app.listen(PORT, "0.0.0.0", () => {
   console.log(`Lazarus Deal Recovery API running on http://0.0.0.0:${PORT}`);
   if (existsSync(distPath)) {

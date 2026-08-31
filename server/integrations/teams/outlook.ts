@@ -89,10 +89,11 @@ export function formatOutlookMessagesAsThread(messages: ImportedOutlookMessage[]
 }
 
 async function fetchOutlookMessages(
+  userId: string,
   limit: number,
   query?: string
 ): Promise<ImportedOutlookMessage[]> {
-  const token = await getValidTeamsAccessToken();
+  const token = await getValidTeamsAccessToken(userId);
   if (!token) {
     throw new Error("Microsoft is not connected. Connect Outlook first.");
   }
@@ -159,8 +160,11 @@ async function expandOutlookConversation(
 }
 
 /** Fetch the N most recent Outlook inbox messages for the connected Microsoft account. */
-export function fetchRecentOutlookMessages(limit = 10): Promise<ImportedOutlookMessage[]> {
-  return fetchOutlookMessages(limit);
+export function fetchRecentOutlookMessages(
+  userId: string,
+  limit = 10
+): Promise<ImportedOutlookMessage[]> {
+  return fetchOutlookMessages(userId, limit);
 }
 
 /**
@@ -169,19 +173,19 @@ export function fetchRecentOutlookMessages(limit = 10): Promise<ImportedOutlookM
  */
 export async function fetchOutlookThreadsByQuery(
   query: string,
-  options?: { maxThreads?: number; maxMessages?: number }
+  options: { maxThreads?: number; maxMessages?: number; userId: string }
 ): Promise<{ messages: ImportedOutlookMessage[]; threadCount: number }> {
   const trimmed = query.trim();
   if (!trimmed) throw new Error("Enter a company, domain, person, or topic to search Outlook.");
 
-  const token = await getValidTeamsAccessToken();
+  const token = await getValidTeamsAccessToken(options.userId);
   if (!token) {
     throw new Error("Microsoft is not connected. Connect Outlook first.");
   }
 
   const maxThreads = Math.min(Math.max(options?.maxThreads ?? 5, 1), 8);
   const maxMessages = Math.min(Math.max(options?.maxMessages ?? 40, 5), 60);
-  const hits = await fetchOutlookMessages(Math.min(maxThreads * 3, 25), trimmed);
+  const hits = await fetchOutlookMessages(options.userId, Math.min(maxThreads * 3, 25), trimmed);
 
   const conversationIds: string[] = [];
   const seen = new Set<string>();
@@ -223,9 +227,11 @@ export async function fetchOutlookThreadsByQuery(
 /** Search connected Outlook mail by company, domain, person, or topic. */
 export async function fetchOutlookMessagesByQuery(
   query: string,
+  userId: string,
   limit = 20
 ): Promise<ImportedOutlookMessage[]> {
   const result = await fetchOutlookThreadsByQuery(query, {
+    userId,
     maxThreads: Math.min(5, Math.max(1, Math.ceil(limit / 4))),
     maxMessages: limit,
   });

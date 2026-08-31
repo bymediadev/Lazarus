@@ -19,8 +19,8 @@ export interface SalesforceMappedDeepContext {
   dealstage?: string;
 }
 
-async function sfFetch(path: string, init?: RequestInit): Promise<Response> {
-  const creds = await getValidSalesforceAccessToken();
+async function sfFetch(userId: string, path: string, init?: RequestInit): Promise<Response> {
+  const creds = await getValidSalesforceAccessToken(userId);
   if (!creds) throw new Error("Salesforce is not connected or the access token expired.");
   const url = path.startsWith("http") ? path : `${creds.instanceUrl}${path}`;
   return fetch(url, {
@@ -34,6 +34,7 @@ async function sfFetch(path: string, init?: RequestInit): Promise<Response> {
 }
 
 export async function searchSalesforceOpportunities(
+  userId: string,
   query: string,
   limit = 15
 ): Promise<SalesforceOppHit[]> {
@@ -41,7 +42,7 @@ export async function searchSalesforceOpportunities(
   if (q.length < 2) throw new Error("Enter at least 2 characters to search opportunities.");
   const capped = Math.min(Math.max(limit, 1), 25);
   const soql = `SELECT Id, Name, StageName, Amount, CloseDate FROM Opportunity WHERE Name LIKE '%${q}%' ORDER BY LastModifiedDate DESC LIMIT ${capped}`;
-  const res = await sfFetch(`/services/data/v59.0/query?q=${encodeURIComponent(soql)}`);
+  const res = await sfFetch(userId,`/services/data/v59.0/query?q=${encodeURIComponent(soql)}`);
   const data = (await res.json()) as {
     records?: Array<{
       Id: string;
@@ -65,6 +66,7 @@ export async function searchSalesforceOpportunities(
 }
 
 export async function importSalesforceOpportunityNotes(
+  userId: string,
   opportunityId: string
 ): Promise<{
   mapped: SalesforceMappedDeepContext;
@@ -74,7 +76,7 @@ export async function importSalesforceOpportunityNotes(
   const id = opportunityId.trim();
   if (!id) throw new Error("opportunityId is required");
 
-  const oppRes = await sfFetch(
+  const oppRes = await sfFetch(userId,
     `/services/data/v59.0/sobjects/Opportunity/${encodeURIComponent(id)}?fields=Id,Name,StageName,Amount,CloseDate,CreatedDate`
   );
   const opp = (await oppRes.json()) as {
@@ -91,7 +93,7 @@ export async function importSalesforceOpportunityNotes(
   }
 
   const soql = `SELECT Id, Body, CreatedDate FROM OpportunityFeed WHERE ParentId = '${id.replace(/'/g, "\\'")}' AND Type = 'TextPost' ORDER BY CreatedDate ASC LIMIT 50`;
-  const feedRes = await sfFetch(`/services/data/v59.0/query?q=${encodeURIComponent(soql)}`);
+  const feedRes = await sfFetch(userId,`/services/data/v59.0/query?q=${encodeURIComponent(soql)}`);
   const feed = (await feedRes.json()) as {
     records?: Array<{ Body?: string; CreatedDate?: string }>;
   };
@@ -138,6 +140,7 @@ export async function importSalesforceOpportunityNotes(
 }
 
 export async function pushNoteToSalesforceOpportunity(
+  userId: string,
   opportunityId: string,
   noteBody: string
 ): Promise<{ feedItemId: string }> {
@@ -146,7 +149,7 @@ export async function pushNoteToSalesforceOpportunity(
   if (!id) throw new Error("opportunityId is required");
   if (!body) throw new Error("Note body is empty");
 
-  const res = await sfFetch("/services/data/v59.0/sobjects/FeedItem", {
+  const res = await sfFetch(userId,"/services/data/v59.0/sobjects/FeedItem", {
     method: "POST",
     body: JSON.stringify({
       ParentId: id,

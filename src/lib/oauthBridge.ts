@@ -5,6 +5,7 @@ export type OAuthCompleteDetail = {
   provider: string;
   outcome: string;
   reason?: string | null;
+  loginCode?: string | null;
 };
 
 const CHANNEL = "lazarus-oauth";
@@ -25,12 +26,14 @@ export function publishOAuthComplete(detail: {
   provider: string;
   outcome: string;
   reason?: string | null;
+  loginCode?: string | null;
 }): void {
   const payload: OAuthCompleteDetail = {
     type: "lazarus-oauth-complete",
     provider: detail.provider,
     outcome: detail.outcome,
     reason: detail.reason ?? null,
+    loginCode: detail.loginCode ?? null,
   };
 
   try {
@@ -51,11 +54,7 @@ export function publishOAuthComplete(detail: {
     try {
       window.opener.postMessage(payload, window.location.origin);
     } catch {
-      try {
-        window.opener.postMessage(payload, "*");
-      } catch {
-        /* ignore */
-      }
+      /* ignore */
     }
   }
 

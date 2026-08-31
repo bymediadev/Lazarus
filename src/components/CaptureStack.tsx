@@ -77,8 +77,8 @@ export default function CaptureStack({ onOpenLiveTab }: CaptureStackProps) {
           </span>
         </div>
         <p className="capture-stack-note">
-          <strong>Today:</strong> Connect Google Meet, Microsoft Teams, or Zoom — same live Recovery
-          Brief (platform stream or mic + paste). Or drop a recording / paste a transcript.{" "}
+          <strong>Today:</strong> Zoom RTMS, Meet captions via the Chrome extension (Captions on), or
+          Teams mic + paste — same live Recovery Brief. Or drop a recording / paste a transcript.{" "}
           <strong>Pitch:</strong> Keep your meeting tools. Lazarus Deal Recovery is the judgment layer
           on top.
         </p>

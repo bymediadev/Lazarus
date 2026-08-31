@@ -190,9 +190,9 @@ async function fetchThreadMessages(
  */
 export async function fetchGmailThreadsByQuery(
   query: string,
-  options?: { maxThreads?: number; maxMessages?: number }
+  options: { maxThreads?: number; maxMessages?: number; userId: string }
 ): Promise<{ messages: ImportedEmailMessage[]; threadCount: number; gmailQuery: string }> {
-  const token = await getValidGoogleAccessToken();
+  const token = await getValidGoogleAccessToken(options.userId);
   if (!token) {
     throw new Error("Google is not connected. Connect Gmail first.");
   }
@@ -262,8 +262,11 @@ export async function fetchGmailThreadsByQuery(
 }
 
 /** Fetch the N most recent Gmail inbox messages for the connected account. */
-export async function fetchRecentGmailMessages(limit = 10): Promise<ImportedEmailMessage[]> {
-  const token = await getValidGoogleAccessToken();
+export async function fetchRecentGmailMessages(
+  userId: string,
+  limit = 10
+): Promise<ImportedEmailMessage[]> {
+  const token = await getValidGoogleAccessToken(userId);
   if (!token) {
     throw new Error("Google is not connected. Connect Gmail first.");
   }
@@ -301,9 +304,11 @@ export async function fetchRecentGmailMessages(limit = 10): Promise<ImportedEmai
 /** Search all connected Gmail mail and expand matching conversation threads. */
 export async function fetchGmailMessagesByQuery(
   query: string,
+  userId: string,
   limit = 20
 ): Promise<ImportedEmailMessage[]> {
   const result = await fetchGmailThreadsByQuery(query, {
+    userId,
     maxThreads: Math.min(5, Math.max(1, Math.ceil(limit / 4))),
     maxMessages: limit,
   });

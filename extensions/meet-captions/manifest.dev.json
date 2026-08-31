@@ -1,0 +1,38 @@
+{
+  "manifest_version": 3,
+  "name": "Lazarus Meet Captions (local)",
+  "version": "1.1.0",
+  "description": "Local-dev Meet captions. Do not ship this manifest.",
+  "permissions": ["storage"],
+  "host_permissions": [
+    "https://lazarus-4uxi.onrender.com/*",
+    "http://localhost:3001/*",
+    "http://127.0.0.1:3001/*",
+    "https://meet.google.com/*",
+    "https://www.getldr.ca/*",
+    "https://getldr.ca/*",
+    "http://localhost:5173/*",
+    "http://127.0.0.1:5173/*"
+  ],
+  "background": {
+    "service_worker": "background.js"
+  },
+  "content_scripts": [
+    {
+      "matches": [
+        "https://www.getldr.ca/*",
+        "https://getldr.ca/*",
+        "http://localhost:5173/*",
+        "http://127.0.0.1:5173/*",
+        "http://localhost:3001/*"
+      ],
+      "js": ["pair.js"],
+      "run_at": "document_idle"
+    },
+    {
+      "matches": ["https://meet.google.com/*"],
+      "js": ["meet.js"],
+      "run_at": "document_idle"
+    }
+  ]
+}

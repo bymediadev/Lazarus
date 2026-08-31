@@ -45,7 +45,7 @@ async function fetchTokenInfo(accessToken: string): Promise<Partial<HubSpotToken
   }
 }
 
-export async function exchangeHubSpotCode(code: string): Promise<HubSpotTokenRecord> {
+export async function exchangeHubSpotCode(code: string, userId?: string): Promise<HubSpotTokenRecord> {
   const cfg = getHubSpotConfig();
   if (!cfg) throw new Error("HubSpot OAuth is not configured");
 
@@ -69,7 +69,7 @@ export async function exchangeHubSpotCode(code: string): Promise<HubSpotTokenRec
   }
 
   const meta = await fetchTokenInfo(data.access_token);
-  const existing = loadHubSpotTokens();
+  const existing = userId ? loadHubSpotTokens(userId) : null;
   const record: HubSpotTokenRecord = {
     access_token: data.access_token,
     refresh_token: data.refresh_token ?? existing?.refresh_token ?? "",
@@ -79,13 +79,13 @@ export async function exchangeHubSpotCode(code: string): Promise<HubSpotTokenRec
     hub_domain: meta.hub_domain ?? existing?.hub_domain,
     connected_at: new Date().toISOString(),
   };
-  saveHubSpotTokens(record);
+  if (userId) saveHubSpotTokens(userId, record);
   return record;
 }
 
-export async function getValidHubSpotAccessToken(): Promise<string | null> {
+export async function getValidHubSpotAccessToken(userId: string): Promise<string | null> {
   const cfg = getHubSpotConfig();
-  const stored = loadHubSpotTokens();
+  const stored = loadHubSpotTokens(userId);
   if (!cfg || !stored?.access_token) return null;
 
   if (Date.now() < new Date(stored.expires_at).getTime() - 60_000) {
@@ -117,6 +117,6 @@ export async function getValidHubSpotAccessToken(): Promise<string | null> {
     refresh_token: data.refresh_token ?? stored.refresh_token,
     expires_at: new Date(Date.now() + data.expires_in * 1000).toISOString(),
   };
-  saveHubSpotTokens(record);
+  saveHubSpotTokens(userId, record);
   return record.access_token;
 }

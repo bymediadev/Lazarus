@@ -2028,6 +2028,28 @@ button.header-brand {
   background: rgba(7, 11, 30, 0.96);
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
   backdrop-filter: blur(8px);
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.analysis-captcha {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.45rem;
+}
+
+.analysis-captcha-label {
+  margin: 0;
+  font-size: 0.72rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: rgba(210, 220, 240, 0.78);
+}
+
+.analysis-captcha-widget {
+  min-height: 65px;
 }
 
 .intake-run-cta .run-button {

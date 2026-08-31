@@ -1,13 +1,13 @@
 import { isZoomConfigured } from "./integrations/zoom/config.js";
-import { loadZoomTokens } from "./integrations/zoom/tokens.js";
+import { hasAnyZoomTokens } from "./integrations/zoom/tokens.js";
 import { isGoogleMeetConfigured } from "./integrations/google/config.js";
-import { loadGoogleTokens } from "./integrations/google/tokens.js";
+import { ensureGoogleTokensHydrated, hasAnyGoogleTokens } from "./integrations/google/tokens.js";
 import { isTeamsConfigured } from "./integrations/teams/config.js";
-import { loadTeamsTokens } from "./integrations/teams/tokens.js";
+import { hasAnyTeamsTokens } from "./integrations/teams/tokens.js";
 import { isHubSpotConfigured } from "./integrations/hubspot/config.js";
-import { loadHubSpotTokens } from "./integrations/hubspot/tokens.js";
+import { hasAnyHubSpotTokens } from "./integrations/hubspot/tokens.js";
 import { isSalesforceConfigured } from "./integrations/salesforce/config.js";
-import { loadSalesforceTokens } from "./integrations/salesforce/tokens.js";
+import { hasAnySalesforceTokens } from "./integrations/salesforce/tokens.js";
 import { serviceRoleClient } from "./founderAuth.js";
 import { FREE_ANALYSIS_CAP } from "./billing.js";
 import { guestDailyLimit } from "./guestRateLimit.js";
@@ -83,6 +83,7 @@ export type SystemStatus = {
 };
 
 export async function buildSystemStatus(): Promise<SystemStatus> {
+  await ensureGoogleTokensHydrated();
   const geminiKey = (process.env.GEMINI_API_KEY ?? "").trim();
   const geminiKeyValid = /^AIza/.test(geminiKey) || /^AQ\./.test(geminiKey);
 
@@ -124,35 +125,35 @@ export async function buildSystemStatus(): Promise<SystemStatus> {
       id: "hubspot",
       label: "HubSpot",
       configured: isHubSpotConfigured(),
-      token_present: isHubSpotConfigured() ? !!loadHubSpotTokens()?.access_token : null,
-      ok: !isHubSpotConfigured() || !!loadHubSpotTokens()?.access_token,
+      token_present: isHubSpotConfigured() ? hasAnyHubSpotTokens() : null,
+      ok: !isHubSpotConfigured() || hasAnyHubSpotTokens(),
       meaning: !isHubSpotConfigured()
         ? "HubSpot OAuth not configured (optional)."
-        : loadHubSpotTokens()?.access_token
-          ? "HubSpot connected (global token on disk)."
-          : "HubSpot configured but no token — reconnect OAuth.",
+        : hasAnyHubSpotTokens()
+          ? "HubSpot connected for at least one signed-in user."
+          : "HubSpot configured but no user has connected yet.",
     },
     {
       id: "salesforce",
       label: "Salesforce",
       configured: isSalesforceConfigured(),
-      token_present: isSalesforceConfigured() ? !!loadSalesforceTokens()?.access_token : null,
-      ok: !isSalesforceConfigured() || !!loadSalesforceTokens()?.access_token,
+      token_present: isSalesforceConfigured() ? hasAnySalesforceTokens() : null,
+      ok: !isSalesforceConfigured() || hasAnySalesforceTokens(),
       meaning: !isSalesforceConfigured()
         ? "Salesforce OAuth not configured (optional)."
-        : loadSalesforceTokens()?.access_token
-          ? "Salesforce connected (global token on disk)."
-          : "Salesforce configured but no token — reconnect OAuth.",
+        : hasAnySalesforceTokens()
+          ? "Salesforce connected for at least one signed-in user."
+          : "Salesforce configured but no user has connected yet.",
     },
     {
       id: "zoom",
       label: "Zoom RTMS",
       configured: isZoomConfigured(),
-      token_present: isZoomConfigured() ? !!loadZoomTokens()?.access_token : null,
+      token_present: isZoomConfigured() ? hasAnyZoomTokens() : null,
       ok: true,
       meaning: isZoomConfigured()
-        ? loadZoomTokens()?.access_token
-          ? "Zoom credentials + token present."
+        ? hasAnyZoomTokens()
+          ? "Zoom credentials + at least one user token present."
           : "Zoom app credentials present (token optional for webhooks)."
         : "Zoom not configured (optional).",
     },
@@ -160,25 +161,25 @@ export async function buildSystemStatus(): Promise<SystemStatus> {
       id: "google_meet",
       label: "Google Meet / Gmail",
       configured: isGoogleMeetConfigured(),
-      token_present: isGoogleMeetConfigured() ? !!loadGoogleTokens()?.access_token : null,
-      ok: !isGoogleMeetConfigured() || !!loadGoogleTokens()?.access_token,
+      token_present: isGoogleMeetConfigured() ? hasAnyGoogleTokens() : null,
+      ok: !isGoogleMeetConfigured() || hasAnyGoogleTokens(),
       meaning: !isGoogleMeetConfigured()
         ? "Google OAuth not configured (optional)."
-        : loadGoogleTokens()?.access_token
-          ? "Google connected (global token on disk)."
-          : "Google configured but no token — reconnect OAuth.",
+        : hasAnyGoogleTokens()
+          ? "Google connected for at least one signed-in user."
+          : "Google configured but no user has connected yet.",
     },
     {
       id: "teams",
       label: "Microsoft Teams / Outlook",
       configured: isTeamsConfigured(),
-      token_present: isTeamsConfigured() ? !!loadTeamsTokens()?.access_token : null,
-      ok: !isTeamsConfigured() || !!loadTeamsTokens()?.access_token,
+      token_present: isTeamsConfigured() ? hasAnyTeamsTokens() : null,
+      ok: !isTeamsConfigured() || hasAnyTeamsTokens(),
       meaning: !isTeamsConfigured()
         ? "Teams OAuth not configured (optional)."
-        : loadTeamsTokens()?.access_token
-          ? "Teams connected (global token on disk)."
-          : "Teams configured but no token — reconnect OAuth.",
+        : hasAnyTeamsTokens()
+          ? "Teams connected for at least one signed-in user."
+          : "Teams configured but no user has connected yet.",
     },
   ];
 

@@ -11,6 +11,7 @@ export interface ZoomIntegrationStatus {
 
 export interface ZoomLiveSession {
   sessionId: string;
+  sessionSecret: string;
   platform: "zoom";
 }
 
@@ -22,7 +23,9 @@ export interface ZoomTranscriptChunk {
 }
 
 export async function fetchZoomStatus(): Promise<ZoomIntegrationStatus> {
-  const res = await fetch(`${API_BASE}/api/integrations/zoom/status`);
+  const res = await fetch(`${API_BASE}/api/integrations/zoom/status`, {
+    headers: apiAuthHeaders(),
+  });
   if (!res.ok) throw new Error(`Zoom status failed (${res.status})`);
   return res.json() as Promise<ZoomIntegrationStatus>;
 }
@@ -54,10 +57,11 @@ export async function startZoomLiveSession(): Promise<ZoomLiveSession> {
 
 export function subscribeZoomTranscriptStream(
   sessionId: string,
+  sessionSecret: string,
   onChunk: (chunk: ZoomTranscriptChunk) => void,
   onError?: (message: string) => void
 ): () => void {
-  const url = `${API_BASE}/api/integrations/zoom/live-transcript/stream?sessionId=${encodeURIComponent(sessionId)}`;
+  const url = `${API_BASE}/api/integrations/zoom/live-transcript/stream?sessionId=${encodeURIComponent(sessionId)}&sessionSecret=${encodeURIComponent(sessionSecret)}`;
   const source = new EventSource(url);
 
   source.onmessage = (event) => {

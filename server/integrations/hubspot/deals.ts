@@ -45,8 +45,8 @@ interface HubSpotBatchReadResponse {
   message?: string;
 }
 
-async function hubspotFetch(path: string, init?: RequestInit): Promise<Response> {
-  const token = await getValidHubSpotAccessToken();
+async function hubspotFetch(userId: string, path: string, init?: RequestInit): Promise<Response> {
+  const token = await getValidHubSpotAccessToken(userId);
   if (!token) throw new Error("HubSpot is not connected or the access token expired.");
 
   return fetch(`${CRM_BASE}${path}`, {
@@ -84,6 +84,7 @@ function mapDealHit(deal: HubSpotApiDeal): HubSpotDealSearchHit {
 
 /** Search deals by name (read-only CRM search). */
 export async function searchHubSpotDeals(
+  userId: string,
   query: string,
   limit = 10
 ): Promise<HubSpotDealSearchHit[]> {
@@ -91,7 +92,7 @@ export async function searchHubSpotDeals(
   if (q.length < 2) throw new Error("Enter at least 2 characters to search deals.");
 
   const capped = Math.min(Math.max(limit, 1), 25);
-  const res = await hubspotFetch("/objects/deals/search", {
+  const res = await hubspotFetch(userId,"/objects/deals/search", {
     method: "POST",
     body: JSON.stringify({
       filterGroups: [
@@ -118,11 +119,11 @@ export async function searchHubSpotDeals(
   return (data.results ?? []).map(mapDealHit);
 }
 
-async function fetchDealById(dealId: string): Promise<HubSpotApiDeal> {
+async function fetchDealById(userId: string, dealId: string): Promise<HubSpotApiDeal> {
   const params = new URLSearchParams({
     properties: ["dealname", "dealstage", "amount", "closedate", "createdate"].join(","),
   });
-  const res = await hubspotFetch(`/objects/deals/${encodeURIComponent(dealId)}?${params}`);
+  const res = await hubspotFetch(userId,`/objects/deals/${encodeURIComponent(dealId)}?${params}`);
   const data = (await res.json()) as HubSpotApiDeal & { message?: string };
   if (!res.ok) {
     throw new Error(data.message ?? `HubSpot deal fetch failed (${res.status})`);
@@ -131,8 +132,8 @@ async function fetchDealById(dealId: string): Promise<HubSpotApiDeal> {
 }
 
 /** Associated note IDs for a deal (v3 associations). */
-export async function fetchDealNoteIds(dealId: string): Promise<string[]> {
-  const res = await hubspotFetch(
+export async function fetchDealNoteIds(userId: string, dealId: string): Promise<string[]> {
+  const res = await hubspotFetch(userId,
     `/objects/deals/${encodeURIComponent(dealId)}/associations/notes`
   );
   const data = (await res.json()) as HubSpotAssociationsResponse;
@@ -144,10 +145,10 @@ export async function fetchDealNoteIds(dealId: string): Promise<string[]> {
     .filter(Boolean);
 }
 
-export async function fetchNotesByIds(noteIds: string[]): Promise<HubSpotNoteRecord[]> {
+export async function fetchNotesByIds(userId: string, noteIds: string[]): Promise<HubSpotNoteRecord[]> {
   if (!noteIds.length) return [];
 
-  const res = await hubspotFetch("/objects/notes/batch/read", {
+  const res = await hubspotFetch(userId,"/objects/notes/batch/read", {
     method: "POST",
     body: JSON.stringify({
       properties: ["hs_note_body", "hs_timestamp", "hs_createdate"],
@@ -208,6 +209,7 @@ export function buildDealSnapshotFromApi(
 }
 
 export async function importHubSpotDealNotes(
+  userId: string,
   dealId: string
 ): Promise<{
   mapped: HubSpotMappedDeepContext;
@@ -218,9 +220,9 @@ export async function importHubSpotDealNotes(
   const id = dealId.trim();
   if (!id) throw new Error("dealId is required");
 
-  const deal = await fetchDealById(id);
-  const noteIds = await fetchDealNoteIds(id);
-  const notes = await fetchNotesByIds(noteIds);
+  const deal = await fetchDealById(userId, id);
+  const noteIds = await fetchDealNoteIds(userId, id);
+  const notes = await fetchNotesByIds(userId, noteIds);
   const snapshot = buildDealSnapshotFromApi(deal, notes);
   const mapped = mapHubSpotDealToDeepContext({ deal: snapshot });
   if (!mapped) {
@@ -245,6 +247,7 @@ export const hubspotDealTestUtils = {
 
 /** Create a note on a HubSpot deal and associate it (Lazarus → CRM). */
 export async function pushNoteToHubSpotDeal(
+  userId: string,
   dealId: string,
   noteBody: string
 ): Promise<{ noteId: string }> {
@@ -253,7 +256,7 @@ export async function pushNoteToHubSpotDeal(
   if (!id) throw new Error("dealId is required");
   if (!body) throw new Error("Note body is empty");
 
-  const createRes = await hubspotFetch("/objects/notes", {
+  const createRes = await hubspotFetch(userId,"/objects/notes", {
     method: "POST",
     body: JSON.stringify({
       properties: {
@@ -267,13 +270,13 @@ export async function pushNoteToHubSpotDeal(
     throw new Error(created.message ?? `HubSpot note create failed (${createRes.status})`);
   }
 
-  const assocRes = await hubspotFetch(
+  const assocRes = await hubspotFetch(userId,
     `/objects/notes/${encodeURIComponent(created.id)}/associations/deals/${encodeURIComponent(id)}/note_to_deal`,
     { method: "PUT" }
   );
   if (!assocRes.ok) {
     // Fallback association type id 214 (note → deal) used by CRM v3
-    const fallback = await hubspotFetch(
+    const fallback = await hubspotFetch(userId,
       `/objects/notes/${encodeURIComponent(created.id)}/associations/deals/${encodeURIComponent(id)}/214`,
       { method: "PUT" }
     );

@@ -19,7 +19,7 @@
     <img src="/logo.png" alt="Lazarus Deal Recovery" />
     <h1>Security Overview</h1>
     <p class="legal-meta">
-      <strong>Version:</strong> 1.4 · August 2026 · Aligned to Lazarus Deal Recovery (guest freemium + optional accounts)<br />
+      <strong>Version:</strong> 1.6 · August 2026 · Aligned to Lazarus Deal Recovery (guest freemium + optional accounts)<br />
       <strong>Provider:</strong> Lazarus Deal Recovery — Lazarus Revenue Intelligence Inc., Ontario, Canada<br />
       <strong>Contact:</strong> <a href="mailto:support@getldr.ca">support@getldr.ca</a>
     </p>
@@ -72,8 +72,8 @@
       <td>Autonomous AI SDR or automated outreach</td>
     </tr>
     <tr>
-      <td>Optional Salesforce read-only opportunity import</td>
-      <td>Encrypted OAuth token vault / formal pen-test report pack</td>
+      <td>Per-user OAuth tokens (AES-256-GCM at rest) + fail-closed webhooks + live session secrets</td>
+      <td>Dedicated KMS / hardware token vault</td>
     </tr>
     <tr>
       <td>Grounding audit + deterministic DRI / viability / trajectory</td>
@@ -147,7 +147,11 @@
     <tr><td>AI data use</td><td>APIs configured for zero retention / no public model training where available</td></tr>
     <tr><td>Anti-hallucination</td><td>Server-side grounding audit; invented content stripped before scoring</td></tr>
     <tr><td>Retention</td><td>Default 30-day purge of raw <code>transcript_text</code> on saved records; analysis JSON retained until deleted</td></tr>
-    <tr><td>API hardening (prod)</td><td>Optional <code>LAZARUS_API_KEY</code>, CORS allowlist, cron secret for purge / alert jobs, freemium soft limits</td></tr>
+    <tr><td>API hardening (prod)</td><td>Optional <code>LAZARUS_API_KEY</code>, CORS allowlist, IP rate limits (API / auth / analyses), Cloudflare Turnstile on every analysis, cron secret for purge / alert jobs, freemium soft limits</td></tr>
+    <tr><td>Authentication</td><td>Email confirmation required; magic-link and password-reset tokens never returned in JSON; OAuth login uses a one-time 5-minute ticket</td></tr>
+    <tr><td>Integrations</td><td>Bearer session required; tokens stored per user (not a global singleton); HubSpot / Zoom / Salesforce webhooks refuse traffic if the secret is unset</td></tr>
+    <tr><td>Live sessions</td><td>Unpredictable session IDs plus a session secret; Zoom RTMS captions publish only to that owner’s sessions</td></tr>
+    <tr><td>Analysis captcha</td><td>Cloudflare Turnstile checkbox before run; server verifies the token with Cloudflare before transcription or model calls. Missing secret in production refuses the analysis (fail closed).</td></tr>
   </table>
 
   <h2>5. Recording and mailbox consent</h2>
@@ -162,12 +166,57 @@
   <h2>6. Sub-processors</h2>
   <p>Same list as <a href="/privacy">Privacy Policy §7</a>. Primary hosting: North America.</p>
 
-  <h2>7. Incident response</h2>
-  <ul>
-    <li>Monitor API and database availability and error rates (including founder Ops alerts when configured)</li>
-    <li>On confirmed personal data breach: notify affected B2B customers without undue delay</li>
-    <li>Contain, investigate, remediate, and document per <a href="/dpa">DPA §7</a></li>
-  </ul>
+  <h2>7. Incident response playbooks</h2>
+  <p>
+    These are internal operating procedures for Lazarus Deal Recovery. They do not replace legal advice.
+    Contact during an incident: <a href="mailto:support@getldr.ca">support@getldr.ca</a>
+    (and founder/ops alerts when configured). B2B customers with a DPA are notified of a confirmed
+    personal-data breach without undue delay, consistent with <a href="/dpa">DPA §7</a>.
+  </p>
+
+  <h3>7a. If someone gets into an account (unauthorized login)</h3>
+  <ol>
+    <li><strong>Contain.</strong> Sign the user out of Lazarus (Supabase Auth session revoke). If they used Google / HubSpot / Salesforce to sign in, tell them to revoke Lazarus on that provider’s security page as well.</li>
+    <li><strong>Rotate.</strong> Reset the Lazarus password (email confirmation required). Disconnect mailbox and CRM connectors from the product so refresh tokens are deleted.</li>
+    <li><strong>Scope.</strong> Review that user’s saved analyses, CRM deal links, and connected-account email in Ops HQ. Guest runs are not stored under an account.</li>
+    <li><strong>Notify.</strong> Email the account holder at the address on file. If a customer org is involved, notify their security contact the same day we confirm misuse.</li>
+    <li><strong>Follow-up.</strong> Check API logs for the same IP/time window. Document what was accessed and whether any OAuth token was used after the suspected time.</li>
+  </ol>
+
+  <h3>7b. If the database is dumped or RLS is bypassed</h3>
+  <ol>
+    <li><strong>Contain.</strong> Rotate <code>SUPABASE_SERVICE_ROLE_KEY</code> and the anon key in Supabase, then update Render and the frontend build. Pause analyses from Ops HQ if writes must stop.</li>
+    <li><strong>Assume exposure.</strong> Treat saved transcripts (within retention), analysis JSON (including quotes), deal names/values, contact-form rows, and <em>encrypted</em> OAuth blobs as in-scope. Encryption at rest reduces but does not eliminate risk if the app encryption key was taken too.</li>
+    <li><strong>Rotate application secrets.</strong> <code>TOKEN_ENCRYPTION_KEY</code>, <code>OAUTH_STATE_SECRET</code>, webhook secrets, Stripe restricted keys, and <code>LAZARUS_API_KEY</code>.</li>
+    <li><strong>Revoke OAuth.</strong> Users must reconnect Gmail / Outlook / Zoom / HubSpot / Salesforce. Delete rows in <code>google_oauth_tokens</code> and on-disk token maps after the new key is in place.</li>
+    <li><strong>Notify.</strong> Affected B2B customers without undue delay; include what classes of data were involved and that connector access has been invalidated. Offer password reset and a reconnect checklist.</li>
+  </ol>
+
+  <h3>7c. If Render env / the API host is compromised</h3>
+  <ol>
+    <li><strong>Contain.</strong> Lock the Render service (or rotate deploy credentials), take a snapshot of current env var <em>names</em> only, and deploy a new secret set. This is worse than a table dump: the service role bypasses RLS.</li>
+    <li><strong>Rotate everything</strong> in that environment: Gemini, AssemblyAI, Supabase service role, Stripe, Resend, Zoom / Google / HubSpot / Salesforce client secrets, webhook secrets, purge cron secret, token encryption key.</li>
+    <li><strong>Invalidate sessions and connectors</strong> as in 7a–7b. Force users to sign in again.</li>
+    <li><strong>Notify</strong> customers whose data could have been read through the API. Do not email raw secrets or dumps; describe categories (transcripts, CRM notes pulled by the user, mailbox search results processed during the window).</li>
+  </ol>
+
+  <h3>7d. If meeting captions leak across customers (or a live session is guessed)</h3>
+  <ol>
+    <li><strong>Contain.</strong> End live sessions (process restart clears in-memory buses). Confirm Zoom RTMS is publishing only to the owner’s sessions and that Meet/Zoom SSE requires the session secret.</li>
+    <li><strong>Scope.</strong> Live turns are not the system of record; check whether a signed-in save happened during the window.</li>
+    <li><strong>Notify</strong> only parties whose live transcript could have been observed. Tighten or rotate Zoom webhook secret if the webhook was the entry point.</li>
+  </ol>
+
+  <h3>7e. If OAuth tokens or an API key leak (paste, logs, Git)</h3>
+  <ol>
+    <li><strong>Contain.</strong> Revoke the leaked credential at the provider immediately (Google Cloud, HubSpot, Salesforce, Zoom, Stripe, Gemini). Remove it from git history going forward; treat the old value as public.</li>
+    <li><strong>Replace</strong> in Render / GitHub Actions. Disconnect affected users so they reconnect with new tokens.</li>
+    <li><strong>Notify</strong> if customer mailbox or CRM data could have been pulled with that token. If only a guest API key leaked, rotate it and watch for abuse against <code>/api/post-mortem</code> (rate limits still apply).</li>
+  </ol>
+
+  <p>
+    After any confirmed incident: write a short internal note (what happened, time window, data classes, who was told, what was rotated). Keep monitoring API error rates and founder Ops alerts until the window is closed.
+  </p>
 
   <h2>8. Customer responsibilities</h2>
   <ul>
@@ -184,7 +233,7 @@
     <li>SOC 2 Type II — not yet obtained</li>
     <li>Single sign-on (SAML/OIDC) for customer orgs</li>
     <li>Formal penetration test report pack for RFPs</li>
-    <li>Encrypted OAuth token vault (tokens today are server-side; harden at rest for enterprise)</li>
+    <li>Dedicated KMS / hardware-backed OAuth token vault (application AES-GCM is in place today)</li>
     <li>Salesforce bi-directional sync / HubSpot write-back</li>
     <li>White-label partner dashboard and custom domains</li>
     <li>Always-on stall detection webhooks (vs user-initiated evidence pull)</li>

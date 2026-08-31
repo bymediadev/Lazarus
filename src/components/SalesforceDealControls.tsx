@@ -3,11 +3,11 @@ import {
   disconnectSalesforce,
   fetchSalesforceStatus,
   importSalesforceOpportunity,
-  salesforceConnectUrl,
   searchSalesforceOpportunities,
   type SalesforceOppHit,
   type SalesforceProviderStatus,
 } from "../lib/salesforceIntegration";
+import { startLoggedInOAuthConnect } from "../lib/oauthConnect";
 import type { HistoricalCrmContextEntry } from "../types";
 
 export interface SalesforceImportPayload {
@@ -65,13 +65,9 @@ export default function SalesforceDealControls({ onImport, onError }: Props) {
             type="button"
             className="btn-secondary"
             onClick={() => {
-              const popup = window.open(
-                salesforceConnectUrl(),
-                "lazarus-salesforce-oauth",
-                "popup=yes,width=560,height=720"
-              );
-              if (!popup) onError("Allow popups to connect Salesforce.");
-              else popup.focus();
+              void startLoggedInOAuthConnect("salesforce").catch((err) => {
+                onError(err instanceof Error ? err.message : "Allow popups to connect Salesforce.");
+              });
             }}
           >
             Connect Salesforce

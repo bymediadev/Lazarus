@@ -1,9 +1,4 @@
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from "fs";
-import { dirname, join } from "path";
-import { fileURLToPath } from "url";
-
-const __dirname = dirname(fileURLToPath(import.meta.url));
-const TOKEN_PATH = join(__dirname, "../../../.data/salesforce-tokens.json");
+import { createUserTokenStore } from "../userTokenStore.js";
 
 export interface SalesforceTokenRecord {
   access_token: string;
@@ -14,32 +9,25 @@ export interface SalesforceTokenRecord {
   connected_at?: string;
 }
 
-function ensureDataDir(): void {
-  const dir = dirname(TOKEN_PATH);
-  if (!existsSync(dir)) mkdirSync(dir, { recursive: true });
+const store = createUserTokenStore<SalesforceTokenRecord>("salesforce-tokens.json");
+
+export function loadSalesforceTokens(userId: string): SalesforceTokenRecord | null {
+  return store.load(userId);
 }
 
-export function loadSalesforceTokens(): SalesforceTokenRecord | null {
-  try {
-    if (!existsSync(TOKEN_PATH)) return null;
-    return JSON.parse(readFileSync(TOKEN_PATH, "utf8")) as SalesforceTokenRecord;
-  } catch {
-    return null;
-  }
+export function saveSalesforceTokens(userId: string, record: SalesforceTokenRecord): void {
+  store.save(userId, record);
 }
 
-export function saveSalesforceTokens(record: SalesforceTokenRecord): void {
-  ensureDataDir();
-  writeFileSync(TOKEN_PATH, JSON.stringify(record, null, 2), "utf8");
+export function clearSalesforceTokens(userId: string): void {
+  store.clear(userId);
 }
 
-export function clearSalesforceTokens(): void {
-  if (existsSync(TOKEN_PATH)) {
-    writeFileSync(TOKEN_PATH, "", "utf8");
-  }
-}
-
-export function isSalesforceConnected(): boolean {
-  const t = loadSalesforceTokens();
+export function isSalesforceConnected(userId: string): boolean {
+  const t = store.load(userId);
   return !!(t?.access_token && t?.instance_url && t?.refresh_token);
+}
+
+export function hasAnySalesforceTokens(): boolean {
+  return store.hasAny();
 }

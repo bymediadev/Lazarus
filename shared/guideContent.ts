@@ -63,7 +63,7 @@ export const GUIDE_STEPS: Record<string, GuideStep> = {
   "fa-3": {
     id: "fa-3",
     title: "Raise this deal from the dead",
-    body: "Click Raise this deal from the dead. Lazarus extracts evidence, scores recoverable vs flat no, and builds the recovery brief on the right.",
+    body: "Complete the security check, then click Raise this deal from the dead. Lazarus extracts evidence, scores recoverable vs flat no, and builds the recovery brief on the right.",
     target: "guide-run-analysis",
     prev: "fa-2",
     next: "fa-4",
@@ -100,7 +100,7 @@ export const GUIDE_STEPS: Record<string, GuideStep> = {
   "lv-1": {
     id: "lv-1",
     title: "Open the Live tab",
-    body: "Switch to Live. Connect Zoom, Google Meet, or Teams, or use mic/paste for a companion session.",
+    body: "Switch to Live. Connect Zoom, or for Meet install the captions extension and turn on Captions. Mic/paste still works.",
     target: "guide-live-tab",
     next: "lv-2",
   },

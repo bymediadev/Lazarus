@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import AnalysisReport from "./components/AnalysisReport";
 import DealProfilePanel, { parseHistoricalCrmJson } from "./components/DealProfilePanel";
 import MeetingCompanion from "./components/MeetingCompanion";
@@ -8,6 +8,7 @@ import SiteFooter from "./components/SiteFooter";
 import TrustPackLink from "./components/TrustPackLink";
 import TrustPackModal from "./components/TrustPackModal";
 import IntakeHowTo from "./components/IntakeHowTo";
+import AnalysisCaptcha from "./components/AnalysisCaptcha";
 import LazarusGuide from "./components/LazarusGuide";
 import EmailProviderControls from "./components/EmailProviderControls";
 import { useAuth } from "./components/AuthProvider";
@@ -68,6 +69,7 @@ import type { MeetingPlatformId } from "./lib/meetingPlatforms";
 import { loadDemoSalesTranscript } from "./lib/demoTranscript";
 import { RUN_DEAL_CTA } from "./lib/cta";
 import { applyDocumentMeta, SITE_DESCRIPTION, SITE_TITLE } from "./lib/site";
+import { bakedCaptchaSiteKey } from "./lib/captcha";
 
 const ACCEPTED_EXT = [".mp3", ".wav", ".mp4", ".m4a", ".webm", ".mpeg", ".mpga"];
 const ACCEPT_ATTR = ".mp3,.wav,.mp4,.m4a,.webm,audio/*,video/mp4,video/webm";
@@ -181,6 +183,11 @@ export default function App() {
   const [apiOnline, setApiOnline] = useState<boolean | null>(null);
   const [syncNotice, setSyncNotice] = useState<string | null>(null);
   const [trustPack, setTrustPack] = useState<TrustPackSlug | null>(null);
+  const [captchaRequired, setCaptchaRequired] = useState(false);
+  const [captchaSiteKey, setCaptchaSiteKey] = useState(() => bakedCaptchaSiteKey());
+  const [captchaToken, setCaptchaToken] = useState("");
+  const [captchaResetKey, setCaptchaResetKey] = useState(0);
+  const captchaTokenRef = useRef("");
 
   const hasAudio = !!file;
   const hasUploadedRecording = recordingSource === "upload" && hasAudio;
@@ -212,6 +219,17 @@ export default function App() {
       ? "INTELLIGENCE BRIEF READY"
       : "STANDBY";
 
+  const resetCaptchaWidget = useCallback(() => {
+    captchaTokenRef.current = "";
+    setCaptchaToken("");
+    setCaptchaResetKey((n) => n + 1);
+  }, []);
+
+  const handleCaptchaToken = useCallback((token: string) => {
+    captchaTokenRef.current = token;
+    setCaptchaToken(token);
+  }, []);
+
   const runAnalysis = useCallback(
     async (payload: {
       file?: File | null;
@@ -228,6 +246,7 @@ export default function App() {
       forceAnalysis?: boolean;
       hubspotDealId?: string;
       salesforceOpportunityId?: string;
+      captchaToken?: string;
     }) => {
       const data = await runPostMortem({
         file: payload.file,
@@ -244,6 +263,7 @@ export default function App() {
         forceAnalysis: payload.forceAnalysis,
         hubspotDealId: payload.hubspotDealId,
         salesforceOpportunityId: payload.salesforceOpportunityId,
+        captchaToken: payload.captchaToken,
       });
       setResult(normalizeResult({ ...data, sources: data.sources, processed_at: data.processed_at }));
       setWarnings(data.warnings ?? []);
@@ -265,9 +285,13 @@ export default function App() {
         const data = (await res.json()) as {
           analyses_paused?: boolean;
           pause_message?: string;
+          captcha?: { required?: boolean; site_key?: string | null };
         };
         if (cancelled) return;
         setRuntimePause(data.analyses_paused ? data.pause_message || "Analyses are paused." : null);
+        setCaptchaRequired(data.captcha?.required === true);
+        const runtimeKey = (data.captcha?.site_key ?? "").trim();
+        if (runtimeKey) setCaptchaSiteKey(runtimeKey);
       } catch {
         if (!cancelled) setRuntimePause(null);
       }
@@ -453,9 +477,24 @@ export default function App() {
     const pending = await listPendingAnalyses();
     if (!pending.length) return;
 
+    if (captchaRequired && !captchaTokenRef.current) {
+      setSyncNotice("Complete the security check to sync queued analyses.");
+      return;
+    }
+
     setSyncNotice(`Syncing ${pending.length} offline capture(s)...`);
     let failures = 0;
-    for (const entry of pending) {
+    let remaining = 0;
+    let synced = 0;
+    for (let i = 0; i < pending.length; i++) {
+      const entry = pending[i];
+      const token = captchaTokenRef.current;
+      if (captchaRequired && !token) {
+        remaining = pending.length - i;
+        break;
+      }
+      captchaTokenRef.current = "";
+      setCaptchaToken("");
       try {
         let file: File | null = entry.recordingFile ?? null;
         if (entry.recordingSessionId) {
@@ -471,24 +510,31 @@ export default function App() {
           emailThread: entry.emailThread,
           dealValue: entry.dealValue,
           fieldCapture: !!entry.recordingSessionId,
+          captchaToken: token || undefined,
         });
         if (entry.recordingSessionId) {
           await clearSessionChunks(entry.recordingSessionId);
         }
         await removePendingAnalysis(entry.id);
+        synced += 1;
       } catch {
-        failures++;
-        continue;
+        failures += 1;
+      } finally {
+        resetCaptchaWidget();
       }
     }
-    if (failures > 0) {
+    if (remaining > 0) {
       setSyncNotice(
-        `${pending.length - failures} of ${pending.length} synced — ${failures} failed and will retry when online.`
+        `${synced} synced. Complete the security check to sync ${remaining} remaining.`
+      );
+    } else if (failures > 0) {
+      setSyncNotice(
+        `${synced} of ${pending.length} synced — ${failures} failed and will retry when online.`
       );
     } else {
       setSyncNotice(null);
     }
-  }, [apiOnline, runAnalysis]);
+  }, [apiOnline, runAnalysis, captchaRequired, resetCaptchaWidget]);
 
   useEffect(() => {
     const check = () => {
@@ -533,8 +579,9 @@ export default function App() {
     };
 
     // Google often clears window.opener (COOP). Broadcast to every Lazarus tab, then close.
+    const loginCode = params.get("login_code");
     if (provider && outcome) {
-      publishOAuthComplete({ provider, outcome, reason });
+      publishOAuthComplete({ provider, outcome, reason, loginCode });
       window.history.replaceState({}, "", window.location.pathname || "/");
       window.setTimeout(() => {
         try {
@@ -599,6 +646,11 @@ export default function App() {
     window.addEventListener("online", onOnline);
     return () => window.removeEventListener("online", onOnline);
   }, [drainPendingQueue]);
+
+  useEffect(() => {
+    if (!captchaToken) return;
+    void drainPendingQueue();
+  }, [captchaToken, drainPendingQueue]);
 
   const handleFieldRecordingReady = useCallback((f: File, sessionId: string) => {
     setFile(f);
@@ -765,6 +817,16 @@ export default function App() {
       return;
     }
 
+    if (captchaRequired && !captchaTokenRef.current) {
+      setError(
+        captchaSiteKey
+          ? "Complete the security check before running an analysis."
+          : "Security check is not available. Refresh the page and try again."
+      );
+      setRelevanceBlocked(false);
+      return;
+    }
+
     const historicalCrmContext = parseHistoricalCrmJson(historicalCrmJson);
     if (historicalCrmJson.trim() && historicalCrmContext === null) {
       setError("Historical CRM context must be valid JSON array.");
@@ -805,6 +867,10 @@ export default function App() {
     setWarnings([]);
     if (!forceAnalysis) setRelevanceBlocked(false);
 
+    const captchaForRun = captchaTokenRef.current;
+    captchaTokenRef.current = "";
+    setCaptchaToken("");
+
     try {
       await runAnalysis({
         file,
@@ -821,6 +887,7 @@ export default function App() {
         forceAnalysis,
         hubspotDealId: linkedHubSpotDealId ?? undefined,
         salesforceOpportunityId: linkedSalesforceOppId ?? undefined,
+        captchaToken: captchaForRun || undefined,
       });
       if (
         shouldEnforceGuestCap({
@@ -874,6 +941,7 @@ export default function App() {
         setError(err instanceof Error ? err.message : "Something went wrong.");
       }
     } finally {
+      resetCaptchaWidget();
       setLoading(false);
     }
   };
@@ -1137,11 +1205,23 @@ export default function App() {
             />
 
             <div className="intake-run-cta" aria-label="Primary analysis action">
+              {captchaRequired && captchaSiteKey && (
+                <AnalysisCaptcha
+                  siteKey={captchaSiteKey}
+                  resetKey={captchaResetKey}
+                  onToken={handleCaptchaToken}
+                />
+              )}
+              {captchaRequired && !captchaSiteKey && (
+                <p className="analysis-captcha-label">
+                  Security check is unavailable. Refresh the page, or try again in a moment.
+                </p>
+              )}
               <button
                 className="run-button run-button-above-fold"
                 data-guide-target="guide-run-analysis"
                 onClick={() => void handleRun(false)}
-                disabled={loading || paywalled}
+                disabled={loading || paywalled || (captchaRequired && !captchaToken)}
               >
                 {loading
                   ? "Analyzing…"
@@ -1478,7 +1558,7 @@ export default function App() {
                     type="button"
                     className="btn-secondary relevance-override-btn"
                     onClick={() => void handleRun(true)}
-                    disabled={loading || paywalled}
+                    disabled={loading || paywalled || (captchaRequired && !captchaToken)}
                   >
                     Analyze anyway
                   </button>

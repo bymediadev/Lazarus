@@ -23,6 +23,7 @@ Repo → Settings → Secrets and variables → Actions:
 | `VITE_LAZARUS_API_KEY` | Same string as Render `LAZARUS_API_KEY` (required if that key is set on Render) |
 | `VITE_SUPABASE_URL` | Same as `SUPABASE_URL` |
 | `VITE_SUPABASE_ANON_KEY` | Same as `SUPABASE_ANON_KEY` (public anon key) |
+| `VITE_TURNSTILE_SITE_KEY` | Optional. Same as Render `TURNSTILE_SITE_KEY` so the widget can render while the API is cold |
 
 Push to `main` runs tests, then `npm run build:pages` and deploys `dist/`.
 
@@ -33,6 +34,8 @@ Keep existing API secrets. Set:
 ```
 FRONTEND_ORIGIN=https://www.getldr.ca,https://getldr.ca,http://localhost:5173
 PUBLIC_API_URL=https://lazarus-4uxi.onrender.com
+TURNSTILE_SITE_KEY=...
+TURNSTILE_SECRET_KEY=...
 ```
 
 Leave `VITE_API_URL` unset on Render. CORS also allows `www.getldr.ca` in code even if this env is stale.

@@ -1,9 +1,5 @@
 import type { Express } from "express";
-import {
-  createSignedOAuthState,
-  resolveFrontendOrigin,
-  verifySignedOAuthState,
-} from "../oauthShared.js";
+import { registerOAuthConnectRoutes } from "../connectFlow.js";
 import { getSalesforceConfig, isSalesforceConfigured, SALESFORCE_OAUTH_SCOPES } from "./config.js";
 import {
   importSalesforceOpportunityNotes,
@@ -15,16 +11,38 @@ import {
   clearSalesforceTokens,
   isSalesforceConnected,
   loadSalesforceTokens,
+  saveSalesforceTokens,
 } from "./tokens.js";
 import { upsertCrmDealLink, getCrmDealLinkByExternalId, updateCrmDealLinkContext } from "../../crmDealLinks.js";
-import { optionalAuthUserId } from "../../authMiddleware.js";
+import { getAuthUserId, requireAuthUser } from "../../requireUser.js";
+import { secretsEqual } from "../../cryptoSecrets.js";
 
 export function registerSalesforceRoutes(app: Express): void {
-  app.get("/api/integrations/salesforce/status", (_req, res) => {
-    const tokens = loadSalesforceTokens();
+  registerOAuthConnectRoutes(app, {
+    slug: "salesforce",
+    queryKey: "salesforce",
+    loginProvider: "salesforce",
+    notConfiguredMessage: "Salesforce OAuth not configured on server",
+    getClientSecret: () => getSalesforceConfig()?.clientSecret ?? null,
+    buildAuthorizeUrl: buildSalesforceAuthorizeUrl,
+    exchangeCode: exchangeSalesforceCode,
+    saveForUser: (userId, record) =>
+      saveSalesforceTokens(userId, {
+        access_token: record.access_token,
+        refresh_token: record.refresh_token ?? "",
+        expires_at: record.expires_at,
+        instance_url: String(record.instance_url ?? ""),
+        account_email: record.account_email,
+        connected_at: new Date().toISOString(),
+      }),
+  });
+
+  app.get("/api/integrations/salesforce/status", requireAuthUser, (req, res) => {
+    const userId = getAuthUserId(req)!;
+    const tokens = loadSalesforceTokens(userId);
     res.json({
       configured: isSalesforceConfigured(),
-      connected: isSalesforceConnected(),
+      connected: isSalesforceConnected(userId),
       account_email: tokens?.account_email ?? null,
       instance_url: tokens?.instance_url ?? null,
       connected_at: tokens?.connected_at ?? null,
@@ -35,49 +53,14 @@ export function registerSalesforceRoutes(app: Express): void {
     });
   });
 
-  app.get("/api/integrations/salesforce/connect", (_req, res) => {
-    const cfg = getSalesforceConfig();
-    if (!cfg) {
-      res.status(503).json({ error: "Salesforce OAuth not configured on server" });
-      return;
-    }
-    try {
-      const state = createSignedOAuthState(cfg.clientSecret);
-      res.redirect(buildSalesforceAuthorizeUrl(state));
-    } catch (err) {
-      res.status(500).json({
-        error: err instanceof Error ? err.message : "Failed to start Salesforce OAuth",
-      });
-    }
-  });
-
-  app.get("/api/integrations/salesforce/callback", async (req, res) => {
-    const code = String(req.query.code ?? "");
-    const state = String(req.query.state ?? "");
-    const frontendOrigin = resolveFrontendOrigin();
-    const cfg = getSalesforceConfig();
-
-    if (!code || !verifySignedOAuthState(state, cfg?.clientSecret ?? "")) {
-      res.redirect(`${frontendOrigin}/?salesforce=error&reason=invalid_state`);
-      return;
-    }
-
-    try {
-      await exchangeSalesforceCode(code);
-      res.redirect(`${frontendOrigin}/?salesforce=connected`);
-    } catch (err) {
-      console.error("[salesforce-oauth] callback error:", err);
-      res.redirect(`${frontendOrigin}/?salesforce=error&reason=token_exchange`);
-    }
-  });
-
-  app.post("/api/integrations/salesforce/disconnect", (_req, res) => {
-    clearSalesforceTokens();
+  app.post("/api/integrations/salesforce/disconnect", requireAuthUser, (req, res) => {
+    clearSalesforceTokens(getAuthUserId(req)!);
     res.json({ ok: true });
   });
 
-  app.post("/api/integrations/salesforce/search-opportunities", async (req, res) => {
-    if (!isSalesforceConnected()) {
+  app.post("/api/integrations/salesforce/search-opportunities", requireAuthUser, async (req, res) => {
+    const userId = getAuthUserId(req)!;
+    if (!isSalesforceConnected(userId)) {
       res.status(401).json({ error: "Salesforce is not connected." });
       return;
     }
@@ -87,7 +70,7 @@ export function registerSalesforceRoutes(app: Express): void {
       return;
     }
     try {
-      const opportunities = await searchSalesforceOpportunities(query, 15);
+      const opportunities = await searchSalesforceOpportunities(userId, query, 15);
       res.json({
         ok: true,
         provider: "salesforce",
@@ -103,8 +86,9 @@ export function registerSalesforceRoutes(app: Express): void {
     }
   });
 
-  app.post("/api/integrations/salesforce/import-opportunity", async (req, res) => {
-    if (!isSalesforceConnected()) {
+  app.post("/api/integrations/salesforce/import-opportunity", requireAuthUser, async (req, res) => {
+    const userId = getAuthUserId(req)!;
+    if (!isSalesforceConnected(userId)) {
       res.status(401).json({ error: "Salesforce is not connected." });
       return;
     }
@@ -116,7 +100,7 @@ export function registerSalesforceRoutes(app: Express): void {
       return;
     }
     try {
-      const result = await importSalesforceOpportunityNotes(opportunityId);
+      const result = await importSalesforceOpportunityNotes(userId, opportunityId);
       await upsertCrmDealLink({
         provider: "salesforce",
         externalDealId: opportunityId,
@@ -124,7 +108,7 @@ export function registerSalesforceRoutes(app: Express): void {
         salesCycleDays: result.mapped.sales_cycle_days,
         historicalCrmContext: result.mapped.historical_crm_context,
         lastInboundAt: new Date().toISOString(),
-        userId: await optionalAuthUserId(req),
+        userId,
       });
       res.json({
         ok: true,
@@ -145,8 +129,9 @@ export function registerSalesforceRoutes(app: Express): void {
     }
   });
 
-  app.post("/api/integrations/salesforce/push-note", async (req, res) => {
-    if (!isSalesforceConnected()) {
+  app.post("/api/integrations/salesforce/push-note", requireAuthUser, async (req, res) => {
+    const userId = getAuthUserId(req)!;
+    if (!isSalesforceConnected(userId)) {
       res.status(401).json({ error: "Salesforce is not connected." });
       return;
     }
@@ -164,12 +149,12 @@ export function registerSalesforceRoutes(app: Express): void {
       return;
     }
     try {
-      const pushed = await pushNoteToSalesforceOpportunity(opportunityId, noteBody);
+      const pushed = await pushNoteToSalesforceOpportunity(userId, opportunityId, noteBody);
       const linkId = await upsertCrmDealLink({
         provider: "salesforce",
         externalDealId: opportunityId,
         postMortemId: postMortemId || null,
-        userId: await optionalAuthUserId(req),
+        userId,
         lastOutboundAt: new Date().toISOString(),
       });
       res.json({
@@ -187,13 +172,12 @@ export function registerSalesforceRoutes(app: Express): void {
     }
   });
 
-  /** Salesforce outbound message / CDC-style webhook → upsert deal link context. */
   app.post("/api/webhooks/salesforce", async (req, res) => {
     const expected = (process.env.SALESFORCE_WEBHOOK_SECRET ?? "").trim();
     const provided =
       (req.headers["x-webhook-secret"] as string | undefined)?.trim() ??
       String(req.query.secret ?? "").trim();
-    if (expected && provided !== expected) {
+    if (!expected || !secretsEqual(provided, expected)) {
       res.status(401).json({ error: "Unauthorized" });
       return;
     }
@@ -206,27 +190,22 @@ export function registerSalesforceRoutes(app: Express): void {
         res.status(400).json({ error: "opportunityId required" });
         return;
       }
-      const imported = await importSalesforceOpportunityNotes(opportunityId);
       const existing = await getCrmDealLinkByExternalId("salesforce", opportunityId);
-      let linkId: string | null = null;
-      if (existing) {
-        await updateCrmDealLinkContext(existing.id, {
-          historical_crm_context: imported.mapped.historical_crm_context,
-          sales_cycle_days: imported.mapped.sales_cycle_days,
-          last_inbound_at: new Date().toISOString(),
-        });
-        linkId = existing.id;
-      } else {
-        linkId = await upsertCrmDealLink({
-          provider: "salesforce",
-          externalDealId: opportunityId,
-          accountId: imported.mapped.account_id,
-          salesCycleDays: imported.mapped.sales_cycle_days,
-          historicalCrmContext: imported.mapped.historical_crm_context,
-          lastInboundAt: new Date().toISOString(),
-        });
+      if (!existing?.user_id) {
+        res.status(404).json({ error: "No owner-linked Salesforce deal for this id" });
+        return;
       }
-      res.json({ ok: true, mapped: imported.mapped, link_id: linkId, synced: !!linkId });
+      if (!isSalesforceConnected(existing.user_id)) {
+        res.status(401).json({ error: "Owner Salesforce connection is missing" });
+        return;
+      }
+      const imported = await importSalesforceOpportunityNotes(existing.user_id, opportunityId);
+      await updateCrmDealLinkContext(existing.id, {
+        historical_crm_context: imported.mapped.historical_crm_context,
+        sales_cycle_days: imported.mapped.sales_cycle_days,
+        last_inbound_at: new Date().toISOString(),
+      });
+      res.json({ ok: true, mapped: imported.mapped, link_id: existing.id, synced: true });
     } catch (err) {
       console.error("[salesforce-webhook]", err);
       res.status(500).json({

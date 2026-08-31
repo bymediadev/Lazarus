@@ -20,7 +20,9 @@ export interface SalesforceOppHit {
 }
 
 export async function fetchSalesforceStatus(): Promise<SalesforceProviderStatus> {
-  const res = await fetch(`${API_BASE}/api/integrations/salesforce/status`);
+  const res = await fetch(`${API_BASE}/api/integrations/salesforce/status`, {
+    headers: apiAuthHeaders(),
+  });
   if (!res.ok) throw new Error(`Salesforce status failed (${res.status})`);
   return res.json() as Promise<SalesforceProviderStatus>;
 }

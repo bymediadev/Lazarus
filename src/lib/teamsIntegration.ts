@@ -9,7 +9,9 @@ export interface TeamsStatus {
 }
 
 export async function fetchTeamsStatus(): Promise<TeamsStatus> {
-  const res = await fetch(`${API_BASE}/api/integrations/teams/status`);
+  const res = await fetch(`${API_BASE}/api/integrations/teams/status`, {
+    headers: apiAuthHeaders(),
+  });
   if (!res.ok) throw new Error(`Teams status failed (${res.status})`);
   return res.json() as Promise<TeamsStatus>;
 }

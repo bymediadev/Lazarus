@@ -29,7 +29,7 @@ export function buildGoogleAuthorizeUrl(state: string): string {
   return `${AUTH_URL}?${params.toString()}`;
 }
 
-export async function exchangeGoogleCode(code: string): Promise<GoogleTokenRecord> {
+export async function exchangeGoogleCode(code: string, userId?: string): Promise<GoogleTokenRecord> {
   const cfg = getGoogleMeetConfig();
   if (!cfg) throw new Error("Google Meet OAuth is not configured");
 
@@ -78,7 +78,7 @@ export async function exchangeGoogleCode(code: string): Promise<GoogleTokenRecor
     /* optional */
   }
 
-  const existing = loadGoogleTokens();
+  const existing = userId ? loadGoogleTokens(userId) : null;
   const record: GoogleTokenRecord = {
     access_token: data.access_token,
     refresh_token: data.refresh_token ?? existing?.refresh_token ?? "",
@@ -86,13 +86,13 @@ export async function exchangeGoogleCode(code: string): Promise<GoogleTokenRecor
     account_email,
     connected_at: new Date().toISOString(),
   };
-  saveGoogleTokens(record);
+  if (userId) saveGoogleTokens(userId, record);
   return record;
 }
 
-export async function getValidGoogleAccessToken(): Promise<string | null> {
+export async function getValidGoogleAccessToken(userId: string): Promise<string | null> {
   const cfg = getGoogleMeetConfig();
-  const stored = loadGoogleTokens();
+  const stored = loadGoogleTokens(userId);
   if (!cfg || !stored?.access_token) return null;
 
   if (Date.now() < new Date(stored.expires_at).getTime() - 60_000) {
@@ -124,6 +124,6 @@ export async function getValidGoogleAccessToken(): Promise<string | null> {
     refresh_token: data.refresh_token ?? stored.refresh_token,
     expires_at: new Date(Date.now() + data.expires_in * 1000).toISOString(),
   };
-  saveGoogleTokens(record);
+  saveGoogleTokens(userId, record);
   return record.access_token;
 }

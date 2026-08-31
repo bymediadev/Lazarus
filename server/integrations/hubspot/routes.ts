@@ -1,22 +1,44 @@
 import type { Express } from "express";
-import {
-  createSignedOAuthState,
-  resolveFrontendOrigin,
-  verifySignedOAuthState,
-} from "../oauthShared.js";
+import { registerOAuthConnectRoutes } from "../connectFlow.js";
 import { getHubSpotConfig, isHubSpotConfigured, HUBSPOT_OAUTH_SCOPES } from "./config.js";
 import { importHubSpotDealNotes, pushNoteToHubSpotDeal, searchHubSpotDeals } from "./deals.js";
 import { buildHubSpotAuthorizeUrl, exchangeHubSpotCode } from "./oauth.js";
-import { clearHubSpotTokens, isHubSpotConnected, loadHubSpotTokens } from "./tokens.js";
+import {
+  clearHubSpotTokens,
+  isHubSpotConnected,
+  loadHubSpotTokens,
+  saveHubSpotTokens,
+} from "./tokens.js";
 import { upsertCrmDealLink } from "../../crmDealLinks.js";
-import { optionalAuthUserId } from "../../authMiddleware.js";
+import { getAuthUserId, requireAuthUser } from "../../requireUser.js";
 
 export function registerHubSpotRoutes(app: Express): void {
-  app.get("/api/integrations/hubspot/status", (_req, res) => {
-    const tokens = loadHubSpotTokens();
+  registerOAuthConnectRoutes(app, {
+    slug: "hubspot",
+    queryKey: "hubspot",
+    loginProvider: "hubspot",
+    notConfiguredMessage: "HubSpot OAuth not configured on server",
+    getClientSecret: () => getHubSpotConfig()?.clientSecret ?? null,
+    buildAuthorizeUrl: buildHubSpotAuthorizeUrl,
+    exchangeCode: exchangeHubSpotCode,
+    saveForUser: (userId, record) =>
+      saveHubSpotTokens(userId, {
+        access_token: record.access_token,
+        refresh_token: record.refresh_token ?? "",
+        expires_at: record.expires_at,
+        account_email: record.account_email,
+        hub_id: typeof record.hub_id === "string" ? record.hub_id : undefined,
+        hub_domain: typeof record.hub_domain === "string" ? record.hub_domain : undefined,
+        connected_at: new Date().toISOString(),
+      }),
+  });
+
+  app.get("/api/integrations/hubspot/status", requireAuthUser, (req, res) => {
+    const userId = getAuthUserId(req)!;
+    const tokens = loadHubSpotTokens(userId);
     res.json({
       configured: isHubSpotConfigured(),
-      connected: isHubSpotConnected(),
+      connected: isHubSpotConnected(userId),
       account_email: tokens?.account_email ?? null,
       hub_domain: tokens?.hub_domain ?? null,
       connected_at: tokens?.connected_at ?? null,
@@ -27,49 +49,14 @@ export function registerHubSpotRoutes(app: Express): void {
     });
   });
 
-  app.get("/api/integrations/hubspot/connect", (_req, res) => {
-    const cfg = getHubSpotConfig();
-    if (!cfg) {
-      res.status(503).json({ error: "HubSpot OAuth not configured on server" });
-      return;
-    }
-    try {
-      const state = createSignedOAuthState(cfg.clientSecret);
-      res.redirect(buildHubSpotAuthorizeUrl(state));
-    } catch (err) {
-      res.status(500).json({
-        error: err instanceof Error ? err.message : "Failed to start HubSpot OAuth",
-      });
-    }
-  });
-
-  app.get("/api/integrations/hubspot/callback", async (req, res) => {
-    const code = String(req.query.code ?? "");
-    const state = String(req.query.state ?? "");
-    const frontendOrigin = resolveFrontendOrigin();
-    const cfg = getHubSpotConfig();
-
-    if (!code || !verifySignedOAuthState(state, cfg?.clientSecret ?? "")) {
-      res.redirect(`${frontendOrigin}/?hubspot=error&reason=invalid_state`);
-      return;
-    }
-
-    try {
-      await exchangeHubSpotCode(code);
-      res.redirect(`${frontendOrigin}/?hubspot=connected`);
-    } catch (err) {
-      console.error("[hubspot-oauth] callback error:", err);
-      res.redirect(`${frontendOrigin}/?hubspot=error&reason=token_exchange`);
-    }
-  });
-
-  app.post("/api/integrations/hubspot/disconnect", (_req, res) => {
-    clearHubSpotTokens();
+  app.post("/api/integrations/hubspot/disconnect", requireAuthUser, (req, res) => {
+    clearHubSpotTokens(getAuthUserId(req)!);
     res.json({ ok: true });
   });
 
-  app.post("/api/integrations/hubspot/search-deals", async (req, res) => {
-    if (!isHubSpotConnected()) {
+  app.post("/api/integrations/hubspot/search-deals", requireAuthUser, async (req, res) => {
+    const userId = getAuthUserId(req)!;
+    if (!isHubSpotConnected(userId)) {
       res.status(401).json({ error: "HubSpot is not connected. Connect HubSpot first." });
       return;
     }
@@ -79,14 +66,8 @@ export function registerHubSpotRoutes(app: Express): void {
       return;
     }
     try {
-      const deals = await searchHubSpotDeals(query, 15);
-      res.json({
-        ok: true,
-        provider: "hubspot",
-        query,
-        count: deals.length,
-        deals,
-      });
+      const deals = await searchHubSpotDeals(userId, query, 15);
+      res.json({ ok: true, provider: "hubspot", query, count: deals.length, deals });
     } catch (err) {
       console.error("[hubspot-search] error:", err);
       res.status(500).json({
@@ -95,8 +76,9 @@ export function registerHubSpotRoutes(app: Express): void {
     }
   });
 
-  app.post("/api/integrations/hubspot/import-deal-notes", async (req, res) => {
-    if (!isHubSpotConnected()) {
+  app.post("/api/integrations/hubspot/import-deal-notes", requireAuthUser, async (req, res) => {
+    const userId = getAuthUserId(req)!;
+    if (!isHubSpotConnected(userId)) {
       res.status(401).json({ error: "HubSpot is not connected. Connect HubSpot first." });
       return;
     }
@@ -106,7 +88,7 @@ export function registerHubSpotRoutes(app: Express): void {
       return;
     }
     try {
-      const result = await importHubSpotDealNotes(dealId);
+      const result = await importHubSpotDealNotes(userId, dealId);
       await upsertCrmDealLink({
         provider: "hubspot",
         externalDealId: dealId,
@@ -114,7 +96,7 @@ export function registerHubSpotRoutes(app: Express): void {
         salesCycleDays: result.mapped.sales_cycle_days,
         historicalCrmContext: result.mapped.historical_crm_context,
         lastInboundAt: new Date().toISOString(),
-        userId: await optionalAuthUserId(req),
+        userId,
       });
       res.json({
         ok: true,
@@ -134,9 +116,9 @@ export function registerHubSpotRoutes(app: Express): void {
     }
   });
 
-  /** Human-confirmed Lazarus → HubSpot note write + deal link upsert. */
-  app.post("/api/integrations/hubspot/push-note", async (req, res) => {
-    if (!isHubSpotConnected()) {
+  app.post("/api/integrations/hubspot/push-note", requireAuthUser, async (req, res) => {
+    const userId = getAuthUserId(req)!;
+    if (!isHubSpotConnected(userId)) {
       res.status(401).json({ error: "HubSpot is not connected. Connect HubSpot first." });
       return;
     }
@@ -152,8 +134,7 @@ export function registerHubSpotRoutes(app: Express): void {
       return;
     }
     try {
-      const pushed = await pushNoteToHubSpotDeal(dealId, noteBody);
-      const userId = await optionalAuthUserId(req);
+      const pushed = await pushNoteToHubSpotDeal(userId, dealId, noteBody);
       const linkId = await upsertCrmDealLink({
         provider: "hubspot",
         externalDealId: dealId,

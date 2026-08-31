@@ -6,7 +6,7 @@ export interface GoogleMeetConfig {
   redirectUri: string;
 }
 
-/** Google OAuth for Meet/Workspace — live captions ingest lands later; Connect works now. */
+/** Google OAuth for Meet/Workspace + Gmail. Live captions come from the Meet extension. */
 export function getGoogleMeetConfig(): GoogleMeetConfig | null {
   const clientId = (process.env.GOOGLE_CLIENT_ID ?? "").trim();
   const clientSecret = (process.env.GOOGLE_CLIENT_SECRET ?? "").trim();

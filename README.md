@@ -106,7 +106,7 @@ The public site is a static Vite build on **GitHub Pages** (`www.getldr.ca`). Th
 | **Render** (API) | Health | `/api/health` |
 | **Render** (API) | Blueprint | `render.yaml` (optional) |
 
-Required env (copy from local `.env`): `GEMINI_API_KEY`, `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, `PURGE_CRON_SECRET`, `DATA_RETENTION_DAYS`, `NODE_ENV=production`, `FRONTEND_ORIGIN` (include `https://www.getldr.ca`), `PUBLIC_API_URL`, `LAZARUS_API_KEY`. GitHub Pages bakes `VITE_API_URL=https://lazarus-4uxi.onrender.com` plus `VITE_LAZARUS_API_KEY` / `VITE_SUPABASE_*` at build time. Local `npm run dev` leaves `VITE_API_URL` unset (Vite proxies `/api`).
+Required env (copy from local `.env`): `GEMINI_API_KEY`, `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, `PURGE_CRON_SECRET`, `DATA_RETENTION_DAYS`, `NODE_ENV=production`, `FRONTEND_ORIGIN` (include `https://www.getldr.ca`), `PUBLIC_API_URL`, `LAZARUS_API_KEY`, `TURNSTILE_SITE_KEY`, `TURNSTILE_SECRET_KEY`. GitHub Pages bakes `VITE_API_URL=https://lazarus-4uxi.onrender.com` plus `VITE_LAZARUS_API_KEY` / `VITE_SUPABASE_*` at build time. Local `npm run dev` leaves `VITE_API_URL` unset (Vite proxies `/api`). Analysis captcha: [`docs/turnstile-setup.md`](docs/turnstile-setup.md).
 
 The marketing pages stay up on GitHub Pages. Pricing CTAs are Stripe Payment Links, so checkout does not wait on the Render API. Analyses, webhooks, and claiming a paid plan after signup still use the API (Free sleeps after ~15 min idle).
 
@@ -120,7 +120,7 @@ Setup guides live under `docs/` — keep real credentials in env vars / host sec
 |---------|--------|-------|
 | HubSpot | Read-only OAuth + deal note import | [`docs/hubspot-setup.md`](docs/hubspot-setup.md) · `npm run test:hubspot` · `npm run test:hubspot:live` |
 | Zoom RTMS | Live transcripts | [`docs/zoom-rtms-setup.md`](docs/zoom-rtms-setup.md) |
-| Google Meet / Gmail | OAuth + mailbox search | [`docs/google-meet-setup.md`](docs/google-meet-setup.md) |
+| Google Meet / Gmail | OAuth + mailbox search + live captions extension | [`docs/google-meet-setup.md`](docs/google-meet-setup.md) |
 | Microsoft Teams / Outlook | OAuth + mailbox search | [`docs/teams-setup.md`](docs/teams-setup.md) |
 
 Not claimed as bidirectional CRM sync. Meet/Teams share the same Live Meeting → triage → end-session autopsy pipe as Zoom.

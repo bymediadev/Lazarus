@@ -16,15 +16,18 @@ import {
   fetchZoomStatus,
   startZoomLiveSession,
   subscribeZoomTranscriptStream,
-  zoomConnectUrl,
   type ZoomIntegrationStatus,
 } from "../lib/zoomIntegration";
 import {
   fetchGoogleMeetStatus,
-  googleMeetConnectUrl,
+  meetCaptionApiBase,
+  publishMeetSessionToExtension,
+  startMeetLiveSession,
+  subscribeMeetTranscriptStream,
   type GoogleMeetStatus,
 } from "../lib/googleMeetIntegration";
-import { fetchTeamsStatus, teamsConnectUrl, type TeamsStatus } from "../lib/teamsIntegration";
+import { fetchTeamsStatus, type TeamsStatus } from "../lib/teamsIntegration";
+import { startLoggedInOAuthConnect } from "../lib/oauthConnect";
 import type { LiveTranscriptTurn } from "../types";
 
 interface Props {
@@ -119,6 +122,9 @@ export default function MeetingCompanion({
   const [googleStatus, setGoogleStatus] = useState<GoogleMeetStatus | null>(null);
   const [teamsStatus, setTeamsStatus] = useState<TeamsStatus | null>(null);
   const [zoomStreamActive, setZoomStreamActive] = useState(false);
+  const [meetStreamActive, setMeetStreamActive] = useState(false);
+  const [meetSessionId, setMeetSessionId] = useState<string | null>(null);
+  const [meetSessionSecret, setMeetSessionSecret] = useState<string | null>(null);
 
   const recognitionRef = useRef<InstanceType<SpeechRecognitionCtor> | null>(null);
   const sessionStartRef = useRef<number | null>(null);
@@ -126,6 +132,8 @@ export default function MeetingCompanion({
   const objectionsRef = useRef(objections);
   const zoomUnsubRef = useRef<(() => void) | null>(null);
   const zoomSessionIdRef = useRef<string | null>(null);
+  const meetUnsubRef = useRef<(() => void) | null>(null);
+  const meetSessionIdRef = useRef<string | null>(null);
 
   const transcript = formatTurns(turns);
 
@@ -188,6 +196,8 @@ export default function MeetingCompanion({
     return () => {
       zoomUnsubRef.current?.();
       zoomUnsubRef.current = null;
+      meetUnsubRef.current?.();
+      meetUnsubRef.current = null;
     };
   }, []);
 
@@ -276,21 +286,47 @@ export default function MeetingCompanion({
     setError(null);
     setPanelMinimized(false);
     setZoomStreamActive(false);
+    setMeetStreamActive(false);
+    setMeetSessionId(null);
     zoomUnsubRef.current?.();
     zoomUnsubRef.current = null;
+    meetUnsubRef.current?.();
+    meetUnsubRef.current = null;
 
     if (platform === "zoom" && zoomStatus?.connected) {
       try {
-        const { sessionId } = await startZoomLiveSession();
-        zoomSessionIdRef.current = sessionId;
+        const created = await startZoomLiveSession();
+        zoomSessionIdRef.current = created.sessionId;
         zoomUnsubRef.current = subscribeZoomTranscriptStream(
-          sessionId,
+          created.sessionId,
+          created.sessionSecret,
           (chunk) => appendTurn(chunk.speaker, chunk.dialogue),
           (msg) => setError(msg)
         );
         setZoomStreamActive(true);
       } catch (e) {
         setError(e instanceof Error ? e.message : "Zoom live session failed — using mic fallback.");
+      }
+    }
+
+    if (platform === "meet") {
+      try {
+        const created = await startMeetLiveSession();
+        meetSessionIdRef.current = created.sessionId;
+        setMeetSessionId(created.sessionId);
+        setMeetSessionSecret(created.sessionSecret);
+        publishMeetSessionToExtension(created.sessionId, created.sessionSecret);
+        meetUnsubRef.current = subscribeMeetTranscriptStream(
+          created.sessionId,
+          created.sessionSecret,
+          (chunk) => appendTurn(chunk.speaker, chunk.dialogue),
+          (msg) => setError(msg)
+        );
+        setMeetStreamActive(true);
+      } catch (e) {
+        setError(
+          e instanceof Error ? e.message : "Meet caption session failed — using mic fallback."
+        );
       }
     }
 
@@ -303,6 +339,13 @@ export default function MeetingCompanion({
     zoomUnsubRef.current = null;
     zoomSessionIdRef.current = null;
     setZoomStreamActive(false);
+    meetUnsubRef.current?.();
+    meetUnsubRef.current = null;
+    meetSessionIdRef.current = null;
+    setMeetSessionId(null);
+    setMeetSessionSecret(null);
+    setMeetStreamActive(false);
+    publishMeetSessionToExtension("");
     setPhase("idle");
     sessionStartRef.current = null;
     const formatted = formatTurns(turns);
@@ -391,9 +434,17 @@ export default function MeetingCompanion({
               <p className="meeting-platform-disconnected">
                 Connect Zoom for live meeting transcripts (RTMS). Mic + paste works without OAuth.
               </p>
-              <a className="btn-primary meeting-platform-connect-btn" href={zoomConnectUrl()}>
+              <button
+                type="button"
+                className="btn-primary meeting-platform-connect-btn"
+                onClick={() =>
+                  void startLoggedInOAuthConnect("zoom").catch((e) =>
+                    setError(e instanceof Error ? e.message : "Could not connect Zoom")
+                  )
+                }
+              >
                 Connect Zoom
-              </a>
+              </button>
             </>
           )}
         </div>
@@ -401,25 +452,28 @@ export default function MeetingCompanion({
 
       {platform === "meet" && (
         <div className="meeting-platform-connect">
+          <p className="meeting-platform-disconnected">
+            Live Meet captions: sideload the Lazarus Chrome extension, turn on <strong>Captions</strong>{" "}
+            in Meet, then Start. Mic + paste still works if captions are off.
+          </p>
           {googleStatus?.connected ? (
             <p className="meeting-platform-connected">
               Google connected
-              {googleStatus.account_email ? ` · ${googleStatus.account_email}` : ""}. Mic + paste
-              feeds the live Recovery Brief today; Meet caption ingest comes next.
+              {googleStatus.account_email ? ` · ${googleStatus.account_email}` : ""} — Gmail search
+              is ready. Captions do not need Connect.
             </p>
           ) : (
-            <>
-              <p className="meeting-platform-disconnected">
-                Connect Google for Meet/Workspace. Until auto-ingest ships, start a live session and
-                use mic + paste beside Meet — same Recovery Brief pipe.
-              </p>
-              <a
-                className="btn-primary meeting-platform-connect-btn"
-                href={googleMeetConnectUrl()}
-              >
-                Connect Google Meet
-              </a>
-            </>
+            <button
+              type="button"
+              className="btn-primary meeting-platform-connect-btn"
+              onClick={() =>
+                void startLoggedInOAuthConnect("google").catch((e) =>
+                  setError(e instanceof Error ? e.message : "Could not connect Gmail")
+                )
+              }
+            >
+              Connect Gmail (optional)
+            </button>
           )}
         </div>
       )}
@@ -438,9 +492,17 @@ export default function MeetingCompanion({
                 Connect Microsoft Teams (Entra ID). Until Graph transcript pull ships, start a live
                 session and use mic + paste beside Teams — same Recovery Brief pipe.
               </p>
-              <a className="btn-primary meeting-platform-connect-btn" href={teamsConnectUrl()}>
+              <button
+                type="button"
+                className="btn-primary meeting-platform-connect-btn"
+                onClick={() =>
+                  void startLoggedInOAuthConnect("teams").catch((e) =>
+                    setError(e instanceof Error ? e.message : "Could not connect Teams")
+                  )
+                }
+              >
                 Connect Microsoft Teams
-              </a>
+              </button>
             </>
           )}
         </div>
@@ -465,6 +527,18 @@ export default function MeetingCompanion({
           <span className="meeting-live-pill">● LIVE · {platform?.toUpperCase()}</span>
           {platform === "zoom" && zoomStreamActive && (
             <span className="meeting-live-pill meeting-zoom-rtms-pill">RTMS stream</span>
+          )}
+          {platform === "meet" && meetStreamActive && (
+            <span className="meeting-live-pill meeting-zoom-rtms-pill">Meet captions</span>
+          )}
+          {meetSessionId && (
+            <span
+              id="lazarus-meet-pair"
+              hidden
+              data-session-id={meetSessionId}
+              data-session-secret={meetSessionSecret ?? ""}
+              data-api-base={meetCaptionApiBase()}
+            />
           )}
           <button type="button" className="file-clear-btn" onClick={() => void runScan()} disabled={scanning}>
             {scanning ? "Scanning…" : "Scan now"}
@@ -544,6 +618,11 @@ export default function MeetingCompanion({
           </header>
           {!panelMinimized && (
             <div className="live-objection-panel-body">
+              {meetStreamActive && (
+                <p className="live-objection-listening">
+                  Meet captions on — keep Captions enabled in the Meet tab
+                </p>
+              )}
               {listening && (
                 <p className="live-objection-listening">Mic capture on — speak or paste notes</p>
               )}

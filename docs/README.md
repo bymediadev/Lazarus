@@ -13,12 +13,13 @@ Do not commit secrets — use `.env.example` and host/GitHub secret stores.
 | Doc | Use when |
 |-----|----------|
 | [zoom-rtms-setup.md](./zoom-rtms-setup.md) | Zoom RTMS live transcripts |
-| [google-meet-setup.md](./google-meet-setup.md) | Google OAuth, Meet, Gmail thread search |
+| [google-meet-setup.md](./google-meet-setup.md) | Google OAuth, Gmail search, Meet live captions extension |
 | [teams-setup.md](./teams-setup.md) | Microsoft Entra / Teams / Outlook |
 | [hubspot-setup.md](./hubspot-setup.md) | HubSpot public OAuth app + Lazarus Connect (see also `hubspot-app/`) |
 | [auth-setup.md](./auth-setup.md) | Login: email magic link, Google, HubSpot/Salesforce bridge + Render Vite env |
 | [billing-setup.md](./billing-setup.md) | Stripe paywall after 5 free analyses ($10 / $99 / $499) |
 | [hosting.md](./hosting.md) | GitHub Pages (site) + Render (API); DNS cutover |
+| [turnstile-setup.md](./turnstile-setup.md) | Cloudflare Turnstile captcha before each analysis |
 
 ---
 

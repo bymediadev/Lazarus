@@ -1,24 +1,44 @@
 import type { Express } from "express";
-import {
-  createSignedOAuthState,
-  resolveFrontendOrigin,
-  verifySignedOAuthState,
-} from "../oauthShared.js";
+import { registerOAuthConnectRoutes } from "../connectFlow.js";
 import { getTeamsConfig, isTeamsConfigured } from "./config.js";
-import { buildTeamsAuthorizeUrl, exchangeTeamsCode } from "./oauth.js";
 import {
   fetchOutlookThreadsByQuery,
   formatOutlookMessagesAsThread,
   fetchRecentOutlookMessages,
 } from "./outlook.js";
-import { clearTeamsTokens, isTeamsConnected, loadTeamsTokens } from "./tokens.js";
+import { buildTeamsAuthorizeUrl, exchangeTeamsCode } from "./oauth.js";
+import {
+  clearTeamsTokens,
+  isTeamsConnected,
+  loadTeamsTokens,
+  saveTeamsTokens,
+} from "./tokens.js";
+import { getAuthUserId, requireAuthUser } from "../../requireUser.js";
 
 export function registerTeamsRoutes(app: Express): void {
-  app.get("/api/integrations/teams/status", (_req, res) => {
-    const tokens = loadTeamsTokens();
+  registerOAuthConnectRoutes(app, {
+    slug: "teams",
+    queryKey: "teams",
+    notConfiguredMessage: "Teams OAuth not configured on server",
+    getClientSecret: () => getTeamsConfig()?.clientSecret ?? null,
+    buildAuthorizeUrl: buildTeamsAuthorizeUrl,
+    exchangeCode: exchangeTeamsCode,
+    saveForUser: (userId, record) =>
+      saveTeamsTokens(userId, {
+        access_token: record.access_token,
+        refresh_token: record.refresh_token ?? "",
+        expires_at: record.expires_at,
+        account_email: record.account_email,
+        connected_at: new Date().toISOString(),
+      }),
+  });
+
+  app.get("/api/integrations/teams/status", requireAuthUser, (req, res) => {
+    const userId = getAuthUserId(req)!;
+    const tokens = loadTeamsTokens(userId);
     res.json({
       configured: isTeamsConfigured(),
-      connected: isTeamsConnected(),
+      connected: isTeamsConnected(userId),
       account_email: tokens?.account_email ?? null,
       connected_at: tokens?.connected_at ?? null,
       note: isTeamsConfigured()
@@ -27,56 +47,21 @@ export function registerTeamsRoutes(app: Express): void {
     });
   });
 
-  app.get("/api/integrations/teams/connect", (_req, res) => {
-    const cfg = getTeamsConfig();
-    if (!cfg) {
-      res.status(503).json({ error: "Teams OAuth not configured on server" });
-      return;
-    }
-    try {
-      const state = createSignedOAuthState(cfg.clientSecret);
-      res.redirect(buildTeamsAuthorizeUrl(state));
-    } catch (err) {
-      res.status(500).json({
-        error: err instanceof Error ? err.message : "Failed to start Teams OAuth",
-      });
-    }
-  });
-
-  app.get("/api/integrations/teams/callback", async (req, res) => {
-    const code = String(req.query.code ?? "");
-    const state = String(req.query.state ?? "");
-    const frontendOrigin = resolveFrontendOrigin();
-    const cfg = getTeamsConfig();
-
-    if (!code || !verifySignedOAuthState(state, cfg?.clientSecret ?? "")) {
-      res.redirect(`${frontendOrigin}/?teams=error&reason=invalid_state`);
-      return;
-    }
-
-    try {
-      await exchangeTeamsCode(code);
-      res.redirect(`${frontendOrigin}/?teams=connected`);
-    } catch (err) {
-      console.error("[teams-oauth] callback error:", err);
-      res.redirect(`${frontendOrigin}/?teams=error&reason=token_exchange`);
-    }
-  });
-
-  app.post("/api/integrations/teams/disconnect", (_req, res) => {
-    clearTeamsTokens();
+  app.post("/api/integrations/teams/disconnect", requireAuthUser, (req, res) => {
+    clearTeamsTokens(getAuthUserId(req)!);
     res.json({ ok: true });
   });
 
-  app.post("/api/integrations/teams/import-emails", async (req, res) => {
-    if (!isTeamsConnected()) {
+  app.post("/api/integrations/teams/import-emails", requireAuthUser, async (req, res) => {
+    const userId = getAuthUserId(req)!;
+    if (!isTeamsConnected(userId)) {
       res.status(401).json({ error: "Microsoft is not connected. Connect Outlook first." });
       return;
     }
     try {
       const limitRaw = Number(req.body?.limit ?? 10);
       const limit = Number.isFinite(limitRaw) ? Math.min(Math.max(limitRaw, 1), 25) : 10;
-      const messages = await fetchRecentOutlookMessages(limit);
+      const messages = await fetchRecentOutlookMessages(userId, limit);
       const thread = formatOutlookMessagesAsThread(messages);
       res.json({
         ok: true,
@@ -99,8 +84,9 @@ export function registerTeamsRoutes(app: Express): void {
     }
   });
 
-  app.post("/api/integrations/teams/search-emails", async (req, res) => {
-    if (!isTeamsConnected()) {
+  app.post("/api/integrations/teams/search-emails", requireAuthUser, async (req, res) => {
+    const userId = getAuthUserId(req)!;
+    if (!isTeamsConnected(userId)) {
       res.status(401).json({ error: "Microsoft is not connected. Connect Outlook first." });
       return;
     }
@@ -111,6 +97,7 @@ export function registerTeamsRoutes(app: Express): void {
     }
     try {
       const result = await fetchOutlookThreadsByQuery(query, {
+        userId,
         maxThreads: 5,
         maxMessages: 40,
       });

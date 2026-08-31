@@ -1,6 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { fetchAuthStatus } from "../lib/auth";
-import { fetchGoogleMeetStatus } from "../lib/googleMeetIntegration";
 import { subscribeOAuthComplete } from "../lib/oauthBridge";
 import { useAuth } from "./AuthProvider";
 import { navigateApp } from "../lib/appRoute";
@@ -40,7 +39,6 @@ export default function LoginScreen({
     salesforce?: boolean;
   }>({});
   const finishingRef = useRef(false);
-  const oauthStartedAtRef = useRef<number>(0);
   /** Only finish Lazarus login after the user started OAuth for this provider. */
   const pendingProviderRef = useRef<ProviderId | null>(null);
 
@@ -76,7 +74,7 @@ export default function LoginScreen({
   }, [auth.session, auth.passwordRecovery, onClose]);
 
   const finishProviderLogin = useCallback(
-    async (provider: ProviderId) => {
+    async (provider: ProviderId, loginCode?: string | null) => {
       if (finishingRef.current) return;
       if (pendingProviderRef.current !== provider) return;
       finishingRef.current = true;
@@ -85,7 +83,7 @@ export default function LoginScreen({
       setBusy(provider);
       setError(null);
       try {
-        await auth.completeProviderLogin(provider);
+        await auth.completeProviderLogin(loginCode);
         setNotice(null);
       } catch (err) {
         setError(err instanceof Error ? err.message : "Sign-in failed");
@@ -130,33 +128,10 @@ export default function LoginScreen({
         return;
       }
       if (detail.outcome === "connected") {
-        void finishProviderLogin(provider);
+        void finishProviderLogin(provider, detail.loginCode);
       }
     });
   }, [finishProviderLogin]);
-
-  useEffect(() => {
-    if (busy !== "google") return;
-    const startedAt = oauthStartedAtRef.current || Date.now();
-    const id = window.setInterval(() => {
-      void (async () => {
-        try {
-          if (pendingProviderRef.current !== "google") return;
-          const status = await fetchGoogleMeetStatus();
-          if (!status.connected || !status.account_email) return;
-          const connectedAt = status.connected_at
-            ? new Date(status.connected_at).getTime()
-            : 0;
-          if (connectedAt >= startedAt - 15_000) {
-            await finishProviderLogin("google");
-          }
-        } catch {
-          /* keep waiting */
-        }
-      })();
-    }, 1200);
-    return () => window.clearInterval(id);
-  }, [busy, finishProviderLogin]);
 
   useEffect(() => {
     if (busy !== "google" && busy !== "hubspot" && busy !== "salesforce") return;
@@ -186,7 +161,6 @@ export default function LoginScreen({
 
   const startProvider = (provider: ProviderId) => {
     setError(null);
-    oauthStartedAtRef.current = Date.now();
     pendingProviderRef.current = provider;
     setNotice(
       `Approve ${provider === "google" ? "Google" : provider === "hubspot" ? "HubSpot" : "Salesforce"} in the popup — Lazarus signs you in only after that succeeds.`
@@ -305,6 +279,10 @@ export default function LoginScreen({
                 throw new Error("Passwords do not match.");
               }
               await auth.signUpPassword(email, password);
+              setMode("signin");
+              setPassword("");
+              setConfirm("");
+              setNotice("Check your email to confirm your account, then sign in.");
             })
           }
         >
@@ -320,7 +298,7 @@ export default function LoginScreen({
           onClick={() =>
             void run("reset", async () => {
               await auth.resetPasswordEmail(email);
-              setNotice("If you weren’t taken to set a password, check your email for a reset link.");
+              setNotice("If that email has an account, check the inbox for a reset link.");
             })
           }
         >

@@ -1,6 +1,4 @@
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from "fs";
-import path from "path";
-import { fileURLToPath } from "url";
+import { createUserTokenStore } from "../userTokenStore.js";
 
 export interface HubSpotTokenRecord {
   access_token: string;
@@ -12,34 +10,24 @@ export interface HubSpotTokenRecord {
   connected_at: string;
 }
 
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const DATA_DIR = path.join(__dirname, "../../../.data");
-const TOKEN_PATH = path.join(DATA_DIR, "hubspot-tokens.json");
+const store = createUserTokenStore<HubSpotTokenRecord>("hubspot-tokens.json");
 
-function ensureDataDir(): void {
-  if (!existsSync(DATA_DIR)) mkdirSync(DATA_DIR, { recursive: true });
+export function loadHubSpotTokens(userId: string): HubSpotTokenRecord | null {
+  return store.load(userId);
 }
 
-export function loadHubSpotTokens(): HubSpotTokenRecord | null {
-  if (!existsSync(TOKEN_PATH)) return null;
-  try {
-    const raw = readFileSync(TOKEN_PATH, "utf8").trim();
-    if (!raw) return null;
-    return JSON.parse(raw) as HubSpotTokenRecord;
-  } catch {
-    return null;
-  }
+export function saveHubSpotTokens(userId: string, record: HubSpotTokenRecord): void {
+  store.save(userId, record);
 }
 
-export function saveHubSpotTokens(record: HubSpotTokenRecord): void {
-  ensureDataDir();
-  writeFileSync(TOKEN_PATH, JSON.stringify(record, null, 2), "utf8");
+export function clearHubSpotTokens(userId: string): void {
+  store.clear(userId);
 }
 
-export function clearHubSpotTokens(): void {
-  if (existsSync(TOKEN_PATH)) writeFileSync(TOKEN_PATH, "", "utf8");
+export function isHubSpotConnected(userId: string): boolean {
+  return !!store.load(userId)?.access_token;
 }
 
-export function isHubSpotConnected(): boolean {
-  return !!loadHubSpotTokens()?.access_token;
+export function hasAnyHubSpotTokens(): boolean {
+  return store.hasAny();
 }

@@ -3,6 +3,7 @@ import {
   normalizeVetoHolders,
 } from "../../shared/deepContextTypes.js";
 import { MAX_SALES_CYCLE_DAYS } from "../deepContext.js";
+import { secretsEqual } from "../cryptoSecrets.js";
 
 /** Minimal HubSpot deal snapshot shape (workflow webhook or enriched payload). */
 export interface HubSpotDealSnapshot {
@@ -141,6 +142,6 @@ export function verifyHubSpotWebhookSecret(
   provided: string | undefined,
   expected: string | undefined
 ): boolean {
-  if (!expected?.trim()) return true;
-  return provided?.trim() === expected.trim();
+  if (!expected?.trim() || !provided?.trim()) return false;
+  return secretsEqual(provided.trim(), expected.trim());
 }

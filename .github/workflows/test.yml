@@ -48,6 +48,7 @@ jobs:
           VITE_LAZARUS_API_KEY: ${{ secrets.VITE_LAZARUS_API_KEY }}
           VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
           VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
+          VITE_TURNSTILE_SITE_KEY: ${{ secrets.VITE_TURNSTILE_SITE_KEY }}
           VITE_GIT_SHA: ${{ github.sha }}
         run: npm run build:pages
 

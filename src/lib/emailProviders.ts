@@ -72,13 +72,17 @@ function cleanupMailboxTarget(value: string): string {
 }
 
 export async function fetchGmailStatus(): Promise<EmailProviderStatus> {
-  const res = await fetch(`${API_BASE}/api/integrations/google/status`);
+  const res = await fetch(`${API_BASE}/api/integrations/google/status`, {
+    headers: apiAuthHeaders(),
+  });
   if (!res.ok) throw new Error(`Gmail status failed (${res.status})`);
   return res.json() as Promise<EmailProviderStatus>;
 }
 
 export async function fetchOutlookStatus(): Promise<EmailProviderStatus> {
-  const res = await fetch(`${API_BASE}/api/integrations/teams/status`);
+  const res = await fetch(`${API_BASE}/api/integrations/teams/status`, {
+    headers: apiAuthHeaders(),
+  });
   if (!res.ok) throw new Error(`Outlook status failed (${res.status})`);
   return res.json() as Promise<EmailProviderStatus>;
 }

@@ -1,0 +1,31 @@
+{
+  "manifest_version": 3,
+  "name": "Lazarus Meet Captions",
+  "version": "1.1.0",
+  "description": "Send Google Meet live captions into Lazarus Deal Recovery.",
+  "permissions": ["storage"],
+  "host_permissions": [
+    "https://lazarus-4uxi.onrender.com/*",
+    "https://meet.google.com/*",
+    "https://www.getldr.ca/*",
+    "https://getldr.ca/*"
+  ],
+  "background": {
+    "service_worker": "background.js"
+  },
+  "content_scripts": [
+    {
+      "matches": [
+        "https://www.getldr.ca/*",
+        "https://getldr.ca/*"
+      ],
+      "js": ["pair.js"],
+      "run_at": "document_idle"
+    },
+    {
+      "matches": ["https://meet.google.com/*"],
+      "js": ["meet.js"],
+      "run_at": "document_idle"
+    }
+  ]
+}

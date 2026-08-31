@@ -4,13 +4,12 @@ import {
   disconnectOutlook,
   fetchGmailStatus,
   fetchOutlookStatus,
-  gmailConnectUrl,
-  outlookConnectUrl,
   searchGmailEmails,
   searchOutlookEmails,
   type EmailImportResult,
   type EmailProviderStatus,
 } from "../lib/emailProviders";
+import { startLoggedInOAuthConnect } from "../lib/oauthConnect";
 
 interface Props {
   onImportThread: (thread: string, notice: string) => void;
@@ -62,17 +61,14 @@ export default function EmailProviderControls({
   }, [refresh]);
 
   const openOAuthPopup = (provider: "gmail" | "outlook") => {
-    const url = provider === "gmail" ? gmailConnectUrl() : outlookConnectUrl();
-    const popup = window.open(
-      url,
-      `lazarus-${provider}-oauth`,
-      "popup=yes,width=560,height=720,resizable=yes,scrollbars=yes"
-    );
-    if (!popup) {
-      onError(`Allow popups to connect ${provider === "gmail" ? "Gmail" : "Outlook"}.`);
-      return;
-    }
-    popup.focus();
+    const slug = provider === "gmail" ? "google" : "teams";
+    void startLoggedInOAuthConnect(slug).catch((err) => {
+      onError(
+        err instanceof Error
+          ? err.message
+          : `Allow popups to connect ${provider === "gmail" ? "Gmail" : "Outlook"}.`
+      );
+    });
   };
 
   const runSearch = async (provider: "gmail" | "outlook") => {

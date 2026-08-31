@@ -40,7 +40,9 @@ export interface HubSpotDealImportResult {
 }
 
 export async function fetchHubSpotStatus(): Promise<HubSpotProviderStatus> {
-  const res = await fetch(`${API_BASE}/api/integrations/hubspot/status`);
+  const res = await fetch(`${API_BASE}/api/integrations/hubspot/status`, {
+    headers: apiAuthHeaders(),
+  });
   if (!res.ok) throw new Error(`HubSpot status failed (${res.status})`);
   return res.json() as Promise<HubSpotProviderStatus>;
 }

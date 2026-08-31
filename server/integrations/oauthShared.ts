@@ -40,47 +40,92 @@ export function corsAllowedOrigins(): string[] {
   ];
 }
 
+export type OAuthStateMeta = {
+  userId?: string | null;
+  purpose?: "login" | "connect";
+};
+
+export type ParsedOAuthState = {
+  ok: boolean;
+  userId: string | null;
+  purpose: "login" | "connect";
+};
+
 function stateSecret(fallback: string): string {
-  return (
-    (process.env.OAUTH_STATE_SECRET ?? "").trim() ||
-    fallback ||
-    "lazarus-oauth-dev-only"
-  );
+  const secret = (process.env.OAUTH_STATE_SECRET ?? "").trim() || fallback.trim();
+  if (!secret) {
+    throw new Error("OAuth state secret missing — set OAUTH_STATE_SECRET (or the provider client secret).");
+  }
+  return secret;
 }
 
-export function createSignedOAuthState(secretFallback: string): string {
+export function createSignedOAuthState(secretFallback: string, meta?: OAuthStateMeta): string {
   const nonce = crypto.randomBytes(16).toString("hex");
   const exp = String(Date.now() + OAUTH_STATE_TTL_MS);
-  const payload = `${nonce}.${exp}`;
+  const userId = (meta?.userId ?? "").replace(/[^a-zA-Z0-9-]/g, "") || "-";
+  const purpose = meta?.purpose === "connect" ? "connect" : "login";
+  const payload = `${nonce}.${exp}.${userId}.${purpose}`;
   const sig = crypto.createHmac("sha256", stateSecret(secretFallback)).update(payload).digest("hex");
   return `${payload}.${sig}`;
+}
+
+export function readSignedOAuthState(
+  state: string | undefined,
+  secretFallback: string
+): ParsedOAuthState {
+  const empty: ParsedOAuthState = { ok: false, userId: null, purpose: "login" };
+  if (!state) return empty;
+  const parts = state.split(".");
+  let payload = "";
+  let sig = "";
+  let userId: string | null = null;
+  let purpose: "login" | "connect" = "login";
+  let exp = "";
+
+  if (parts.length === 5) {
+    const [nonce, expPart, uid, purposePart, sigPart] = parts;
+    if (!nonce || !expPart || !uid || !purposePart || !sigPart) return empty;
+    payload = `${nonce}.${expPart}.${uid}.${purposePart}`;
+    sig = sigPart;
+    exp = expPart;
+    userId = uid === "-" ? null : uid;
+    purpose = purposePart === "connect" ? "connect" : "login";
+  } else if (parts.length === 3) {
+    const [nonce, expPart, sigPart] = parts;
+    if (!nonce || !expPart || !sigPart) return empty;
+    payload = `${nonce}.${expPart}`;
+    sig = sigPart;
+    exp = expPart;
+  } else {
+    return empty;
+  }
+
+  let secret: string;
+  try {
+    secret = stateSecret(secretFallback);
+  } catch {
+    return empty;
+  }
+
+  const expected = crypto.createHmac("sha256", secret).update(payload).digest("hex");
+  try {
+    const a = Buffer.from(sig, "hex");
+    const b = Buffer.from(expected, "hex");
+    if (a.length !== b.length || !crypto.timingSafeEqual(a, b)) return empty;
+  } catch {
+    return empty;
+  }
+
+  const expiry = Number(exp);
+  if (!Number.isFinite(expiry) || Date.now() > expiry) return empty;
+  return { ok: true, userId, purpose };
 }
 
 export function verifySignedOAuthState(
   state: string | undefined,
   secretFallback: string
 ): boolean {
-  if (!state) return false;
-  const parts = state.split(".");
-  if (parts.length !== 3) return false;
-  const [nonce, exp, sig] = parts;
-  if (!nonce || !exp || !sig) return false;
-
-  const payload = `${nonce}.${exp}`;
-  const expected = crypto
-    .createHmac("sha256", stateSecret(secretFallback))
-    .update(payload)
-    .digest("hex");
-  try {
-    const a = Buffer.from(sig, "hex");
-    const b = Buffer.from(expected, "hex");
-    if (a.length !== b.length || !crypto.timingSafeEqual(a, b)) return false;
-  } catch {
-    return false;
-  }
-
-  const expiry = Number(exp);
-  return Number.isFinite(expiry) && Date.now() <= expiry;
+  return readSignedOAuthState(state, secretFallback).ok;
 }
 
 export function resolveFrontendOrigin(): string {

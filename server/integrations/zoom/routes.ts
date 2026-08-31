@@ -1,11 +1,16 @@
 import type { Express, Request, Response } from "express";
-import crypto from "crypto";
 import { getZoomConfig, isZoomConfigured } from "./config.js";
 import { buildZoomAuthorizeUrl, exchangeZoomCode } from "./oauth.js";
-import { clearZoomTokens, isZoomConnected, loadZoomTokens } from "./tokens.js";
+import {
+  clearZoomTokens,
+  isZoomConnected,
+  loadZoomTokens,
+  saveZoomTokens,
+} from "./tokens.js";
 import {
   createZoomLiveSession,
   getLiveSession,
+  sessionSecretOk,
   subscribeLiveSession,
 } from "./transcriptBus.js";
 import {
@@ -15,21 +20,8 @@ import {
   verifyZoomWebhookSignature,
   zoomWebhookValidationResponse,
 } from "./rtmsHub.js";
-import { resolveFrontendOrigin } from "../oauthShared.js";
-
-const oauthStates = new Set<string>();
-
-function newOAuthState(): string {
-  const state = crypto.randomBytes(16).toString("hex");
-  oauthStates.add(state);
-  return state;
-}
-
-function consumeOAuthState(state: string | undefined): boolean {
-  if (!state || !oauthStates.has(state)) return false;
-  oauthStates.delete(state);
-  return true;
-}
+import { registerOAuthConnectRoutes } from "../connectFlow.js";
+import { getAuthUserId, requireAuthUser } from "../../requireUser.js";
 
 /** Register before express.json() — Zoom HMAC requires raw body. */
 export function registerZoomWebhook(app: Express): void {
@@ -44,15 +36,16 @@ export function registerZoomWebhook(app: Express): void {
 
 async function handleZoomWebhook(req: Request, res: Response, rawBody: string): Promise<void> {
   const cfg = getZoomConfig();
+  if (!cfg?.webhookSecret) {
+    res.status(401).json({ error: "Zoom webhook secret is not configured" });
+    return;
+  }
   const signature = req.headers["x-zm-signature"] as string | undefined;
   const timestamp = req.headers["x-zm-request-timestamp"] as string | undefined;
-
-  if (cfg?.webhookSecret) {
-    const valid = verifyZoomWebhookSignature(rawBody, signature, timestamp, cfg.webhookSecret);
-    if (!valid) {
-      res.status(401).json({ error: "Invalid Zoom webhook signature" });
-      return;
-    }
+  const valid = verifyZoomWebhookSignature(rawBody, signature, timestamp, cfg.webhookSecret);
+  if (!valid) {
+    res.status(401).json({ error: "Invalid Zoom webhook signature" });
+    return;
   }
 
   let body: { event?: string; payload?: Record<string, unknown> };
@@ -68,7 +61,7 @@ async function handleZoomWebhook(req: Request, res: Response, rawBody: string): 
 
   if (event === "endpoint.url_validation") {
     const plainToken = String(payload.plainToken ?? "");
-    if (!plainToken || !cfg?.webhookSecret) {
+    if (!plainToken) {
       res.status(400).json({ error: "Missing validation token" });
       return;
     }
@@ -86,12 +79,31 @@ async function handleZoomWebhook(req: Request, res: Response, rawBody: string): 
 }
 
 export function registerZoomRoutes(app: Express): void {
-  app.get("/api/integrations/zoom/status", (_req, res) => {
+  registerOAuthConnectRoutes(app, {
+    slug: "zoom",
+    queryKey: "zoom",
+    notConfiguredMessage: "Zoom OAuth not configured on server",
+    getClientSecret: () => getZoomConfig()?.clientSecret ?? null,
+    buildAuthorizeUrl: buildZoomAuthorizeUrl,
+    exchangeCode: exchangeZoomCode,
+    saveForUser: (userId, record) =>
+      saveZoomTokens(userId, {
+        access_token: record.access_token,
+        refresh_token: record.refresh_token ?? "",
+        expires_at: record.expires_at,
+        account_email: record.account_email,
+        account_id: typeof record.account_id === "string" ? record.account_id : undefined,
+        connected_at: new Date().toISOString(),
+      }),
+  });
+
+  app.get("/api/integrations/zoom/status", requireAuthUser, (req, res) => {
     const cfg = getZoomConfig();
-    const tokens = loadZoomTokens();
+    const userId = getAuthUserId(req)!;
+    const tokens = loadZoomTokens(userId);
     res.json({
       configured: isZoomConfigured(),
-      connected: isZoomConnected(),
+      connected: isZoomConnected(userId),
       account_email: tokens?.account_email ?? null,
       connected_at: tokens?.connected_at ?? null,
       rtms_supported: cfg?.rtmsSupported ?? false,
@@ -99,59 +111,26 @@ export function registerZoomRoutes(app: Express): void {
     });
   });
 
-  app.get("/api/integrations/zoom/connect", (_req, res) => {
-    if (!isZoomConfigured()) {
-      res.status(503).json({ error: "Zoom OAuth not configured on server" });
-      return;
-    }
-    try {
-      const state = newOAuthState();
-      const url = buildZoomAuthorizeUrl(state);
-      res.redirect(url);
-    } catch (err) {
-      res.status(500).json({
-        error: err instanceof Error ? err.message : "Failed to start Zoom OAuth",
-      });
-    }
-  });
-
-  app.get("/api/integrations/zoom/callback", async (req, res) => {
-    const code = String(req.query.code ?? "");
-    const state = String(req.query.state ?? "");
-    const frontendOrigin = resolveFrontendOrigin();
-
-    if (!code || !consumeOAuthState(state)) {
-      res.redirect(`${frontendOrigin}/?zoom=error&reason=invalid_state`);
-      return;
-    }
-
-    try {
-      await exchangeZoomCode(code);
-      res.redirect(`${frontendOrigin}/?zoom=connected`);
-    } catch (err) {
-      console.error("[zoom-oauth] callback error:", err);
-      res.redirect(`${frontendOrigin}/?zoom=error&reason=token_exchange`);
-    }
-  });
-
-  app.post("/api/integrations/zoom/disconnect", (_req, res) => {
-    clearZoomTokens();
+  app.post("/api/integrations/zoom/disconnect", requireAuthUser, (req, res) => {
+    clearZoomTokens(getAuthUserId(req)!);
     res.json({ ok: true });
   });
 
-  app.post("/api/integrations/zoom/live-session/start", (_req, res) => {
-    if (!isZoomConnected()) {
-      res.status(400).json({ error: "Connect Zoom first via /api/integrations/zoom/connect" });
+  app.post("/api/integrations/zoom/live-session/start", requireAuthUser, (req, res) => {
+    const userId = getAuthUserId(req)!;
+    if (!isZoomConnected(userId)) {
+      res.status(400).json({ error: "Connect Zoom first via Connect Zoom" });
       return;
     }
-    const sessionId = createZoomLiveSession();
-    res.json({ sessionId, platform: "zoom" });
+    const created = createZoomLiveSession(userId);
+    res.json({ ...created, platform: "zoom" });
   });
 
   app.get("/api/integrations/zoom/live-transcript/stream", (req, res) => {
     const sessionId = String(req.query.sessionId ?? "");
+    const sessionSecret = String(req.query.sessionSecret ?? "");
     const session = getLiveSession(sessionId);
-    if (!session) {
+    if (!session || !sessionSecretOk(session, sessionSecret)) {
       res.status(404).json({ error: "Live session not found or expired" });
       return;
     }

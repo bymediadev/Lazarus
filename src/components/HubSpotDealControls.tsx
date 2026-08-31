@@ -2,12 +2,12 @@ import { useCallback, useEffect, useState } from "react";
 import {
   disconnectHubSpot,
   fetchHubSpotStatus,
-  hubspotConnectUrl,
   importHubSpotDealNotes,
   searchHubSpotDeals,
   type HubSpotDealHit,
   type HubSpotProviderStatus,
 } from "../lib/hubspotIntegration";
+import { startLoggedInOAuthConnect } from "../lib/oauthConnect";
 import type { HistoricalCrmContextEntry } from "../types";
 
 export interface HubSpotImportPayload {
@@ -59,16 +59,9 @@ export default function HubSpotDealControls({ onImport, onError }: Props) {
   }, [refresh]);
 
   const openOAuthPopup = () => {
-    const popup = window.open(
-      hubspotConnectUrl(),
-      "lazarus-hubspot-oauth",
-      "popup=yes,width=560,height=720,resizable=yes,scrollbars=yes"
-    );
-    if (!popup) {
-      onError("Allow popups to connect HubSpot.");
-      return;
-    }
-    popup.focus();
+    void startLoggedInOAuthConnect("hubspot").catch((err) => {
+      onError(err instanceof Error ? err.message : "Allow popups to connect HubSpot.");
+    });
   };
 
   const runSearch = async () => {
