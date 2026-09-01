@@ -13,6 +13,7 @@ import { FREE_ANALYSIS_CAP } from "./billing.js";
 import { guestDailyLimit } from "./guestRateLimit.js";
 import { countAnalysesTodayUtc, getRuntimeConfig } from "./runtimeConfig.js";
 import { latestRestoreSnapshot, RESTORE_RUNBOOK, type RestoreSnapshot } from "./opsRestore.js";
+import { vendorDashboards, type VendorDashboardLink } from "./vendorDashboards.js";
 
 const bootTime = new Date().toISOString();
 
@@ -80,6 +81,7 @@ export type SystemStatus = {
     rows_affected: number;
     retention_days: number;
   } | null;
+  vendor_dashboards: VendorDashboardLink[];
 };
 
 export async function buildSystemStatus(): Promise<SystemStatus> {
@@ -251,6 +253,7 @@ export async function buildSystemStatus(): Promise<SystemStatus> {
     integrations,
     keys,
     last_purge: lastPurge,
+    vendor_dashboards: vendorDashboards(),
   };
 }
 

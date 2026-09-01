@@ -229,9 +229,18 @@ export async function signInWithEmail(email: string): Promise<{
 }
 
 export function providerConnectUrl(provider: LazarusLoginProvider): string {
-  if (provider === "google") return `${API_BASE}/api/integrations/google/connect`;
-  if (provider === "hubspot") return `${API_BASE}/api/integrations/hubspot/connect`;
-  return `${API_BASE}/api/integrations/salesforce/connect`;
+  const slug =
+    provider === "google" ? "google" : provider === "hubspot" ? "hubspot" : "salesforce";
+  const path = `${API_BASE}/api/integrations/${slug}/connect`;
+  const url =
+    typeof window !== "undefined"
+      ? new URL(path, window.location.origin)
+      : new URL(path, "http://localhost:5173");
+  if (typeof window !== "undefined") {
+    url.searchParams.set("return_origin", window.location.origin);
+  }
+  url.searchParams.set("return_path", "/login");
+  return url.toString();
 }
 
 /** Ensure the API is reachable before opening the OAuth popup (avoids blank "refused" tabs). */

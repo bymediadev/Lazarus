@@ -578,18 +578,34 @@ export default function App() {
       return "Integration";
     };
 
-    // Google often clears window.opener (COOP). Broadcast to every Lazarus tab, then close.
+    // Google often clears window.opener (COOP). Broadcast to every Lazarus tab.
+    // Keep login_code in the URL until LoginScreen consumes it. Legacy callbacks
+    // landed on `/`; send those to /login, but never yank /portal connect returns.
     const loginCode = params.get("login_code");
     if (provider && outcome) {
       publishOAuthComplete({ provider, outcome, reason, loginCode });
-      window.history.replaceState({}, "", window.location.pathname || "/");
-      window.setTimeout(() => {
-        try {
-          window.close();
-        } catch {
-          /* browser may block */
-        }
-      }, 350);
+      const isPopup = Boolean(window.opener && !window.opener.closed);
+      const path = window.location.pathname.replace(/\/+$/, "") || "/";
+      const onLogin = path === "/login";
+      const onPortal =
+        path === "/portal" ||
+        path === "/app" ||
+        path.startsWith("/portal/") ||
+        path.startsWith("/app/");
+      const loginProviders = provider === "google" || provider === "hubspot" || provider === "salesforce";
+      if (isPopup) {
+        window.setTimeout(() => {
+          try {
+            window.close();
+          } catch {
+            /* browser may block */
+          }
+        }, 400);
+      } else if (!onLogin && !onPortal && loginProviders) {
+        const qs = window.location.search;
+        window.history.replaceState({}, "", `/login${qs}`);
+        setRoute(getAppRoute("/login"));
+      }
     }
 
     return subscribeOAuthComplete((detail) => {
@@ -1086,7 +1102,6 @@ export default function App() {
       ) : showLoginPage ? (
         <LoginScreen
           initialMode={loginMode}
-          onClose={() => goTo("/")}
           onContinueGuest={() => goTo("/portal")}
         />
       ) : showSite ? (

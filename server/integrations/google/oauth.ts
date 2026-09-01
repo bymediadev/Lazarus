@@ -1,4 +1,4 @@
-import { getGoogleMeetConfig, GOOGLE_MEET_SCOPES } from "./config.js";
+import { getGoogleMeetConfig, GOOGLE_LOGIN_SCOPES, GOOGLE_MEET_SCOPES } from "./config.js";
 import { loadGoogleTokens, saveGoogleTokens, type GoogleTokenRecord } from "./tokens.js";
 import { secureFetch } from "../../secureFetch.js";
 
@@ -13,17 +13,21 @@ interface TokenResponse {
   token_type: string;
 }
 
-export function buildGoogleAuthorizeUrl(state: string): string {
+export function buildGoogleAuthorizeUrl(
+  state: string,
+  purpose: "login" | "connect" = "connect"
+): string {
   const cfg = getGoogleMeetConfig();
   if (!cfg) throw new Error("Google Meet OAuth is not configured");
 
+  const login = purpose === "login";
   const params = new URLSearchParams({
     client_id: cfg.clientId,
     redirect_uri: cfg.redirectUri,
     response_type: "code",
-    scope: GOOGLE_MEET_SCOPES,
-    access_type: "offline",
-    prompt: "consent",
+    scope: login ? GOOGLE_LOGIN_SCOPES : GOOGLE_MEET_SCOPES,
+    access_type: login ? "online" : "offline",
+    prompt: login ? "select_account" : "consent",
     state,
   });
   return `${AUTH_URL}?${params.toString()}`;

@@ -1,4 +1,4 @@
-import { openTrustPack, TRUST_PACK_NAV, type TrustPackSlug } from "../lib/trustPack";
+import { openTrustPack, TRUST_PACK_NAV, trustPackUrl, type TrustPackSlug } from "../lib/trustPack";
 
 export default function SiteFooter() {
   const handleOpen = (slug: TrustPackSlug) => {
@@ -13,14 +13,20 @@ export default function SiteFooter() {
           </span>
           <nav className="site-footer-nav" aria-label="Legal">
             {TRUST_PACK_NAV.map(({ slug, label }) => (
-              <button
+              <a
                 key={slug}
-                type="button"
+                href={trustPackUrl(slug)}
                 className="trust-pack-link"
-                onClick={() => handleOpen(slug)}
+                onClick={(event) => {
+                  if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey || event.button !== 0) {
+                    return;
+                  }
+                  event.preventDefault();
+                  handleOpen(slug);
+                }}
               >
                 {label}
-              </button>
+              </a>
             ))}
           </nav>
           <span className="site-footer-copy">

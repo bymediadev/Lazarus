@@ -3,7 +3,7 @@
  * Usage: npm run test:security
  */
 import { verifyHubSpotWebhookSecret } from "../server/integrations/hubspot.ts";
-import { createSignedOAuthState, verifySignedOAuthState } from "../server/integrations/oauthShared.ts";
+import { createSignedOAuthState, verifySignedOAuthState, readSignedOAuthState, oauthFrontendReturnUrl } from "../server/integrations/oauthShared.ts";
 import { secretsEqual } from "../server/cryptoSecrets.ts";
 import { consumeRateLimit } from "../server/rateLimit.ts";
 import { consumeLoginCode, issueLoginCode } from "../server/loginTickets.ts";
@@ -64,8 +64,38 @@ const code = issueLoginCode({
 });
 const first = consumeLoginCode(code);
 check("login code consumes once and is user-bound", first?.userId === "user-1" && first.access_token === "access");
-check("login code cannot be reused", consumeLoginCode(code) === null);
+check("login code can be replayed briefly for popup+opener", consumeLoginCode(code)?.userId === "user-1");
 check("login code rejects missing id", consumeLoginCode("") === null);
+
+const loginState = createSignedOAuthState("provider-secret", {
+  purpose: "login",
+  returnOrigin: "https://www.getldr.ca",
+  returnPath: "/login",
+});
+const loginParsed = readSignedOAuthState(loginState, "provider-secret");
+check(
+  "oauth 7-part state roundtrip",
+  loginParsed.ok === true &&
+    loginParsed.purpose === "login" &&
+    loginParsed.returnOrigin === "https://www.getldr.ca" &&
+    loginParsed.returnPath === "/login"
+);
+check(
+  "oauth login callback returns to /login",
+  oauthFrontendReturnUrl(loginParsed, { google: "connected", login_code: "abc" }) ===
+    "https://www.getldr.ca/login?google=connected&login_code=abc"
+);
+const connectState = createSignedOAuthState("provider-secret", {
+  userId: "user-1",
+  purpose: "connect",
+  returnOrigin: "https://www.getldr.ca",
+  returnPath: "/portal",
+});
+check(
+  "oauth connect callback returns to /portal",
+  oauthFrontendReturnUrl(readSignedOAuthState(connectState, "provider-secret"), { google: "connected" }) ===
+    "https://www.getldr.ca/portal?google=connected"
+);
 
 const prevDelivery = process.env.AUTH_REQUIRE_EMAIL_DELIVERY;
 const prevNode = process.env.NODE_ENV;

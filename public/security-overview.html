@@ -4,11 +4,17 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Security Overview — Lazarus Deal Recovery</title>
+  <meta name="robots" content="index, follow" />
+  <meta
+    name="description"
+    content="Security Overview for Lazarus Deal Recovery: encryption, tenant isolation, subprocessors, and current SOC 2 status."
+  />
+  <link rel="canonical" href="https://www.getldr.ca/security-overview" />
   <link rel="stylesheet" href="/legal-shared.css" />
 </head>
 <body>
   <div class="legal-nav no-print">
-    <a href="/">App</a>
+    <a href="/">Home</a>
     <a href="/privacy">Privacy Policy</a>
     <a href="/terms">Terms of Service</a>
     <a href="/dpa">Data Processing Addendum</a>
@@ -141,7 +147,7 @@
     <tr><th>Control</th><th>Implementation</th></tr>
     <tr><td>Encryption in transit</td><td>TLS 1.3 (HTTPS) for all client and API traffic</td></tr>
     <tr><td>Encryption at rest</td><td>AES-256 via Supabase / cloud infrastructure</td></tr>
-    <tr><td>Tenant isolation</td><td>PostgreSQL RLS on customer tables; per-user rows when Supabase Auth + <code>user_id</code> are used</td></tr>
+    <tr><td>Tenant isolation</td><td>PostgreSQL RLS on every public table (FORCE enabled). Browser <code>anon</code>/<code>authenticated</code> keys have no table GRANT (including TRUNCATE, which RLS does not cover). Data API cannot read or wipe rows; the Express API uses the service role.</td></tr>
     <tr><td>Privileged access</td><td>Service role bypasses RLS server-side only; RPC functions locked to service role; founder/ops routes require allowlisted login</td></tr>
     <tr><td>Browser exposure</td><td>Service role and Gemini keys never shipped to client</td></tr>
     <tr><td>AI data use</td><td>APIs configured for zero retention / no public model training where available</td></tr>

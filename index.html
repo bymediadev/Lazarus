@@ -23,6 +23,17 @@
       content="deal recovery, closed lost pipeline, sales pipeline recovery, win back lost clients, sales pipeline acceleration, Lazarus AI"
     />
     <link rel="canonical" href="https://www.getldr.ca/" />
+    <link rel="alternate" hreflang="en-CA" href="https://www.getldr.ca/" />
+    <link rel="alternate" hreflang="en" href="https://www.getldr.ca/" />
+    <link rel="alternate" hreflang="x-default" href="https://www.getldr.ca/" />
+    <link rel="describedby" href="https://www.getldr.ca/llms.txt" />
+    <link rel="alternate" type="text/plain" title="LLM information" href="https://www.getldr.ca/llms.txt" />
+    <script>
+      document.documentElement.classList.add("js-ready");
+    </script>
+    <style>
+      html.js-ready #seo-static { display: none !important; }
+    </style>
 
     <!-- LinkedIn & Slack Link Preview Optimization -->
     <meta property="og:type" content="website" />
@@ -61,23 +72,26 @@
             "@id": "https://www.getldr.ca/#organization",
             "name": "Lazarus Deal Recovery",
             "url": "https://www.getldr.ca/",
-            "logo": "https://www.getldr.ca/logo.png",
+            "logo": {
+              "@type": "ImageObject",
+              "url": "https://www.getldr.ca/logo.png",
+              "width": 500,
+              "height": 500
+            },
             "email": "support@getldr.ca",
+            "areaServed": "CA",
             "contactPoint": [
               {
                 "@type": "ContactPoint",
                 "email": "sales@getldr.ca",
-                "contactType": "sales"
+                "contactType": "sales",
+                "availableLanguage": "English"
               },
               {
                 "@type": "ContactPoint",
                 "email": "support@getldr.ca",
-                "contactType": "customer support"
-              },
-              {
-                "@type": "ContactPoint",
-                "email": "joshua@getldr.ca",
-                "contactType": "feedback"
+                "contactType": "customer support",
+                "availableLanguage": "English"
               }
             ],
             "description": "Deal recovery software for sales managers and VPs who need to win back closed-lost B2B pipeline."
@@ -88,7 +102,22 @@
             "url": "https://www.getldr.ca/",
             "name": "Lazarus Deal Recovery",
             "publisher": { "@id": "https://www.getldr.ca/#organization" },
-            "inLanguage": "en-US"
+            "inLanguage": "en-CA"
+          },
+          {
+            "@type": "WebPage",
+            "@id": "https://www.getldr.ca/#webpage",
+            "url": "https://www.getldr.ca/",
+            "name": "Lazarus Deal Recovery | Win Back Closed-Lost Sales Pipeline",
+            "isPartOf": { "@id": "https://www.getldr.ca/#website" },
+            "about": { "@id": "https://www.getldr.ca/#app" },
+            "primaryImageOfPage": {
+              "@type": "ImageObject",
+              "url": "https://www.getldr.ca/og-card.png",
+              "width": 1200,
+              "height": 630
+            },
+            "inLanguage": "en-CA"
           },
           {
             "@type": "SoftwareApplication",
@@ -96,12 +125,17 @@
             "name": "Lazarus Deal Recovery",
             "url": "https://www.getldr.ca/",
             "applicationCategory": "BusinessApplication",
-            "operatingSystem": "Web",
-            "description": "Lazarus reads the recording, transcript, and HubSpot notes, then names the blocker and a 0–90 day plan you paste into HubSpot. No meeting bot. Five free analyses.",
+            "operatingSystem": "Web browser",
+            "description": "Lazarus reads the recording, transcript, and HubSpot notes, then names the blocker and a 0-90 day plan you paste into HubSpot. No meeting bot. Five free analyses.",
+            "brand": { "@id": "https://www.getldr.ca/#organization" },
+            "publisher": { "@id": "https://www.getldr.ca/#organization" },
             "offers": {
               "@type": "Offer",
-              "price": "0",
+              "url": "https://www.getldr.ca/#pricing",
+              "price": 0,
               "priceCurrency": "USD",
+              "availability": "https://schema.org/InStock",
+              "category": "Free",
               "description": "First 5 deal recovery reports free"
             },
             "featureList": [
@@ -109,19 +143,20 @@
               "Recoverable vs flat no triage",
               "0-90 day recovery plan",
               "CRM-ready forecast notes"
-            ],
-            "publisher": { "@id": "https://www.getldr.ca/#organization" }
+            ]
           },
           {
             "@type": "FAQPage",
-            "@id": "https://www.getldr.ca/#objections",
+            "@id": "https://www.getldr.ca/#faq",
+            "url": "https://www.getldr.ca/#objections",
+            "isPartOf": { "@id": "https://www.getldr.ca/#webpage" },
             "mainEntity": [
               {
                 "@type": "Question",
-                "name": "We don’t want another bot on the call.",
+                "name": "We don't want another bot on the call.",
                 "acceptedAnswer": {
                   "@type": "Answer",
-                  "text": "There isn’t one. Lazarus never joins the meeting. You drop the recording, transcript, or email after. Keep your stack."
+                  "text": "There isn't one. Lazarus never joins the meeting. You drop the recording, transcript, or email after. Keep your stack."
                 }
               },
               {
@@ -129,7 +164,7 @@
                 "name": "We already have Meet, Teams, or a recorder.",
                 "acceptedAnswer": {
                   "@type": "Answer",
-                  "text": "Keep it. That tool saves the call. Lazarus judges the deal — closable, recoverable, or a flat no. We sit on top, not instead."
+                  "text": "Keep it. That tool saves the call. Lazarus judges the deal: closable, recoverable, or a flat no. We sit on top, not instead."
                 }
               },
               {
@@ -145,7 +180,7 @@
                 "name": "AI makes things up.",
                 "acceptedAnswer": {
                   "@type": "Answer",
-                  "text": "If a quote or person is not in your upload, the server strips it before the score runs — and tells you it did. You score what is left, not a chatbot essay."
+                  "text": "If a quote or person is not in your upload, the server strips it before the score runs and tells you it did. You score what is left, not a chatbot essay."
                 }
               },
               {
@@ -153,7 +188,7 @@
                 "name": "Is our data safe? Do you have SOC 2?",
                 "acceptedAnswer": {
                   "@type": "Answer",
-                  "text": "Encrypted in transit and at rest. Your content is not used to train public models. Teams only see their own deals. We are not SOC 2 certified today — honest fit for pilot and mid-market."
+                  "text": "Encrypted in transit and at rest. Your content is not used to train public models. Teams only see their own deals. We are not SOC 2 certified today. Honest fit for pilot and mid-market."
                 }
               }
             ]
@@ -171,23 +206,117 @@
   </head>
   <body>
     <div id="root"></div>
-    <noscript>
+    <!-- Visible to crawlers that do not run JS (Semrush Site Audit). Hidden as soon as JS runs. -->
+    <div id="seo-static">
+      <header>
+        <p>Lazarus Deal Recovery</p>
+        <nav aria-label="Site">
+          <a href="https://www.getldr.ca/">Home</a>
+          <a href="https://www.getldr.ca/privacy">Privacy Policy</a>
+          <a href="https://www.getldr.ca/terms">Terms of Service</a>
+          <a href="https://www.getldr.ca/dpa">Data Processing Addendum</a>
+          <a href="https://www.getldr.ca/security-overview">Security Overview</a>
+        </nav>
+      </header>
       <main>
         <p>Deal recovery for sales managers and VPs</p>
         <h1>Win back closed-lost sales pipeline</h1>
         <p>
-          Lazarus reads the recording, transcript, and email thread — plus HubSpot notes when you
-          connect. It names the blocker and a 0–90 day plan you paste into HubSpot notes. No meeting
-          bot. Five free analyses.
+          Lazarus Deal Recovery helps sales managers and VPs of Sales run cleaner forecast calls.
+          Which rep-owned deals will actually close, which stalled deals are recoverable versus a
+          flat no, and what to do in the next 0-90 days. Keep Meet, Teams, or Zoom. Lazarus never
+          joins the meeting.
         </p>
         <p>
-          Lazarus Deal Recovery is a forecast tool for the manager running the call — which deals
-          close, which stalled deals are recoverable vs a flat no, and a 0–90 day plan you paste
-          into HubSpot notes. Salesforce works the same way.
+          Lazarus reads the recording, transcript, and email thread — plus HubSpot notes when you
+          connect. It names the blocker and a 0-90 day plan you paste into HubSpot notes. Salesforce
+          works the same way. No credit card. No meeting bot. Five free analyses.
         </p>
-        <p><a href="https://www.getldr.ca/">Open Lazarus Deal Recovery</a></p>
+        <p>
+          <a href="https://www.getldr.ca/">Run 5 Free Recovery Reports</a>
+          ·
+          <a href="https://calendly.com/getldr-sales/30min">Book a 30-minute look</a>
+        </p>
+        <h2>Who it is for</h2>
+        <p>
+          Frontline sales managers and VPs who own the forecast call. Mid-market B2B with HubSpot or
+          Salesforce. About 44% of B2B deals get pushed back — know which of yours still deserve
+          effort. Not for anyone shopping for an AI SDR, an autonomous closer, a meeting bot, or a
+          Gong replacement. Keep your recorder. Lazarus is the judgment layer on top.
+        </p>
+        <h2>What it is</h2>
+        <p>
+          Deal recovery for the manager running the call. Not a recorder. Not an AI salesperson.
+          You keep your stack. Lazarus scores the deal from evidence you already have.
+        </p>
+        <ul>
+          <li>Which rep-owned deals are actually going to close</li>
+          <li>Which stalled deals are recoverable vs a flat no</li>
+          <li>The blocker, and a 0-90 day plan you paste into HubSpot notes</li>
+        </ul>
+        <h2>How it works</h2>
+        <ol>
+          <li>
+            Add evidence: a recording, transcript, email thread, or CRM notes, compiled in one run.
+          </li>
+          <li>Run analysis: Lazarus scores the deal and names the blocker in plain language.</li>
+          <li>
+            Use the brief: take the recovery plan into forecast and paste a short note into HubSpot
+            or Salesforce.
+          </li>
+        </ol>
+        <h2>The ones that show up on every call</h2>
+        <h3>We don't want another bot on the call.</h3>
+        <p>
+          There isn't one. Lazarus never joins the meeting. You drop the recording, transcript, or
+          email after. Keep your stack.
+        </p>
+        <h3>We already have Meet, Teams, or a recorder.</h3>
+        <p>
+          Keep it. That tool saves the call. Lazarus judges the deal: closable, recoverable, or a
+          flat no. We sit on top, not instead.
+        </p>
+        <h3>Why not just paste the transcript into ChatGPT?</h3>
+        <p>
+          ChatGPT writes. Paste the same call twice and the answer can change. Lazarus reads the
+          text, checks quotes against the transcript, then scores with fixed rules you can defend
+          in the room.
+        </p>
+        <h3>AI makes things up.</h3>
+        <p>
+          If a quote or person is not in your upload, the server strips it before the score runs
+          and tells you it did. You score what is left, not a chatbot essay.
+        </p>
+        <h3>Is our data safe? Do you have SOC 2?</h3>
+        <p>
+          Encrypted in transit and at rest. Your content is not used to train public models. Teams
+          only see their own deals. We are not SOC 2 certified today. Honest fit for pilot and
+          mid-market. Full detail is in the
+          <a href="https://www.getldr.ca/security-overview">Security Overview</a>.
+        </p>
+        <h2>Pricing</h2>
+        <p>
+          Five free analyses. Price is per deal analysis, not per seat. Paid plans wait until you
+          need them. Sign in to save your runs.
+        </p>
+        <h2>About Lazarus Deal Recovery</h2>
+        <p>
+          Built for sales managers and VPs who run forecast calls and need a straight answer on
+          stalled deals. You already have a recorder and HubSpot. What you do not have is a clear
+          call on which deals are still winnable. A person still runs the deal. Lazarus does not
+          sell, write outreach, or replace your team.
+        </p>
       </main>
-    </noscript>
+      <footer>
+        <nav aria-label="Legal">
+          <a href="https://www.getldr.ca/privacy">Privacy Policy</a>
+          <a href="https://www.getldr.ca/terms">Terms of Service</a>
+          <a href="https://www.getldr.ca/dpa">Data Processing Addendum</a>
+          <a href="https://www.getldr.ca/security-overview">Security Overview</a>
+        </nav>
+        <p>Lazarus Revenue Intelligence Inc., Ontario, Canada. Contact sales@getldr.ca or support@getldr.ca.</p>
+      </footer>
+    </div>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>

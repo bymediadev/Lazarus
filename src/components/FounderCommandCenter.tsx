@@ -18,6 +18,7 @@ import {
   fetchFounderContactInquiries,
   type ContactInquiry,
   type FounderApisInventory,
+  type VendorDashboard,
 } from "../lib/founderApi";
 import { isFounderUnlimitedEmail } from "../lib/guestUsage";
 import { trustPackUrl } from "../lib/trustPack";
@@ -199,6 +200,10 @@ export default function FounderCommandCenter({ opsEmail, onOpenProduct }: Props)
           </button>
         ))}
       </nav>
+
+      {(system?.vendor_dashboards ?? apis?.vendor_dashboards)?.length ? (
+        <VendorConsoles dashboards={system?.vendor_dashboards ?? apis?.vendor_dashboards ?? []} />
+      ) : null}
 
       {notice && <p className="ops-notice">{notice}</p>}
       {error && <p className="ops-error">{error}</p>}
@@ -440,6 +445,15 @@ export default function FounderCommandCenter({ opsEmail, onOpenProduct }: Props)
                       {p.last_error_at
                         ? ` · last fail ${new Date(p.last_error_at).toLocaleString()}`
                         : ""}
+                      {p.dashboard_url ? (
+                        <>
+                          {" "}
+                          ·{" "}
+                          <a href={p.dashboard_url} target="_blank" rel="noopener noreferrer">
+                            Open dashboard
+                          </a>
+                        </>
+                      ) : null}
                     </p>
                   </div>
                 </div>
@@ -823,7 +837,8 @@ export default function FounderCommandCenter({ opsEmail, onOpenProduct }: Props)
 
           <h2>LLM credit / quota</h2>
           <p className="ops-sub">
-            Model {system.spend.gemini_model}. {system.spend.llm_fails_at_zero}
+            Model {system.spend.gemini_model}. {system.spend.llm_fails_at_zero} Dollar caps live in
+            the vendor consoles above — this page does not set Google or AssemblyAI budgets.
           </p>
           {apis && (
             <p className="ops-fix">
@@ -936,5 +951,36 @@ export default function FounderCommandCenter({ opsEmail, onOpenProduct }: Props)
         </section>
       )}
     </div>
+  );
+}
+
+function VendorConsoles({ dashboards }: { dashboards: VendorDashboard[] }) {
+  if (dashboards.length === 0) return null;
+  return (
+    <section className="ops-vendor-strip" aria-label="Vendor dashboards">
+      <h2 className="ops-vendor-heading">Vendor consoles</h2>
+      <div className="ops-vendor-grid">
+        {dashboards.map((d) => (
+          <article key={d.id} className="ops-vendor-card">
+            <a className="ops-vendor-link" href={d.href} target="_blank" rel="noopener noreferrer">
+              {d.label}
+            </a>
+            <p className="ops-sub">{d.why}</p>
+            {d.extra && d.extra.length > 0 ? (
+              <p className="ops-vendor-extra">
+                {d.extra.map((e, i) => (
+                  <span key={e.href}>
+                    {i > 0 ? " · " : null}
+                    <a href={e.href} target="_blank" rel="noopener noreferrer">
+                      {e.label}
+                    </a>
+                  </span>
+                ))}
+              </p>
+            ) : null}
+          </article>
+        ))}
+      </div>
+    </section>
   );
 }

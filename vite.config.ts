@@ -77,6 +77,9 @@ function trustPackDevPlugin(): Plugin {
 
 export default defineConfig({
   plugins: [react(), trustPackDevPlugin()],
+  build: {
+    sourcemap: false,
+  },
   server: {
     port: 5173,
     proxy: {

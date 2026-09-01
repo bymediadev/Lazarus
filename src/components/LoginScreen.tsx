@@ -39,7 +39,7 @@ export default function LoginScreen({
     salesforce?: boolean;
   }>({});
   const finishingRef = useRef(false);
-  /** Only finish Lazarus login after the user started OAuth for this provider. */
+  /** Set when the user clicks a provider, or when /login returns with a login_code. */
   const pendingProviderRef = useRef<ProviderId | null>(null);
 
   useEffect(() => {
@@ -105,6 +105,45 @@ export default function LoginScreen({
       });
     });
   }, []);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    // Popup still has opener: the original tab finishes via BroadcastChannel.
+    if (window.opener && !window.opener.closed) return;
+
+    const params = new URLSearchParams(window.location.search);
+    const loginCode = params.get("login_code");
+    for (const provider of ["google", "hubspot", "salesforce"] as const) {
+      const outcome = params.get(provider);
+      if (outcome === "error") {
+        pendingProviderRef.current = null;
+        const reason = params.get("reason") ?? "oauth";
+        const friendly =
+          provider === "google" && (reason === "tls_certificate" || reason === "token_exchange")
+            ? "Google sign-in failed on this machine (TLS). Use email + password, or fix Windows CA certs."
+            : `Sign-in failed (${reason}). Try again.`;
+        setError(friendly);
+        setNotice(null);
+        setBusy(null);
+        params.delete(provider);
+        params.delete("reason");
+        params.delete("login_code");
+        const next = `${window.location.pathname}${params.toString() ? `?${params}` : ""}`;
+        window.history.replaceState({}, "", next);
+        return;
+      }
+      if (outcome === "connected" && loginCode) {
+        pendingProviderRef.current = provider;
+        params.delete(provider);
+        params.delete("login_code");
+        params.delete("reason");
+        const next = `${window.location.pathname}${params.toString() ? `?${params}` : ""}`;
+        window.history.replaceState({}, "", next);
+        void finishProviderLogin(provider, loginCode);
+        return;
+      }
+    }
+  }, [finishProviderLogin]);
 
   useEffect(() => {
     return subscribeOAuthComplete((detail) => {

@@ -4,11 +4,17 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Data Processing Addendum — Lazarus Deal Recovery</title>
+  <meta name="robots" content="index, follow" />
+  <meta
+    name="description"
+    content="Data Processing Addendum for Lazarus Deal Recovery: controller and processor roles for B2B deal evidence."
+  />
+  <link rel="canonical" href="https://www.getldr.ca/dpa" />
   <link rel="stylesheet" href="/legal-shared.css" />
 </head>
 <body>
   <div class="legal-nav no-print">
-    <a href="/">App</a>
+    <a href="/">Home</a>
     <a href="/privacy">Privacy Policy</a>
     <a href="/terms">Terms of Service</a>
     <a href="/dpa">Data Processing Addendum</a>
@@ -82,6 +88,10 @@
   <table class="legal-table">
     <tr><th>Sub-processor</th><th>Purpose</th><th>Data processed</th></tr>
     <tr><td>Supabase Inc.</td><td>Database, auth, storage</td><td>Account data, transcripts (when saved), analysis JSON, CRM link metadata</td></tr>
+    <tr><td>Render</td><td>API application hosting</td><td>Application logs and request metadata; Customer data in transit to the API</td></tr>
+    <tr><td>GitHub, Inc. (Pages)</td><td>Static site hosting</td><td>No Customer deal data; public marketing and app UI assets</td></tr>
+    <tr><td>Cloudflare, Inc.</td><td>Turnstile bot protection on analysis submit</td><td>Bot-check tokens; IP as processed by Cloudflare</td></tr>
+    <tr><td>Stripe, Inc.</td><td>Payment processing when checkout is used</td><td>Billing identifiers and payment status (not full card numbers)</td></tr>
     <tr><td>Google LLC (Gemini API)</td><td>LLM text extraction</td><td>Transcript text (ephemeral API call)</td></tr>
     <tr><td>AssemblyAI</td><td>Speech-to-text when Customer uploads audio</td><td>Audio content (ephemeral API call; not stored by Lazarus Deal Recovery)</td></tr>
     <tr><td>Google LLC (Gmail / Meet)</td><td>Optional read-only mailbox / meeting connect</td><td>Thread or meeting text authorized by Customer</td></tr>

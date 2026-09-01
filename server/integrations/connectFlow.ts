@@ -4,6 +4,8 @@ import { createVerifiedSupabaseSession } from "../oauthLogin.js";
 import { requireAuthUser, getAuthUserId } from "../requireUser.js";
 import {
   createSignedOAuthState,
+  oauthFrontendReturnUrl,
+  pickAllowedFrontendOrigin,
   readSignedOAuthState,
   resolveFrontendOrigin,
 } from "./oauthShared.js";
@@ -20,6 +22,8 @@ type Tokenish = {
   connected_at?: string;
 };
 
+export type OAuthPurpose = "login" | "connect";
+
 export function registerOAuthConnectRoutes(
   app: Express,
   opts: {
@@ -28,20 +32,27 @@ export function registerOAuthConnectRoutes(
     loginProvider?: LoginTicketProvider;
     notConfiguredMessage: string;
     getClientSecret: () => string | null;
-    buildAuthorizeUrl: (state: string) => string;
+    buildAuthorizeUrl: (state: string, purpose: OAuthPurpose) => string;
     exchangeCode: (code: string, userId?: string) => Promise<Tokenish>;
     saveForUser: (userId: string, record: Tokenish) => void | Promise<void>;
   }
 ): void {
-  const startLogin = (_req: Request, res: Response) => {
+  const startLogin = (req: Request, res: Response) => {
     const secret = opts.getClientSecret();
     if (!secret) {
       res.status(503).json({ error: opts.notConfiguredMessage });
       return;
     }
     try {
-      const state = createSignedOAuthState(secret, { purpose: "login" });
-      res.redirect(opts.buildAuthorizeUrl(state));
+      const returnOrigin =
+        pickAllowedFrontendOrigin(req.query.return_origin) ?? resolveFrontendOrigin();
+      const returnPath = req.query.return_path === "/portal" ? "/portal" : "/login";
+      const state = createSignedOAuthState(secret, {
+        purpose: "login",
+        returnOrigin,
+        returnPath,
+      });
+      res.redirect(opts.buildAuthorizeUrl(state, "login"));
     } catch (err) {
       res.status(500).json({
         error: err instanceof Error ? err.message : "Failed to start OAuth",
@@ -65,8 +76,15 @@ export function registerOAuthConnectRoutes(
       return;
     }
     try {
-      const state = createSignedOAuthState(secret, { userId, purpose: "connect" });
-      res.json({ url: opts.buildAuthorizeUrl(state) });
+      const returnOrigin =
+        pickAllowedFrontendOrigin(req.get("origin")) ?? resolveFrontendOrigin();
+      const state = createSignedOAuthState(secret, {
+        userId,
+        purpose: "connect",
+        returnOrigin,
+        returnPath: "/portal",
+      });
+      res.json({ url: opts.buildAuthorizeUrl(state, "connect") });
     } catch (err) {
       res.status(500).json({
         error: err instanceof Error ? err.message : "Failed to start OAuth",
@@ -77,42 +95,48 @@ export function registerOAuthConnectRoutes(
   app.get(`/api/integrations/${opts.slug}/callback`, async (req, res) => {
     const code = String(req.query.code ?? "");
     const state = String(req.query.state ?? "");
-    const frontendOrigin = resolveFrontendOrigin();
     const secret = opts.getClientSecret() ?? "";
     const parsed = readSignedOAuthState(state, secret);
+    const bounce = (query: Record<string, string>) =>
+      res.redirect(oauthFrontendReturnUrl(parsed, query));
+
     if (!code || !parsed.ok) {
-      res.redirect(`${frontendOrigin}/?${opts.queryKey}=error&reason=invalid_state`);
+      bounce({ [opts.queryKey]: "error", reason: "invalid_state" });
       return;
     }
     try {
       const record = await opts.exchangeCode(code, parsed.userId ?? undefined);
       if (parsed.purpose === "connect" && parsed.userId) {
         await opts.saveForUser(parsed.userId, record);
-        res.redirect(`${frontendOrigin}/?${opts.queryKey}=connected`);
+        bounce({ [opts.queryKey]: "connected" });
         return;
       }
       if (opts.loginProvider) {
         const email = String(record.account_email ?? "").trim();
         if (!email) {
-          res.redirect(`${frontendOrigin}/?${opts.queryKey}=error&reason=no_email`);
+          bounce({ [opts.queryKey]: "error", reason: "no_email" });
           return;
         }
         const minted = await createVerifiedSupabaseSession(email, opts.loginProvider);
-        await opts.saveForUser(minted.userId, record);
+        // Login uses sign-in scopes (no refresh token). Do not overwrite Gmail/CRM tokens.
+        if (record.refresh_token) {
+          await opts.saveForUser(minted.userId, record);
+        }
         const loginCode = issueLoginCode(minted);
-        res.redirect(
-          `${frontendOrigin}/?${opts.queryKey}=connected&login_code=${encodeURIComponent(loginCode)}`
-        );
+        bounce({
+          [opts.queryKey]: "connected",
+          login_code: loginCode,
+        });
         return;
       }
-      res.redirect(`${frontendOrigin}/?${opts.queryKey}=connected`);
+      bounce({ [opts.queryKey]: "connected" });
     } catch (err) {
       console.error(`[${opts.slug}-oauth] callback error:`, err);
       const reason =
         err instanceof Error && /TLS|certificate/i.test(err.message)
           ? "tls_certificate"
           : "token_exchange";
-      res.redirect(`${frontendOrigin}/?${opts.queryKey}=error&reason=${reason}`);
+      bounce({ [opts.queryKey]: "error", reason });
     }
   });
 }

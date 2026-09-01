@@ -1,0 +1,20 @@
+# Lazarus Deal Recovery
+
+> Lazarus Deal Recovery helps sales managers and VPs of Sales run cleaner forecast calls — which rep-owned deals will close, which stalled deals are recoverable versus a flat no, and what to do in the next 0-90 days. Human-led, AI-assisted. Not an AI SDR or meeting bot.
+
+Lazarus reads a recording, transcript, email thread, and optional HubSpot or Salesforce notes. It names the blocker and returns a CRM-ready brief. Five free analyses; paid plans are priced per deal analysis, not per seat. Keep Meet, Teams, or Zoom — Lazarus never joins the call.
+
+Official site: https://www.getldr.ca/
+
+## Pages
+
+- [Lazarus Deal Recovery](https://www.getldr.ca/): Product homepage — who it is for, how a recovery brief works, objections, and pricing.
+- [Privacy Policy](https://www.getldr.ca/privacy): What we collect, guest versus signed-in processing, and recording-consent rules.
+- [Terms of Service](https://www.getldr.ca/terms): Customer warranties, acceptable use, and how the service is provided.
+- [Data Processing Addendum](https://www.getldr.ca/dpa): Controller/processor roles for B2B use of deal evidence.
+- [Security Overview](https://www.getldr.ca/security-overview): Encryption, tenant isolation, subprocessors, and SOC 2 status.
+
+## Optional
+
+- [Sitemap](https://www.getldr.ca/sitemap.xml): Canonical public URLs.
+- [Book a 30-minute look](https://calendly.com/getldr-sales/30min): Sales walkthrough for managers who own a forecast call.

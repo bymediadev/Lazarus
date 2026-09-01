@@ -3,6 +3,7 @@ import { classifyIssue, buildSystemStatus } from "./founderSystem.js";
 import { serviceRoleClient } from "./founderAuth.js";
 import { isWhiteWhaleConfigured } from "./integrations/whitewhale/config.js";
 import { getWhiteWhaleUserOverview } from "./integrations/whitewhale/client.js";
+import { vendorDashboards } from "./vendorDashboards.js";
 
 export type ApiProviderHealth = {
   id: string;
@@ -21,6 +22,7 @@ export type ApiProviderHealth = {
   last_error_code: string | null;
   error_count_7d: number;
   probe: "config" | "live" | "events";
+  dashboard_url?: string | null;
 };
 
 export type CategoryBucket = {
@@ -56,6 +58,7 @@ export type ApisInventory = {
     detail: string;
     action: string;
   }>;
+  vendor_dashboards: ReturnType<typeof vendorDashboards>;
 };
 
 type EventRow = {
@@ -395,6 +398,8 @@ export async function buildApisInventory(): Promise<ApisInventory> {
   ]);
 
   const integrationMap = Object.fromEntries(system.integrations.map((i) => [i.id, i]));
+  const dashboards = vendorDashboards();
+  const dashboardById = Object.fromEntries(dashboards.map((d) => [d.id, d.href]));
 
   const providers: ApiProviderHealth[] = [
     {
@@ -409,6 +414,7 @@ export async function buildApisInventory(): Promise<ApisInventory> {
       last_error_code: errorsByProvider.gemini?.last_code ?? null,
       error_count_7d: errorsByProvider.gemini?.count ?? 0,
       probe: "live",
+      dashboard_url: dashboardById.gemini ?? null,
     },
     {
       id: "assemblyai",
@@ -422,6 +428,7 @@ export async function buildApisInventory(): Promise<ApisInventory> {
       last_error_code: errorsByProvider.assemblyai?.last_code ?? null,
       error_count_7d: errorsByProvider.assemblyai?.count ?? 0,
       probe: "live",
+      dashboard_url: dashboardById.assemblyai ?? null,
     },
     {
       id: "whitewhale",
@@ -451,6 +458,7 @@ export async function buildApisInventory(): Promise<ApisInventory> {
       last_error_code: errorsByProvider.supabase?.last_code ?? null,
       error_count_7d: errorsByProvider.supabase?.count ?? 0,
       probe: "config",
+      dashboard_url: dashboardById.supabase ?? null,
     },
     {
       id: "hubspot",
@@ -652,5 +660,6 @@ export async function buildApisInventory(): Promise<ApisInventory> {
       quota_errors_prior_7d: quotaPrior,
     },
     billing_alerts,
+    vendor_dashboards: dashboards,
   };
 }

@@ -24,6 +24,14 @@ export type FounderMe = {
   role: string | null;
 };
 
+export type VendorDashboard = {
+  id: string;
+  label: string;
+  href: string;
+  why: string;
+  extra?: Array<{ label: string; href: string }>;
+};
+
 export async function fetchFounderMe(): Promise<FounderMe> {
   return founderFetch<FounderMe>("/api/founder/me");
 }
@@ -107,6 +115,7 @@ export async function fetchFounderSystem() {
       rows_affected: number;
       retention_days: number;
     } | null;
+    vendor_dashboards: VendorDashboard[];
   }>("/api/founder/system");
 }
 
@@ -227,6 +236,7 @@ export type FounderApisInventory = {
     last_error_code: string | null;
     error_count_7d: number;
     probe: string;
+    dashboard_url?: string | null;
   }>;
   category_shift: Array<{
     category: string;
@@ -253,6 +263,7 @@ export type FounderApisInventory = {
     detail: string;
     action: string;
   }>;
+  vendor_dashboards: VendorDashboard[];
 };
 
 export async function fetchFounderApis(): Promise<FounderApisInventory> {

@@ -40,15 +40,26 @@ export function corsAllowedOrigins(): string[] {
   ];
 }
 
+/** Only bounce OAuth back to a listed frontend origin (never an open redirect). */
+export function pickAllowedFrontendOrigin(raw: unknown): string | null {
+  const origin = stripSlash(String(raw ?? "").trim());
+  if (!origin) return null;
+  return corsAllowedOrigins().includes(origin) ? origin : null;
+}
+
 export type OAuthStateMeta = {
   userId?: string | null;
   purpose?: "login" | "connect";
+  returnOrigin?: string | null;
+  returnPath?: "/login" | "/portal" | null;
 };
 
 export type ParsedOAuthState = {
   ok: boolean;
   userId: string | null;
   purpose: "login" | "connect";
+  returnOrigin: string | null;
+  returnPath: "/login" | "/portal" | null;
 };
 
 function stateSecret(fallback: string): string {
@@ -64,7 +75,14 @@ export function createSignedOAuthState(secretFallback: string, meta?: OAuthState
   const exp = String(Date.now() + OAUTH_STATE_TTL_MS);
   const userId = (meta?.userId ?? "").replace(/[^a-zA-Z0-9-]/g, "") || "-";
   const purpose = meta?.purpose === "connect" ? "connect" : "login";
-  const payload = `${nonce}.${exp}.${userId}.${purpose}`;
+  const origin = pickAllowedFrontendOrigin(meta?.returnOrigin);
+  const pathKey =
+    meta?.returnPath === "/portal" ? "portal" : meta?.returnPath === "/login" ? "login" : "";
+  const originB64 = origin ? Buffer.from(origin, "utf8").toString("base64url") : "";
+  const payload =
+    originB64 && pathKey
+      ? `${nonce}.${exp}.${userId}.${purpose}.${originB64}.${pathKey}`
+      : `${nonce}.${exp}.${userId}.${purpose}`;
   const sig = crypto.createHmac("sha256", stateSecret(secretFallback)).update(payload).digest("hex");
   return `${payload}.${sig}`;
 }
@@ -73,7 +91,13 @@ export function readSignedOAuthState(
   state: string | undefined,
   secretFallback: string
 ): ParsedOAuthState {
-  const empty: ParsedOAuthState = { ok: false, userId: null, purpose: "login" };
+  const empty: ParsedOAuthState = {
+    ok: false,
+    userId: null,
+    purpose: "login",
+    returnOrigin: null,
+    returnPath: null,
+  };
   if (!state) return empty;
   const parts = state.split(".");
   let payload = "";
@@ -81,8 +105,24 @@ export function readSignedOAuthState(
   let userId: string | null = null;
   let purpose: "login" | "connect" = "login";
   let exp = "";
+  let returnOrigin: string | null = null;
+  let returnPath: "/login" | "/portal" | null = null;
 
-  if (parts.length === 5) {
+  if (parts.length === 7) {
+    const [nonce, expPart, uid, purposePart, originB64, pathKey, sigPart] = parts;
+    if (!nonce || !expPart || !uid || !purposePart || !originB64 || !pathKey || !sigPart) return empty;
+    payload = `${nonce}.${expPart}.${uid}.${purposePart}.${originB64}.${pathKey}`;
+    sig = sigPart;
+    exp = expPart;
+    userId = uid === "-" ? null : uid;
+    purpose = purposePart === "connect" ? "connect" : "login";
+    try {
+      returnOrigin = pickAllowedFrontendOrigin(Buffer.from(originB64, "base64url").toString("utf8"));
+    } catch {
+      return empty;
+    }
+    returnPath = pathKey === "portal" ? "/portal" : "/login";
+  } else if (parts.length === 5) {
     const [nonce, expPart, uid, purposePart, sigPart] = parts;
     if (!nonce || !expPart || !uid || !purposePart || !sigPart) return empty;
     payload = `${nonce}.${expPart}.${uid}.${purposePart}`;
@@ -118,7 +158,7 @@ export function readSignedOAuthState(
 
   const expiry = Number(exp);
   if (!Number.isFinite(expiry) || Date.now() > expiry) return empty;
-  return { ok: true, userId, purpose };
+  return { ok: true, userId, purpose, returnOrigin, returnPath };
 }
 
 export function verifySignedOAuthState(
@@ -147,6 +187,26 @@ export function resolveFrontendOrigin(): string {
   }
 
   return CANONICAL_SITE_ORIGIN;
+}
+
+export function oauthFrontendReturnUrl(
+  parsed: ParsedOAuthState,
+  query: Record<string, string>
+): string {
+  const origin =
+    pickAllowedFrontendOrigin(parsed.returnOrigin) ?? resolveFrontendOrigin();
+  const path =
+    parsed.purpose === "connect"
+      ? "/portal"
+      : parsed.returnPath === "/portal"
+        ? "/portal"
+        : "/login";
+  const params = new URLSearchParams();
+  for (const [key, value] of Object.entries(query)) {
+    if (value) params.set(key, value);
+  }
+  const qs = params.toString();
+  return qs ? `${origin}${path}?${qs}` : `${origin}${path}`;
 }
 
 export function publicApiBase(): string {

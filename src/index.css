@@ -35,6 +35,38 @@ body,
   height: 100%;
 }
 
+html.js-ready #seo-static {
+  display: none !important;
+}
+
+#seo-static {
+  max-width: 44rem;
+  margin: 0 auto;
+  padding: 2rem 1.25rem 4rem;
+}
+
+#seo-static nav {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem 1.25rem;
+  margin: 0.75rem 0 1.5rem;
+}
+
+#seo-static h1,
+#seo-static h2,
+#seo-static h3 {
+  margin: 1.25rem 0 0.5rem;
+}
+
+#seo-static p,
+#seo-static li {
+  margin-bottom: 0.75rem;
+}
+
+#seo-static a {
+  color: var(--teal);
+}
+
 body {
   font-family: var(--font);
   background: var(--bg);
@@ -4722,6 +4754,60 @@ a.run-button:hover {
   padding: 0;
   text-decoration: underline;
   text-underline-offset: 2px;
+}
+
+.ops-vendor-strip {
+  margin: 0 0 1.25rem;
+}
+
+.ops-vendor-heading {
+  font-size: 0.8rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--label);
+  margin: 0 0 0.65rem;
+}
+
+.ops-vendor-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.75rem;
+}
+
+.ops-vendor-card {
+  border: 1px solid var(--panel-border);
+  background: var(--panel);
+  padding: 0.85rem 0.95rem;
+}
+
+.ops-vendor-link {
+  color: var(--teal);
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.ops-vendor-link:hover {
+  text-decoration: underline;
+}
+
+.ops-vendor-card .ops-sub {
+  margin-top: 0.4rem;
+}
+
+.ops-vendor-extra {
+  margin-top: 0.45rem;
+  font-size: 0.8rem;
+}
+
+.ops-vendor-extra a {
+  color: var(--muted);
+}
+
+@media (max-width: 800px) {
+  .ops-vendor-grid {
+    grid-template-columns: 1fr;
+  }
 }
 
 .ops-apis-headline {

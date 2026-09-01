@@ -23,6 +23,8 @@ export function isGoogleMeetConfigured(): boolean {
   return getGoogleMeetConfig() !== null;
 }
 
+export const GOOGLE_LOGIN_SCOPES = "openid email profile";
+
 export const GOOGLE_MEET_SCOPES = [
   "openid",
   "email",
