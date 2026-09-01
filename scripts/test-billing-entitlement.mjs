@@ -1,4 +1,5 @@
-import { ENTRY_PERIOD_CAP, evaluateCanAnalyze, featureAccessFromRow, FREE_ANALYSIS_CAP } from "../server/billing.ts";
+import { ENTRY_PERIOD_CAP, capHitMessage, evaluateCanAnalyze, featureAccessFromRow, FREE_ANALYSIS_CAP } from "../server/billing.ts";
+import { teamUsageBanner } from "../server/teamUsageNotice.ts";
 import { modelCandidatesForTier, modelTierFromConsume } from "../server/modelForPlan.ts";
 
 function row(partial) {
@@ -38,9 +39,41 @@ assert(
   "entry exhausted should block"
 );
 assert(
-  evaluateCanAnalyze(row({ plan: "team", status: "active", free_used: 5 })).consume === "team",
-  "team unlimited"
+  evaluateCanAnalyze(
+    row({ plan: "entry", status: "active", free_used: 0, entry_used_this_period: ENTRY_PERIOD_CAP })
+  ).can === false,
+  "entry exhausted does not fall back to leftover free"
 );
+assert(
+  evaluateCanAnalyze(
+    row({
+      plan: "entry",
+      status: "active",
+      free_used: 5,
+      entry_used_this_period: ENTRY_PERIOD_CAP,
+      ppu_credits: 1,
+    })
+  ).consume === "ppu",
+  "entry exhausted still consumes ppu credits"
+);
+assert(
+  evaluateCanAnalyze(row({ plan: "team", status: "active", free_used: 5 })).consume === "team",
+  "team consumes team"
+);
+assert(
+  evaluateCanAnalyze(
+    row({ plan: "team", status: "active", free_used: 5, entry_used_this_period: 500 })
+  ).can === true,
+  "team stays unlimited at high usage"
+);
+assert(
+  evaluateCanAnalyze(
+    row({ plan: "team", status: "active", free_used: 5, entry_used_this_period: 500 })
+  ).consume === "team",
+  "team high usage still consumes team, not ppu"
+);
+assert(teamUsageBanner(99) === null, "team notice silent under 100");
+assert(typeof teamUsageBanner(100) === "string" && teamUsageBanner(100).includes("unlimited"), "team notice at 100");
 assert(evaluateCanAnalyze(row({ plan: "team", status: "past_due" })).can === false, "past due blocks");
 assert(featureAccessFromRow(row({ plan: "free" })).lifecycle === false, "free has no lifecycle");
 assert(featureAccessFromRow(row({ plan: "ppu", status: "active" })).lifecycle === false, "ppu has no lifecycle");
@@ -67,4 +100,23 @@ assert(
   "team primary is 3.1 pro"
 );
 assert(modelCandidatesForTier("team").includes("gemini-2.5-pro"), "team falls back to 2.5 pro");
+
+const entryCapMsg = capHitMessage(
+  row({
+    plan: "entry",
+    status: "active",
+    free_used: 5,
+    entry_used_this_period: ENTRY_PERIOD_CAP,
+    period_end: "2026-10-01T00:00:00.000Z",
+  })
+);
+assert(entryCapMsg.includes("$10 extra report"), "entry cap offers $10 extras");
+assert(entryCapMsg.includes("plan renews"), "entry cap offers wait until renew");
+assert(
+  capHitMessage(row({ free_used: FREE_ANALYSIS_CAP, period_end: "2026-10-01T00:00:00.000Z" })).includes(
+    "allowance renews"
+  ),
+  "free cap offers wait until allowance renews"
+);
+
 console.log("billing entitlement checks passed");

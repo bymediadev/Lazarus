@@ -18,11 +18,12 @@ type Props = {
   onSignIn: () => void;
   onCheckout: (plan: CheckoutPlan) => void;
   checkoutContext?: CheckoutContext;
+  plans?: CheckoutPlan[];
 };
 
 function checkoutCta(card: PricingCard, _signedIn: boolean, configured: boolean, busy: string | null) {
   if (busy === card.id) return "Redirecting…";
-  if (card.id === "free") return "Start with 5 free";
+  if (card.id === "free") return "Start with 5 / month";
   if (!configured) return "Billing not configured";
   if (card.checkout === "ppu") return "Buy 1 report";
   return "Subscribe";
@@ -127,7 +128,9 @@ export default function PricingGate({
   onSignIn: _onSignIn,
   onCheckout,
   checkoutContext,
+  plans,
 }: Props) {
+  const extrasOnly = plans?.length === 1 && plans[0] === "ppu";
   return (
     <div className="pricing-gate" role="region" aria-label="Paid plans">
       {pastDue ? (
@@ -140,8 +143,9 @@ export default function PricingGate({
         </div>
       )}
       <p className="pricing-plan-footnote">
-        Paid plans open Stripe Checkout. Create or sign in to your Lazarus account after payment to
-        unlock analyses.
+        {extrasOnly
+          ? "Your monthly plan renews on its billing date. Until then, $10 buys one extra report."
+          : "Paid plans open Stripe Checkout. Create or sign in to your Lazarus account after payment to unlock analyses."}
       </p>
       <PricingPlanCards
         configured={configured}
@@ -151,6 +155,7 @@ export default function PricingGate({
         checkoutContext={checkoutContext}
         onSignIn={_onSignIn}
         onCheckout={onCheckout}
+        plans={plans}
       />
     </div>
   );

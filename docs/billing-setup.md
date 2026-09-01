@@ -4,13 +4,15 @@ Paid gate after **5 free deal analyses**. USD prices (canonical — do not inven
 
 | Plan | Price | Included | Packaging |
 |------|-------|----------|-----------|
-| Free | $0 | 5 analyses · **Gemini 2.5 Flash** | Evaluation |
-| Pay-per-use | $10 one-time | 1 analysis credit (brief only) · **Gemini 2.5 Flash** | One ugly deal this week |
-| Entry | **$99 / month** | 20 analyses + **deal lifecycle tracker** · **Gemini 2.5 Pro** | Default close / intro plan |
-| Team | **$499 / month** | Unlimited + lifecycle · **Gemini 3.1 Pro** | Larger unlimited / multi-manager SKU |
+| Free | $0 | **5 analyses / month** · **Gemini 2.5 Flash** | Evaluation |
+| Pay-per-use | $10 one-time | 1 analysis credit (brief only) · **Gemini 2.5 Flash** | Extra run after a monthly cap, or one ugly deal |
+| Entry | **$99 / month** | **20 analyses / month** + **deal lifecycle tracker** · **Gemini 2.5 Pro** | Default close / intro plan |
+| Team | **$499 / month** | **Unlimited** + lifecycle · **Gemini 3.1 Pro** | Multi-manager stretch SKU |
 | Enterprise | $1,500+ / month | Custom | Deferred until traction — no Stripe Price, no checkout |
 
 **Do not add** a second intro price ($79 was discussed; live Entry is **$99**). **Do not** put Enterprise on the paywall. Team is high for a 5–20 AE team — lead sales with Entry; Team is the stretch plan, not the first close. Customer copy should not apologize for the Team price.
+
+Monthly included caps are hard on **Free** and **Entry**. After that cap: **buy a $10 extra report**, or **wait until the plan renews**. **Team ($499) is unlimited** — we still count usage and email a heads-up at 100 / 200 / 400 analyses in the billing period (`TEAM_USAGE_NOTICE_LEVELS`), not a cutoff. $10 extras from one IP stop at **100 / month** (`PPU_IP_MONTHLY_LIMIT`). Founder / ops accounts stay unlimited.
 
 Paid plans buy a **better model**, not just more volume:
 

@@ -945,6 +945,11 @@ export default function App() {
         setError(err.message);
         if (!auth.session) openSignupPortal();
         void refreshBilling();
+      } else if (
+        err instanceof PostMortemApiError &&
+        (err.code === "IP_DAILY_LIMIT" || err.code === "PPU_IP_LIMIT")
+      ) {
+        setError(err.message);
       } else if (err instanceof TypeError) {
         setRelevanceBlocked(false);
         setError(
@@ -1253,6 +1258,11 @@ export default function App() {
                   {!auth.session && " · Sign up to save results"}
                 </p>
               )}
+              {billing?.usage_notice && !paywalled && (
+                <div className="warning-banner guest-usage-banner">
+                  <p>{billing.usage_notice}</p>
+                </div>
+              )}
 
               {guestNearCap && (
                 <div className="warning-banner guest-usage-banner">
@@ -1273,7 +1283,14 @@ export default function App() {
                     (auth.session ? billing?.configured !== false : stripeConfigured)
                   }
                   pastDue={billing?.past_due === true}
-                  message={guestCapLockMessage(!!auth.session)}
+                  message={
+                    auth.session
+                      ? billing?.cap_hit_message || guestCapLockMessage(true)
+                      : guestCapLockMessage(false)
+                  }
+                  plans={
+                    billing?.plan === "entry" ? ["ppu"] : undefined
+                  }
                   busy={checkoutBusy}
                   error={billingError}
                   onSignIn={openSignupPortal}

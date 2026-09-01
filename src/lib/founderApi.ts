@@ -87,6 +87,7 @@ export async function fetchFounderSystem() {
     spend: {
       guest_cap: number;
       guest_daily_limit: number;
+      guest_free_per_ip?: number;
       global_daily_cap: number | null;
       analyses_today: number;
       gemini_model: string;

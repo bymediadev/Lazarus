@@ -10,7 +10,7 @@ import { isSalesforceConfigured } from "./integrations/salesforce/config.js";
 import { hasAnySalesforceTokens } from "./integrations/salesforce/tokens.js";
 import { serviceRoleClient } from "./founderAuth.js";
 import { FREE_ANALYSIS_CAP } from "./billing.js";
-import { guestDailyLimit } from "./guestRateLimit.js";
+import { guestDailyLimit, guestFreePerIpLimit } from "./guestRateLimit.js";
 import { countAnalysesTodayUtc, getRuntimeConfig } from "./runtimeConfig.js";
 import { latestRestoreSnapshot, RESTORE_RUNBOOK, type RestoreSnapshot } from "./opsRestore.js";
 import { vendorDashboards, type VendorDashboardLink } from "./vendorDashboards.js";
@@ -53,6 +53,7 @@ export type SystemStatus = {
   spend: {
     guest_cap: number;
     guest_daily_limit: number;
+    guest_free_per_ip?: number;
     global_daily_cap: number | null;
     analyses_today: number;
     gemini_model: string;
@@ -240,6 +241,7 @@ export async function buildSystemStatus(): Promise<SystemStatus> {
     spend: {
       guest_cap: FREE_ANALYSIS_CAP,
       guest_daily_limit: guestDailyLimit(),
+      guest_free_per_ip: guestFreePerIpLimit(),
       global_daily_cap: runtime.daily_analysis_cap,
       analyses_today: analysesToday,
       gemini_model: (process.env.GEMINI_MODEL ?? "gemini-2.5-flash").trim() || "gemini-2.5-flash",

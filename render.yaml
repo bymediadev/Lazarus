@@ -105,6 +105,12 @@ services:
         sync: false
       - key: CAPTCHA_REQUIRED
         value: "true"
+      - key: GUEST_IP_MONTHLY_LIMIT
+        value: "100"
+      - key: GUEST_FREE_PER_IP
+        value: "5"
+      - key: PPU_IP_MONTHLY_LIMIT
+        value: "100"
       - key: SUPABASE_ACCESS_TOKEN
         sync: false
       - key: STRIPE_SECRET_KEY

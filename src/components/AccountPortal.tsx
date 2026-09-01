@@ -152,6 +152,11 @@ export default function AccountPortal({ open, onClose }: Props) {
               <p className="account-email">{billing.plan_label}</p>
               <p className="meta-line">Status: {billing.status}</p>
               <p className="meta-line">Analyses: {billing.analyses_remaining_label}</p>
+              {billing.usage_notice && (
+                <div className="warning-banner">
+                  <p>{billing.usage_notice}</p>
+                </div>
+              )}
               {billing.period_end && (billing.plan === "entry" || billing.plan === "team") && (
                 <p className="meta-line">
                   Next renewal: {new Date(billing.period_end).toLocaleDateString()}

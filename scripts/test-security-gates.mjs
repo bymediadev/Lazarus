@@ -7,6 +7,12 @@ import { createSignedOAuthState, verifySignedOAuthState, readSignedOAuthState, o
 import { secretsEqual } from "../server/cryptoSecrets.ts";
 import { consumeRateLimit } from "../server/rateLimit.ts";
 import { consumeLoginCode, issueLoginCode } from "../server/loginTickets.ts";
+import {
+  isAnonymousGuestRateLimited,
+  isIpDailyRateLimited,
+  isPpuIpRateLimited,
+  resetGuestRateLimitBuckets,
+} from "../server/guestRateLimit.ts";
 import { requireEmailDelivery } from "../server/authRoutes.ts";
 import {
   captchaRequired,
@@ -198,6 +204,57 @@ if (prevCaptchaSecret === undefined) delete process.env.TURNSTILE_SECRET_KEY;
 else process.env.TURNSTILE_SECRET_KEY = prevCaptchaSecret;
 if (prevCaptchaNode === undefined) delete process.env.NODE_ENV;
 else process.env.NODE_ENV = prevCaptchaNode;
+
+const prevIpLimit = process.env.GUEST_IP_MONTHLY_LIMIT;
+const prevFreePerIp = process.env.GUEST_FREE_PER_IP;
+process.env.GUEST_FREE_PER_IP = "5";
+process.env.GUEST_IP_MONTHLY_LIMIT = "100";
+process.env.GUEST_LIMIT_MEMORY_ONLY = "true";
+resetGuestRateLimitBuckets();
+const guestReq = (ip) => ({
+  headers: { "x-forwarded-for": ip, "user-agent": "test" },
+  socket: { remoteAddress: ip },
+});
+let guestHits = 0;
+for (let i = 0; i < 5; i++) {
+  if (!(await isAnonymousGuestRateLimited(guestReq("203.0.113.9")))) guestHits += 1;
+}
+check("guest free cap allows 5 per IP per calendar month", guestHits === 5);
+check(
+  "guest free cap blocks the 6th from the same IP",
+  (await isAnonymousGuestRateLimited(guestReq("203.0.113.9"))) === true
+);
+check(
+  "guest free cap is per IP, not shared",
+  (await isAnonymousGuestRateLimited(guestReq("203.0.113.10"))) === false
+);
+resetGuestRateLimitBuckets();
+process.env.GUEST_IP_MONTHLY_LIMIT = "3";
+let ipHits = 0;
+for (let i = 0; i < 3; i++) {
+  if (!(await isIpDailyRateLimited(guestReq("198.51.100.7")))) ipHits += 1;
+}
+check("IP monthly ceiling allows configured max", ipHits === 3);
+check("IP monthly ceiling blocks the next request", (await isIpDailyRateLimited(guestReq("198.51.100.7"))) === true);
+resetGuestRateLimitBuckets();
+process.env.PPU_IP_MONTHLY_LIMIT = "2";
+let ppuHits = 0;
+for (let i = 0; i < 2; i++) {
+  if (!(await isPpuIpRateLimited(guestReq("198.51.100.9")))) ppuHits += 1;
+}
+check("PPU IP ceiling allows configured max", ppuHits === 2);
+check("PPU IP ceiling blocks the next request", (await isPpuIpRateLimited(guestReq("198.51.100.9"))) === true);
+check(
+  "PPU IP ceiling is per IP, not shared with unpaid bucket",
+  (await isPpuIpRateLimited(guestReq("198.51.100.10"))) === false
+);
+delete process.env.PPU_IP_MONTHLY_LIMIT;
+if (prevIpLimit === undefined) delete process.env.GUEST_IP_MONTHLY_LIMIT;
+else process.env.GUEST_IP_MONTHLY_LIMIT = prevIpLimit;
+if (prevFreePerIp === undefined) delete process.env.GUEST_FREE_PER_IP;
+else process.env.GUEST_FREE_PER_IP = prevFreePerIp;
+delete process.env.GUEST_LIMIT_MEMORY_ONLY;
+resetGuestRateLimitBuckets();
 
 if (failed) {
   console.error(`${failed} security gate(s) failed`);

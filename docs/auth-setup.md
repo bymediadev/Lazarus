@@ -15,12 +15,14 @@ End users sign into **Lazarus Deal Recovery** — not the Supabase website. Supa
 
 | Who | Cap | Persist |
 |-----|-----|---------|
-| Guest (not logged in) | 5 analyses (client), then lock | No |
-| Signed-in free user | Same freemium cap (client + soft daily API limit) | Yes |
+| Guest (not logged in) | 5 analyses / calendar month (client + IP) | Server IP hash |
+| Signed-in free user | 5 analyses / calendar month | Yes |
+| Entry ($99) | 20 analyses / Stripe billing month, then wait | Yes |
+| Team ($499) | Unlimited. Usage heads-up email at 100 / 200 / 400 in the billing period | Yes |
 | **Founder only** (`joshua.bennett003@gmail.com`) / ops role | **Unlimited** — use this account for demos | Yes |
 | Demo machine | `?demo=1` (tab session) or `VITE_GUEST_USAGE_BYPASS=true` | Unlocks that browser tab |
 
-No other email skips the free-analysis blocker. Anonymous soft-limit ~10/day per IP+UA (`GUEST_ANALYSIS_DAILY_LIMIT`); signed-in non-founder accounts get a per-user daily soft-limit. Production demo header bypass requires `GUEST_USAGE_DEMO_BYPASS=true`.
+No other email skips the free-analysis blocker. Guests get **5 free analyses per IP per calendar month** (clearing the browser does not reset this). All unpaid traffic from one IP is also capped at **100 analyses / calendar month** (`GUEST_IP_MONTHLY_LIMIT`). **$10 pay-per-report** extras are capped separately at **100 / IP / calendar month** (`PPU_IP_MONTHLY_LIMIT`) — after that they wait, or subscribe; the lock copy tells them Entry/Team is more cost-effective. Production demo header bypass requires `GUEST_USAGE_DEMO_BYPASS=true`.
 
 Passwords live in Supabase Auth (hashed). Changing password uses the signed-in session (`updateUser({ password })`).
 

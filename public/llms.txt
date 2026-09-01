@@ -2,7 +2,7 @@
 
 > Lazarus Deal Recovery helps sales managers and VPs of Sales run cleaner forecast calls — which rep-owned deals will close, which stalled deals are recoverable versus a flat no, and what to do in the next 0-90 days. Human-led, AI-assisted. Not an AI SDR or meeting bot.
 
-Lazarus reads a recording, transcript, email thread, and optional HubSpot or Salesforce notes. It names the blocker and returns a CRM-ready brief. Five free analyses; paid plans are priced per deal analysis, not per seat. Keep Meet, Teams, or Zoom — Lazarus never joins the call.
+Lazarus reads a recording, transcript, email thread, and optional HubSpot or Salesforce notes. It names the blocker and returns a CRM-ready brief. Five free analyses a month; paid plans are priced per deal analysis, not per seat. After a monthly cap you wait until next month, or buy a $10 extra report. Keep Meet, Teams, or Zoom — Lazarus never joins the call.
 
 Official site: https://www.getldr.ca/
 

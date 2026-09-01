@@ -796,8 +796,9 @@ export default function FounderCommandCenter({ opsEmail, onOpenProduct }: Props)
 
           <h2>Spend fuses</h2>
           <p className="ops-sub">
-            Product caps — not Google&apos;s dollar budget. Guest {system.spend.guest_cap} per
-            browser · IP daily {system.spend.guest_daily_limit} · analyses today{" "}
+            Product caps — not Google&apos;s dollar budget. Guest {system.spend.guest_cap} free
+            per browser · {system.spend.guest_free_per_ip ?? 5} free per IP / 30d · IP ceiling{" "}
+            {system.spend.guest_daily_limit}/30d · analyses today{" "}
             {system.spend.analyses_today}
             {system.spend.global_daily_cap != null
               ? ` · global daily cap ${system.spend.global_daily_cap}`

@@ -2,6 +2,7 @@ import type { User } from "@supabase/supabase-js";
 import Stripe from "stripe";
 import { serviceRoleClient } from "./founderAuth.js";
 import { resolveFrontendOrigin } from "./integrations/oauthShared.js";
+import { maybeNotifyTeamUsage, teamUsageBanner } from "./teamUsageNotice.js";
 
 export const FREE_ANALYSIS_CAP = 5;
 export const ENTRY_PERIOD_CAP = 20;
@@ -53,6 +54,8 @@ export type BillingSnapshot = {
   period_end: string | null;
   can_analyze: boolean;
   payment_required: boolean;
+  cap_hit_message: string;
+  usage_notice: string | null;
   can_checkout: boolean;
   can_manage_portal: boolean;
   past_due: boolean;
@@ -76,7 +79,7 @@ const PLANS: BillingPlan[] = ["free", "ppu", "entry", "team"];
 const STATUSES: BillingStatus[] = ["none", "active", "past_due", "canceled"];
 
 export const PAYMENT_REQUIRED_MESSAGE =
-  "You’ve used your 5 free analyses. If you need more, $10 per extra report or a monthly plan is in your account.";
+  "You’ve used your 5 free analyses this month. Buy a $10 extra report to keep going, or wait until next month when your allowance renews.";
 
 export const PAST_DUE_MESSAGE =
   "Your subscription payment is past due. Update billing on your account to run more analyses.";
@@ -120,7 +123,7 @@ export function planMeta(plan: BillingPlan): { label: string; price_usd: number 
     case "team":
       return { label: "$499/mo · unlimited", price_usd: 499 };
     default:
-      return { label: "Free · 5 analyses", price_usd: 0 };
+      return { label: "Free · 5 analyses / month", price_usd: 0 };
   }
 }
 
@@ -163,6 +166,81 @@ function mapRow(raw: Record<string, unknown>): BillingRow {
   };
 }
 
+function utcMonthStart(from = new Date()): Date {
+  return new Date(Date.UTC(from.getUTCFullYear(), from.getUTCMonth(), 1));
+}
+
+function utcMonthEnd(from = new Date()): Date {
+  return new Date(Date.UTC(from.getUTCFullYear(), from.getUTCMonth() + 1, 1));
+}
+
+function includedMonthlyCap(row: BillingRow): number | null {
+  if (row.plan === "entry" && row.status === "active") return ENTRY_PERIOD_CAP;
+  return null;
+}
+
+function formatResetDay(iso: string | null): string {
+  if (!iso) return "next month";
+  const d = new Date(iso);
+  if (!Number.isFinite(d.getTime())) return "next month";
+  return d.toLocaleDateString("en-CA", { month: "long", day: "numeric", timeZone: "UTC" });
+}
+
+export function capHitMessage(row: BillingRow): string {
+  if (row.status === "past_due") return PAST_DUE_MESSAGE;
+  const when = formatResetDay(row.period_end);
+  const cap = includedMonthlyCap(row);
+  if (cap != null) {
+    return `You’ve used your ${cap} analyses this month. Buy a $10 extra report to keep going, or wait until ${when} when your plan renews.`;
+  }
+  return `You’ve used your ${FREE_ANALYSIS_CAP} free analyses this month. Buy a $10 extra report to keep going, or wait until ${when} when your allowance renews.`;
+}
+
+function entitlementDeniedMessage(row: BillingRow): string {
+  return capHitMessage(row);
+}
+
+async function rolloverIfNeeded(row: BillingRow): Promise<BillingRow> {
+  const now = Date.now();
+  const subscribed = (row.plan === "entry" || row.plan === "team") && row.status === "active";
+  if (subscribed) {
+    if (row.period_end && new Date(row.period_end).getTime() <= now) {
+      const ended = new Date(row.period_end).getTime();
+      const nextEnd = new Date(ended + 30 * 24 * 60 * 60 * 1000).toISOString();
+      return (
+        (await patchBilling(row.user_id, {
+          entry_used_this_period: 0,
+          period_start: row.period_end,
+          period_end: nextEnd,
+        })) ?? row
+      );
+    }
+    return row;
+  }
+  if (!row.period_end) {
+    return (
+      (await patchBilling(row.user_id, {
+        period_start: utcMonthStart().toISOString(),
+        period_end: utcMonthEnd().toISOString(),
+      })) ?? row
+    );
+  }
+  if (new Date(row.period_end).getTime() <= now) {
+    return (
+      (await patchBilling(row.user_id, {
+        free_used: 0,
+        period_start: utcMonthStart().toISOString(),
+        period_end: utcMonthEnd().toISOString(),
+      })) ?? row
+    );
+  }
+  return row;
+}
+
+export function skipsIpMonthlyCap(row: BillingRow): boolean {
+  return row.status === "active" && (row.plan === "entry" || row.plan === "team");
+}
+
 export function evaluateCanAnalyze(row: BillingRow): { can: boolean; consume: ConsumeKind } {
   if (row.status === "past_due") {
     return { can: false, consume: "free" };
@@ -170,8 +248,12 @@ export function evaluateCanAnalyze(row: BillingRow): { can: boolean; consume: Co
   if (row.plan === "team" && row.status === "active") {
     return { can: true, consume: "team" };
   }
-  if (row.plan === "entry" && row.status === "active" && row.entry_used_this_period < ENTRY_PERIOD_CAP) {
-    return { can: true, consume: "entry" };
+  if (row.plan === "entry" && row.status === "active") {
+    if (row.entry_used_this_period < ENTRY_PERIOD_CAP) {
+      return { can: true, consume: "entry" };
+    }
+    if (row.ppu_credits > 0) return { can: true, consume: "ppu" };
+    return { can: false, consume: "entry" };
   }
   if (row.ppu_credits > 0) {
     return { can: true, consume: "ppu" };
@@ -184,11 +266,17 @@ export function evaluateCanAnalyze(row: BillingRow): { can: boolean; consume: Co
 
 function remainingLabel(row: BillingRow, canAnalyze: boolean): string {
   if (row.status === "past_due") return "Payment past due";
-  if (row.plan === "team" && row.status === "active") return "Unlimited";
-  if (row.plan === "entry" && row.status === "active") {
-    const left = Math.max(0, ENTRY_PERIOD_CAP - row.entry_used_this_period);
+  if (row.plan === "team" && row.status === "active") {
+    return `Unlimited · ${row.entry_used_this_period} used this period`;
+  }
+  const included = includedMonthlyCap(row);
+  if (included != null) {
+    const left = Math.max(0, included - row.entry_used_this_period);
     const extra = row.ppu_credits > 0 ? ` + ${row.ppu_credits} pay-per-use` : "";
-    return `${left} of ${ENTRY_PERIOD_CAP} this period${extra}`;
+    if (left === 0 && row.ppu_credits === 0) {
+      return `0 of ${included} this month — $10 extra, or wait until ${formatResetDay(row.period_end)}`;
+    }
+    return `${left} of ${included} this month${extra}`;
   }
   if (row.ppu_credits > 0) {
     const freeLeft = Math.max(0, FREE_ANALYSIS_CAP - row.free_used);
@@ -196,8 +284,11 @@ function remainingLabel(row: BillingRow, canAnalyze: boolean): string {
     return `${freeBit}${row.ppu_credits} pay-per-use credit${row.ppu_credits === 1 ? "" : "s"}`;
   }
   const freeLeft = Math.max(0, FREE_ANALYSIS_CAP - row.free_used);
-  if (freeLeft > 0) return `${freeLeft} of ${FREE_ANALYSIS_CAP} free left`;
-  if (!canAnalyze) return "None — payment required";
+  if (freeLeft > 0) return `${freeLeft} of ${FREE_ANALYSIS_CAP} this month`;
+  if (!canAnalyze) {
+    const when = formatResetDay(row.period_end);
+    return `None — $10 extra, or wait until ${when}`;
+  }
   return "None";
 }
 
@@ -220,16 +311,19 @@ export function snapshotFromRow(
     free_used: row.free_used,
     free_remaining: Math.max(0, FREE_ANALYSIS_CAP - row.free_used),
     ppu_credits: row.ppu_credits,
-    entry_cap: ENTRY_PERIOD_CAP,
+    entry_cap: includedMonthlyCap(row) ?? ENTRY_PERIOD_CAP,
     entry_used_this_period: row.entry_used_this_period,
     entry_remaining:
-      row.plan === "entry" && row.status === "active"
-        ? Math.max(0, ENTRY_PERIOD_CAP - row.entry_used_this_period)
+      includedMonthlyCap(row) != null
+        ? Math.max(0, includedMonthlyCap(row)! - row.entry_used_this_period)
         : null,
     analyses_remaining_label: remainingLabel(row, can),
     period_end: row.period_end,
     can_analyze: can,
     payment_required: !can,
+    cap_hit_message: capHitMessage(row),
+    usage_notice:
+      row.plan === "team" && row.status === "active" ? teamUsageBanner(row.entry_used_this_period) : null,
     can_checkout: isStripeConfigured(),
     can_manage_portal: isStripeConfigured() && !!row.stripe_customer_id,
     past_due: pastDue,
@@ -256,7 +350,7 @@ export async function ensureBillingCustomer(userId: string): Promise<BillingRow 
   if (readErr) {
     console.error("billing read failed:", readErr.message);
   }
-  if (existing) return mapRow(existing as Record<string, unknown>);
+  if (existing) return rolloverIfNeeded(mapRow(existing as Record<string, unknown>));
 
   const now = new Date().toISOString();
   const { data, error } = await supabase
@@ -265,6 +359,8 @@ export async function ensureBillingCustomer(userId: string): Promise<BillingRow 
       user_id: userId,
       plan: "free",
       status: "none",
+      period_start: utcMonthStart().toISOString(),
+      period_end: utcMonthEnd().toISOString(),
       updated_at: now,
     })
     .select("*")
@@ -323,11 +419,10 @@ export async function reserveAnalysis(userId: string): Promise<EntitlementDecisi
       ok: false,
       status: 402,
       code: "PAYMENT_REQUIRED",
-      error: row.status === "past_due" ? PAST_DUE_MESSAGE : PAYMENT_REQUIRED_MESSAGE,
+      error: entitlementDeniedMessage(row),
     };
   }
 
-  if (consume === "team") return { ok: true, consume };
   if (consume === "free") {
     const supabase = serviceRoleClient();
     if (!supabase) return { ok: true, consume };
@@ -389,16 +484,43 @@ export async function reserveAnalysis(userId: string): Promise<EntitlementDecisi
         ok: false,
         status: 402,
         code: "PAYMENT_REQUIRED",
-        error: PAYMENT_REQUIRED_MESSAGE,
+        error: entitlementDeniedMessage(row),
       };
     }
+    return { ok: true, consume };
+  }
+  if (consume === "team") {
+    const supabase = serviceRoleClient();
+    if (!supabase) return { ok: true, consume };
+    const nextUsed = row.entry_used_this_period + 1;
+    const { data, error } = await supabase
+      .from("billing_customers")
+      .update({
+        entry_used_this_period: nextUsed,
+        updated_at: new Date().toISOString(),
+      })
+      .eq("user_id", userId)
+      .eq("entry_used_this_period", row.entry_used_this_period)
+      .select("user_id")
+      .maybeSingle();
+    if (error || !data) {
+      return {
+        ok: false,
+        status: 402,
+        code: "PAYMENT_REQUIRED",
+        error: entitlementDeniedMessage(row),
+      };
+    }
+    void maybeNotifyTeamUsage(userId, nextUsed, row.period_start).catch((err) => {
+      console.warn("[team-usage] notice failed:", err instanceof Error ? err.message : err);
+    });
     return { ok: true, consume };
   }
   return { ok: true, consume };
 }
 
 export async function releaseReservation(userId: string, consume: ConsumeKind): Promise<void> {
-  if (consume === "exempt" || consume === "guest" || consume === "team") return;
+  if (consume === "exempt" || consume === "guest") return;
   const row = await ensureBillingCustomer(userId);
   if (!row) return;
   if (consume === "free") {
@@ -409,7 +531,7 @@ export async function releaseReservation(userId: string, consume: ConsumeKind): 
     await patchBilling(userId, { ppu_credits: row.ppu_credits + 1 });
     return;
   }
-  if (consume === "entry") {
+  if (consume === "entry" || consume === "team") {
     await patchBilling(userId, {
       entry_used_this_period: Math.max(0, row.entry_used_this_period - 1),
     });
@@ -771,7 +893,7 @@ async function applySubscription(userId: string, sub: Stripe.Subscription): Prom
     period_start: periodStart,
     period_end: periodEnd,
     entry_used_this_period:
-      plan === "entry" && newPeriod ? 0 : row.entry_used_this_period,
+      (plan === "entry" || plan === "team") && newPeriod ? 0 : row.entry_used_this_period,
   });
 }
 
@@ -849,7 +971,7 @@ export async function handleStripeWebhookEvent(rawBody: Buffer, signature: strin
     const userId = await findUserIdForCustomer(customerId);
     if (!userId) return;
     const row = await ensureBillingCustomer(userId);
-    if (!row || row.plan !== "entry") return;
+    if (!row || (row.plan !== "entry" && row.plan !== "team")) return;
     await patchBilling(userId, { entry_used_this_period: 0 });
   }
 }

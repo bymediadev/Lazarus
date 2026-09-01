@@ -240,7 +240,7 @@ export default function MarketingHome({
 
       <section className="marketing-page marketing-band marketing-reveal" id="pricing">
         <p className="hero-trust-eyebrow">Pricing</p>
-        <h2>Five free analyses. Paid plans wait until you need them.</h2>
+        <h2>Five free analyses a month. Hit the cap? $10 extra, or wait until it renews.</h2>
         <p className="marketing-page-lead">
           Sign in to save your runs. Price is per analysis, not per seat. Paid plans open Stripe
           Checkout first; you create an account after payment.

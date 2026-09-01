@@ -32,6 +32,8 @@ export type BillingMe = {
   period_end: string | null;
   can_analyze: boolean;
   payment_required: boolean;
+  cap_hit_message?: string;
+  usage_notice?: string | null;
   can_checkout: boolean;
   can_manage_portal: boolean;
   past_due: boolean;
@@ -63,9 +65,9 @@ export const PRICING_CARDS: PricingCard[] = [
     id: "free",
     price: "$0",
     title: "Free",
-    usage: "5 analyses",
+    usage: "5 analyses / month",
     quality: "Start here",
-    qualityDetail: "Five runs to try a stalled deal",
+    qualityDetail: "Five runs a month to try a stalled deal",
     detail: "Sign in to save. No card required.",
     features: [
       "Forecast brief on one deal",
@@ -81,7 +83,8 @@ export const PRICING_CARDS: PricingCard[] = [
     unitCost: "$10 per deal",
     quality: "As needed",
     qualityDetail: "Same brief as Free — no subscription",
-    detail: "One extra stalled deal. Available when you outgrow the free five.",
+    detail:
+      "After you hit this month’s included cap, buy one extra report — or wait until your plan renews.",
     features: [
       "Same analysis as Free",
       "Brief only — no deal lifecycle",
@@ -111,8 +114,8 @@ export const PRICING_CARDS: PricingCard[] = [
     title: "Team",
     usage: "Unlimited analyses",
     quality: "Scale",
-    qualityDetail: "Unlimited runs + deal lifecycle",
-    detail: "For more than one manager inspecting deals together.",
+    qualityDetail: "Highest-reasoning model + deal lifecycle",
+    detail: "Unlimited runs for more than one manager inspecting deals together. We send a usage heads-up if volume gets high.",
     features: [
       "Unlimited analyses",
       "Deal lifecycle tracker",
@@ -127,7 +130,7 @@ export const CHECKOUT_PLANS = PRICING_CARDS.filter(
 );
 
 export const PRICING_USAGE_FOOTNOTE =
-  "One analysis = one deal run. A recording, transcript, email thread, and docs in the same run still count as one. The public offer is five free analyses. Paid plans stay in the product for when you outgrow that.";
+  "One analysis = one deal run. Free and Entry have a monthly included cap — then $10 extra, or wait until the plan renews. Team is unlimited; we email a heads-up if usage gets high. $10 extras from one network stop at 100 a month."
 
 async function billingFetch<T>(path: string, init?: RequestInit): Promise<T> {
   const res = await fetch(`${API_BASE}${path}`, {

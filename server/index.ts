@@ -56,12 +56,19 @@ import { optionalAuthUserId } from "./authMiddleware.js";
 import {
   isAnonymousGuestRateLimited,
   isFreemiumExempt,
+  isIpDailyRateLimited,
+  ipDailyLimitMessage,
+  isPpuIpRateLimited,
+  ppuIpLimitMessage,
+  guestServerLimitMessage,
 } from "./guestRateLimit.js";
 import {
+  ensureBillingCustomer,
+  evaluateCanAnalyze,
   isStripeConfigured,
-  PAYMENT_REQUIRED_MESSAGE,
   releaseReservation,
   reserveAnalysis,
+  skipsIpMonthlyCap,
   type ConsumeKind,
 } from "./billing.js";
 import { resolveModelTierForUser } from "./modelForPlan.js";
@@ -273,10 +280,25 @@ app.post(
     const authUserIdEarly = (await optionalAuthUserId(req)) ?? undefined;
     const freemiumExempt = await isFreemiumExempt(req);
     if (!freemiumExempt) {
+      let skipIpCeiling = false;
+      if (authUserIdEarly) {
+        const billingRow = await ensureBillingCustomer(authUserIdEarly);
+        skipIpCeiling = !!(
+          billingRow &&
+          (skipsIpMonthlyCap(billingRow) || evaluateCanAnalyze(billingRow).consume === "ppu")
+        );
+      }
+      if (!skipIpCeiling && (await isIpDailyRateLimited(req))) {
+        res.status(429).json({
+          error: ipDailyLimitMessage(),
+          code: "IP_DAILY_LIMIT",
+        });
+        return;
+      }
       if (!authUserIdEarly) {
-        if (isAnonymousGuestRateLimited(req)) {
+        if (await isAnonymousGuestRateLimited(req)) {
           res.status(402).json({
-            error: PAYMENT_REQUIRED_MESSAGE,
+            error: guestServerLimitMessage(),
             code: "PAYMENT_REQUIRED",
           });
           return;
@@ -292,6 +314,13 @@ app.post(
         }
         reservation = decision.consume;
         reservationUserId = authUserIdEarly;
+        if (reservation === "ppu" && (await isPpuIpRateLimited(req))) {
+          res.status(429).json({
+            error: ppuIpLimitMessage(),
+            code: "PPU_IP_LIMIT",
+          });
+          return;
+        }
       }
     }
 

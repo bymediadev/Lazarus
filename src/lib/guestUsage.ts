@@ -2,7 +2,13 @@
 
 export const GUEST_ANALYSIS_CAP = 5;
 const STORAGE_KEY = "lazarus_guest_analyses";
+const MONTH_KEY = "lazarus_guest_analyses_month";
 const DEMO_BYPASS_KEY = "lazarus_demo_bypass";
+
+function utcMonthStamp(): string {
+  const d = new Date();
+  return `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, "0")}`;
+}
 
 /** Founder demo account — the only email with uncapped free analyses. */
 export const FOUNDER_UNLIMITED_EMAILS = ["joshua.bennett003@gmail.com"] as const;
@@ -32,6 +38,12 @@ export function isFounderUnlimitedEmail(email: string | null | undefined): boole
 
 function readCount(): number {
   try {
+    const current = utcMonthStamp();
+    if (localStorage.getItem(MONTH_KEY) !== current) {
+      localStorage.setItem(MONTH_KEY, current);
+      localStorage.setItem(STORAGE_KEY, "0");
+      return 0;
+    }
     const raw = localStorage.getItem(STORAGE_KEY);
     const n = Number(raw);
     return Number.isFinite(n) && n > 0 ? Math.floor(n) : 0;
@@ -42,6 +54,7 @@ function readCount(): number {
 
 function writeCount(n: number): void {
   try {
+    localStorage.setItem(MONTH_KEY, utcMonthStamp());
     localStorage.setItem(STORAGE_KEY, String(Math.max(0, Math.floor(n))));
   } catch {
     /* private mode */
@@ -118,11 +131,11 @@ export function shouldEnforceGuestCap(opts: {
 
 export function guestCapLockMessage(signedIn = false): string {
   if (signedIn) {
-    return `You’ve used your ${GUEST_ANALYSIS_CAP} free analyses. If you need more, $10 per extra report or a monthly plan is in your account.`;
+    return `You’ve used your ${GUEST_ANALYSIS_CAP} free analyses this month. Buy a $10 extra report to keep going, or wait until next month when your allowance renews.`;
   }
-  return `You’ve used your ${GUEST_ANALYSIS_CAP} free analyses. Pay on Stripe for another report or a monthly plan, then create your account to unlock it.`;
+  return `You’ve used your ${GUEST_ANALYSIS_CAP} free analyses this month. Buy a $10 extra report (then create your account), or wait until next month when the free allowance renews.`;
 }
 
 export function guestNearCapMessage(): string {
-  return "1 free analysis left. After that you can buy one more report or a monthly plan — only if you need it.";
+  return "1 free analysis left this month. After that: $10 per extra report, or wait until next month when it renews.";
 }
