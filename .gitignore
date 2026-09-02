@@ -8,5 +8,6 @@ npm-install.log
 hubspot.config.yml
 
 # Cursor / debug session logs
-.cursor/
+.cursor/*
+!.cursor/environment.json
 debug-*.log
