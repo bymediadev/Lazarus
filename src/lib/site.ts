@@ -12,6 +12,10 @@ export const WALKTHROUGH_EMBED_URL =
 
 export const SITE_ORIGIN = "https://www.getldr.ca";
 
+export const FOUNDER_NAME = "Joshua Bennett";
+
+export const FOUNDER_LINKEDIN = "https://www.linkedin.com/in/jjebennett";
+
 export const SITE_TITLE = "Lazarus Deal Recovery | Win Back Closed-Lost Sales Pipeline";
 
 export const SITE_DESCRIPTION =

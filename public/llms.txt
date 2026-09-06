@@ -9,6 +9,7 @@ Official site: https://www.getldr.ca/
 ## Pages
 
 - [Lazarus Deal Recovery](https://www.getldr.ca/): Product homepage — who it is for, how a recovery brief works, objections, and pricing.
+- [How do I recover this deal?](https://www.getldr.ca/how-to-recover-a-stalled-b2b-deal): 4-step B2B stalled-deal recovery framework for forecast owners.
 - [Privacy Policy](https://www.getldr.ca/privacy): What we collect, guest versus signed-in processing, and recording-consent rules.
 - [Terms of Service](https://www.getldr.ca/terms): Customer warranties, acceptable use, and how the service is provided.
 - [Data Processing Addendum](https://www.getldr.ca/dpa): Controller/processor roles for B2B use of deal evidence.

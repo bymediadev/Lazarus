@@ -1,5 +1,5 @@
 import { HERO_PRIMARY_CTA, PORTAL_ENTRY_CTA } from "../lib/cta";
-import { BOOKING_URL, PILLAR_PATH, WALKTHROUGH_EMBED_URL } from "../lib/site";
+import { BOOKING_URL, FOUNDER_LINKEDIN, FOUNDER_NAME, PILLAR_PATH, WALKTHROUGH_EMBED_URL } from "../lib/site";
 import { scrollToSection } from "../lib/appRoute";
 import { useReveal } from "../lib/useReveal";
 import { PricingPlanCards } from "./PricingGate";
@@ -287,6 +287,11 @@ export default function MarketingHome({
         <p>
           A person still runs the deal. Lazarus does not sell, write outreach, or replace your team.
           Your data stays on your account.
+        </p>
+        <p>
+          Founded by{" "}
+          <a href={FOUNDER_LINKEDIN} target="_blank" rel="noopener noreferrer">{FOUNDER_NAME}</a>.
+          Official site: getldr.ca.
         </p>
         <div className="marketing-hero-actions">
           <button type="button" className="run-button" onClick={onPortal}>

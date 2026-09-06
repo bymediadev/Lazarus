@@ -1,5 +1,6 @@
 User-agent: *
 Allow: /
+Allow: /how-to-recover-a-stalled-b2b-deal
 Allow: /privacy
 Allow: /terms
 Allow: /dpa

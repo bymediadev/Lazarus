@@ -26,8 +26,14 @@ for (const slug of ["login", "portal"]) {
   copyFileSync(indexHtml, join(dist, `${slug}.html`));
 }
 
-const trustPack = ["privacy", "terms", "dpa", "security-overview"];
-for (const slug of trustPack) {
+const staticHtmlFolders = [
+  "privacy",
+  "terms",
+  "dpa",
+  "security-overview",
+  "how-to-recover-a-stalled-b2b-deal",
+];
+for (const slug of staticHtmlFolders) {
   const src = join(dist, `${slug}.html`);
   if (!existsSync(src)) {
     console.warn(`Skipping ${slug}: ${src} not found`);
@@ -38,4 +44,6 @@ for (const slug of trustPack) {
   copyFileSync(src, join(dir, "index.html"));
 }
 
-console.log("GitHub Pages dist ready (404.html, /login, /portal, Trust Pack folders, .nojekyll)");
+console.log(
+  "GitHub Pages dist ready (404.html, /login, /portal, Trust Pack + SEO folders, .nojekyll)"
+);

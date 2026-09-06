@@ -1,3 +1,4 @@
+import { FOUNDER_LINKEDIN, FOUNDER_NAME, PILLAR_PATH } from "../lib/site";
 import { openTrustPack, TRUST_PACK_NAV, trustPackUrl, type TrustPackSlug } from "../lib/trustPack";
 
 export default function SiteFooter() {
@@ -12,6 +13,7 @@ export default function SiteFooter() {
             Lazarus Deal Recovery · Trust Pack v1.12
           </span>
           <nav className="site-footer-nav" aria-label="Legal">
+            <a href={PILLAR_PATH}>How do I recover this deal?</a>
             {TRUST_PACK_NAV.map(({ slug, label }) => (
               <a
                 key={slug}
@@ -28,6 +30,9 @@ export default function SiteFooter() {
                 {label}
               </a>
             ))}
+            <a href={FOUNDER_LINKEDIN} target="_blank" rel="noopener noreferrer">
+              {FOUNDER_NAME} on LinkedIn
+            </a>
           </nav>
           <span className="site-footer-copy">
             © {new Date().getFullYear()} Lazarus Deal Recovery. TLS 1.3 in transit · AES-256 at rest
