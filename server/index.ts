@@ -68,6 +68,7 @@ import { registerFeedbackRoutes } from "./feedback.js";
 import { apiEventsMiddleware, setApiErrorLocal } from "./apiEvents.js";
 import { registerFounderRoutes } from "./founderRoutes.js";
 import { registerMeDealRoutes } from "./meDeals.js";
+import { registerSeoPageRoutes, sendIndexedHtml } from "./seoPages.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const distPath = path.join(__dirname, "../dist");
@@ -667,6 +668,7 @@ registerFeedbackRoutes(app);
 registerFounderRoutes(app);
 registerMeDealRoutes(app);
 registerTrustPackRoutes(app, publicPath);
+registerSeoPageRoutes(app, publicPath);
 
 /** Public assets (logo, legal-shared.css). Trust-pack HTML only via /api/trust-pack/:slug. */
 app.use(express.static(publicPath, { index: false }));
@@ -688,7 +690,7 @@ if (process.env.NODE_ENV === "production" || existsSync(distPath)) {
       res.sendFile(trustFile);
       return;
     }
-    res.sendFile(path.join(distPath, "index.html"));
+    sendIndexedHtml(path.join(distPath, "index.html"), res);
   });
 }
 

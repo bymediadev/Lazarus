@@ -5329,7 +5329,8 @@ button.header-brand {
   gap: 0.25rem;
 }
 
-.marketing-nav button {
+.marketing-nav button,
+.marketing-nav a {
   background: none;
   border: none;
   color: var(--muted);
@@ -5339,15 +5340,18 @@ button.header-brand {
   font-weight: 600;
   padding: 0.45rem 0.7rem;
   position: relative;
+  text-decoration: none;
   transition: color 0.2s ease;
 }
 
 .marketing-nav button.active,
-.marketing-nav button:hover {
+.marketing-nav button:hover,
+.marketing-nav a:hover {
   color: var(--text);
 }
 
-.marketing-nav button::after {
+.marketing-nav button::after,
+.marketing-nav a::after {
   content: "";
   position: absolute;
   left: 0.7rem;
@@ -5360,7 +5364,8 @@ button.header-brand {
 }
 
 .marketing-nav button:hover::after,
-.marketing-nav button.active::after {
+.marketing-nav button.active::after,
+.marketing-nav a:hover::after {
   transform: scaleX(1);
 }
 
@@ -5416,6 +5421,10 @@ button.header-brand {
   padding: 0;
   text-decoration: underline;
   text-underline-offset: 2px;
+}
+
+a.marketing-text-link {
+  display: inline;
 }
 
 @media (max-width: 800px) {
