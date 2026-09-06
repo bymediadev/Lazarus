@@ -24,12 +24,16 @@ const DEFAULT_GROQ_AUTOPSY = [
 ];
 const DEFAULT_GROQ_LIVE = ["llama-3.1-8b-instant"];
 const DEFAULT_OPENROUTER_AUTOPSY = [
-  "meta-llama/llama-3.3-70b-instruct:free",
-  "mistralai/mistral-small-3.1-24b-instruct:free",
+  "poolside/laguna-s-2.1:free",
+  "minimax/minimax-m2.7:free",
+  "nvidia/nemotron-3.5-lightning:free",
+  "google/gemma-4-31b-it:free",
 ];
 const DEFAULT_OPENROUTER_LIVE = [
-  "meta-llama/llama-3.1-8b-instruct:free",
-  "mistralai/mistral-small-3.1-24b-instruct:free",
+  "nvidia/nemotron-3.5-lightning:free",
+  "liquid/lfm-2.5-2.6b:free",
+  "poolside/laguna-xs-2.1:free",
+  "google/gemma-4-26b-a4b-it:free",
 ];
 
 function csvEnv(name: string, fallback: string[]): string[] {

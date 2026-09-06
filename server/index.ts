@@ -226,6 +226,9 @@ function formatApiError(message: string): string {
   ) {
     return "GEMINI_API_KEY was rejected by Google (401). Create a new key at https://aistudio.google.com/apikey — AIza or AQ. format both work. Restart npm run dev after updating .env.";
   }
+  if (/unavailable for free|No endpoints found/i.test(message)) {
+    return "OpenRouter free models changed. Update OPENROUTER_MODEL_LIVE / OPENROUTER_MODEL_AUTOPSY. See docs/llm-failover.md.";
+  }
   if (message.includes("429") || message.includes("quota") || message.includes("All LLM providers failed")) {
     return "LLM providers are rate-limited or down. Wait a few minutes, or add a free OPENROUTER_API_KEY. See docs/llm-failover.md.";
   }

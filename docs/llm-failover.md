@@ -30,11 +30,11 @@ After saving, wait for the service to restart. `/api/health` should show `"openr
 Optional model overrides (comma-separated):
 
 ```
-OPENROUTER_MODEL_AUTOPSY=meta-llama/llama-3.3-70b-instruct:free,mistralai/mistral-small-3.1-24b-instruct:free
-OPENROUTER_MODEL_LIVE=meta-llama/llama-3.1-8b-instruct:free,mistralai/mistral-small-3.1-24b-instruct:free
+OPENROUTER_MODEL_AUTOPSY=poolside/laguna-s-2.1:free,minimax/minimax-m2.7:free,nvidia/nemotron-3.5-lightning:free
+OPENROUTER_MODEL_LIVE=nvidia/nemotron-3.5-lightning:free,liquid/lfm-2.5-2.6b:free,poolside/laguna-xs-2.1:free
 ```
 
-Do **not** use `openrouter/free` (thinking models break JSON).
+Do **not** use `openrouter/free` (thinking models break JSON). OpenRouter `:free` slugs churn — Llama/Mistral `:free` were delisted in 2026. If health is green but analyses still fail, probe the current free list and update these defaults.
 
 ## What uses which models
 
