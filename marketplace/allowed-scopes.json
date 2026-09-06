@@ -1,0 +1,42 @@
+{
+  "comment": "Least privilege each store will accept for Lazarus. Zips and authorize URLs must stay inside these lists.",
+  "chrome": {
+    "permissions": ["storage"],
+    "host_permissions": ["https://lazarus-4uxi.onrender.com/*"],
+    "content_script_hosts": [
+      "https://meet.google.com/*",
+      "https://www.getldr.ca/*",
+      "https://getldr.ca/*"
+    ],
+    "forbidden_permissions": [
+      "tabs",
+      "scripting",
+      "webRequest",
+      "cookies",
+      "identity",
+      "debugger",
+      "<all_urls>"
+    ]
+  },
+  "zoom": [
+    "user:read:user",
+    "meeting:read:meeting_transcripts",
+    "meeting:update:participant_rtms_app_status"
+  ],
+  "teams_store_manifest_permissions": [],
+  "teams_graph": [
+    "openid",
+    "profile",
+    "email",
+    "offline_access",
+    "User.Read",
+    "Mail.Read"
+  ],
+  "hubspot": [
+    "oauth",
+    "crm.objects.deals.read",
+    "crm.objects.deals.write"
+  ],
+  "salesforce": ["api", "refresh_token", "offline_access"],
+  "google_login": ["openid", "email", "profile"]
+}

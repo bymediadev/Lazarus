@@ -23,7 +23,9 @@ On **Windows local dev**, RTMS native SDK does not run — use mic + paste fallb
    ```
    https://lazarus-4uxi.onrender.com/
    ```
-   Lazarus serves OWASP Secure Headers on HTML responses (`Strict-Transport-Security`, `X-Content-Type-Options`, `Content-Security-Policy`, `Referrer-Policy`). Redeploy after that code is on `main`, or Zoom will reject the Home URL.
+   Lazarus serves OWASP Secure Headers on HTML responses (`Strict-Transport-Security`, `X-Content-Type-Options`, `Content-Security-Policy` including `frame-ancestors` for Zoom/Teams, `Referrer-Policy`). Redeploy after that code is on `main`, or Zoom will reject the Home URL.
+
+   Listing-assets zip (not an app package): [`marketplace/zoom/lazarus-deal-recovery-widget-zoom.zip`](../marketplace/zoom/listing.md) via `npm run marketplace:package`. Do not upload the Meet or Teams zips to marketplace.zoom.us.
 5. Add **Domain Allow List** entry: `lazarus-4uxi.onrender.com`
 6. Add **OAuth redirect URL**:
    ```
@@ -111,6 +113,5 @@ Zoom RTMS requires **Developer Pack credits** on your Zoom account. See [Zoom RT
 
 ## Next: Google Meet & Teams
 
-After Zoom pilot validation:
-- **Meet** — Google Workspace Meet API / live captions (TBD)
-- **Teams** — Microsoft Graph online meeting transcripts (TBD)
+- **Meet** — Chrome captions extension ([google-meet-setup.md](./google-meet-setup.md)); Chrome Web Store zip in `marketplace/google/`
+- **Teams** — Entra OAuth + Teams Store app package ([teams-setup.md](./teams-setup.md), `marketplace/teams/`)

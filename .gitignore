@@ -7,6 +7,14 @@ windows-extra-cas.pem
 npm-install.log
 hubspot.config.yml
 
+# Generated store packages
+marketplace/**/*.zip
+marketplace/.cws-staging
+marketplace/.teams-staging
+marketplace/.zoom-staging
+marketplace/.hubspot-staging
+marketplace/.inspect
+
 # Cursor / debug session logs
 .cursor/
 debug-*.log

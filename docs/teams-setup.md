@@ -1,6 +1,8 @@
 # Microsoft Teams / Entra ID setup
 
-Lazarus Connect Teams uses **Microsoft Entra ID (Azure AD)** + **Microsoft Graph**. Online meeting transcript auto-pull is next; today mic + paste feeds the same **live Recovery Brief** pipe as Zoom and Google Meet.
+Lazarus Connect Teams uses **Microsoft Entra ID (Azure AD)** + **Microsoft Graph**. Online meeting transcript auto-pull is **not shipped**; today mic + paste feeds the same **live Recovery Brief** pipe as Zoom and Google Meet.
+
+Teams Store package: [`marketplace/teams/lazarus-deal-recovery-widget-teams.zip`](../marketplace/teams/listing.md) via `npm run marketplace:package`. Personal tab + meeting side panel only — no bot, no Graph transcript scopes in the zip. Listing name: **Lazarus Deal Recovery Widget**.
 
 ## 1. Register an Azure app
 
@@ -12,12 +14,11 @@ Lazarus Connect Teams uses **Microsoft Entra ID (Azure AD)** + **Microsoft Graph
    https://lazarus-4uxi.onrender.com/api/integrations/teams/callback
    ```
 5. **Certificates & secrets** → create a client secret; copy the value
-6. **API permissions** (Delegated) → add:
+6. **API permissions** (Delegated) → add only what the product uses today:
    - `User.Read`
-   - `OnlineMeetings.Read`
-   - `OnlineMeetingTranscript.Read.All`
+   - `Mail.Read` (Outlook thread search the user starts)
    - `openid`, `profile`, `email`, `offline_access`
-7. Grant admin consent if your tenant requires it
+7. Do **not** add `OnlineMeetings.Read` or `OnlineMeetingTranscript.Read.All` until Graph live transcript ships. Store listing and this Entra app must match.
 
 ## 2. Environment variables
 

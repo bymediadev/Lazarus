@@ -70,6 +70,7 @@ import { loadDemoSalesTranscript } from "./lib/demoTranscript";
 import { RUN_DEAL_CTA } from "./lib/cta";
 import { applyDocumentMeta, SITE_DESCRIPTION, SITE_TITLE } from "./lib/site";
 import { bakedCaptchaSiteKey } from "./lib/captcha";
+import { bootTeamsHost } from "./lib/teamsHost";
 
 const ACCEPTED_EXT = [".mp3", ".wav", ".mp4", ".m4a", ".webm", ".mpeg", ".mpga"];
 const ACCEPT_ATTR = ".mp3,.wav,.mp4,.m4a,.webm,audio/*,video/mp4,video/webm";
@@ -271,6 +272,10 @@ export default function App() {
     },
     []
   );
+
+  useEffect(() => {
+    bootTeamsHost();
+  }, []);
 
   useEffect(() => {
     captureDemoBypassFromUrl();

@@ -1,0 +1,39 @@
+{
+  "$schema": "https://developer.microsoft.com/json-schemas/teams/v1.17/MicrosoftTeams.schema.json",
+  "manifestVersion": "1.17",
+  "version": "1.0.2",
+  "id": "7f48e5c6-6e16-47ea-a5a4-513fd4989e0c",
+  "developer": {
+    "name": "Lazarus Revenue Intelligence Inc.",
+    "websiteUrl": "https://www.getldr.ca",
+    "privacyUrl": "https://www.getldr.ca/privacy",
+    "termsOfUseUrl": "https://www.getldr.ca/terms"
+  },
+  "name": {
+    "short": "Lazarus Deal Recovery Widget",
+    "full": "Lazarus Deal Recovery Widget"
+  },
+  "description": {
+    "short": "Forecast judgment for stalled deals — recoverable vs flat no.",
+    "full": "Lazarus Deal Recovery helps sales managers run cleaner forecast calls: which deals will close, which are recoverable versus a flat no, and what to do next. Keep Microsoft Teams; Lazarus is the judgment layer on top. This app opens the Lazarus companion as a personal tab and, when you add it in a meeting, as a side panel. It does not join as a hidden bot, does not send chat messages, and does not pull Graph live transcripts — use mic or paste in the companion, or connect Outlook thread search from the Lazarus website. Human-led, AI-assisted. Not an AI SDR."
+  },
+  "icons": {
+    "color": "color.png",
+    "outline": "outline.png"
+  },
+  "accentColor": "#0B1F33",
+  "staticTabs": [
+    {
+      "entityId": "lazarusPortal",
+      "name": "Lazarus Deal Recovery Widget",
+      "contentUrl": "https://www.getldr.ca/portal",
+      "websiteUrl": "https://www.getldr.ca",
+      "scopes": ["personal"],
+      "context": ["personalTab", "meetingSidePanel"]
+    }
+  ],
+  "validDomains": [
+    "www.getldr.ca",
+    "getldr.ca"
+  ]
+}

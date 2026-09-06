@@ -175,6 +175,7 @@ app.use((_req, res, next) => {
       "font-src 'self' data:",
       "connect-src 'self' https: wss:",
       "frame-src 'self' https://*.zoom.us https://www.loom.com https://*.loom.com https://challenges.cloudflare.com",
+      "frame-ancestors 'self' https://*.zoom.us https://zoom.us https://teams.microsoft.com https://*.teams.microsoft.com https://*.cloud.microsoft",
       "object-src 'none'",
       "base-uri 'self'",
       "form-action 'self' https://zoom.us https://*.zoom.us",

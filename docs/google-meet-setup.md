@@ -2,6 +2,8 @@
 
 Lazarus uses **Google OAuth** for Gmail thread search (`gmail.readonly`) and a **Chrome extension** for live Meet captions. Google has no Zoom-style RTMS feed. The extension reads Meet’s own captions — turn **Captions** on in the call. There is no bot in the meeting.
 
+Chrome Web Store zip: [`marketplace/google/lazarus-deal-recovery-widget-meet.zip`](../marketplace/google/chrome-web-store.md) via `npm run marketplace:package`. Listing name: **Lazarus Deal Recovery Widget**. Do not upload that zip to Zoom or Teams.
+
 ## 1. Live Meet captions (send-out)
 
 ### Sideload the extension

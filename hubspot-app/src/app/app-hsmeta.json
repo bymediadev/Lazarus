@@ -2,8 +2,9 @@
   "uid": "lazarus_deal_recovery_app",
   "type": "app",
   "config": {
-    "description": "Read-only deal search and note import for Lazarus Deal Recovery — forecast clarity on stalled opportunities.",
+    "description": "Forecast judgment on stalled HubSpot deals — recoverable vs flat no. Import deal notes; optional user-clicked Push. Not an AI SDR.",
     "name": "Lazarus Deal Recovery",
+    "logo": "/app/app-logo.png",
     "distribution": "marketplace",
     "auth": {
       "type": "oauth",
@@ -13,7 +14,8 @@
       ],
       "requiredScopes": [
         "oauth",
-        "crm.objects.deals.read"
+        "crm.objects.deals.read",
+        "crm.objects.deals.write"
       ],
       "optionalScopes": [],
       "conditionallyRequiredScopes": []
@@ -24,10 +26,9 @@
       "img": []
     },
     "support": {
-      "supportEmail": "support@lazarusdealrecovery.com",
-      "documentationUrl": "https://lazarus-4uxi.onrender.com",
-      "supportUrl": "https://lazarus-4uxi.onrender.com",
-      "supportPhone": "+18005555555"
+      "supportEmail": "support@getldr.ca",
+      "documentationUrl": "https://www.getldr.ca",
+      "supportUrl": "https://www.getldr.ca"
     }
   }
 }
