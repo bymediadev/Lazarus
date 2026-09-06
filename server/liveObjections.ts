@@ -6,6 +6,7 @@ export interface LiveObjectionScanRequest {
   full_transcript: string;
   existing_objections?: { id: string; text: string; status: LiveObjectionStatus }[];
   modelTier?: ModelTier;
+  preferOpenWeights?: boolean;
 }
 
 export interface LiveObjectionScanResponse {
@@ -59,6 +60,8 @@ ${openList || "(none)"}
 TRANSCRIPT:
 ${transcript.slice(-12000)}`;
 
-  const text = await generateGeminiText(prompt, body.modelTier ?? "free");
+  const text = await generateGeminiText(prompt, body.modelTier ?? "free", {
+    preferOpenWeights: body.preferOpenWeights,
+  });
   return parseJsonBlock(text);
 }

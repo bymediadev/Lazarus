@@ -1,6 +1,6 @@
 import { ENTRY_PERIOD_CAP, capHitMessage, evaluateCanAnalyze, featureAccessFromRow, FREE_ANALYSIS_CAP } from "../server/billing.ts";
 import { teamUsageBanner } from "../server/teamUsageNotice.ts";
-import { modelCandidatesForTier, modelTierFromConsume } from "../server/modelForPlan.ts";
+import { modelCandidatesForTier, modelTierFromConsume, preferOpenWeightsFor } from "../server/modelForPlan.ts";
 
 function row(partial) {
   return {
@@ -100,6 +100,11 @@ assert(
   "team primary is 3.1 pro"
 );
 assert(modelCandidatesForTier("team").includes("gemini-2.5-pro"), "team falls back to 2.5 pro");
+assert(preferOpenWeightsFor({ userId: null }) === true, "no-signup uses open weights first");
+assert(preferOpenWeightsFor({ consume: "guest" }) === true, "guest consume uses open weights first");
+assert(preferOpenWeightsFor({ userId: "u1", consume: "free" }) === true, "signed-in free uses OpenRouter");
+assert(preferOpenWeightsFor({ userId: "u1", consume: "ppu" }) === false, "ppu stays Gemini-first");
+assert(preferOpenWeightsFor({ userId: "u1", consume: "entry" }) === false, "entry stays Gemini-first");
 
 const entryCapMsg = capHitMessage(
   row({

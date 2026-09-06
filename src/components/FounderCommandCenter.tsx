@@ -839,12 +839,14 @@ export default function FounderCommandCenter({ opsEmail, onOpenProduct }: Props)
           <h2>LLM credit / quota</h2>
           <p className="ops-sub">
             Model {system.spend.gemini_model}. {system.spend.llm_fails_at_zero} Dollar caps live in
-            the vendor consoles above — this page does not set Google or AssemblyAI budgets.
+            the vendor consoles above — this page does not set Google, OpenRouter, or AssemblyAI budgets.
           </p>
           {apis && (
             <p className="ops-fix">
-              Gemini {apis.providers.find((p) => p.id === "gemini")?.status ?? "unknown"} · quota
-              errors 7d {apis.usage.quota_errors_7d} · {apis.providers.find((p) => p.id === "gemini")?.billing.detail}
+              Gemini {apis.providers.find((p) => p.id === "gemini")?.status ?? "unknown"} · Cerebras{" "}
+              {apis.providers.find((p) => p.id === "cerebras")?.status ?? "unknown"} · OpenRouter{" "}
+              {apis.providers.find((p) => p.id === "openrouter")?.status ?? "unknown"} · quota
+              errors 7d {apis.usage.quota_errors_7d}
             </p>
           )}
 

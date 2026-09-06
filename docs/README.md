@@ -19,6 +19,7 @@ Do not commit secrets — use `.env.example` and host/GitHub secret stores.
 | [auth-setup.md](./auth-setup.md) | Login: email magic link, Google, HubSpot/Salesforce bridge + Render Vite env |
 | [billing-setup.md](./billing-setup.md) | Stripe paywall after 5 free analyses ($10 / $99 / $499) |
 | [hosting.md](./hosting.md) | GitHub Pages (site) + Render (API); DNS cutover |
+| [llm-failover.md](./llm-failover.md) | $0 Gemini → OpenRouter failover (no credit card) |
 | [turnstile-setup.md](./turnstile-setup.md) | Cloudflare Turnstile captcha before each analysis |
 | [marketplace-listings.md](./marketplace-listings.md) | Meet / Teams / Zoom store zips and listing kit |
 

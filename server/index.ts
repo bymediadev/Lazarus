@@ -71,7 +71,7 @@ import {
   skipsIpMonthlyCap,
   type ConsumeKind,
 } from "./billing.js";
-import { resolveModelTierForUser } from "./modelForPlan.js";
+import { consumeForLlmRoute, preferOpenWeightsFor, resolveModelTierForUser } from "./modelForPlan.js";
 import { registerBillingRoutes, registerBillingWebhook } from "./billingRoutes.js";
 import { apiEventsMiddleware, setApiErrorLocal } from "./apiEvents.js";
 import { registerFounderRoutes } from "./founderRoutes.js";
@@ -193,10 +193,17 @@ app.use(apiEventsMiddleware);
 app.get("/api/health", (_req, res) => {
   const geminiKey = (process.env.GEMINI_API_KEY ?? "").trim();
   const geminiKeyValid = /^AIza/.test(geminiKey) || /^AQ\./.test(geminiKey);
+  const groqKey = (process.env.GROQ_API_KEY ?? "").trim();
+  const openRouterKey = (process.env.OPENROUTER_API_KEY ?? "").trim();
+  const cerebrasKey = (process.env.CEREBRAS_API_KEY ?? "").trim();
   res.json({
     status: "ok",
     gemini: !!geminiKey,
     gemini_key_format_valid: geminiKeyValid,
+    cerebras: !!cerebrasKey,
+    groq: !!groqKey,
+    openrouter: !!openRouterKey,
+    llm: !!(geminiKey || cerebrasKey || groqKey || openRouterKey),
     assemblyai: !!process.env.ASSEMBLYAI_API_KEY,
     supabase: !!process.env.SUPABASE_URL,
     zoom: isZoomConfigured(),
@@ -219,11 +226,11 @@ function formatApiError(message: string): string {
   ) {
     return "GEMINI_API_KEY was rejected by Google (401). Create a new key at https://aistudio.google.com/apikey — AIza or AQ. format both work. Restart npm run dev after updating .env.";
   }
-  if (message.includes("429") || message.includes("quota")) {
-    return "Gemini API quota exceeded. Wait a few minutes and retry, enable Google billing for Team (Gemini 3.1 Pro), or set GEMINI_MODEL=gemini-2.5-flash in .env.";
+  if (message.includes("429") || message.includes("quota") || message.includes("All LLM providers failed")) {
+    return "LLM providers are rate-limited or down. Wait a few minutes, or add a free OPENROUTER_API_KEY. See docs/llm-failover.md.";
   }
-  if (message.includes("GEMINI_API_KEY")) {
-    return "GEMINI_API_KEY is missing. Add it to your .env file.";
+  if (message.includes("GEMINI_API_KEY") || message.includes("No LLM provider")) {
+    return "No LLM key is set. Add GEMINI_API_KEY, or a free OPENROUTER_API_KEY. See docs/llm-failover.md.";
   }
   if (message.includes("ASSEMBLYAI_API_KEY")) {
     return "Audio upload requires ASSEMBLYAI_API_KEY in .env — or paste a transcript instead.";
@@ -403,7 +410,12 @@ app.post(
     const forceAnalysis = ["1", "true", true].includes(
       req.body.force_analysis as string | boolean
     );
-    const relevance = await classifySalesRelevance(transcript);
+    const preferOpenWeights = preferOpenWeightsFor({
+      userId: authUserIdEarly,
+      consume: reservation,
+      exempt: freemiumExempt,
+    });
+    const relevance = await classifySalesRelevance(transcript, { preferOpenWeights });
     if (relevance.label === "not_sales" && !forceAnalysis) {
       res.status(400).json({
         error: `Can't use this — it doesn't look like sales or deal evidence. ${relevance.reason}`,
@@ -421,6 +433,7 @@ app.post(
         consume: reservation,
         exempt: freemiumExempt,
       }),
+      preferOpenWeights,
     });
 
     const recurringVetoHolders = deepContext.historicalCrmContext?.length
@@ -596,14 +609,18 @@ app.post(
       ? req.body.existing_objections
       : [];
     const userId = (await optionalAuthUserId(req)) ?? undefined;
+    const exempt = await isFreemiumExempt(req);
+    const consume = await consumeForLlmRoute(userId, exempt);
     const modelTier = await resolveModelTierForUser({
       userId,
-      exempt: await isFreemiumExempt(req),
+      consume,
+      exempt,
     });
     const result = await scanLiveObjectionsServer({
       full_transcript,
       existing_objections,
       modelTier,
+      preferOpenWeights: preferOpenWeightsFor({ userId, consume, exempt }),
     });
     res.json(result);
   } catch (err) {
@@ -621,9 +638,12 @@ app.post(
   try {
     if (await rejectIfAnalysesBlocked(req, res)) return;
     const userId = (await optionalAuthUserId(req)) ?? undefined;
+    const exempt = await isFreemiumExempt(req);
+    const consume = await consumeForLlmRoute(userId, exempt);
     const modelTier = await resolveModelTierForUser({
       userId,
-      exempt: await isFreemiumExempt(req),
+      consume,
+      exempt,
     });
     const result = await runLiveTriage({
       full_transcript: String(req.body?.full_transcript ?? ""),
@@ -636,6 +656,7 @@ app.post(
         ? req.body.open_objections.map(String)
         : [],
       modelTier,
+      preferOpenWeights: preferOpenWeightsFor({ userId, consume, exempt }),
     });
     res.json(result);
   } catch (err) {

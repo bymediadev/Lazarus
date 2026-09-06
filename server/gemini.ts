@@ -1,4 +1,3 @@
-import { GoogleGenerativeAI } from "@google/generative-ai";
 import { readFileSync, existsSync } from "fs";
 import { dirname, join } from "path";
 import { fileURLToPath } from "url";
@@ -30,11 +29,8 @@ import {
   type ProprietaryIndices,
   type ScoringForce,
 } from "./scoring.js";
-import {
-  isRetryableGeminiError,
-  modelCandidatesForTier,
-  type ModelTier,
-} from "./modelForPlan.js";
+import { type ModelTier } from "./modelForPlan.js";
+import { generateJson, hasAnyLlmProvider } from "./llmProviders.js";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
@@ -246,15 +242,6 @@ function loadSystemPrompt(): string {
     return `${engine}\n\n---\n\n${core}`;
   }
   return core;
-}
-
-function quotaErrorMessage(lastError: unknown): string {
-  const base =
-    "Gemini quota exceeded. Wait a few minutes, enable Google billing for Team (Gemini 3.1 Pro), or set GEMINI_MODEL=gemini-2.5-flash in .env.";
-  if (lastError instanceof Error && lastError.message) {
-    return `${base}\n\nLast error: ${lastError.message.split("\n")[0]}`;
-  }
-  return base;
 }
 
 function asStringArray(value: unknown): string[] {
@@ -817,56 +804,21 @@ export interface AnalyzeTranscriptOptions {
   dealValue: number;
   deepContext?: DeepContextInput;
   modelTier?: ModelTier;
-}
-
-async function generateWithModel(
-  apiKey: string,
-  modelName: string,
-  systemPrompt: string,
-  userMessage: string
-): Promise<EnterpriseAnalysis> {
-  const genAI = new GoogleGenerativeAI(apiKey);
-  const model = genAI.getGenerativeModel({
-    model: modelName,
-    generationConfig: {
-      responseMimeType: "application/json",
-      temperature: 0,
-    },
-  });
-
-  const result = await model.generateContent([
-    { text: systemPrompt },
-    { text: userMessage },
-  ]);
-
-  const text = result.response.text();
-  const parsed = JSON.parse(text) as Record<string, unknown>;
-  return normalizeOutput(parsed);
+  preferOpenWeights?: boolean;
 }
 
 async function extractWithModels(
-  apiKey: string,
   systemPrompt: string,
   userMessage: string,
-  candidates: string[]
+  tier: ModelTier,
+  preferOpenWeights?: boolean
 ): Promise<EnterpriseAnalysis> {
-  let lastError: unknown;
-
-  for (const modelName of candidates) {
-    try {
-      console.log(`Gemini: trying ${modelName}`);
-      return await generateWithModel(apiKey, modelName, systemPrompt, userMessage);
-    } catch (err) {
-      lastError = err;
-      if (isRetryableGeminiError(err)) {
-        console.warn(`Gemini: ${modelName} unavailable, trying next model`);
-        continue;
-      }
-      throw err;
-    }
-  }
-
-  throw new Error(quotaErrorMessage(lastError));
+  const parsed = await generateJson(systemPrompt, userMessage, {
+    job: "autopsy",
+    tier,
+    preferOpenWeights,
+  });
+  return normalizeOutput(parsed);
 }
 
 function applyGroundingFilter(
@@ -920,17 +872,19 @@ export async function analyzeTranscript(
       : dealValueOrOptions;
   const dealValue = options.dealValue;
   const deepContext = options.deepContext;
-  const candidates = modelCandidatesForTier(options.modelTier ?? "free");
+  const tier = options.modelTier ?? "free";
+  const preferOpenWeights = options.preferOpenWeights === true;
 
-  const apiKey = process.env.GEMINI_API_KEY;
-  if (!apiKey) {
-    throw new Error("GEMINI_API_KEY is not set. Add it to your .env file.");
+  if (!hasAnyLlmProvider()) {
+    throw new Error(
+      "No LLM provider configured. Set GEMINI_API_KEY, or a free OPENROUTER_API_KEY. See docs/llm-failover.md."
+    );
   }
 
   const systemPrompt = loadSystemPrompt();
   let userMessage = buildExtractionMessage(transcript, dealValue, deepContext);
 
-  let analysis = await extractWithModels(apiKey, systemPrompt, userMessage, candidates);
+  let analysis = await extractWithModels(systemPrompt, userMessage, tier, preferOpenWeights);
   let audit = auditTranscriptGrounding({
     transcript,
     dealValue,
@@ -943,7 +897,7 @@ export async function analyzeTranscript(
   if (!audit.pass) {
     console.warn("Grounding audit failed — retrying with correction prompt", audit);
     userMessage = buildGroundingRetryMessage(transcript, dealValue, audit, deepContext);
-    analysis = await extractWithModels(apiKey, systemPrompt, userMessage, candidates);
+    analysis = await extractWithModels(systemPrompt, userMessage, tier, preferOpenWeights);
     audit = auditTranscriptGrounding({
       transcript,
       dealValue,

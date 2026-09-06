@@ -199,6 +199,10 @@ export async function runPostMortem(payload: PostMortemPayload): Promise<PostMor
 export async function checkHealth(): Promise<{
   status: string;
   gemini: boolean;
+  cerebras?: boolean;
+  groq?: boolean;
+  openrouter?: boolean;
+  llm?: boolean;
   assemblyai: boolean;
   supabase: boolean;
 }> {

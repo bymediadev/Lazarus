@@ -11,7 +11,7 @@ Full doc map: [`docs/README.md`](docs/README.md)
 ## Quick start
 
 ```bash
-cp .env.example .env   # add GEMINI_API_KEY (AIza… or AQ.… format)
+cp .env.example .env   # add GEMINI_API_KEY; add OPENROUTER_API_KEY for $0 failover
 npm install
 npm run dev            # UI http://localhost:5173 · API http://localhost:3001
 ```
@@ -106,7 +106,7 @@ The public site is a static Vite build on **GitHub Pages** (`www.getldr.ca`). Th
 | **Render** (API) | Health | `/api/health` |
 | **Render** (API) | Blueprint | `render.yaml` (optional) |
 
-Required env (copy from local `.env`): `GEMINI_API_KEY`, `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, `PURGE_CRON_SECRET`, `DATA_RETENTION_DAYS`, `NODE_ENV=production`, `FRONTEND_ORIGIN` (include `https://www.getldr.ca`), `PUBLIC_API_URL`, `LAZARUS_API_KEY`, `TURNSTILE_SITE_KEY`, `TURNSTILE_SECRET_KEY`. GitHub Pages bakes `VITE_API_URL=https://lazarus-4uxi.onrender.com` plus `VITE_LAZARUS_API_KEY` / `VITE_SUPABASE_*` at build time. Local `npm run dev` leaves `VITE_API_URL` unset (Vite proxies `/api`). Analysis captcha: [`docs/turnstile-setup.md`](docs/turnstile-setup.md).
+Required env (copy from local `.env`): `GEMINI_API_KEY` (plus free `OPENROUTER_API_KEY` — [`docs/llm-failover.md`](docs/llm-failover.md)), `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, `PURGE_CRON_SECRET`, `DATA_RETENTION_DAYS`, `NODE_ENV=production`, `FRONTEND_ORIGIN` (include `https://www.getldr.ca`), `PUBLIC_API_URL`, `LAZARUS_API_KEY`, `TURNSTILE_SITE_KEY`, `TURNSTILE_SECRET_KEY`. GitHub Pages bakes `VITE_API_URL=https://lazarus-4uxi.onrender.com` plus `VITE_LAZARUS_API_KEY` / `VITE_SUPABASE_*` at build time. Local `npm run dev` leaves `VITE_API_URL` unset (Vite proxies `/api`). Analysis captcha: [`docs/turnstile-setup.md`](docs/turnstile-setup.md).
 
 The marketing pages stay up on GitHub Pages. Pricing CTAs are Stripe Payment Links, so checkout does not wait on the Render API. Analyses, webhooks, and claiming a paid plan after signup still use the API (Free sleeps after ~15 min idle).
 

@@ -27,6 +27,12 @@ services:
       # Render injects PORT — do not set it. Public site is GitHub Pages; this service is API-only.
       - key: GEMINI_API_KEY
         sync: false
+      - key: CEREBRAS_API_KEY
+        sync: false
+      - key: GROQ_API_KEY
+        sync: false
+      - key: OPENROUTER_API_KEY
+        sync: false
       - key: FRONTEND_ORIGIN
         sync: false
       - key: ASSEMBLYAI_API_KEY

@@ -76,7 +76,7 @@ After HTTPS works on Pages, drop `www.getldr.ca` / `getldr.ca` from Render custo
 ## Local
 
 ```bash
-cp .env.example .env   # add GEMINI_API_KEY (AIza… or AQ.… format)
+cp .env.example .env   # add GEMINI_API_KEY; add OPENROUTER_API_KEY for $0 failover
 npm install
 npm run dev            # UI http://localhost:5173 · API http://localhost:3001
 ```
@@ -106,7 +106,7 @@ On a VPS, put nginx in front for HTTPS and proxy to `127.0.0.1:3001`.
 
 Copy [`.env.example`](../.env.example). Minimum for a usable API:
 
-- `GEMINI_API_KEY`
+- `GEMINI_API_KEY` (or a free `OPENROUTER_API_KEY` — see [llm-failover.md](./llm-failover.md))
 - `SUPABASE_URL`, `SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY`
 - `FRONTEND_ORIGIN` = `https://www.getldr.ca` plus localhost for local OAuth
 - `PUBLIC_API_URL` = `https://lazarus-4uxi.onrender.com`

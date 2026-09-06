@@ -34,6 +34,27 @@ export function vendorDashboards(): VendorDashboardLink[] {
       extra: [{ label: "API keys", href: "https://aistudio.google.com/apikey" }],
     },
     {
+      id: "openrouter",
+      label: "OpenRouter",
+      href: "https://openrouter.ai/keys",
+      why: "$0 spare when Gemini is down. Pin :free model IDs. Do not use openrouter/free.",
+      extra: [{ label: "Activity", href: "https://openrouter.ai/activity" }],
+    },
+    {
+      id: "cerebras",
+      label: "Cerebras Cloud",
+      href: "https://cloud.cerebras.ai",
+      why: "Paid. Not part of the $0 path. Leave unset unless you already have a key.",
+      extra: [{ label: "API keys", href: "https://cloud.cerebras.ai" }],
+    },
+    {
+      id: "groq",
+      label: "Groq console",
+      href: "https://console.groq.com/keys",
+      why: "Optional extra spare. Skip if GitHub login loops.",
+      extra: [{ label: "Usage", href: "https://console.groq.com/dashboard" }],
+    },
+    {
       id: "assemblyai",
       label: "AssemblyAI",
       href: "https://www.assemblyai.com/app",

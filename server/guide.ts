@@ -1,4 +1,5 @@
 import { generateGeminiText } from "./modelForPlan.js";
+import { hasAnyLlmProvider } from "./llmProviders.js";
 import { buildGuideGroundingText, matchGuideOffline } from "../shared/guideContent.js";
 
 export interface GuideChatMessage {
@@ -57,11 +58,10 @@ export async function answerGuideQuestion(
     return { ...offline, offline: true };
   }
 
-  const apiKey = process.env.GEMINI_API_KEY;
-  if (!apiKey) {
+  if (!hasAnyLlmProvider()) {
     return {
       answer:
-        "Guide AI is offline (no GEMINI_API_KEY). Use the step-by-step workflows above, or ask about HubSpot push, Live triage, or first analysis.",
+        "Guide AI is offline (no GEMINI_API_KEY or OPENROUTER_API_KEY). Use the step-by-step workflows above, or ask about HubSpot push, Live triage, or first analysis.",
       steps: [],
       offline: true,
     };

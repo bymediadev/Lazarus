@@ -10,6 +10,7 @@ export interface LiveTriageRequest {
   deal_value?: number;
   open_objections?: string[];
   modelTier?: ModelTier;
+  preferOpenWeights?: boolean;
 }
 
 export interface LiveTriageResult {
@@ -74,7 +75,9 @@ export async function runLiveTriage(body: LiveTriageRequest): Promise<LiveTriage
     };
   }
 
-  const relevance = await classifySalesRelevance(transcript);
+  const relevance = await classifySalesRelevance(transcript, {
+    preferOpenWeights: body.preferOpenWeights,
+  });
   if (relevance.label === "not_sales") {
     return {
       risk_tier: "LOW",
@@ -118,7 +121,9 @@ ${objections.length ? `- Already tracked open objections:\n${objections.map((o) 
 TRANSCRIPT (rolling):
 ${transcript.slice(-14000)}`;
 
-  const raw = await generateGeminiText(prompt, body.modelTier ?? "free");
+  const raw = await generateGeminiText(prompt, body.modelTier ?? "free", {
+    preferOpenWeights: body.preferOpenWeights,
+  });
   const parsed = parseJsonBlock(raw);
   return { ...parsed, updated_at: new Date().toISOString() };
 }

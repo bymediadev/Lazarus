@@ -14,6 +14,7 @@ import { guestDailyLimit, guestFreePerIpLimit } from "./guestRateLimit.js";
 import { countAnalysesTodayUtc, getRuntimeConfig } from "./runtimeConfig.js";
 import { latestRestoreSnapshot, RESTORE_RUNBOOK, type RestoreSnapshot } from "./opsRestore.js";
 import { vendorDashboards, type VendorDashboardLink } from "./vendorDashboards.js";
+import { hasCerebrasKey, hasGroqKey, hasOpenRouterKey } from "./llmProviders.js";
 
 const bootTime = new Date().toISOString();
 
@@ -74,6 +75,10 @@ export type SystemStatus = {
   keys: {
     gemini: boolean;
     gemini_key_format_valid: boolean;
+    cerebras: boolean;
+    groq: boolean;
+    openrouter: boolean;
+    llm: boolean;
     assemblyai: boolean;
     supabase: boolean;
   };
@@ -98,10 +103,40 @@ export async function buildSystemStatus(): Promise<SystemStatus> {
       token_present: null,
       ok: !!geminiKey && geminiKeyValid,
       meaning: !geminiKey
-        ? "GEMINI_API_KEY missing — analyses will fail."
+        ? "GEMINI_API_KEY missing — OpenRouter can still run analyses if configured."
         : !geminiKeyValid
           ? "GEMINI_API_KEY format looks wrong — create a new key in AI Studio."
-          : "Analysis engine key present.",
+          : "Primary analysis engine key present.",
+    },
+    {
+      id: "openrouter",
+      label: "OpenRouter (free failover)",
+      configured: hasOpenRouterKey(),
+      token_present: null,
+      ok: true,
+      meaning: hasOpenRouterKey()
+        ? "OpenRouter key present — $0 spare when Gemini is down; guests use this first."
+        : "OPENROUTER_API_KEY not set. Free signup: https://openrouter.ai/keys",
+    },
+    {
+      id: "cerebras",
+      label: "Cerebras (paid, optional)",
+      configured: hasCerebrasKey(),
+      token_present: null,
+      ok: true,
+      meaning: hasCerebrasKey()
+        ? "Cerebras key present — extra spare only. Not part of the $0 path."
+        : "Cerebras is paid. Leave unset.",
+    },
+    {
+      id: "groq",
+      label: "Groq (optional spare)",
+      configured: hasGroqKey(),
+      token_present: null,
+      ok: true,
+      meaning: hasGroqKey()
+        ? "Groq key present — extra spare if Cerebras/OpenRouter 429."
+        : "GROQ_API_KEY optional. Skip if console login loops.",
     },
     {
       id: "assemblyai",
@@ -197,15 +232,22 @@ export async function buildSystemStatus(): Promise<SystemStatus> {
     latestRestoreSnapshot(),
   ]);
 
+  const cerebras = hasCerebrasKey();
+  const groq = hasGroqKey();
+  const openrouter = hasOpenRouterKey();
+  const geminiUsable = !!geminiKey && geminiKeyValid;
   const keys = {
     gemini: !!geminiKey,
-    gemini_key_format_valid: geminiKeyValid,
+    gemini_key_format_valid: !geminiKey || geminiKeyValid,
+    cerebras,
+    groq,
+    openrouter,
+    llm: geminiUsable || cerebras || groq || openrouter,
     assemblyai: !!process.env.ASSEMBLYAI_API_KEY?.trim(),
     supabase: !!(process.env.SUPABASE_URL?.trim() && process.env.SUPABASE_SERVICE_ROLE_KEY?.trim()),
   };
 
-  const criticalFail =
-    !keys.gemini || !keys.gemini_key_format_valid || !keys.supabase;
+  const criticalFail = !keys.llm || !keys.supabase;
   const warningFail = integrations.some(
     (i) => i.configured && i.token_present === false && i.id !== "zoom"
   );
@@ -246,7 +288,7 @@ export async function buildSystemStatus(): Promise<SystemStatus> {
       analyses_today: analysesToday,
       gemini_model: (process.env.GEMINI_MODEL ?? "gemini-2.5-flash").trim() || "gemini-2.5-flash",
       llm_fails_at_zero:
-        "Gemini Flash fails hard (HTTP 429) when quota is gone — analyses error in the product, they do not silently skip.",
+        "Paid runs try Gemini first, then OpenRouter. The 5 free runs use OpenRouter only so they still work when Gemini is down.",
     },
     restore: {
       last_snapshot: lastSnapshot,
@@ -275,7 +317,7 @@ export function classifyIssue(route: string, statusCode: number, errorCode: stri
   if (statusCode === 429 || err.includes("quota") || err.includes("429")) {
     return {
       category: "Quota",
-      likely_fix: "Gemini/API quota — wait, enable Google billing (required for Team / Gemini 3.1 Pro), or switch GEMINI_MODEL; check AI Studio quotas.",
+      likely_fix: "LLM quota — wait, or add a free OPENROUTER_API_KEY so failover can run. See docs/llm-failover.md.",
     };
   }
   if (
@@ -287,7 +329,7 @@ export function classifyIssue(route: string, statusCode: number, errorCode: stri
     if (err.includes("gemini") || err.includes("api key") || err.includes("401")) {
       return {
         category: "AI",
-        likely_fix: "Check GEMINI_API_KEY on Render; create a fresh AI Studio key if rejected.",
+        likely_fix: "Check GEMINI_API_KEY and OPENROUTER_API_KEY on Render. See docs/llm-failover.md.",
       };
     }
   }

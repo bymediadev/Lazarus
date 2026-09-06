@@ -1,14 +1,9 @@
-import { GoogleGenerativeAI } from "@google/generative-ai";
-import { ensureBillingCustomer, type ConsumeKind } from "./billing.js";
+import { ensureBillingCustomer, evaluateCanAnalyze, type ConsumeKind } from "./billing.js";
+import { modelCandidatesForTier, type ModelTier } from "./geminiModels.js";
+import { generateText, isRetryableLlmError } from "./llmProviders.js";
 
-export type ModelTier = "free" | "entry" | "team";
-
-const FLASH_CHAIN = [
-  "gemini-2.5-flash",
-  "gemini-2.5-flash-lite",
-  "gemini-flash-latest",
-  "gemini-3.1-flash-lite",
-];
+export type { ModelTier };
+export { modelCandidatesForTier };
 
 export function modelTierFromConsume(consume: ConsumeKind | null | undefined): ModelTier {
   if (consume === "team" || consume === "exempt") return "team";
@@ -16,20 +11,31 @@ export function modelTierFromConsume(consume: ConsumeKind | null | undefined): M
   return "free";
 }
 
-export function modelCandidatesForTier(tier: ModelTier): string[] {
-  const flash = process.env.GEMINI_MODEL?.trim() || "gemini-2.5-flash";
-  const entry = process.env.GEMINI_MODEL_ENTRY?.trim() || "gemini-2.5-pro";
-  const team = process.env.GEMINI_MODEL_TEAM?.trim() || "gemini-3.1-pro-preview";
-  const flashChain = [flash, ...FLASH_CHAIN.filter((name) => name !== flash)];
+/** The 5 free runs (no signup or Free plan) use OpenRouter. Paid / founder stay Gemini-first. */
+export function preferOpenWeightsFor(opts: {
+  userId?: string | null;
+  consume?: ConsumeKind | null;
+  exempt?: boolean;
+}): boolean {
+  if (opts.exempt) return false;
+  if (opts.consume === "guest" || opts.consume === "free") return true;
+  return !opts.userId;
+}
 
-  if (tier === "team") return [...new Set([team, entry, ...flashChain])];
-  if (tier === "entry") return [...new Set([entry, ...flashChain])];
-  return [...new Set(flashChain)];
+/** Live routes do not reserve a slot; still route the 5 free runs to OpenRouter. */
+export async function consumeForLlmRoute(
+  userId?: string | null,
+  exempt?: boolean
+): Promise<ConsumeKind | undefined> {
+  if (exempt) return "exempt";
+  if (!userId) return "guest";
+  const row = await ensureBillingCustomer(userId);
+  if (!row) return "free";
+  return evaluateCanAnalyze(row).consume;
 }
 
 export function isRetryableGeminiError(err: unknown): boolean {
-  const msg = err instanceof Error ? err.message : String(err);
-  return /\b(429|404|503)\b/.test(msg) || /high demand|unavailable|overloaded/i.test(msg);
+  return isRetryableLlmError(err);
 }
 
 export async function resolveModelTierForUser(opts: {
@@ -47,30 +53,11 @@ export async function resolveModelTierForUser(opts: {
   return "free";
 }
 
-export async function generateGeminiText(prompt: string, tier: ModelTier): Promise<string> {
-  const apiKey = process.env.GEMINI_API_KEY;
-  if (!apiKey) {
-    throw new Error("GEMINI_API_KEY is not set. Add it to your .env file.");
-  }
-  const genAI = new GoogleGenerativeAI(apiKey);
-  let lastError: unknown;
-  for (const modelName of modelCandidatesForTier(tier)) {
-    try {
-      console.log(`Gemini: trying ${modelName}`);
-      const result = await genAI.getGenerativeModel({ model: modelName }).generateContent(prompt);
-      return result.response.text();
-    } catch (err) {
-      lastError = err;
-      if (isRetryableGeminiError(err)) {
-        console.warn(`Gemini: ${modelName} unavailable, trying next model`);
-        continue;
-      }
-      throw err;
-    }
-  }
-  const detail =
-    lastError instanceof Error ? lastError.message.split("\n")[0] : "all models unavailable";
-  throw new Error(
-    `Gemini quota exceeded. Team quality needs Google billing enabled for Gemini 3.1 Pro.\n\nLast error: ${detail}`
-  );
+/** Live/gate/guide text. Gemini Flash first unless preferOpenWeights (5 free runs). */
+export async function generateGeminiText(
+  prompt: string,
+  _tier?: ModelTier,
+  opts: { preferOpenWeights?: boolean } = {}
+): Promise<string> {
+  return generateText(prompt, { job: "live", preferOpenWeights: opts.preferOpenWeights });
 }

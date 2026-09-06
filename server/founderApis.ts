@@ -91,7 +91,7 @@ async function probeGemini(): Promise<{
   if (!key) {
     return {
       status: "not_configured",
-      meaning: "GEMINI_API_KEY missing — analyses will fail.",
+      meaning: "GEMINI_API_KEY missing — OpenRouter can still run analyses if configured.",
       billing: { level: "unknown", detail: "No key to meter." },
     };
   }
@@ -151,6 +151,109 @@ async function probeGemini(): Promise<{
       billing: { level: "unknown", detail: "Could not reach Google from this host." },
     };
   }
+}
+
+async function probeOpenAiCompat(opts: {
+  label: string;
+  key: string;
+  url: string;
+  headers: Record<string, string>;
+  missingMeaning: string;
+  signup: string;
+}): Promise<{
+  status: ApiProviderHealth["status"];
+  meaning: string;
+  billing: ApiProviderHealth["billing"];
+}> {
+  if (!opts.key) {
+    return {
+      status: "not_configured",
+      meaning: opts.missingMeaning,
+      billing: { level: "ok", detail: `Optional free failover — ${opts.signup}` },
+    };
+  }
+  try {
+    const res = await withTimeout(
+      secureFetch(opts.url, { method: "GET", headers: opts.headers }),
+      8000
+    );
+    if (res.status === 429) {
+      return {
+        status: "degraded",
+        meaning: `${opts.label} returned 429 — free-tier rate limit.`,
+        billing: {
+          level: "watch",
+          detail: "Wait a minute or rely on the next provider in the chain.",
+          metric_label: "probe",
+          metric_value: "429",
+        },
+      };
+    }
+    if (res.status === 401 || res.status === 403) {
+      return {
+        status: "out",
+        meaning: `${opts.label} key rejected (${res.status}).`,
+        billing: { level: "unknown", detail: "Create a fresh free key." },
+      };
+    }
+    if (!res.ok) {
+      return {
+        status: "degraded",
+        meaning: `${opts.label} probe HTTP ${res.status}.`,
+        billing: { level: "watch", detail: "Unexpected probe response." },
+      };
+    }
+    return {
+      status: "ok",
+      meaning: `${opts.label} reachable (models list OK).`,
+      billing: {
+        level: "ok",
+        detail: "Free tier — rate limits, not a dollar bill.",
+      },
+    };
+  } catch (err) {
+    return {
+      status: "degraded",
+      meaning: err instanceof Error ? err.message : `${opts.label} probe failed`,
+      billing: { level: "unknown", detail: `Could not reach ${opts.label} from this host.` },
+    };
+  }
+}
+
+async function probeCerebras() {
+  const key = (process.env.CEREBRAS_API_KEY ?? "").trim();
+  return probeOpenAiCompat({
+    label: "Cerebras",
+    key,
+    url: "https://api.cerebras.ai/v1/models",
+    headers: { Authorization: `Bearer ${key}` },
+    missingMeaning: "CEREBRAS_API_KEY unset — paid provider, not required.",
+    signup: "https://cloud.cerebras.ai",
+  });
+}
+
+async function probeGroq() {
+  const key = (process.env.GROQ_API_KEY ?? "").trim();
+  return probeOpenAiCompat({
+    label: "Groq",
+    key,
+    url: "https://api.groq.com/openai/v1/models",
+    headers: { Authorization: `Bearer ${key}` },
+    missingMeaning: "GROQ_API_KEY optional — skip if Groq login loops.",
+    signup: "https://console.groq.com/keys",
+  });
+}
+
+async function probeOpenRouter() {
+  const key = (process.env.OPENROUTER_API_KEY ?? "").trim();
+  return probeOpenAiCompat({
+    label: "OpenRouter",
+    key,
+    url: "https://openrouter.ai/api/v1/models",
+    headers: { Authorization: `Bearer ${key}` },
+    missingMeaning: "OPENROUTER_API_KEY missing — add this free key for Gemini outages.",
+    signup: "https://openrouter.ai/keys",
+  });
 }
 
 async function probeAssemblyAI(): Promise<{
@@ -391,8 +494,11 @@ export async function buildApisInventory(): Promise<ApisInventory> {
     errorsByProvider[id] = slot;
   }
 
-  const [gemini, assembly, whitewhale] = await Promise.all([
+  const [gemini, cerebras, groq, openrouter, assembly, whitewhale] = await Promise.all([
     probeGemini(),
+    probeCerebras(),
+    probeGroq(),
+    probeOpenRouter(),
     probeAssemblyAI(),
     probeWhiteWhale(),
   ]);
@@ -415,6 +521,48 @@ export async function buildApisInventory(): Promise<ApisInventory> {
       error_count_7d: errorsByProvider.gemini?.count ?? 0,
       probe: "live",
       dashboard_url: dashboardById.gemini ?? null,
+    },
+    {
+      id: "cerebras",
+      label: "Cerebras (paid, optional)",
+      category: "AI",
+      status: cerebras.status,
+      configured: !!process.env.CEREBRAS_API_KEY?.trim(),
+      meaning: cerebras.meaning,
+      billing: cerebras.billing,
+      last_error_at: errorsByProvider.cerebras?.last_at ?? null,
+      last_error_code: errorsByProvider.cerebras?.last_code ?? null,
+      error_count_7d: errorsByProvider.cerebras?.count ?? 0,
+      probe: "live",
+      dashboard_url: dashboardById.cerebras ?? null,
+    },
+    {
+      id: "openrouter",
+      label: "OpenRouter (free failover)",
+      category: "AI",
+      status: openrouter.status,
+      configured: !!process.env.OPENROUTER_API_KEY?.trim(),
+      meaning: openrouter.meaning,
+      billing: openrouter.billing,
+      last_error_at: errorsByProvider.openrouter?.last_at ?? null,
+      last_error_code: errorsByProvider.openrouter?.last_code ?? null,
+      error_count_7d: errorsByProvider.openrouter?.count ?? 0,
+      probe: "live",
+      dashboard_url: dashboardById.openrouter ?? null,
+    },
+    {
+      id: "groq",
+      label: "Groq (optional spare)",
+      category: "AI",
+      status: groq.status,
+      configured: !!process.env.GROQ_API_KEY?.trim(),
+      meaning: groq.meaning,
+      billing: groq.billing,
+      last_error_at: errorsByProvider.groq?.last_at ?? null,
+      last_error_code: errorsByProvider.groq?.last_code ?? null,
+      error_count_7d: errorsByProvider.groq?.count ?? 0,
+      probe: "live",
+      dashboard_url: dashboardById.groq ?? null,
     },
     {
       id: "assemblyai",
@@ -565,7 +713,9 @@ export async function buildApisInventory(): Promise<ApisInventory> {
         detail: p.billing.detail,
         action:
           p.id === "gemini"
-            ? "Open Google AI Studio → raise quota or enable billing. Team analyses use Gemini 3.1 Pro, which has no free tier."
+            ? "Wait for Gemini, or add a free OPENROUTER_API_KEY so analyses keep running. See docs/llm-failover.md."
+            : p.id === "cerebras" || p.id === "groq" || p.id === "openrouter"
+              ? "Free-tier rate limit — wait a minute or rely on the next provider in the chain."
             : p.id === "whitewhale"
               ? "Top up WhiteWhale credits or pause active monitors."
               : "Upgrade the provider plan or wait for reset.",
@@ -595,7 +745,7 @@ export async function buildApisInventory(): Promise<ApisInventory> {
       severity: quota7 >= 10 ? "critical" : "warning",
       title: "Quota errors showing up in Lazarus telemetry",
       detail: `${quota7} quota-classified failures in the last 7 days (was ${quotaPrior} prior week).`,
-      action: "Usually Gemini free-tier — Team uses Gemini 3.1 Pro, which needs Google billing enabled.",
+      action: "Usually Gemini free-tier. Add OPENROUTER_API_KEY so failover can cover the outage.",
     });
   }
 
@@ -609,9 +759,14 @@ export async function buildApisInventory(): Promise<ApisInventory> {
     });
   }
 
-  const criticalOut = providers.some((p) =>
-    ["gemini", "supabase"].includes(p.id) && (p.status === "out" || p.status === "degraded")
+  const llmProviders = providers.filter((p) =>
+    ["gemini", "cerebras", "openrouter", "groq"].includes(p.id)
   );
+  const llmUp = llmProviders.some((p) => p.configured && p.status === "ok");
+  const supabaseOut = providers.some(
+    (p) => p.id === "supabase" && (p.status === "out" || p.status === "degraded")
+  );
+  const criticalOut = supabaseOut || !llmUp;
   const anyBillingCritical = billing_alerts.some((a) => a.severity === "critical");
   const status: ApisInventory["status"] = criticalOut || anyBillingCritical
     ? "critical"
