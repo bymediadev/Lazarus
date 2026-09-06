@@ -183,14 +183,22 @@ export default function AnalysisReport({
 
       {sources && (
         <div className="sources-bar">
+          {sources.live && <span>Live meeting merged</span>}
           {sources.audio && <span>Call audio transcribed</span>}
           {sources.field && <span>Field capture merged</span>}
           {sources.manual && <span>Call notes merged</span>}
           {sources.email && <span>Email thread merged</span>}
           {sources.document && <span>PDF/DOCX merged</span>}
-          {[sources.audio, sources.field, sources.manual, sources.email, sources.document].filter(
-            Boolean
-          ).length >= 2 && <span className="sources-merged">Cross-channel stitched</span>}
+          {sources.crm && <span>CRM history merged</span>}
+          {[
+            sources.live,
+            sources.audio,
+            sources.field,
+            sources.manual,
+            sources.email,
+            sources.document,
+            sources.crm,
+          ].filter(Boolean).length >= 2 && <span className="sources-merged">Cross-channel stitched</span>}
         </div>
       )}
 

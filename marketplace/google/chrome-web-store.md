@@ -88,7 +88,7 @@ Do **not** add `tabs`, `scripting`, `<all_urls>`, `identity`, or localhost in th
 
 2. [Chrome Web Store Developer Dashboard](https://chrome.google.com/webstore/devconsole) → New item → upload `lazarus-deal-recovery-widget-meet.zip`.
 
-3. Screenshots: 1280×800 of Meet + Lazarus Live (see [`marketplace/screenshots.md`](../screenshots.md)).
+3. Screenshots: 1280×800 with the **Live** tab selected and Meet adding the meeting (see [`marketplace/screenshots.md`](../screenshots.md)). Leave Upload and Mailbox visible — they stack into the same score from the signed-in account.
 
 4. Submit for review.
 

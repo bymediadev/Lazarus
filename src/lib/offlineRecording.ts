@@ -1,3 +1,5 @@
+import type { LiveTranscriptTurn } from "../types";
+
 const DB_NAME = "lazarus-field-capture";
 const DB_VERSION = 1;
 const CHUNKS_STORE = "recording_chunks";
@@ -20,6 +22,8 @@ export interface PendingAnalysis {
   recordingFile?: File;
   documentFile?: File;
   recordingSessionId?: string;
+  liveTranscriptPayload?: LiveTranscriptTurn[];
+  liveSessionObjections?: { text: string; status: string; source: string }[];
 }
 
 function openDb(): Promise<IDBDatabase> {

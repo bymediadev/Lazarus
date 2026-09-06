@@ -105,8 +105,9 @@ export default function DealProfilePanel({
     <details className="deal-profile-panel" data-guide-target="guide-deal-profile">
       <summary>CRM import + deal history (optional)</summary>
       <p className="console-tab-hint">
-        Import HubSpot or Salesforce notes, or paste prior deal history. Use a company domain as
-        Account ID (e.g. acme.com) when you have one. Push updates after analysis are human-confirmed.
+        Import a HubSpot deal or Salesforce opportunity so live meetings, uploads, and mailbox
+        threads score against that record. After the run, Push the recovery plan — Lazarus does
+        not write back until you click.
       </p>
 
       <HubSpotDealControls

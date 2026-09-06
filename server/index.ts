@@ -400,11 +400,18 @@ app.post(
       fieldCapturedAt: isFieldCapture && audioTranscript ? processedAt : undefined,
       documentCapturedAt: documentText ? processedAt : undefined,
     });
+    if (deepContext.liveTranscriptPayload?.length) {
+      sources.live = true;
+      if (!manualRaw.trim()) sources.manual = false;
+    }
+    if (deepContext.historicalCrmContext?.length) {
+      sources.crm = true;
+    }
 
     if (!rawTranscript.trim()) {
       res.status(400).json({
         error:
-          "Add one or more evidence sources. Every recording, transcript, email thread, and document is analyzed together.",
+          "Add one or more evidence sources. Live meetings, uploads, mailbox threads, and documents analyze together.",
       });
       return;
     }

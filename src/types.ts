@@ -24,6 +24,8 @@ export interface TranscriptSources {
   email: boolean;
   field: boolean;
   document: boolean;
+  live?: boolean;
+  crm?: boolean;
 }
 
 export interface LiveDealTriage {

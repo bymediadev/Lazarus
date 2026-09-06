@@ -17,7 +17,7 @@ export const MEETING_PLATFORMS: MeetingPlatform[] = [
     id: "meet",
     label: "Google Meet",
     connectNote:
-      "Install the Lazarus Meet captions extension, turn on Captions in Meet, then Start. Mic + paste stays as fallback.",
+      "Install the Lazarus Meet captions extension, turn on Captions in Meet, then Start. The meeting adds to this deal — Upload and Mailbox still count on the score.",
   },
   {
     id: "teams",

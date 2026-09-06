@@ -113,6 +113,31 @@ function formatFileSize(bytes: number): string {
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 }
 
+function formatLiveTurns(turns: LiveTranscriptTurn[]): string {
+  return turns
+    .map((t) => {
+      const ts = t.timestamp ? `[${t.timestamp}] ` : "";
+      return `${ts}${t.speaker}: ${t.dialogue}`;
+    })
+    .join("\n")
+    .trim();
+}
+
+/** True when the transcript box has upload/paste text besides a live session dump. */
+function hasStandaloneCallTranscript(
+  transcript: string,
+  liveTurns: LiveTranscriptTurn[]
+): boolean {
+  const text = transcript.trim();
+  if (!text) return false;
+  if (!liveTurns.length) return true;
+  const liveText = formatLiveTurns(liveTurns);
+  if (liveText && text === liveText) return false;
+  const marker = "--- LIVE SESSION ---";
+  if (!text.includes(marker)) return true;
+  return text.split(marker)[0].trim().length > 0;
+}
+
 async function readTextEvidence(file: File): Promise<string> {
   const ext = getExtension(file.name);
   const supported = [".txt", ".md", ".csv"].includes(ext) || file.type.startsWith("text/");
@@ -197,22 +222,28 @@ export default function App() {
   const hasEmail = emailThread.trim().length > 0;
   const hasFieldRecording = recordingSource === "field" && hasAudio;
   const hasCallInput = hasAudio || hasCallTranscript;
+  const liveTurnsForRun =
+    liveTranscriptPayload.length > 0 ? liveTranscriptPayload : liveSessionTurns;
+  const hasLiveEvidence = liveTurnsForRun.length > 0;
+  const hasStandaloneTranscript = hasStandaloneCallTranscript(callTranscript, liveTurnsForRun);
   const channelCount = [
     hasUploadedRecording,
-    hasCallTranscript,
+    hasStandaloneTranscript,
     hasEmail,
     hasFieldRecording,
     hasDocument,
+    hasLiveEvidence,
   ].filter(Boolean).length;
-  const hasAnyInput = hasCallInput || hasEmail || hasDocument;
+  const hasAnyInput = hasCallInput || hasEmail || hasDocument || hasLiveEvidence;
 
   const loadingMessage = useMemo(() => {
     if (channelCount >= 2) return "Stitching cross-channel context into intelligence brief...";
     if (hasAudio) return "Transcribing audio and building intelligence brief...";
     if (hasDocument) return "Extracting document and building intelligence brief...";
     if (hasEmail) return "Parsing email thread and building intelligence brief...";
+    if (hasLiveEvidence) return "Folding the live meeting into the intelligence brief...";
     return "Analyzing deal and building intelligence brief...";
-  }, [channelCount, hasAudio, hasDocument, hasEmail]);
+  }, [channelCount, hasAudio, hasDocument, hasEmail, hasLiveEvidence]);
 
   const headerStatus = loading
     ? "INTELLIGENCE BRIEF IN PROGRESS..."
@@ -515,6 +546,8 @@ export default function App() {
           emailThread: entry.emailThread,
           dealValue: entry.dealValue,
           fieldCapture: !!entry.recordingSessionId,
+          liveTranscriptPayload: entry.liveTranscriptPayload,
+          liveSessionObjections: entry.liveSessionObjections,
           captchaToken: token || undefined,
         });
         if (entry.recordingSessionId) {
@@ -819,7 +852,7 @@ export default function App() {
   const handleRun = async (forceAnalysis = false) => {
     if (!hasAnyInput) {
       setError(
-        "Add one or more evidence sources. Every recording, transcript, email thread, and document is analyzed together."
+        "Add one or more evidence sources. Live meetings, uploads, mailbox threads, and documents analyze together on one score."
       );
       setRelevanceBlocked(false);
       return;
@@ -871,6 +904,8 @@ export default function App() {
         recordingFile: recordingSource === "upload" ? file ?? undefined : undefined,
         documentFile: documentFile ?? undefined,
         recordingSessionId: fieldSessionId ?? undefined,
+        liveTranscriptPayload: liveTurnsForRun.length ? liveTurnsForRun : undefined,
+        liveSessionObjections: liveSessionObjections.length ? liveSessionObjections : undefined,
       });
       // Clear all input state so the user cannot double-submit and badges reset
       setFile(null);
@@ -879,6 +914,9 @@ export default function App() {
       setDocumentFile(null);
       setFieldSessionId(null);
       setRecordingSource(null);
+      setLiveTranscriptPayload([]);
+      setLiveSessionObjections([]);
+      setLiveSessionTurns([]);
       setSyncNotice("Analysis queued — will auto-sync when connection restores.");
       return;
     }
@@ -903,7 +941,7 @@ export default function App() {
         accountId: accountId.trim() || undefined,
         salesCycleDays: salesCycleDaysNum,
         historicalCrmContext,
-        liveTranscriptPayload: liveTranscriptPayload.length ? liveTranscriptPayload : undefined,
+        liveTranscriptPayload: liveTurnsForRun.length ? liveTurnsForRun : undefined,
         liveSessionObjections: liveSessionObjections.length ? liveSessionObjections : undefined,
         forceAnalysis,
         hubspotDealId: linkedHubSpotDealId ?? undefined,
@@ -974,7 +1012,7 @@ export default function App() {
 
   const tabs: { id: InputTab; label: string; dot?: boolean }[] = [
     { id: "call", label: "Upload", dot: hasCallInput },
-    { id: "live", label: "Live", dot: liveSessionActive },
+    { id: "live", label: "Live", dot: liveSessionActive || hasLiveEvidence },
     { id: "email", label: "Mailbox", dot: hasEmail },
     { id: "field", label: "Field", dot: hasFieldRecording },
   ];
@@ -1061,6 +1099,9 @@ export default function App() {
       }
       setActiveTab("call");
       setError(null);
+      setSyncNotice(
+        "Live meeting added to this deal. Upload, mailbox, and a linked HubSpot or Salesforce record still count — run the score, then Push the plan."
+      );
     },
     []
   );
@@ -1552,9 +1593,9 @@ export default function App() {
                     All {channelCount} sources analyze together
                   </span>
                 )}
-                {liveTranscriptPayload.length > 0 && (
+                {hasLiveEvidence && (
                   <span className="input-badge input-badge-text">
-                    Live session ({liveTranscriptPayload.length} turns)
+                    Live meeting ({liveTurnsForRun.length} turns)
                   </span>
                 )}
                 {liveSessionObjections.length > 0 && (

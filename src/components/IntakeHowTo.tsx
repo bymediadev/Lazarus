@@ -31,8 +31,8 @@ export default function IntakeHowTo({
         <h2 className="intake-how-to-title">Deal evidence</h2>
         <p className="intake-how-to-entry">This is the left pane — add the stalled deal here.</p>
         <p className="intake-how-to-hint">
-          Add a recording, transcript, email thread, or notes from your CRM. Compile them in one
-          run for a full picture of the deal.
+          Add a recording, live meeting, mailbox thread, or CRM notes. They stack in one run —
+          one score and one recovery plan.
         </p>
         <p className="intake-how-to-status">{status}</p>
       </div>

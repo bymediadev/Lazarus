@@ -45,7 +45,7 @@ Sales productivity · CRM · Revenue intelligence · Meetings (companion, not a 
 ## Screenshot captions (when you capture)
 
 1. Login — Sign in to Lazarus (Google is identity only).
-2. Live tab — Recovery Brief beside Zoom, Meet, or Teams.
+2. Live tab — Recovery Brief beside Zoom, Meet, or Teams. Upload and Mailbox stay on the same deal so the score stays cumulative.
 3. Mailbox search — user-initiated Gmail or Outlook thread attach.
 4. HubSpot / Salesforce — import a stalled deal, then optional Push.
 5. Security overview — Trust Pack at getldr.ca/security-overview.
