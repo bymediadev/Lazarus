@@ -79,6 +79,14 @@ function requireClient(): SupabaseClient {
   return sb;
 }
 
+export async function establishSessionFromBridge(data: {
+  email?: string;
+  token_hash?: string | null;
+  email_otp?: string | null;
+}): Promise<{ email: string }> {
+  return applySessionFromBridge(data);
+}
+
 async function applySessionFromBridge(data: {
   email?: string;
   token_hash?: string | null;

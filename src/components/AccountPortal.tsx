@@ -1,6 +1,11 @@
 import { useEffect, useState } from "react";
 import { useAuth } from "./AuthProvider";
 import { PricingPlanCards } from "./PricingGate";
+import WidgetLoadout from "./WidgetLoadout";
+import { fetchZoomStatus, zoomConnectUrl } from "../lib/zoomIntegration";
+import { fetchGoogleMeetStatus, googleMeetConnectUrl } from "../lib/googleMeetIntegration";
+import { fetchTeamsStatus, teamsConnectUrl } from "../lib/teamsIntegration";
+import { navigateApp } from "../lib/appRoute";
 import {
   fetchBillingMe,
   formatInvoiceAmount,
@@ -25,6 +30,12 @@ export default function AccountPortal({ open, onClose }: Props) {
   const [billing, setBilling] = useState<BillingMe | null>(null);
   const [billingBusy, setBillingBusy] = useState<string | null>(null);
   const [billingError, setBillingError] = useState<string | null>(null);
+  const [zoomConnected, setZoomConnected] = useState(false);
+  const [zoomEmail, setZoomEmail] = useState<string | null>(null);
+  const [meetConnected, setMeetConnected] = useState(false);
+  const [meetEmail, setMeetEmail] = useState<string | null>(null);
+  const [teamsConnected, setTeamsConnected] = useState(false);
+  const [teamsEmail, setTeamsEmail] = useState<string | null>(null);
 
   useEffect(() => {
     if (!open || !auth.session) {
@@ -40,6 +51,24 @@ export default function AccountPortal({ open, onClose }: Props) {
         if (!cancelled) {
           setBillingError(err instanceof Error ? err.message : "Could not load billing");
         }
+      }
+    })();
+    void (async () => {
+      try {
+        const [zoom, meet, teams] = await Promise.all([
+          fetchZoomStatus(),
+          fetchGoogleMeetStatus(),
+          fetchTeamsStatus(),
+        ]);
+        if (cancelled) return;
+        setZoomConnected(!!zoom.connected);
+        setZoomEmail(zoom.account_email);
+        setMeetConnected(!!meet.connected);
+        setMeetEmail(meet.account_email);
+        setTeamsConnected(!!teams.connected);
+        setTeamsEmail(teams.account_email);
+      } catch {
+        /* status endpoints optional when API is cold */
       }
     })();
     return () => {
@@ -116,6 +145,32 @@ export default function AccountPortal({ open, onClose }: Props) {
           <h3>Profile</h3>
           <p className="account-email">{email}</p>
           {auth.user?.id && <p className="meta-line">User ID: {auth.user.id}</p>}
+        </section>
+
+        <section className="account-portal-section">
+          <WidgetLoadout
+            signedIn={!!auth.session}
+            email={auth.user?.email ?? null}
+            onSignIn={() => {
+              onClose();
+              navigateApp("/login");
+            }}
+            zoom={{
+              connected: zoomConnected,
+              accountEmail: zoomEmail,
+              connectUrl: zoomConnectUrl(),
+            }}
+            meet={{
+              connected: meetConnected,
+              accountEmail: meetEmail,
+              connectUrl: googleMeetConnectUrl(),
+            }}
+            teams={{
+              connected: teamsConnected,
+              accountEmail: teamsEmail,
+              connectUrl: teamsConnectUrl(),
+            }}
+          />
         </section>
 
         <section className="account-portal-section">

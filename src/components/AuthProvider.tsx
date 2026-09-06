@@ -24,6 +24,7 @@ import {
   type Session,
   type User,
 } from "../lib/auth";
+import { consumeWidgetLaunchFromUrl } from "../lib/widgetLaunch";
 import {
   clearPasswordRecoveryState,
   capturePasswordRecoveryFromUrl,
@@ -80,6 +81,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setLoading(false);
         return;
       }
+
+      try {
+        await consumeWidgetLaunchFromUrl();
+      } catch {
+        /* invalid/expired launch token — fall through to normal session */
+      }
+      if (cancelled) return;
 
       const sb = getSupabaseBrowserClient();
       if (!sb) {

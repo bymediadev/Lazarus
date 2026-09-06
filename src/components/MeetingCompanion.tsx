@@ -26,6 +26,9 @@ import {
 } from "../lib/googleMeetIntegration";
 import { fetchTeamsStatus, teamsConnectUrl, type TeamsStatus } from "../lib/teamsIntegration";
 import type { LiveTranscriptTurn } from "../types";
+import { useAuth } from "./AuthProvider";
+import WidgetLoadout from "./WidgetLoadout";
+import { navigateApp } from "../lib/appRoute";
 
 interface Props {
   dealValue: string;
@@ -119,6 +122,7 @@ export default function MeetingCompanion({
   const [googleStatus, setGoogleStatus] = useState<GoogleMeetStatus | null>(null);
   const [teamsStatus, setTeamsStatus] = useState<TeamsStatus | null>(null);
   const [zoomStreamActive, setZoomStreamActive] = useState(false);
+  const auth = useAuth();
 
   const recognitionRef = useRef<InstanceType<SpeechRecognitionCtor> | null>(null);
   const sessionStartRef = useRef<number | null>(null);
@@ -445,6 +449,28 @@ export default function MeetingCompanion({
           )}
         </div>
       )}
+
+      <WidgetLoadout
+        signedIn={!!auth.session}
+        email={auth.user?.email ?? null}
+        focus={platform}
+        onSignIn={() => navigateApp("/login")}
+        zoom={{
+          connected: !!zoomStatus?.connected,
+          accountEmail: zoomStatus?.account_email,
+          connectUrl: zoomConnectUrl(),
+        }}
+        meet={{
+          connected: !!googleStatus?.connected,
+          accountEmail: googleStatus?.account_email,
+          connectUrl: googleMeetConnectUrl(),
+        }}
+        teams={{
+          connected: !!teamsStatus?.connected,
+          accountEmail: teamsStatus?.account_email,
+          connectUrl: teamsConnectUrl(),
+        }}
+      />
 
       {phase === "idle" ? (
         <div className="meeting-session-idle">

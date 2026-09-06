@@ -28,7 +28,9 @@ export function hasOAuthReturnParams(search = window.location.search): boolean {
     params.has("google") ||
     params.has("teams") ||
     params.has("hubspot") ||
-    params.has("salesforce")
+    params.has("salesforce") ||
+    params.has("launch") ||
+    params.has("widget")
   );
 }
 

@@ -49,6 +49,7 @@ import {
   updateCrmDealLinkContext,
 } from "./crmDealLinks.js";
 import { registerAuthRoutes } from "./authRoutes.js";
+import { registerWidgetLaunchRoutes } from "./widgetLaunch.js";
 import { optionalAuthUserId } from "./authMiddleware.js";
 import {
   isAnonymousGuestRateLimited,
@@ -663,6 +664,7 @@ registerHubSpotRoutes(app);
 registerSalesforceRoutes(app);
 registerWhiteWhaleRoutes(app);
 registerAuthRoutes(app);
+registerWidgetLaunchRoutes(app);
 registerBillingRoutes(app);
 registerFeedbackRoutes(app);
 registerFounderRoutes(app);

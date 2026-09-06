@@ -11,6 +11,10 @@ import IntakeHowTo from "./components/IntakeHowTo";
 import LazarusGuide from "./components/LazarusGuide";
 import EmailProviderControls from "./components/EmailProviderControls";
 import { useAuth } from "./components/AuthProvider";
+import { bootTeamsHost } from "./lib/teamsHost";
+import { publishMeetAccountPair } from "./lib/meetPair";
+import { setLinkedPlatform } from "./lib/meetingPlatforms";
+import { widgetFromSearch } from "./lib/widgetStores";
 import LoginScreen from "./components/LoginScreen";
 import PasswordRecoveryScreen from "./components/PasswordRecoveryScreen";
 import AccountPortal from "./components/AccountPortal";
@@ -244,6 +248,18 @@ export default function App() {
     },
     []
   );
+
+  useEffect(() => {
+    bootTeamsHost();
+  }, []);
+
+  useEffect(() => {
+    if (!auth.session) return;
+    publishMeetAccountPair({
+      userId: auth.user?.id ?? null,
+      userEmail: auth.user?.email ?? null,
+    });
+  }, [auth.session, auth.user?.id, auth.user?.email]);
 
   useEffect(() => {
     captureDemoBypassFromUrl();
@@ -656,9 +672,13 @@ export default function App() {
     if (route !== "app") return;
     const params = new URLSearchParams(window.location.search);
     const tab = params.get("tab");
+    const host = widgetFromSearch(window.location.search);
     if (tab === "call" || tab === "email" || tab === "field" || tab === "live") {
       setActiveTab(tab);
+    } else if (host) {
+      setActiveTab("live");
     }
+    if (host) setLinkedPlatform(host);
     if (params.get("sample") !== "1") return;
     void handleLoadDemoTranscript();
     params.delete("sample");

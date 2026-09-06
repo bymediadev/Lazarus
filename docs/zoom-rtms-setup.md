@@ -2,6 +2,8 @@
 
 Lazarus uses **Zoom Realtime Media Streams (RTMS)** to pull **live diarized transcripts** into the Meeting Companion during calls. Meet and Teams follow after the Zoom pilot.
 
+**Loadout:** sign in on getldr.ca, Connect Zoom, then enable **Lazarus Deal Recovery Widget** in the Zoom Marketplace. That enable is this same General App + RTMS — not a second engine. Open widget as this account uses `/portal?widget=zoom&launch=` so Home URL / portal opens as the connected Lazarus user.
+
 ## Architecture
 
 ```

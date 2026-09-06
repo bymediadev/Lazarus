@@ -19,6 +19,7 @@ Do not commit secrets — use `.env.example` and host/GitHub secret stores.
 | [auth-setup.md](./auth-setup.md) | Login: email magic link, Google, HubSpot/Salesforce bridge + Render Vite env |
 | [billing-setup.md](./billing-setup.md) | Stripe paywall after 5 free analyses ($10 / $99 / $499) |
 | [hosting.md](./hosting.md) | Upload the whole site+API to Render or a Node VPS |
+| Meeting widget loadout | After website sign-in + Connect, enable Lazarus Deal Recovery Widget in Chrome / Zoom / Teams — see the Live tab and Account |
 
 ---
 

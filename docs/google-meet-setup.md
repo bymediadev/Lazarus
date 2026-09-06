@@ -2,6 +2,8 @@
 
 Lazarus uses **Google OAuth** for Meet/Workspace connect and **Gmail thread search** (`gmail.readonly`).
 
+**Loadout:** sign in on getldr.ca, Connect Google, then enable **Lazarus Deal Recovery Widget** in the Chrome Web Store (or sideload `extensions/meet-captions`). The extension pairs to the signed-in Lazarus account — same Recovery Brief, not a second product.
+
 ## 1. Create a Google Cloud OAuth client
 
 1. Open [Google Cloud Console](https://console.cloud.google.com/) → APIs & Services → Credentials

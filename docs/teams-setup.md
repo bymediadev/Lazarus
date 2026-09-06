@@ -2,6 +2,8 @@
 
 Lazarus Connect Teams uses **Microsoft Entra ID (Azure AD)** + **Microsoft Graph**. Online meeting transcript auto-pull is next; today mic + paste feeds the same **live Recovery Brief** pipe as Zoom and Google Meet.
 
+**Loadout:** sign in on getldr.ca, Connect Teams, then enable **Lazarus Deal Recovery Widget** in the Teams store (or import the Teams zip). Open widget as this account mints a one-time `/portal?widget=teams&launch=` link so the side panel does not ask for a second login.
+
 ## 1. Register an Azure app
 
 1. Open [Azure Portal](https://portal.azure.com/) → **Microsoft Entra ID** → **App registrations** → **New registration**
