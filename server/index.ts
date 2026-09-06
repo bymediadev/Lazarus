@@ -52,6 +52,8 @@ import {
   updateCrmDealLinkContext,
 } from "./crmDealLinks.js";
 import { registerAuthRoutes } from "./authRoutes.js";
+import { registerFeedbackRoutes } from "./feedback.js";
+import { registerSeoPageRoutes } from "./seoPages.js";
 import { optionalAuthUserId } from "./authMiddleware.js";
 import {
   isAnonymousGuestRateLimited,
@@ -764,12 +766,14 @@ registerTeamsRoutes(app);
 registerHubSpotRoutes(app);
 registerSalesforceRoutes(app);
 registerAuthRoutes(app);
+registerFeedbackRoutes(app);
 registerBillingRoutes(app);
 registerContactRoutes(app);
 registerFounderRoutes(app);
 registerMeDealRoutes(app);
 registerTelemetryRoutes(app);
 registerTrustPackRoutes(app, publicPath);
+registerSeoPageRoutes(app, publicPath);
 
 app.get("/api/runtime", async (_req, res) => {
   try {

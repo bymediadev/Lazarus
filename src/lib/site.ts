@@ -22,6 +22,8 @@ export const OG_TITLE = "Lazarus Deal Recovery | Win Back Closed-Lost Sales";
 export const OG_DESCRIPTION =
   "Lazarus names the blocker and a 0–90 day plan you paste into HubSpot notes. No meeting bot. Connect with OAuth. Five free analyses.";
 
+export const PILLAR_PATH = "/how-to-recover-a-stalled-b2b-deal";
+
 const ROBOTS_INDEX = "index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1";
 const ROBOTS_NOINDEX = "noindex, nofollow";
 

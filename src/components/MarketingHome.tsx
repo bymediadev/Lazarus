@@ -1,5 +1,5 @@
 import { HERO_PRIMARY_CTA, PORTAL_ENTRY_CTA } from "../lib/cta";
-import { BOOKING_URL, WALKTHROUGH_EMBED_URL } from "../lib/site";
+import { BOOKING_URL, PILLAR_PATH, WALKTHROUGH_EMBED_URL } from "../lib/site";
 import { scrollToSection } from "../lib/appRoute";
 import { useReveal } from "../lib/useReveal";
 import { PricingPlanCards } from "./PricingGate";
@@ -90,6 +90,21 @@ export default function MarketingHome({
           <li>Which stalled deals are recoverable vs a flat no</li>
           <li>The blocker, and a 0–90 day plan you paste into HubSpot notes</li>
         </ul>
+      </section>
+
+      <section className="marketing-simple marketing-reveal" id="recover" aria-label="How do I recover this deal?">
+        <h2>How do I recover this deal?</h2>
+        <ol className="marketing-plain-list">
+          <li>Audit existing transcript and email evidence.</li>
+          <li>Map hidden background stakeholders.</li>
+          <li>Isolate decision-making anxiety — recoverable versus a flat no.</li>
+          <li>Execute a 0–90 day tactical recovery script.</li>
+        </ol>
+        <p>
+          <a className="marketing-text-link" href={PILLAR_PATH}>
+            Read the 4-step stalled B2B deal recovery framework
+          </a>
+        </p>
       </section>
 
       <section className="marketing-simple marketing-reveal" id="brief" aria-label="Example brief">

@@ -16,6 +16,10 @@ const TRUST_PACK_FILES: Record<string, string> = {
 
 const PUBLIC_TRUST_PACK_SLUGS = new Set(["privacy", "terms", "dpa", "security-overview"]);
 
+const CRAWLABLE_HTML_PAGES: Record<string, string> = {
+  "/how-to-recover-a-stalled-b2b-deal": "how-to-recover-a-stalled-b2b-deal.html",
+};
+
 function canonicalTrustPackPath(slug: string): string {
   if (slug === "battlecard") return `/api/trust-pack/${slug}`;
   if (PUBLIC_TRUST_PACK_SLUGS.has(slug)) return `/${slug}`;
@@ -30,6 +34,24 @@ const LEGACY_TRUST_PACK_HTML: Record<string, string> = Object.fromEntries(
 function attachTrustPackMiddleware(server: { middlewares: { use: Function } }) {
   server.middlewares.use((req: { url?: string }, res: { statusCode: number; setHeader: Function; end: Function }, next: () => void) => {
     const pathname = req.url?.split("?")[0] ?? "";
+    const seoFile = CRAWLABLE_HTML_PAGES[pathname];
+    if (seoFile) {
+      const filePath = path.join(__dirname, "public", seoFile);
+      if (existsSync(filePath)) {
+        res.setHeader("Content-Type", "text/html; charset=utf-8");
+        createReadStream(filePath).pipe(res);
+        return;
+      }
+    }
+    if (pathname.endsWith(".html")) {
+      const clean = pathname.replace(/\.html$/, "");
+      if (CRAWLABLE_HTML_PAGES[clean]) {
+        res.statusCode = 301;
+        res.setHeader("Location", clean);
+        res.end();
+        return;
+      }
+    }
     const legacyRedirect = LEGACY_TRUST_PACK_HTML[pathname];
     if (legacyRedirect) {
       res.statusCode = 301;

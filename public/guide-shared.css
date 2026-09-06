@@ -1,0 +1,71 @@
+/* Long-form SEO guides — pair with legal-shared.css */
+
+.guide-hero-kicker {
+  font-size: 0.8rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--legal-accent);
+  margin: 0 0 0.5rem;
+}
+
+.guide-lead {
+  font-size: 1.05rem;
+  color: #222;
+}
+
+.guide-steps {
+  margin: 1rem 0 1.5rem;
+  padding-left: 1.4rem;
+}
+
+.guide-steps li {
+  margin: 0.55rem 0;
+}
+
+.guide-cta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  margin: 1.25rem 0 1.75rem;
+}
+
+.guide-cta a {
+  display: inline-block;
+  padding: 0.7rem 1rem;
+  border-radius: 6px;
+  text-decoration: none;
+  font-weight: 600;
+}
+
+.guide-cta a.primary {
+  background: var(--legal-navy);
+  color: #fff;
+}
+
+.guide-cta a.secondary {
+  background: #fff;
+  color: var(--legal-navy);
+  border: 1px solid var(--legal-navy);
+}
+
+.guide-cta a:hover {
+  opacity: 0.92;
+}
+
+.guide-sample {
+  background: var(--legal-bg-note);
+  border-left: 4px solid var(--legal-navy);
+  padding: 0.9rem 1rem;
+  margin: 1rem 0 1.5rem;
+}
+
+.guide-sample p {
+  margin: 0.35rem 0;
+}
+
+.guide-sample .label {
+  font-size: 0.75rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--legal-muted);
+}
