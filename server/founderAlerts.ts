@@ -159,7 +159,7 @@ function formatMiniPacket(input: {
   return lines.join("\n");
 }
 
-async function sendResendEmail(to: string[], subject: string, text: string): Promise<{ ok: boolean; error?: string }> {
+export async function sendResendEmail(to: string[], subject: string, text: string): Promise<{ ok: boolean; error?: string }> {
   const apiKey = (process.env.RESEND_API_KEY ?? "").trim();
   const from = (process.env.FOUNDER_ALERT_FROM ?? "Lazarus Ops <onboarding@resend.dev>").trim();
   if (!apiKey) {

@@ -5695,6 +5695,10 @@ a.run-button:hover {
   text-underline-offset: 2px;
 }
 
+a.marketing-text-link {
+  display: inline;
+}
+
 @media (max-width: 800px) {
   .marketing-step-grid {
     grid-template-columns: 1fr;

@@ -75,6 +75,14 @@ Workflow: `.github/workflows/purge-retention.yml` (daily 03:00 UTC) → `POST /a
 
 Customer-facing legal/security pages (source in `public/`):
 
+Public SEO pages (static HTML, crawlable without JavaScript):
+
+| Page | Path |
+|------|------|
+| How do I recover this deal? | `/how-to-recover-a-stalled-b2b-deal` |
+
+Set `GOOGLE_SITE_VERIFICATION` on Render to inject the Search Console HTML-tag token. Or drop the `google*.html` file Google gives you into `public/`.
+
 | ID | Doc | Path |
 |----|-----|------|
 | PP-001 | Privacy Policy | `/privacy` |

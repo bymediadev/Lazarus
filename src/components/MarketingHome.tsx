@@ -130,6 +130,7 @@ export default function MarketingHome({
         </article>
       </section>
 
+
       <section className="marketing-steps marketing-reveal" id="how" aria-label="How it works">
         <p className="hero-trust-eyebrow">How it works</p>
         <ol className="marketing-step-grid">

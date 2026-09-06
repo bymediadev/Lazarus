@@ -53,7 +53,7 @@ import {
 } from "./crmDealLinks.js";
 import { registerAuthRoutes } from "./authRoutes.js";
 import { registerFeedbackRoutes } from "./feedback.js";
-import { registerSeoPageRoutes } from "./seoPages.js";
+import { registerSeoPageRoutes, sendIndexedHtml } from "./seoPages.js";
 import { optionalAuthUserId } from "./authMiddleware.js";
 import {
   isAnonymousGuestRateLimited,
@@ -75,6 +75,7 @@ import {
 } from "./billing.js";
 import { consumeForLlmRoute, preferOpenWeightsFor, resolveModelTierForUser } from "./modelForPlan.js";
 import { registerBillingRoutes, registerBillingWebhook } from "./billingRoutes.js";
+import { registerFeedbackRoutes } from "./feedback.js";
 import { apiEventsMiddleware, setApiErrorLocal } from "./apiEvents.js";
 import { registerFounderRoutes } from "./founderRoutes.js";
 import { registerMeDealRoutes } from "./meDeals.js";
@@ -820,7 +821,7 @@ if (process.env.NODE_ENV === "production" || existsSync(distPath)) {
     ) {
       res.setHeader("X-Robots-Tag", "noindex, nofollow");
     }
-    res.sendFile(path.join(distPath, "index.html"));
+    sendIndexedHtml(path.join(distPath, "index.html"), res);
   });
 }
 
