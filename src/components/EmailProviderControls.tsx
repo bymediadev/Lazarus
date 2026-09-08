@@ -31,7 +31,7 @@ export default function EmailProviderControls({
   const [lastResult, setLastResult] = useState<EmailImportResult | null>(null);
   const [statusError, setStatusError] = useState<string | null>(null);
 
-  const anyConnected = !!(gmail?.connected || outlook?.connected);
+  const anyConnected = !!gmail?.connected;
 
   const refresh = useCallback(async () => {
     try {
@@ -152,16 +152,6 @@ export default function EmailProviderControls({
               {busy === "gmail" ? "Searching…" : "Search Gmail"}
             </button>
           )}
-          {outlook?.connected && (
-            <button
-              type="button"
-              className={`mailbox-search-btn ${gmail?.connected ? "btn-secondary" : "btn-primary"}`}
-              disabled={busy !== null || !request.trim()}
-              onClick={() => void runSearch("outlook")}
-            >
-              {busy === "outlook" ? "Searching…" : "Search Outlook"}
-            </button>
-          )}
         </div>
         {!anyConnected && (
           <p className="mailbox-connect-prompt">
@@ -219,39 +209,7 @@ export default function EmailProviderControls({
         <div className="email-provider-card">
           <div className="email-provider-head">
             <strong>Outlook</strong>
-            <span className={`email-provider-status ${outlook?.connected ? "is-connected" : ""}`}>
-              {!outlook
-                ? "…"
-                : !outlook.configured
-                  ? "Not configured"
-                  : outlook.connected
-                    ? outlook.account_email || "Connected"
-                    : "Disconnected"}
-            </span>
-          </div>
-          <div className="email-provider-actions">
-            {outlook?.configured && !outlook.connected && (
-              <button
-                type="button"
-                className="btn-secondary email-provider-btn"
-                onClick={() => openOAuthPopup("outlook")}
-              >
-                Connect Outlook
-              </button>
-            )}
-            {outlook?.connected && (
-              <button
-                type="button"
-                className="file-clear-btn"
-                disabled={busy !== null}
-                onClick={() => void runDisconnect("outlook")}
-              >
-                Disconnect
-              </button>
-            )}
-            {!outlook?.configured && (
-              <span className="email-provider-hint">Add Azure TEAMS_CLIENT_ID / SECRET in .env</span>
-            )}
+            <span className="email-provider-status">Coming soon</span>
           </div>
         </div>
       </div>

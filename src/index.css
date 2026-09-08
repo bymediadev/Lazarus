@@ -4445,6 +4445,11 @@ a.run-button:hover {
   margin-bottom: 0.45rem;
 }
 
+.login-oauth:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
 .login-card .run-button {
   width: 100%;
   margin-top: 0.25rem;

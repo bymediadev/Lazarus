@@ -390,6 +390,9 @@ export default function LoginScreen({
           {busy === "salesforce" ? "Waiting for Salesforce…" : "Salesforce"}
         </button>
       )}
+      <button type="button" className="btn-secondary login-oauth" disabled>
+        Outlook — Coming soon
+      </button>
 
       {notice && <p className="demo-transcript-notice">{notice}</p>}
       {error && <div className="error-banner">{error}</div>}
