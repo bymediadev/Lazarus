@@ -42,11 +42,11 @@ export default function MarketingHome({
   return (
     <>
       <section className="marketing-hero">
-        <p className="hero-trust-eyebrow">Deal recovery for sales managers and VPs</p>
-        <h1 className="marketing-hero-title">Win back closed-lost sales pipeline</h1>
+        <p className="hero-trust-eyebrow">B2B Deal Recovery Software</p>
+        <h1 className="marketing-hero-title">Win back stalled sales pipeline</h1>
         <h2 className="marketing-hero-sub">
-          Lazarus reads the recording, transcript, and email thread — plus HubSpot notes when you
-          connect. It names the blocker and a 0–90 day plan you paste into HubSpot notes.
+          Lazarus identifies which stalled and closed-lost deals are still recoverable, why
+          momentum died, and what your team should do next.
         </h2>
         <div className="marketing-hero-actions">
           <button type="button" className="run-button run-button-above-fold" onClick={onPortal}>

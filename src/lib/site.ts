@@ -16,15 +16,15 @@ export const FOUNDER_NAME = "Joshua Bennett";
 
 export const FOUNDER_LINKEDIN = "https://www.linkedin.com/in/jjebennett";
 
-export const SITE_TITLE = "Lazarus Deal Recovery | Win Back Closed-Lost Sales Pipeline";
+export const SITE_TITLE = "B2B Deal Recovery Software | Lazarus Deal Recovery";
 
 export const SITE_DESCRIPTION =
-  "Lazarus reads the recording, transcript, and HubSpot notes, then names the blocker and a 0–90 day plan you paste into HubSpot. No meeting bot. Five free analyses.";
+  "Lazarus identifies which stalled and closed-lost deals are still recoverable, why momentum died, and what your team should do next. No meeting bot. Five free analyses.";
 
-export const OG_TITLE = "Lazarus Deal Recovery | Win Back Closed-Lost Sales";
+export const OG_TITLE = "B2B Deal Recovery Software | Win Back Stalled Pipeline";
 
 export const OG_DESCRIPTION =
-  "Lazarus names the blocker and a 0–90 day plan you paste into HubSpot notes. No meeting bot. Connect with OAuth. Five free analyses.";
+  "Lazarus identifies which stalled and closed-lost deals are still recoverable, why momentum died, and what to do next. No meeting bot. Five free analyses.";
 
 export const PILLAR_PATH = "/how-to-recover-a-stalled-b2b-deal";
 
