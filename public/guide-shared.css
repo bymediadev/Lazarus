@@ -13,6 +13,16 @@
   color: #222;
 }
 
+.guide-tldr {
+  font-size: 1.02rem;
+  line-height: 1.55;
+  color: #111;
+  background: var(--legal-bg-note);
+  border-left: 4px solid var(--legal-navy);
+  padding: 0.9rem 1rem;
+  margin: 0 0 1.5rem;
+}
+
 .guide-steps {
   margin: 1rem 0 1.5rem;
   padding-left: 1.4rem;

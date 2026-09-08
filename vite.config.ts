@@ -18,11 +18,14 @@ const PUBLIC_TRUST_PACK_SLUGS = new Set(["privacy", "terms", "dpa", "security-ov
 
 const CRAWLABLE_HTML_PAGES: Record<string, string> = {
   "/how-to-recover-a-stalled-b2b-deal": "how-to-recover-a-stalled-b2b-deal.html",
+  "/deal-recovery": "deal-recovery.html",
+  "/integrations": "integrations.html",
 };
 
 const SEO_PAGE_ALIASES: Record<string, string> = {
   "/security": "/security-overview",
   "/stalled-deal-framework": "/how-to-recover-a-stalled-b2b-deal",
+  "/framework": "/how-to-recover-a-stalled-b2b-deal",
 };
 
 function canonicalTrustPackPath(slug: string): string {

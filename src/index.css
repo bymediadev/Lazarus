@@ -5330,6 +5330,17 @@ a.run-button:hover {
   letter-spacing: 0;
 }
 
+.marketing-geo-summary {
+  max-width: 42rem;
+  margin: 0 0 1.5rem;
+  padding: 0.85rem 1rem;
+  border-left: 3px solid var(--teal);
+  background: rgba(61, 214, 198, 0.08);
+  color: var(--text);
+  font-size: 0.95rem;
+  line-height: 1.55;
+}
+
 .marketing-hero-actions .run-button-above-fold {
   min-width: 16rem;
   background: linear-gradient(180deg, #7dff7d 0%, var(--emerald) 42%, var(--emerald-dark) 100%);

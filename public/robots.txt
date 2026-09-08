@@ -2,6 +2,9 @@ User-agent: *
 Allow: /
 Allow: /how-to-recover-a-stalled-b2b-deal
 Allow: /stalled-deal-framework
+Allow: /framework
+Allow: /deal-recovery
+Allow: /integrations
 Allow: /privacy
 Allow: /terms
 Allow: /dpa

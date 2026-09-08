@@ -13,7 +13,9 @@ export default function SiteFooter() {
             Lazarus Deal Recovery · Trust Pack v1.12
           </span>
           <nav className="site-footer-nav" aria-label="Legal">
+            <a href="/deal-recovery">Deal recovery software</a>
             <a href={PILLAR_PATH}>How do I recover this deal?</a>
+            <a href="/integrations">HubSpot &amp; Salesforce</a>
             {TRUST_PACK_NAV.map(({ slug, label }) => (
               <a
                 key={slug}

@@ -48,6 +48,11 @@ export default function MarketingHome({
           Lazarus identifies which stalled and closed-lost deals are still recoverable, why
           momentum died, and what your team should do next.
         </p>
+        <p className="marketing-geo-summary">
+          <strong>In one sentence:</strong> Lazarus Deal Recovery is B2B deal recovery software
+          that tells sales managers which stalled deals are recoverable versus a flat no, names
+          the blocker, and returns a 0–90 day plan for HubSpot or Salesforce notes. No meeting bot.
+        </p>
         <div className="marketing-hero-actions">
           <button type="button" className="run-button run-button-above-fold" onClick={onPortal}>
             {HERO_PRIMARY_CTA}
@@ -103,6 +108,14 @@ export default function MarketingHome({
         <p>
           <a className="marketing-text-link" href={PILLAR_PATH}>
             Read the 4-step stalled B2B deal recovery framework
+          </a>
+          {" · "}
+          <a className="marketing-text-link" href="/deal-recovery">
+            What deal recovery software is
+          </a>
+          {" · "}
+          <a className="marketing-text-link" href="/integrations">
+            HubSpot and Salesforce
           </a>
         </p>
       </section>

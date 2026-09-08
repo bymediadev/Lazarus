@@ -5,12 +5,15 @@ import path from "path";
 /** Clean public URLs that must return real HTML, not the SPA shell. */
 export const CRAWLABLE_HTML_PAGES: Record<string, string> = {
   "/how-to-recover-a-stalled-b2b-deal": "how-to-recover-a-stalled-b2b-deal.html",
+  "/deal-recovery": "deal-recovery.html",
+  "/integrations": "integrations.html",
 };
 
 /** Short entry paths that 301 to the canonical indexed pages. */
 export const SEO_PAGE_ALIASES: Record<string, string> = {
   "/security": "/security-overview",
   "/stalled-deal-framework": "/how-to-recover-a-stalled-b2b-deal",
+  "/framework": "/how-to-recover-a-stalled-b2b-deal",
 };
 
 const VERIFICATION_TOKEN = /^[A-Za-z0-9_-]{8,128}$/;

@@ -34,6 +34,9 @@ const staticHtmlFolders = [
   "security",
   "how-to-recover-a-stalled-b2b-deal",
   "stalled-deal-framework",
+  "framework",
+  "deal-recovery",
+  "integrations",
 ];
 for (const slug of staticHtmlFolders) {
   const src = join(dist, `${slug}.html`);
