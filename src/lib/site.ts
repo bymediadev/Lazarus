@@ -16,15 +16,14 @@ export const FOUNDER_NAME = "Joshua Bennett";
 
 export const FOUNDER_LINKEDIN = "https://www.linkedin.com/in/jjebennett";
 
-export const SITE_TITLE = "B2B Deal Recovery Software | Lazarus Deal Recovery";
+export const SITE_TITLE = "Lazarus Deal Recovery | B2B Pipeline & Deal Recovery Software";
 
 export const SITE_DESCRIPTION =
-  "Lazarus identifies which stalled and closed-lost deals are still recoverable, why momentum died, and what your team should do next. No meeting bot. Five free analyses.";
+  "Lazarus Deal Recovery helps sales managers run cleaner forecast calls: which stalled B2B deals are recoverable vs a flat no, and what to do next. Try 5 free analyses.";
 
-export const OG_TITLE = "B2B Deal Recovery Software | Win Back Stalled Pipeline";
+export const OG_TITLE = SITE_TITLE;
 
-export const OG_DESCRIPTION =
-  "Lazarus identifies which stalled and closed-lost deals are still recoverable, why momentum died, and what to do next. No meeting bot. Five free analyses.";
+export const OG_DESCRIPTION = SITE_DESCRIPTION;
 
 export const PILLAR_PATH = "/how-to-recover-a-stalled-b2b-deal";
 
@@ -48,8 +47,12 @@ export function applyDocumentMeta(opts: {
   robots?: "index" | "noindex";
 }) {
   document.title = opts.title;
+  upsertMeta("property", "og:title", opts.title);
+  upsertMeta("name", "twitter:title", opts.title);
   if (opts.description) {
     upsertMeta("name", "description", opts.description);
+    upsertMeta("property", "og:description", opts.description);
+    upsertMeta("name", "twitter:description", opts.description);
   }
   upsertMeta("name", "robots", opts.robots === "noindex" ? ROBOTS_NOINDEX : ROBOTS_INDEX);
   upsertMeta("name", "googlebot", opts.robots === "noindex" ? ROBOTS_NOINDEX : "index, follow");

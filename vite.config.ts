@@ -20,6 +20,11 @@ const CRAWLABLE_HTML_PAGES: Record<string, string> = {
   "/how-to-recover-a-stalled-b2b-deal": "how-to-recover-a-stalled-b2b-deal.html",
 };
 
+const SEO_PAGE_ALIASES: Record<string, string> = {
+  "/security": "/security-overview",
+  "/stalled-deal-framework": "/how-to-recover-a-stalled-b2b-deal",
+};
+
 function canonicalTrustPackPath(slug: string): string {
   if (slug === "battlecard") return `/api/trust-pack/${slug}`;
   if (PUBLIC_TRUST_PACK_SLUGS.has(slug)) return `/${slug}`;
@@ -34,7 +39,17 @@ const LEGACY_TRUST_PACK_HTML: Record<string, string> = Object.fromEntries(
 function attachTrustPackMiddleware(server: { middlewares: { use: Function } }) {
   server.middlewares.use((req: { url?: string }, res: { statusCode: number; setHeader: Function; end: Function }, next: () => void) => {
     const pathname = req.url?.split("?")[0] ?? "";
-    const seoFile = CRAWLABLE_HTML_PAGES[pathname];
+    const cleanPath = pathname.replace(/\/+$/, "") || "/";
+    const aliasTarget = SEO_PAGE_ALIASES[cleanPath] ?? (
+      cleanPath.endsWith(".html") ? SEO_PAGE_ALIASES[cleanPath.slice(0, -5)] : undefined
+    );
+    if (aliasTarget) {
+      res.statusCode = 301;
+      res.setHeader("Location", aliasTarget);
+      res.end();
+      return;
+    }
+    const seoFile = CRAWLABLE_HTML_PAGES[pathname] ?? CRAWLABLE_HTML_PAGES[cleanPath];
     if (seoFile) {
       const filePath = path.join(__dirname, "public", seoFile);
       if (existsSync(filePath)) {

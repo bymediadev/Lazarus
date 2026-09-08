@@ -1,10 +1,12 @@
 User-agent: *
 Allow: /
 Allow: /how-to-recover-a-stalled-b2b-deal
+Allow: /stalled-deal-framework
 Allow: /privacy
 Allow: /terms
 Allow: /dpa
 Allow: /security-overview
+Allow: /security
 Allow: /llms.txt
 Allow: /api/trust-pack/privacy
 Allow: /api/trust-pack/terms

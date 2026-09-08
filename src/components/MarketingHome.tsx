@@ -44,10 +44,10 @@ export default function MarketingHome({
       <section className="marketing-hero">
         <p className="hero-trust-eyebrow">B2B Deal Recovery Software</p>
         <h1 className="marketing-hero-title">Win back stalled sales pipeline</h1>
-        <h2 className="marketing-hero-sub">
+        <p className="marketing-hero-sub">
           Lazarus identifies which stalled and closed-lost deals are still recoverable, why
           momentum died, and what your team should do next.
-        </h2>
+        </p>
         <div className="marketing-hero-actions">
           <button type="button" className="run-button run-button-above-fold" onClick={onPortal}>
             {HERO_PRIMARY_CTA}

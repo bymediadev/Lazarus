@@ -7,6 +7,12 @@ export const CRAWLABLE_HTML_PAGES: Record<string, string> = {
   "/how-to-recover-a-stalled-b2b-deal": "how-to-recover-a-stalled-b2b-deal.html",
 };
 
+/** Short entry paths that 301 to the canonical indexed pages. */
+export const SEO_PAGE_ALIASES: Record<string, string> = {
+  "/security": "/security-overview",
+  "/stalled-deal-framework": "/how-to-recover-a-stalled-b2b-deal",
+};
+
 const VERIFICATION_TOKEN = /^[A-Za-z0-9_-]{8,128}$/;
 
 export function googleSiteVerificationMeta(): string {
@@ -34,6 +40,14 @@ export function sendIndexedHtml(filePath: string, res: Response): void {
 }
 
 export function registerSeoPageRoutes(app: Express, publicPath: string): void {
+  for (const [from, to] of Object.entries(SEO_PAGE_ALIASES)) {
+    app.get(from, (_req: Request, res: Response) => {
+      res.redirect(301, to);
+    });
+    app.get(`${from}.html`, (_req: Request, res: Response) => {
+      res.redirect(301, to);
+    });
+  }
   for (const [url, file] of Object.entries(CRAWLABLE_HTML_PAGES)) {
     const filePath = path.join(publicPath, file);
     app.get(url, (_req: Request, res: Response) => {

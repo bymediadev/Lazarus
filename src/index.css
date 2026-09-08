@@ -35,10 +35,6 @@ body,
   height: 100%;
 }
 
-html.js-ready #seo-static {
-  display: none !important;
-}
-
 #seo-static {
   max-width: 44rem;
   margin: 0 auto;
