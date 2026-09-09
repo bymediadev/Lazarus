@@ -33,7 +33,7 @@ export function registerOAuthConnectRoutes(
     notConfiguredMessage: string;
     getClientSecret: () => string | null;
     buildAuthorizeUrl: (state: string, purpose: OAuthPurpose) => string;
-    exchangeCode: (code: string, userId?: string) => Promise<Tokenish>;
+    exchangeCode: (code: string, userId?: string, purpose?: OAuthPurpose) => Promise<Tokenish>;
     saveForUser: (userId: string, record: Tokenish) => void | Promise<void>;
   }
 ): void {
@@ -105,7 +105,7 @@ export function registerOAuthConnectRoutes(
       return;
     }
     try {
-      const record = await opts.exchangeCode(code, parsed.userId ?? undefined);
+      const record = await opts.exchangeCode(code, parsed.userId ?? undefined, parsed.purpose);
       if (parsed.purpose === "connect" && parsed.userId) {
         await opts.saveForUser(parsed.userId, record);
         bounce({ [opts.queryKey]: "connected" });

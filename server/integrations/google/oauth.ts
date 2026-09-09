@@ -1,4 +1,9 @@
-import { getGoogleMeetConfig, GOOGLE_LOGIN_SCOPES, GOOGLE_MEET_SCOPES } from "./config.js";
+import {
+  getGoogleConnectConfig,
+  getGoogleOAuthConfig,
+  GOOGLE_LOGIN_SCOPES,
+  GOOGLE_MEET_SCOPES,
+} from "./config.js";
 import { loadGoogleTokens, saveGoogleTokens, type GoogleTokenRecord } from "./tokens.js";
 import { secureFetch } from "../../secureFetch.js";
 
@@ -17,8 +22,8 @@ export function buildGoogleAuthorizeUrl(
   state: string,
   purpose: "login" | "connect" = "connect"
 ): string {
-  const cfg = getGoogleMeetConfig();
-  if (!cfg) throw new Error("Google Meet OAuth is not configured");
+  const cfg = getGoogleOAuthConfig(purpose);
+  if (!cfg) throw new Error("Google OAuth is not configured");
 
   const login = purpose === "login";
   const params = new URLSearchParams({
@@ -30,12 +35,17 @@ export function buildGoogleAuthorizeUrl(
     prompt: login ? "select_account" : "consent",
     state,
   });
+  if (login) params.set("include_granted_scopes", "false");
   return `${AUTH_URL}?${params.toString()}`;
 }
 
-export async function exchangeGoogleCode(code: string, userId?: string): Promise<GoogleTokenRecord> {
-  const cfg = getGoogleMeetConfig();
-  if (!cfg) throw new Error("Google Meet OAuth is not configured");
+export async function exchangeGoogleCode(
+  code: string,
+  userId?: string,
+  purpose: "login" | "connect" = "login"
+): Promise<GoogleTokenRecord> {
+  const cfg = getGoogleOAuthConfig(purpose);
+  if (!cfg) throw new Error("Google OAuth is not configured");
 
   const body = new URLSearchParams({
     code,
@@ -95,7 +105,7 @@ export async function exchangeGoogleCode(code: string, userId?: string): Promise
 }
 
 export async function getValidGoogleAccessToken(userId: string): Promise<string | null> {
-  const cfg = getGoogleMeetConfig();
+  const cfg = getGoogleConnectConfig();
   const stored = loadGoogleTokens(userId);
   if (!cfg || !stored?.access_token) return null;
 
