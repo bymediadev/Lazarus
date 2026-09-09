@@ -393,9 +393,9 @@ export default function MeetingCompanion({
   return (
     <div className="meeting-companion">
       <p className="console-tab-hint">
-        Float the live panel in the corner during Zoom, Meet, or Teams. Track objections as they
-        land — check them off or let Lazarus Deal Recovery auto-clear when the buyer answers. End the session for
-        a full post-call score on the same deal.
+        Live adds this meeting to the same deal. Upload and mailbox from your account still
+        count — one score and one 0–90 day plan after the call. Track objections as they land,
+        then end the session to fold the meeting into that run.
       </p>
 
       <div className="meeting-platform-row">
@@ -453,8 +453,9 @@ export default function MeetingCompanion({
       {platform === "meet" && (
         <div className="meeting-platform-connect">
           <p className="meeting-platform-disconnected">
-            Live Meet captions: sideload the Lazarus Chrome extension, turn on <strong>Captions</strong>{" "}
-            in Meet, then Start. Mic + paste still works if captions are off.
+            Live Meet captions: install the Lazarus Deal Recovery Widget, turn on{" "}
+            <strong>Captions</strong> in Meet, then Start. Mic + paste still works if captions are
+            off.
           </p>
           {googleStatus?.connected ? (
             <p className="meeting-platform-connected">

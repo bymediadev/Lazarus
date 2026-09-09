@@ -173,10 +173,22 @@ const crmNotes = formatCompressedCrmNotes(
     },
     immediate_remediation: ["AE: schedule legal review by 2026-08-03."],
     stakeholders: [],
+    sources: {
+      audio: false,
+      manual: true,
+      email: true,
+      field: false,
+      document: false,
+      live: true,
+      crm: true,
+    },
   })
 );
 check("CRM overview names account", crmNotes.includes("Lazarus Deal Recovery Overview — Acme"));
 check("CRM overview includes recovery action", crmNotes.includes("schedule legal review"));
+check("CRM overview lists live meeting evidence", crmNotes.includes("Live meeting"));
+check("CRM overview lists mailbox evidence", crmNotes.includes("Mailbox thread"));
+check("CRM overview lists imported CRM history", crmNotes.includes("Imported HubSpot / Salesforce history"));
 check("CRM overview includes dispersion /100", crmNotes.includes("Dispersion:** 48/100"));
 check("CRM overview includes metric legend", crmNotes.includes("Metric legend"));
 

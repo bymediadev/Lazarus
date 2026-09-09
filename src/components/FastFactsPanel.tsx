@@ -163,6 +163,11 @@ export default function FastFactsPanel({
         </div>
       </article>
 
+      <p className="console-tab-hint">
+        {linkedHubSpotDealId || linkedSalesforceOppId
+          ? "Push sends this full run — live meeting, upload, mailbox, and CRM history — as a note on the linked record."
+          : "Import a HubSpot deal or Salesforce opportunity in Deal Profile so this same brief can Push after the score."}
+      </p>
       <div className="fast-facts-actions">
         <button type="button" className="btn-secondary" onClick={() => void copyCrm()}>
           {copied ? "Copied" : "Copy for CRM"}

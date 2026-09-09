@@ -21,7 +21,7 @@ Source art: `public/logo.png`.
 
 | Store | Size | Count | Notes |
 |---|---|---|---|
-| Chrome Web Store | 1280×800 or 640×400 | 1–5 | Meet + Live tab; no other products in the shot |
+| Chrome Web Store | 1280×800 or 640×400 | 1–5 | **Live tab selected, Meet adding the meeting.** Leave Upload / Mailbox / Field visible — they stack into the same score. The widget only adds live captions. |
 | Zoom Marketplace | 1280×800 (min 746×420) | 3–5 | Live RTMS / Recovery Brief; Home URL loaded |
 | Teams Store | 1366×768 | 1–4 | Side panel or portal in a meeting context |
 | HubSpot | 1600×900 recommended | 3+ | Deal import, not a fake CRM write-back story |

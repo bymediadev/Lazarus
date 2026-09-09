@@ -217,6 +217,20 @@ function historicalExtras(result: PostMortemResult): string[] {
   });
 }
 
+function evidenceInThisRun(result: PostMortemResult): string[] {
+  const s = result.sources;
+  if (!s) return [];
+  const lines: string[] = [];
+  if (s.live) lines.push("Live meeting");
+  if (s.audio) lines.push("Call recording");
+  if (s.manual) lines.push("Uploaded / pasted transcript");
+  if (s.email) lines.push("Mailbox thread");
+  if (s.field) lines.push("Field capture");
+  if (s.document) lines.push("Document");
+  if (s.crm) lines.push("Imported HubSpot / Salesforce history");
+  return lines;
+}
+
 function metricsBlock(result: PostMortemResult): string {
   const pi = result.proprietary_indices;
   const triage = result.live_deal_triage;
@@ -263,10 +277,14 @@ export function formatCompressedCrmNotes(result: PostMortemResult): string {
   const eqNote = result.equilibrium_analysis?.explanation?.trim();
   const friction = frictionExtras(result);
   const history = historicalExtras(result);
+  const evidence = evidenceInThisRun(result);
 
   return [
     `## Lazarus Deal Recovery Overview — ${client}`,
     "",
+    evidence.length ? "### Evidence in this run" : null,
+    evidence.length ? bulletList(evidence) : null,
+    evidence.length ? "" : null,
     "### Exactly what's going on",
     `**Deal status:** ${status}`,
     `**Forecast judgment:** ${recoverableFraming(status)}`,

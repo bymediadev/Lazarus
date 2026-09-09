@@ -4261,6 +4261,10 @@ a.run-button:hover {
   gap: 0.5rem;
 }
 
+.fast-facts .console-tab-hint {
+  margin: 0 0 0.65rem;
+}
+
 .header-right {
   display: flex;
   align-items: center;
