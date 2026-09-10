@@ -8,6 +8,13 @@ import { secretsEqual } from "../server/cryptoSecrets.ts";
 import { consumeRateLimit } from "../server/rateLimit.ts";
 import { consumeLoginCode, issueLoginCode } from "../server/loginTickets.ts";
 import {
+  createSalesforcePkce,
+  openSalesforcePkceCookie,
+  sealSalesforcePkceCookie,
+} from "../server/integrations/salesforce/pkce.ts";
+import { buildSalesforceAuthorizeUrl } from "../server/integrations/salesforce/oauth.ts";
+import { createHash } from "crypto";
+import {
   isAnonymousGuestRateLimited,
   isIpDailyRateLimited,
   isPpuIpRateLimited,
@@ -102,6 +109,42 @@ check(
   oauthFrontendReturnUrl(readSignedOAuthState(connectState, "provider-secret"), { google: "connected" }) ===
     "https://www.getldr.ca/portal?google=connected"
 );
+
+const sfPkce = createSalesforcePkce();
+check("salesforce pkce verifier is 43 chars", sfPkce.verifier.length === 43);
+check(
+  "salesforce pkce challenge is S256",
+  createHash("sha256").update(sfPkce.verifier).digest("base64url") === sfPkce.challenge
+);
+const sfSealed = sealSalesforcePkceCookie("provider-secret", "state-abc", sfPkce.verifier);
+check(
+  "salesforce pkce cookie opens for matching state",
+  openSalesforcePkceCookie("provider-secret", "state-abc", sfSealed) === sfPkce.verifier
+);
+check(
+  "salesforce pkce cookie rejects other state",
+  openSalesforcePkceCookie("provider-secret", "other-state", sfSealed) === undefined
+);
+check(
+  "salesforce pkce cookie rejects other secret",
+  openSalesforcePkceCookie("other-secret", "state-abc", sfSealed) === undefined
+);
+
+const prevSfId = process.env.SALESFORCE_CLIENT_ID;
+const prevSfSecret = process.env.SALESFORCE_CLIENT_SECRET;
+const prevSfRedirect = process.env.SALESFORCE_REDIRECT_URI;
+process.env.SALESFORCE_CLIENT_ID = "test-client-id";
+process.env.SALESFORCE_CLIENT_SECRET = "test-client-secret";
+process.env.SALESFORCE_REDIRECT_URI = "https://api.getldr.ca/api/integrations/salesforce/callback";
+const sfAuth = new URL(buildSalesforceAuthorizeUrl("st", "login", { codeChallenge: "challenge-abc" }));
+check("salesforce authorize includes code_challenge", sfAuth.searchParams.get("code_challenge") === "challenge-abc");
+check("salesforce authorize uses S256", sfAuth.searchParams.get("code_challenge_method") === "S256");
+if (prevSfId === undefined) delete process.env.SALESFORCE_CLIENT_ID;
+else process.env.SALESFORCE_CLIENT_ID = prevSfId;
+if (prevSfSecret === undefined) delete process.env.SALESFORCE_CLIENT_SECRET;
+else process.env.SALESFORCE_CLIENT_SECRET = prevSfSecret;
+if (prevSfRedirect === undefined) delete process.env.SALESFORCE_REDIRECT_URI;
+else process.env.SALESFORCE_REDIRECT_URI = prevSfRedirect;
 
 const prevDelivery = process.env.AUTH_REQUIRE_EMAIL_DELIVERY;
 const prevNode = process.env.NODE_ENV;

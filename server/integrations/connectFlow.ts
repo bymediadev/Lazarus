@@ -6,6 +6,7 @@ import {
   createSignedOAuthState,
   oauthFrontendReturnUrl,
   pickAllowedFrontendOrigin,
+  publicApiBase,
   readSignedOAuthState,
   resolveFrontendOrigin,
 } from "./oauthShared.js";
@@ -24,6 +25,12 @@ type Tokenish = {
 
 export type OAuthPurpose = "login" | "connect";
 
+export type OAuthPkceHooks = {
+  begin: (res: Response, state: string, secret: string) => string;
+  take: (req: Request, state: string, secret: string) => string | undefined;
+  clear: (res: Response) => void;
+};
+
 export function registerOAuthConnectRoutes(
   app: Express,
   opts: {
@@ -32,11 +39,27 @@ export function registerOAuthConnectRoutes(
     loginProvider?: LoginTicketProvider;
     notConfiguredMessage: string;
     getClientSecret: () => string | null;
-    buildAuthorizeUrl: (state: string, purpose: OAuthPurpose) => string;
-    exchangeCode: (code: string, userId?: string, purpose?: OAuthPurpose) => Promise<Tokenish>;
+    buildAuthorizeUrl: (
+      state: string,
+      purpose: OAuthPurpose,
+      extras?: { codeChallenge?: string }
+    ) => string;
+    exchangeCode: (
+      code: string,
+      userId?: string,
+      purpose?: OAuthPurpose,
+      codeVerifier?: string
+    ) => Promise<Tokenish>;
     saveForUser: (userId: string, record: Tokenish) => void | Promise<void>;
+    /** Top-level hop so PKCE verifier cookie is first-party (not set on a cross-site POST). */
+    pkce?: OAuthPkceHooks;
   }
 ): void {
+  const startUrl = (state: string) =>
+    opts.pkce
+      ? `${publicApiBase()}/api/integrations/${opts.slug}/oauth-start?state=${encodeURIComponent(state)}`
+      : opts.buildAuthorizeUrl(state, "login");
+
   const startLogin = (req: Request, res: Response) => {
     const secret = opts.getClientSecret();
     if (!secret) {
@@ -52,7 +75,7 @@ export function registerOAuthConnectRoutes(
         returnOrigin,
         returnPath,
       });
-      res.redirect(opts.buildAuthorizeUrl(state, "login"));
+      res.redirect(startUrl(state));
     } catch (err) {
       res.status(500).json({
         error: err instanceof Error ? err.message : "Failed to start OAuth",
@@ -84,13 +107,39 @@ export function registerOAuthConnectRoutes(
         returnOrigin,
         returnPath: "/portal",
       });
-      res.json({ url: opts.buildAuthorizeUrl(state, "connect") });
+      res.json({
+        url: opts.pkce
+          ? startUrl(state)
+          : opts.buildAuthorizeUrl(state, "connect"),
+      });
     } catch (err) {
       res.status(500).json({
         error: err instanceof Error ? err.message : "Failed to start OAuth",
       });
     }
   });
+
+  if (opts.pkce) {
+    app.get(`/api/integrations/${opts.slug}/oauth-start`, (req, res) => {
+      const secret = opts.getClientSecret();
+      const state = String(req.query.state ?? "");
+      const parsed = readSignedOAuthState(state, secret ?? "");
+      if (!secret || !parsed.ok) {
+        res.redirect(
+          oauthFrontendReturnUrl(parsed, { [opts.queryKey]: "error", reason: "invalid_state" })
+        );
+        return;
+      }
+      try {
+        const challenge = opts.pkce!.begin(res, state, secret);
+        res.redirect(opts.buildAuthorizeUrl(state, parsed.purpose, { codeChallenge: challenge }));
+      } catch (err) {
+        res.status(500).json({
+          error: err instanceof Error ? err.message : "Failed to start OAuth",
+        });
+      }
+    });
+  }
 
   app.get(`/api/integrations/${opts.slug}/callback`, async (req, res) => {
     const code = String(req.query.code ?? "");
@@ -105,7 +154,21 @@ export function registerOAuthConnectRoutes(
       return;
     }
     try {
-      const record = await opts.exchangeCode(code, parsed.userId ?? undefined, parsed.purpose);
+      let codeVerifier: string | undefined;
+      if (opts.pkce) {
+        codeVerifier = opts.pkce.take(req, state, secret);
+        opts.pkce.clear(res);
+        if (!codeVerifier) {
+          bounce({ [opts.queryKey]: "error", reason: "pkce_missing" });
+          return;
+        }
+      }
+      const record = await opts.exchangeCode(
+        code,
+        parsed.userId ?? undefined,
+        parsed.purpose,
+        codeVerifier
+      );
       if (parsed.purpose === "connect" && parsed.userId) {
         await opts.saveForUser(parsed.userId, record);
         bounce({ [opts.queryKey]: "connected" });
