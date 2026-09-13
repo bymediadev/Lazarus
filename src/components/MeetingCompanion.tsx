@@ -125,6 +125,7 @@ export default function MeetingCompanion({
   const [meetStreamActive, setMeetStreamActive] = useState(false);
   const [meetSessionId, setMeetSessionId] = useState<string | null>(null);
   const [meetSessionSecret, setMeetSessionSecret] = useState<string | null>(null);
+  const [meetExtensionPaired, setMeetExtensionPaired] = useState(false);
 
   const recognitionRef = useRef<InstanceType<SpeechRecognitionCtor> | null>(null);
   const sessionStartRef = useRef<number | null>(null);
@@ -191,6 +192,12 @@ export default function MeetingCompanion({
         .catch(() => setTeamsStatus(null));
     }
   }, [platform]);
+
+  useEffect(() => {
+    const onPaired = () => setMeetExtensionPaired(true);
+    window.addEventListener("lazarus-meet-paired", onPaired);
+    return () => window.removeEventListener("lazarus-meet-paired", onPaired);
+  }, []);
 
   useEffect(() => {
     return () => {
@@ -288,6 +295,7 @@ export default function MeetingCompanion({
     setZoomStreamActive(false);
     setMeetStreamActive(false);
     setMeetSessionId(null);
+    setMeetExtensionPaired(false);
     zoomUnsubRef.current?.();
     zoomUnsubRef.current = null;
     meetUnsubRef.current?.();
@@ -453,8 +461,9 @@ export default function MeetingCompanion({
       {platform === "meet" && (
         <div className="meeting-platform-connect">
           <p className="meeting-platform-disconnected">
-            Live Meet captions: sideload the Lazarus Chrome extension, turn on <strong>Captions</strong>{" "}
-            in Meet, then Start. Mic + paste still works if captions are off.
+            Live Meet uses the Lazarus Chrome extension — not Gmail Connect. After you load it, a
+            Lazarus panel appears inside Google Meet. Sign in here, select Google Meet, Start, then
+            turn on <strong>Captions</strong> in Meet. Mic + paste still works if captions are off.
           </p>
           {googleStatus?.connected ? (
             <p className="meeting-platform-connected">
@@ -529,7 +538,9 @@ export default function MeetingCompanion({
             <span className="meeting-live-pill meeting-zoom-rtms-pill">RTMS stream</span>
           )}
           {platform === "meet" && meetStreamActive && (
-            <span className="meeting-live-pill meeting-zoom-rtms-pill">Meet captions</span>
+            <span className="meeting-live-pill meeting-zoom-rtms-pill">
+              {meetExtensionPaired ? "Widget paired" : "Meet captions"}
+            </span>
           )}
           {meetSessionId && (
             <span
@@ -620,7 +631,9 @@ export default function MeetingCompanion({
             <div className="live-objection-panel-body">
               {meetStreamActive && (
                 <p className="live-objection-listening">
-                  Meet captions on — keep Captions enabled in the Meet tab
+                  {meetExtensionPaired
+                    ? "Widget paired — keep Captions on in the Meet tab"
+                    : "Waiting for the Chrome widget. Load extensions/meet-captions, then keep Captions on in Meet."}
                 </p>
               )}
               {listening && (

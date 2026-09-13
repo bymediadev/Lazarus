@@ -71,7 +71,7 @@ const cwsStaging = join(root, "marketplace", ".cws-staging");
 rmSync(cwsStaging, { recursive: true, force: true });
 mkdirSync(cwsStaging, { recursive: true });
 const ext = join(root, "extensions", "meet-captions");
-for (const name of ["manifest.json", "background.js", "meet.js", "pair.js", "icons"]) {
+for (const name of ["manifest.json", "background.js", "meet.js", "meet.css", "pair.js", "icons"]) {
   copyIfExists(join(ext, name), join(cwsStaging, name));
 }
 if (existsSync(join(cwsStaging, "manifest.dev.json"))) {

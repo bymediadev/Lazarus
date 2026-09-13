@@ -1,12 +1,11 @@
 function allowedApiBases() {
-  const set = new Set(["https://lazarus-4uxi.onrender.com"]);
-  const perms = chrome.runtime.getManifest().host_permissions || [];
-  const localDev = perms.some(
-    (p) => p.includes("localhost:3001") || p.includes("127.0.0.1:3001")
-  );
-  if (localDev) {
-    set.add("http://localhost:3001");
-    set.add("http://127.0.0.1:3001");
+  const set = new Set(["https://api.getldr.ca", "https://lazarus-4uxi.onrender.com"]);
+  for (const p of chrome.runtime.getManifest().host_permissions || []) {
+    try {
+      set.add(new URL(p.replace("/*", "/")).origin);
+    } catch {
+      /* skip */
+    }
   }
   return set;
 }
@@ -36,6 +35,19 @@ chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
 
   if (msg.type === "pair") {
     storePair(msg.sessionId, msg.sessionSecret, msg.apiBase, sendResponse);
+    return true;
+  }
+
+  if (msg.type === "status") {
+    chrome.storage.local.get(["sessionId", "sessionSecret", "apiBase"], (st) => {
+      const sessionId = String(st.sessionId ?? "").trim();
+      const sessionSecret = String(st.sessionSecret ?? "").trim();
+      const apiBase = String(st.apiBase ?? "").replace(/\/$/, "");
+      sendResponse({
+        paired: Boolean(sessionId && sessionSecret && apiBase),
+        apiBase,
+      });
+    });
     return true;
   }
 

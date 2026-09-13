@@ -7,7 +7,7 @@ Production is a **split**: GitHub Pages serves the website; Render runs the API.
 | Piece | Host | URL |
 |-------|------|-----|
 | Marketing site, login, `/portal` | GitHub Pages | `https://www.getldr.ca` |
-| `/api/*` (Gemini, Stripe, OAuth callbacks, contact) | Render | `https://lazarus-4uxi.onrender.com` |
+| `/api/*` (Gemini, Stripe, OAuth callbacks, contact) | Render | `https://lazarus-4uxi.onrender.com` and `https://api.getldr.ca` |
 
 PHP-only shared hosting (Bluehost / GoDaddy cPanel) cannot run the API.
 
@@ -33,14 +33,28 @@ Keep existing API secrets. Set:
 
 ```
 FRONTEND_ORIGIN=https://www.getldr.ca,https://getldr.ca,http://localhost:5173
-PUBLIC_API_URL=https://lazarus-4uxi.onrender.com
+PUBLIC_API_URL=https://api.getldr.ca
 TURNSTILE_SITE_KEY=...
 TURNSTILE_SECRET_KEY=...
 ```
 
 Leave `VITE_API_URL` unset on Render. CORS also allows `www.getldr.ca` in code even if this env is stale.
 
-OAuth callback URLs stay on the Render host (already registered). After login/Stripe, users return to `https://www.getldr.ca`.
+OAuth callbacks should use `https://api.getldr.ca` (Google requires an authorized domain you own). Keep `https://lazarus-4uxi.onrender.com` enabled as the Render subdomain until every provider dashboard is updated.
+
+### API hostname (`api.getldr.ca`)
+
+1. Render → Lazarus → Settings → Custom Domains → `api.getldr.ca` (already added).
+2. GoDaddy DNS for `getldr.ca`:
+
+| Type | Name | Value | TTL |
+|------|------|--------|-----|
+| CNAME | `api` | `lazarus-4uxi.onrender.com` | 1 Hour |
+
+3. In Render, click **Verify** on `api.getldr.ca`. Wait for Certificate Issued.
+4. Set `PUBLIC_API_URL=https://api.getldr.ca` and `GOOGLE_REDIRECT_URI=https://api.getldr.ca/api/integrations/google/callback`, then add that URI on the Google OAuth client.
+
+Do **not** point `www` or apex at Render — those stay on GitHub Pages.
 
 ### DNS cutover (GoDaddy)
 

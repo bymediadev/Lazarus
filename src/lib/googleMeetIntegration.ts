@@ -52,7 +52,7 @@ export function meetCaptionApiBase(): string {
     const host = window.location.hostname;
     if (host === "localhost" || host === "127.0.0.1") return "http://localhost:3001";
   }
-  return "https://lazarus-4uxi.onrender.com";
+  return "https://api.getldr.ca";
 }
 
 export function publishMeetSessionToExtension(sessionId: string, sessionSecret = ""): void {

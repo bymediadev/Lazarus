@@ -20,10 +20,10 @@ Chrome Web Store listing comes later. For demos, load the unpacked folder:
 
 1. On [www.getldr.ca](https://www.getldr.ca) (or local Vite), open **Live** and select **Google Meet**
 2. Click **Start live session** (pairs the extension automatically)
-3. In Meet, turn on **Captions** (CC)
-4. Caption lines stream into the Recovery Brief. Mic + paste still work if captions are off or the extension is missing
+3. In Meet, a Lazarus panel appears in the bottom-right. Turn on **Captions** (CC)
+4. Caption lines show in that panel and stream into the Recovery Brief. Mic + paste still work if captions are off or the extension is missing
 
-Local API default for the extension is `http://localhost:3001`. Production uses `https://lazarus-4uxi.onrender.com`.
+Local API default for the extension is `http://localhost:3001`. Production uses `https://api.getldr.ca`.
 
 ## 2. Create a Google Cloud OAuth client (Gmail Connect)
 
@@ -35,15 +35,15 @@ Local API default for the extension is `http://localhost:3001`. Production uses 
    https://lazarus-4uxi.onrender.com/api/integrations/google/callback
    ```
 4. Enable APIs: **Gmail API**, **Google Calendar API**, **Google Meet API** (as available)
-5. OAuth consent screen → add scope `https://www.googleapis.com/auth/gmail.readonly` (plus the Meet/profile scopes below)
+5. OAuth consent screen → add scope `https://www.googleapis.com/auth/gmail.readonly` (plus identity scopes below)
 6. If the app is in Testing, add your Gmail as a **test user**
 
 ### Scopes Lazarus requests
 
-- `openid`, `email`, `profile`
-- `https://www.googleapis.com/auth/calendar.readonly`
-- `https://www.googleapis.com/auth/meetings.space.readonly`
-- `https://www.googleapis.com/auth/gmail.readonly`
+- `openid`, `email`, `profile` (Sign in with Google)
+- `https://www.googleapis.com/auth/gmail.readonly` (Connect Gmail — user-initiated search only)
+
+Do **not** add `calendar.readonly` or `meetings.space.readonly`. Live Meet captions use the Chrome extension, not those APIs. Extra sensitive scopes force Google verification (justification + demo video) and will be rejected if unused.
 
 ## 3. Environment variables
 

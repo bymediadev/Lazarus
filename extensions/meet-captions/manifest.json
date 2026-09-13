@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Lazarus Deal Recovery Widget",
-  "version": "1.1.2",
+  "version": "1.1.4",
   "description": "Send Google Meet live captions into Lazarus Deal Recovery after you turn Captions on. No Google OAuth.",
   "homepage_url": "https://www.getldr.ca",
   "icons": {
@@ -18,7 +18,10 @@
     }
   },
   "permissions": ["storage"],
-  "host_permissions": ["https://lazarus-4uxi.onrender.com/*"],
+  "host_permissions": [
+    "https://api.getldr.ca/*",
+    "https://lazarus-4uxi.onrender.com/*"
+  ],
   "background": {
     "service_worker": "background.js"
   },
@@ -35,6 +38,12 @@
       "matches": ["https://meet.google.com/*"],
       "js": ["meet.js"],
       "run_at": "document_idle"
+    }
+  ],
+  "web_accessible_resources": [
+    {
+      "resources": ["meet.css"],
+      "matches": ["https://meet.google.com/*"]
     }
   ]
 }
