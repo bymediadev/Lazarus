@@ -34,6 +34,37 @@ function applyNoindex(filePath, canonicalPath) {
     /<link rel="canonical" href="https:\/\/www\.getldr\.ca\/" \/>/,
     `<link rel="canonical" href="${SITE}${canonicalPath}" />`
   );
+  html = html.replace(
+    /<meta property="og:url" content="https:\/\/www\.getldr\.ca\/" \/>/,
+    `<meta property="og:url" content="${SITE}${canonicalPath}" />`
+  );
+  html = html.replace(
+    /<meta name="twitter:url" content="https:\/\/www\.getldr\.ca\/" \/>/,
+    `<meta name="twitter:url" content="${SITE}${canonicalPath}" />`
+  );
+  writeFileSync(filePath, html);
+}
+
+/** SPA fallback must boot the app, but must not look like an indexable homepage duplicate. */
+function applySpaFallback404(filePath) {
+  if (!existsSync(filePath)) return;
+  let html = readFileSync(filePath, "utf8");
+  html = html.replace(/content="index, follow[^"]*"/g, 'content="noindex, nofollow"');
+  html = html.replace(
+    /<meta name="googlebot" content="index, follow" \/>/,
+    '<meta name="googlebot" content="noindex, nofollow" />'
+  );
+  html = html.replace(/\s*<link rel="canonical" href="https:\/\/www\.getldr\.ca\/" \/>/, "");
+  html = html.replace(/\s*<meta property="og:url" content="https:\/\/www\.getldr\.ca\/" \/>/, "");
+  html = html.replace(/\s*<meta name="twitter:url" content="https:\/\/www\.getldr\.ca\/" \/>/, "");
+  html = html.replace(
+    /\s*<script type="application\/ld\+json">[\s\S]*?<\/script>/,
+    ""
+  );
+  html = html.replace(
+    /<noscript>[\s\S]*?<\/noscript>/,
+    '<noscript><p>Page not found. <a href="https://www.getldr.ca/">Lazarus Deal Recovery</a></p></noscript>'
+  );
   writeFileSync(filePath, html);
 }
 
@@ -45,7 +76,7 @@ for (const slug of ["login", "portal", "app"]) {
   applyNoindex(join(dist, `${slug}.html`), `/${slug}`);
 }
 
-applyNoindex(join(dist, "404.html"), "/");
+applySpaFallback404(join(dist, "404.html"));
 
 const staticHtmlFolders = [
   "privacy",
@@ -54,13 +85,16 @@ const staticHtmlFolders = [
   "security-overview",
   "security",
   "how-to-recover-a-stalled-b2b-deal",
+  "how-do-i-recover-this-deal",
   "stalled-deal-framework",
   "framework",
   "deal-recovery",
+  "deal-recovery-software",
   "stalled-deal-recovery",
   "closed-lost-deal-recovery",
   "deal-recovery-plan",
   "integrations",
+  "hubspot-and-salesforce",
 ];
 for (const slug of staticHtmlFolders) {
   const src = join(dist, `${slug}.html`);

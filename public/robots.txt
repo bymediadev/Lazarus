@@ -5,6 +5,9 @@ Disallow: /app/
 Disallow: /portal
 Disallow: /portal/
 Disallow: /login
+Disallow: /login/
 Disallow: /api/
+Disallow: /security-battlecard
+Disallow: /security-battlecard.html
 
 Sitemap: https://www.getldr.ca/sitemap.xml

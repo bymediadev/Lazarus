@@ -196,6 +196,8 @@ export default function MarketingHome({
             alt="Lazarus Deal Recovery workspace: drop evidence on the left, recovery brief on the right"
             width={1600}
             height={900}
+            loading="lazy"
+            decoding="async"
           />
         </figure>
         <p className="marketing-product-caption">Watch a 4-minute walkthrough</p>

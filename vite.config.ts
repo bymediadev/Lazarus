@@ -29,6 +29,9 @@ const SEO_PAGE_ALIASES: Record<string, string> = {
   "/security": "/security-overview",
   "/stalled-deal-framework": "/how-to-recover-a-stalled-b2b-deal",
   "/framework": "/how-to-recover-a-stalled-b2b-deal",
+  "/how-do-i-recover-this-deal": "/how-to-recover-a-stalled-b2b-deal",
+  "/deal-recovery-software": "/deal-recovery",
+  "/hubspot-and-salesforce": "/integrations",
 };
 
 function canonicalTrustPackPath(slug: string): string {
