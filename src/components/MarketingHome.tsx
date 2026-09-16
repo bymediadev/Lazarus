@@ -50,7 +50,7 @@ export default function MarketingHome({
         </p>
         <p className="marketing-geo-summary">
           Lazarus Deal Recovery is B2B deal recovery software: recoverable versus a flat no, the
-          blocker, and a 0–90 day plan for HubSpot or Salesforce notes. No meeting bot.
+          blocker, and a 0–90 day plan on the HubSpot or Salesforce deal. No meeting bot.
         </p>
         <div className="marketing-hero-actions">
           <button type="button" className="run-button run-button-above-fold" onClick={onPortal}>
@@ -59,8 +59,7 @@ export default function MarketingHome({
           <BookLookButton />
         </div>
         <p className="marketing-hero-note">
-          No credit card. No meeting bot. Connect HubSpot when you want deal notes in; you paste the
-          brief back — Lazarus does not silently write the CRM. Salesforce works the same way.{" "}
+          No credit card. No meeting bot. Connect HubSpot or Salesforce and the deal updates.{" "}
           <button type="button" className="marketing-text-link" onClick={onSignup}>
             Create an account
           </button>
@@ -92,7 +91,7 @@ export default function MarketingHome({
         <ul className="marketing-plain-list">
           <li>Which rep-owned deals are actually going to close</li>
           <li>Which stalled deals are recoverable vs a flat no</li>
-          <li>The blocker, and a 0–90 day plan you paste into HubSpot notes</li>
+          <li>The blocker, and a 0–90 day plan on the HubSpot or Salesforce deal</li>
         </ul>
       </section>
 
@@ -133,14 +132,14 @@ export default function MarketingHome({
 
       <section className="marketing-simple marketing-reveal" id="brief" aria-label="Example brief">
         <p className="hero-trust-eyebrow">Example brief</p>
-        <h2>What you take into HubSpot</h2>
+        <h2>What lands on the deal</h2>
         <p>
           An example of the{" "}
           <a className="marketing-text-link" href={SEO_PATHS.plan}>
             deal recovery plan
           </a>
-          . Your deals, your evidence — the blocker, recoverable vs a flat no, and the next 90 days,
-          ready to paste into HubSpot notes.
+          . Your deals, your evidence — the blocker, recoverable vs a flat no, and the next 90 days
+          on the HubSpot or Salesforce record.
         </p>
         <article className="marketing-brief-preview">
           <p className="marketing-brief-kicker">Recoverable</p>
@@ -154,7 +153,7 @@ export default function MarketingHome({
             <li>Get the champion to book the security review this week.</li>
             <li>Multi-thread to finance so procurement is not the only gate.</li>
           </ol>
-          <p className="marketing-brief-foot">Paste into HubSpot notes before the forecast call.</p>
+          <p className="marketing-brief-foot">On the HubSpot deal before the forecast call.</p>
         </article>
       </section>
 
@@ -179,7 +178,8 @@ export default function MarketingHome({
             <span>3</span>
             <h3>Use the brief</h3>
             <p>
-              Take the recovery plan into forecast. Paste a short note into HubSpot — or Salesforce.
+              Take the recovery plan into forecast. Connect HubSpot or Salesforce and the deal
+              updates.
             </p>
           </li>
         </ol>
@@ -216,7 +216,7 @@ export default function MarketingHome({
           </li>
           <li>
             <strong>Right — Recovery brief.</strong> Closable vs a flat no, the blocker, and a 0–90
-            day plan for HubSpot notes.
+            day plan on the HubSpot or Salesforce deal.
           </li>
         </ul>
       </section>
@@ -271,7 +271,7 @@ export default function MarketingHome({
             <dt>Do you read our whole inbox?</dt>
             <dd>
               No. Mailbox connect is read-only. You search a deal and attach the thread. No silent
-              scrape, no secret CRM write.
+              scrape.
             </dd>
           </div>
           <div>
