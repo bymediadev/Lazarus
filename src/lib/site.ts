@@ -16,16 +16,25 @@ export const FOUNDER_NAME = "Joshua Bennett";
 
 export const FOUNDER_LINKEDIN = "https://www.linkedin.com/in/jjebennett";
 
-export const SITE_TITLE = "Lazarus Deal Recovery | B2B Pipeline & Deal Recovery Software";
+export const SITE_TITLE = "Lazarus Deal Recovery | B2B Deal Recovery Software";
 
 export const SITE_DESCRIPTION =
-  "Lazarus Deal Recovery helps sales managers run cleaner forecast calls: which stalled B2B deals are recoverable vs a flat no, and what to do next. Try 5 free analyses.";
+  "Lazarus Deal Recovery is B2B deal recovery software: which stalled deals are recoverable vs a flat no, the blocker, and a 0–90 day plan. Five free analyses.";
+
+export const SEO_PATHS = {
+  dealRecovery: "/deal-recovery",
+  stalled: "/stalled-deal-recovery",
+  closedLost: "/closed-lost-deal-recovery",
+  plan: "/deal-recovery-plan",
+  howTo: "/how-to-recover-a-stalled-b2b-deal",
+  integrations: "/integrations",
+} as const;
 
 export const OG_TITLE = SITE_TITLE;
 
 export const OG_DESCRIPTION = SITE_DESCRIPTION;
 
-export const PILLAR_PATH = "/how-to-recover-a-stalled-b2b-deal";
+export const PILLAR_PATH = SEO_PATHS.howTo;
 
 const ROBOTS_INDEX = "index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1";
 const ROBOTS_NOINDEX = "noindex, nofollow";

@@ -1,7 +1,7 @@
 import type { ReactNode } from "react";
 import { scrollToSection } from "../lib/appRoute";
 import { PORTAL_ENTRY_CTA } from "../lib/cta";
-import { PILLAR_PATH } from "../lib/site";
+import { SEO_PATHS } from "../lib/site";
 import FeedbackButton from "./FeedbackButton";
 import SiteFooter from "./SiteFooter";
 
@@ -29,18 +29,12 @@ export default function MarketingShell({
           </div>
         </button>
         <nav className="marketing-nav" aria-label="Site">
-          <a href={PILLAR_PATH}>Recover a deal</a>
-          <button type="button" onClick={() => scrollToSection("how")}>
-            How it works
-          </button>
-          <button type="button" onClick={() => scrollToSection("objections")}>
-            Objections
-          </button>
+          <a href={SEO_PATHS.dealRecovery}>Deal recovery</a>
+          <a href={SEO_PATHS.stalled}>Stalled deals</a>
+          <a href={SEO_PATHS.closedLost}>Closed-lost</a>
+          <a href={SEO_PATHS.plan}>Recovery plan</a>
           <button type="button" onClick={() => scrollToSection("pricing")}>
             Pricing
-          </button>
-          <button type="button" onClick={() => scrollToSection("about")}>
-            About
           </button>
           <button type="button" onClick={() => scrollToSection("contact")}>
             Contact

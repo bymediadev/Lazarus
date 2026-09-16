@@ -47,6 +47,9 @@ body.wide { max-width: 8.5in; }
   margin-bottom: 1.25rem;
   padding: 0.65rem 0;
   border-bottom: 1px solid #ddd;
+  display: flex;
+  flex-wrap: wrap;
+  row-gap: 0.35rem;
 }
 
 .legal-nav a {

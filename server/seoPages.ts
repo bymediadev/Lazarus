@@ -6,6 +6,9 @@ import path from "path";
 export const CRAWLABLE_HTML_PAGES: Record<string, string> = {
   "/how-to-recover-a-stalled-b2b-deal": "how-to-recover-a-stalled-b2b-deal.html",
   "/deal-recovery": "deal-recovery.html",
+  "/stalled-deal-recovery": "stalled-deal-recovery.html",
+  "/closed-lost-deal-recovery": "closed-lost-deal-recovery.html",
+  "/deal-recovery-plan": "deal-recovery-plan.html",
   "/integrations": "integrations.html",
 };
 

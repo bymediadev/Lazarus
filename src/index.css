@@ -5766,6 +5766,9 @@ a.marketing-text-link {
 .marketing-hero > *:nth-child(5) {
   animation-delay: 0.36s;
 }
+.marketing-hero > *:nth-child(6) {
+  animation-delay: 0.44s;
+}
 
 .marketing-reveal {
   opacity: 0;

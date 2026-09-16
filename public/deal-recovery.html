@@ -19,6 +19,7 @@
   <link rel="alternate" hreflang="x-default" href="https://www.getldr.ca/deal-recovery" />
   <link rel="icon" href="/logo.png" type="image/png" />
   <meta property="og:type" content="website" />
+  <meta property="og:locale" content="en_CA" />
   <meta property="og:url" content="https://www.getldr.ca/deal-recovery" />
   <meta property="og:site_name" content="Lazarus Deal Recovery" />
   <meta property="og:title" content="Deal Recovery Software | Lazarus Deal Recovery" />
@@ -39,13 +40,35 @@
   <script type="application/ld+json">
     {
       "@context": "https://schema.org",
-      "@type": "WebPage",
-      "@id": "https://www.getldr.ca/deal-recovery#webpage",
-      "url": "https://www.getldr.ca/deal-recovery",
-      "name": "Deal Recovery Software for Stalled B2B Pipeline",
-      "description": "Deal recovery software that tells sales managers which stalled deals are recoverable versus a flat no.",
-      "isPartOf": { "@id": "https://www.getldr.ca/#website" },
-      "about": { "@id": "https://www.getldr.ca/#app" }
+      "@graph": [
+        {
+          "@type": "BreadcrumbList",
+          "itemListElement": [
+            {
+              "@type": "ListItem",
+              "position": 1,
+              "name": "Lazarus Deal Recovery",
+              "item": "https://www.getldr.ca/"
+            },
+            {
+              "@type": "ListItem",
+              "position": 2,
+              "name": "Deal recovery software",
+              "item": "https://www.getldr.ca/deal-recovery"
+            }
+          ]
+        },
+        {
+          "@type": "WebPage",
+          "@id": "https://www.getldr.ca/deal-recovery#webpage",
+          "url": "https://www.getldr.ca/deal-recovery",
+          "name": "Deal Recovery Software for Stalled B2B Pipeline",
+          "description": "Deal recovery software that tells sales managers which stalled deals are recoverable versus a flat no.",
+          "isPartOf": { "@id": "https://www.getldr.ca/#website" },
+          "about": { "@id": "https://www.getldr.ca/#app" },
+          "inLanguage": "en-CA"
+        }
+      ]
     }
   </script>
 </head>
@@ -53,8 +76,11 @@
   <div class="legal-nav no-print">
     <a href="/">Home</a>
     <a href="/deal-recovery">Deal recovery software</a>
-    <a href="/integrations">HubSpot &amp; Salesforce</a>
+    <a href="/stalled-deal-recovery">Stalled deal recovery</a>
+    <a href="/closed-lost-deal-recovery">Closed-lost recovery</a>
+    <a href="/deal-recovery-plan">Deal recovery plan</a>
     <a href="/how-to-recover-a-stalled-b2b-deal">How do I recover this deal?</a>
+    <a href="/integrations">HubSpot &amp; Salesforce</a>
     <a href="/portal">Run a recovery report</a>
   </div>
 
@@ -105,9 +131,13 @@
   </div>
 
   <p>
-    Also see <a href="/integrations">HubSpot and Salesforce deal recovery</a>
+    Also see
+    <a href="/stalled-deal-recovery">stalled deal recovery</a>,
+    <a href="/closed-lost-deal-recovery">closed-lost deal recovery</a>,
+    the <a href="/deal-recovery-plan">deal recovery plan</a>,
+    <a href="/integrations">HubSpot and Salesforce</a>,
     and the
-    <a href="/how-to-recover-a-stalled-b2b-deal">stalled-deal recovery framework</a>.
+    <a href="/how-to-recover-a-stalled-b2b-deal">4-step recovery framework</a>.
   </p>
 
   <footer>

@@ -1,5 +1,5 @@
 import { HERO_PRIMARY_CTA, PORTAL_ENTRY_CTA } from "../lib/cta";
-import { BOOKING_URL, FOUNDER_LINKEDIN, FOUNDER_NAME, PILLAR_PATH, WALKTHROUGH_EMBED_URL } from "../lib/site";
+import { BOOKING_URL, FOUNDER_LINKEDIN, FOUNDER_NAME, PILLAR_PATH, SEO_PATHS, WALKTHROUGH_EMBED_URL } from "../lib/site";
 import { scrollToSection } from "../lib/appRoute";
 import { useReveal } from "../lib/useReveal";
 import { PricingPlanCards } from "./PricingGate";
@@ -42,11 +42,11 @@ export default function MarketingHome({
   return (
     <>
       <section className="marketing-hero">
-        <p className="hero-trust-eyebrow">B2B Deal Recovery Software</p>
-        <h1 className="marketing-hero-title">Win back stalled sales pipeline</h1>
+        <p className="hero-trust-eyebrow">B2B deal recovery software</p>
+        <h1 className="marketing-hero-title">Lazarus Deal Recovery</h1>
         <p className="marketing-hero-sub">
-          Lazarus identifies which stalled and closed-lost deals are still recoverable, why
-          momentum died, and what your team should do next.
+          Diagnose stalled B2B sales. See which deals are recoverable versus a flat no. Leave
+          with a 0–90 day recovery plan for HubSpot or Salesforce notes.
         </p>
         <p className="marketing-geo-summary">
           <strong>In one sentence:</strong> Lazarus Deal Recovery is B2B deal recovery software
@@ -97,8 +97,8 @@ export default function MarketingHome({
         </ul>
       </section>
 
-      <section className="marketing-simple marketing-reveal" id="recover" aria-label="How do I recover this deal?">
-        <h2>How do I recover this deal?</h2>
+      <section className="marketing-simple marketing-reveal" id="recover" aria-label="From stalled deal to recovery plan">
+        <h2>From stalled deal to recovery plan</h2>
         <ol className="marketing-plain-list">
           <li>Audit existing transcript and email evidence.</li>
           <li>Map hidden background stakeholders.</li>
@@ -106,15 +106,27 @@ export default function MarketingHome({
           <li>Execute a 0–90 day tactical recovery script.</li>
         </ol>
         <p>
-          <a className="marketing-text-link" href={PILLAR_PATH}>
-            Read the 4-step stalled B2B deal recovery framework
+          <a className="marketing-text-link" href={SEO_PATHS.stalled}>
+            Stalled deal recovery
           </a>
           {" · "}
-          <a className="marketing-text-link" href="/deal-recovery">
+          <a className="marketing-text-link" href={SEO_PATHS.closedLost}>
+            Closed-lost deal recovery
+          </a>
+          {" · "}
+          <a className="marketing-text-link" href={SEO_PATHS.plan}>
+            Deal recovery plan
+          </a>
+          {" · "}
+          <a className="marketing-text-link" href={PILLAR_PATH}>
+            4-step framework
+          </a>
+          {" · "}
+          <a className="marketing-text-link" href={SEO_PATHS.dealRecovery}>
             What deal recovery software is
           </a>
           {" · "}
-          <a className="marketing-text-link" href="/integrations">
+          <a className="marketing-text-link" href={SEO_PATHS.integrations}>
             HubSpot and Salesforce
           </a>
         </p>
@@ -124,8 +136,12 @@ export default function MarketingHome({
         <p className="hero-trust-eyebrow">Example brief</p>
         <h2>What you take into HubSpot</h2>
         <p>
-          An example of the output. Your deals, your evidence — the blocker, recoverable vs a flat
-          no, and the next 90 days, ready to paste into HubSpot notes.
+          An example of the{" "}
+          <a className="marketing-text-link" href={SEO_PATHS.plan}>
+            deal recovery plan
+          </a>
+          . Your deals, your evidence — the blocker, recoverable vs a flat no, and the next 90 days,
+          ready to paste into HubSpot notes.
         </p>
         <article className="marketing-brief-preview">
           <p className="marketing-brief-kicker">Recoverable</p>
@@ -305,7 +321,8 @@ export default function MarketingHome({
         <p>
           Founded by{" "}
           <a href={FOUNDER_LINKEDIN} target="_blank" rel="noopener noreferrer">{FOUNDER_NAME}</a>.
-          Official site: getldr.ca.
+          Official site:{" "}
+          <a href="https://www.getldr.ca/">www.getldr.ca</a>.
         </p>
         <div className="marketing-hero-actions">
           <button type="button" className="run-button" onClick={onPortal}>

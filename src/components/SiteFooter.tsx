@@ -1,4 +1,4 @@
-import { FOUNDER_LINKEDIN, FOUNDER_NAME, PILLAR_PATH } from "../lib/site";
+import { FOUNDER_LINKEDIN, FOUNDER_NAME, SEO_PATHS } from "../lib/site";
 import { openTrustPack, TRUST_PACK_NAV, trustPackUrl, type TrustPackSlug } from "../lib/trustPack";
 
 export default function SiteFooter() {
@@ -13,9 +13,12 @@ export default function SiteFooter() {
             Lazarus Deal Recovery · Trust Pack v1.12
           </span>
           <nav className="site-footer-nav" aria-label="Legal">
-            <a href="/deal-recovery">Deal recovery software</a>
-            <a href={PILLAR_PATH}>How do I recover this deal?</a>
-            <a href="/integrations">HubSpot &amp; Salesforce</a>
+            <a href={SEO_PATHS.dealRecovery}>Deal recovery software</a>
+            <a href={SEO_PATHS.stalled}>Stalled deal recovery</a>
+            <a href={SEO_PATHS.closedLost}>Closed-lost recovery</a>
+            <a href={SEO_PATHS.plan}>Deal recovery plan</a>
+            <a href={SEO_PATHS.howTo}>How do I recover this deal?</a>
+            <a href={SEO_PATHS.integrations}>HubSpot &amp; Salesforce</a>
             {TRUST_PACK_NAV.map(({ slug, label }) => (
               <a
                 key={slug}
