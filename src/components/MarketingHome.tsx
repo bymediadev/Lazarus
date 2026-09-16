@@ -59,8 +59,8 @@ export default function MarketingHome({
           <BookLookButton />
         </div>
         <p className="marketing-hero-note">
-          No credit card. No meeting bot. Connect HubSpot with OAuth when you want deal notes — no
-          engineering team. Salesforce works the same way.{" "}
+          No credit card. No meeting bot. Connect HubSpot when you want deal notes in; you paste the
+          brief back — Lazarus does not silently write the CRM. Salesforce works the same way.{" "}
           <button type="button" className="marketing-text-link" onClick={onSignup}>
             Create an account
           </button>
@@ -75,7 +75,7 @@ export default function MarketingHome({
         <h2>Who it’s for</h2>
         <p>
           Sales managers and VPs who own the forecast call. Mid-market B2B. HubSpot or Salesforce.
-          About 44% of B2B deals get pushed back — know which of yours are recoverable vs a flat no.
+          Know which stalled deals are recoverable vs a flat no.
         </p>
         <p>
           <strong>Not for</strong> anyone shopping for an AI SDR, an autonomous closer, a meeting
@@ -262,8 +262,8 @@ export default function MarketingHome({
             <dt>Is our data safe? Do you have SOC 2?</dt>
             <dd>
               Encrypted in transit and at rest. Your content is not used to train public models.
-              Teams only see their own deals. We are not SOC 2 certified today — honest fit for
-              pilot and mid-market. Full detail:{" "}
+              Teams only see their own deals. Saved transcripts purge on a 30-day default. We are
+              not SOC 2 certified today — honest fit for pilot and mid-market. Full detail:{" "}
               <TrustPackLink slug="security-overview">Security Overview</TrustPackLink>.
             </dd>
           </div>
@@ -317,7 +317,8 @@ export default function MarketingHome({
         </p>
         <p>
           A person still runs the deal. Lazarus does not sell, write outreach, or replace your team.
-          Your data stays on your account.
+          Your data stays on your account — not used to train public models.{" "}
+          <TrustPackLink slug="security-overview">Security Overview</TrustPackLink>.
         </p>
         <p>
           Founded by{" "}
