@@ -37,7 +37,6 @@ export default function ContactSection() {
 
   return (
     <section className="marketing-page marketing-band marketing-reveal" id="contact">
-      <p className="hero-trust-eyebrow">Contact</p>
       <h2>Talk to a person</h2>
       <p className="marketing-page-lead">
         Sales, support, a technical question, or product feedback. We’ll reply.

@@ -8,42 +8,44 @@ export default function SiteFooter() {
 
   return (
     <footer className="site-footer">
-        <div className="site-footer-inner">
-          <span className="site-footer-brand">
-            Lazarus Deal Recovery · Trust Pack v1.12
-          </span>
-          <nav className="site-footer-nav" aria-label="Legal">
-            <a href={SEO_PATHS.dealRecovery}>Deal recovery software</a>
-            <a href={SEO_PATHS.stalled}>Stalled deal recovery</a>
-            <a href={SEO_PATHS.closedLost}>Closed-lost recovery</a>
-            <a href={SEO_PATHS.plan}>Deal recovery plan</a>
-            <a href={SEO_PATHS.howTo}>How do I recover this deal?</a>
-            <a href={SEO_PATHS.integrations}>HubSpot &amp; Salesforce</a>
-            {TRUST_PACK_NAV.map(({ slug, label }) => (
-              <a
-                key={slug}
-                href={trustPackUrl(slug)}
-                className="trust-pack-link"
-                onClick={(event) => {
-                  if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey || event.button !== 0) {
-                    return;
-                  }
-                  event.preventDefault();
-                  handleOpen(slug);
-                }}
-              >
-                {label}
-              </a>
-            ))}
-            <a href={FOUNDER_LINKEDIN} target="_blank" rel="noopener noreferrer">
-              {FOUNDER_NAME} on LinkedIn
-            </a>
-          </nav>
+      <div className="site-footer-inner">
+        <div className="site-footer-brand-block">
+          <span className="site-footer-brand">Lazarus Deal Recovery</span>
           <span className="site-footer-copy">
-            © {new Date().getFullYear()} Lazarus Deal Recovery. TLS 1.3 in transit · AES-256 at rest
-            (Supabase) · audio processed in memory · RLS on stored data.
+            © {new Date().getFullYear()} Lazarus Deal Recovery. Encrypted in transit and at rest.
+            Not SOC 2 certified today.
           </span>
         </div>
-      </footer>
+        <nav className="site-footer-nav" aria-label="Learn more">
+          <a href={SEO_PATHS.dealRecovery}>Deal recovery software</a>
+          <a href={SEO_PATHS.stalled}>Stalled deals</a>
+          <a href={SEO_PATHS.closedLost}>Closed-lost</a>
+          <a href={SEO_PATHS.plan}>Recovery plan</a>
+          <a href={SEO_PATHS.howTo}>How do I recover this deal?</a>
+          <a href={SEO_PATHS.integrations}>HubSpot &amp; Salesforce</a>
+        </nav>
+        <nav className="site-footer-nav" aria-label="Legal">
+          {TRUST_PACK_NAV.map(({ slug, label }) => (
+            <a
+              key={slug}
+              href={trustPackUrl(slug)}
+              className="trust-pack-link"
+              onClick={(event) => {
+                if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey || event.button !== 0) {
+                  return;
+                }
+                event.preventDefault();
+                handleOpen(slug);
+              }}
+            >
+              {label}
+            </a>
+          ))}
+          <a href={FOUNDER_LINKEDIN} target="_blank" rel="noopener noreferrer">
+            {FOUNDER_NAME}
+          </a>
+        </nav>
+      </div>
+    </footer>
   );
 }

@@ -1149,28 +1149,41 @@ body {
 .site-footer {
   border-top: 1px solid var(--panel-border);
   background: var(--panel);
-  padding: 1rem 1.5rem;
+  padding: 1.35rem 1.5rem 1.5rem;
 }
 
 .site-footer-inner {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  justify-content: space-between;
-  gap: 0.75rem;
-  font-size: 0.7rem;
+  display: grid;
+  grid-template-columns: minmax(12rem, 1.5fr) 1fr 1fr;
+  align-items: start;
+  gap: 1.25rem 2rem;
+  max-width: 68rem;
+  margin: 0 auto;
+  font-size: 0.78rem;
   color: var(--muted);
+}
+
+.site-footer-brand-block {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
 }
 
 .site-footer-brand {
   font-family: var(--mono);
   letter-spacing: 0.06em;
+  color: var(--text);
+}
+
+.site-footer-copy {
+  line-height: 1.5;
 }
 
 .site-footer-nav {
   display: flex;
-  flex-wrap: wrap;
-  gap: 1rem;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.4rem;
 }
 
 .site-footer-nav a {
@@ -2240,9 +2253,10 @@ a.run-button:hover {
 }
 
 .pricing-plan-quality span {
-  display: inline-block;
-  margin-right: 0.4rem;
-  margin-bottom: 0.15rem;
+  display: block;
+  width: fit-content;
+  margin-right: 0;
+  margin-bottom: 0.35rem;
   padding: 0.12rem 0.4rem;
   border: 1px solid var(--emerald, #3ecf8e);
   border-radius: 999px;
@@ -5262,13 +5276,11 @@ a.run-button:hover {
 
 #how,
 #pricing,
-#about,
-#what,
 #who,
 #layout,
-#questions,
-#objections,
-#brief {
+#answers,
+#brief,
+#contact {
   scroll-margin-top: 6.5rem;
 }
 
@@ -5277,14 +5289,8 @@ a.run-button:hover {
 }
 
 .marketing-qa > div {
-  padding: 0.85rem 0;
+  padding: 0.95rem 0;
   border-top: 1px solid var(--panel-border);
-  transition: padding-left 0.22s ease, border-color 0.22s ease;
-}
-
-.marketing-qa > div:hover {
-  padding-left: 0.45rem;
-  border-top-color: var(--teal);
 }
 
 .marketing-qa dt {
@@ -5306,9 +5312,22 @@ a.run-button:hover {
   margin: 0 auto;
 }
 
+.marketing-header .header-brand .tag {
+  animation: none;
+}
+
+.marketing-header .header-logo {
+  height: 48px;
+}
+
+.marketing-header .marketing-entry-cta {
+  max-width: none;
+  white-space: nowrap;
+}
+
 .marketing-hero {
-  padding: 3.25rem 1.5rem 2.5rem;
-  max-width: 46rem;
+  padding: 3.5rem 1.5rem 2.75rem;
+  max-width: 42rem;
 }
 
 .marketing-hero-title {
@@ -5330,15 +5349,20 @@ a.run-button:hover {
   letter-spacing: 0;
 }
 
-.marketing-geo-summary {
-  max-width: 42rem;
-  margin: 0 0 1.5rem;
-  padding: 0.85rem 1rem;
-  border-left: 3px solid var(--teal);
-  background: rgba(61, 214, 198, 0.08);
-  color: var(--text);
-  font-size: 0.95rem;
-  line-height: 1.55;
+.marketing-split {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1.35rem;
+  margin-top: 0.85rem;
+}
+
+.marketing-split h3 {
+  margin: 0 0 0.4rem;
+  font-size: 0.92rem;
+}
+
+.marketing-split p {
+  margin: 0;
 }
 
 .marketing-hero-actions .run-button-above-fold {
@@ -5482,7 +5506,7 @@ a.run-button:hover {
 }
 
 .marketing-steps {
-  padding: 0.5rem 1.5rem 1.75rem;
+  padding: 1.25rem 1.5rem 2.25rem;
   border-top: 1px solid var(--panel-border);
 }
 
@@ -5718,7 +5742,9 @@ a.marketing-text-link {
 }
 
 @media (max-width: 800px) {
-  .marketing-step-grid {
+  .marketing-step-grid,
+  .marketing-split,
+  .site-footer-inner {
     grid-template-columns: 1fr;
   }
 
@@ -5739,6 +5765,10 @@ a.marketing-text-link {
   .marketing-nav {
     order: 3;
     width: 100%;
+  }
+
+  .marketing-header .marketing-entry-cta {
+    white-space: normal;
   }
 }
 

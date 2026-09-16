@@ -1,7 +1,6 @@
 import type { ReactNode } from "react";
 import { scrollToSection } from "../lib/appRoute";
-import { PORTAL_ENTRY_CTA } from "../lib/cta";
-import { SEO_PATHS } from "../lib/site";
+import { HEADER_ENTRY_CTA } from "../lib/cta";
 import FeedbackButton from "./FeedbackButton";
 import SiteFooter from "./SiteFooter";
 
@@ -25,14 +24,13 @@ export default function MarketingShell({
           <img src="/logo.png" alt="Lazarus Deal Recovery" className="header-logo" />
           <div className="header-brand-copy">
             <span className="header-product-name">Lazarus Deal Recovery</span>
-            <span className="tag">Forecast &amp; Deal Recovery</span>
+            <span className="tag">For the forecast call</span>
           </div>
         </button>
         <nav className="marketing-nav" aria-label="Site">
-          <a href={SEO_PATHS.dealRecovery}>Deal recovery</a>
-          <a href={SEO_PATHS.stalled}>Stalled deals</a>
-          <a href={SEO_PATHS.closedLost}>Closed-lost</a>
-          <a href={SEO_PATHS.plan}>Recovery plan</a>
+          <button type="button" onClick={() => scrollToSection("how")}>
+            How it works
+          </button>
           <button type="button" onClick={() => scrollToSection("pricing")}>
             Pricing
           </button>
@@ -45,7 +43,7 @@ export default function MarketingShell({
             Log In
           </button>
           <button type="button" className="btn-primary header-auth-signup marketing-entry-cta" onClick={onPortal}>
-            {PORTAL_ENTRY_CTA}
+            {HEADER_ENTRY_CTA}
           </button>
         </div>
       </header>

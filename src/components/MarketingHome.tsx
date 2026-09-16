@@ -1,5 +1,5 @@
-import { HERO_PRIMARY_CTA, PORTAL_ENTRY_CTA } from "../lib/cta";
-import { BOOKING_URL, FOUNDER_LINKEDIN, FOUNDER_NAME, PILLAR_PATH, SEO_PATHS, WALKTHROUGH_EMBED_URL } from "../lib/site";
+import { HERO_PRIMARY_CTA } from "../lib/cta";
+import { BOOKING_URL, WALKTHROUGH_EMBED_URL } from "../lib/site";
 import { scrollToSection } from "../lib/appRoute";
 import { useReveal } from "../lib/useReveal";
 import { PricingPlanCards } from "./PricingGate";
@@ -42,15 +42,12 @@ export default function MarketingHome({
   return (
     <>
       <section className="marketing-hero">
-        <p className="hero-trust-eyebrow">B2B Deal Recovery Software</p>
+        <p className="hero-trust-eyebrow">B2B deal recovery</p>
         <h1 className="marketing-hero-title">Win back stalled sales pipeline</h1>
         <p className="marketing-hero-sub">
-          Lazarus identifies which stalled and closed-lost deals are still recoverable, why
-          momentum died, and what your team should do next.
-        </p>
-        <p className="marketing-geo-summary">
-          Lazarus Deal Recovery is B2B deal recovery software: recoverable versus a flat no, the
-          blocker, and a 0–90 day plan on the HubSpot or Salesforce deal. No meeting bot.
+          We tell sales managers which stalled deals are recoverable versus a flat no, name the
+          blocker, and put a 0–90 day plan on the HubSpot or Salesforce deal. We never join the
+          call.
         </p>
         <div className="marketing-hero-actions">
           <button type="button" className="run-button run-button-above-fold" onClick={onPortal}>
@@ -59,87 +56,47 @@ export default function MarketingHome({
           <BookLookButton />
         </div>
         <p className="marketing-hero-note">
-          No credit card. No meeting bot. Connect HubSpot or Salesforce and the deal updates.{" "}
-          <button type="button" className="marketing-text-link" onClick={onSignup}>
-            Create an account
-          </button>
-          {" · "}
+          No credit card. Five free analyses a month.{" "}
           <button type="button" className="marketing-text-link" onClick={() => scrollToSection("pricing")}>
             See pricing
           </button>
         </p>
       </section>
 
-      <section className="marketing-simple marketing-reveal" id="who" aria-label="Who it is for">
-        <h2>Who it’s for</h2>
-        <p>
-          Sales managers and VPs who own the forecast call. Mid-market B2B. HubSpot or Salesforce.
-          Know which stalled deals are recoverable vs a flat no.
-        </p>
-        <p>
-          <strong>Not for</strong> anyone shopping for an AI SDR, an autonomous closer, a meeting
-          bot, or a Gong replacement. Keep your recorder. Lazarus is the judgment layer on top.
-        </p>
-      </section>
-
-      <section className="marketing-simple marketing-reveal" id="what" aria-label="What it is">
-        <h2>What it is</h2>
-        <p>
-          Deal recovery for the manager running the call. Not a recorder. Not an AI salesperson. Not
-          a meeting bot. You keep Meet, Teams, or Zoom — Lazarus never joins the call.
-        </p>
-        <ul className="marketing-plain-list">
-          <li>Which rep-owned deals are actually going to close</li>
-          <li>Which stalled deals are recoverable vs a flat no</li>
-          <li>The blocker, and a 0–90 day plan on the HubSpot or Salesforce deal</li>
-        </ul>
-      </section>
-
-      <section className="marketing-simple marketing-reveal" id="recover" aria-label="How do I recover this deal?">
-        <h2>How do I recover this deal?</h2>
-        <ol className="marketing-plain-list">
-          <li>Audit existing transcript and email evidence.</li>
-          <li>Map hidden background stakeholders.</li>
-          <li>Isolate decision-making anxiety — recoverable versus a flat no.</li>
-          <li>Execute a 0–90 day tactical recovery script.</li>
+      <section className="marketing-steps marketing-reveal" id="how" aria-label="How it works">
+        <h2>How it works</h2>
+        <ol className="marketing-step-grid">
+          <li>
+            <span>1</span>
+            <h3>Add the evidence</h3>
+            <p>
+              A recording, transcript, email thread, or CRM notes. One run, so the score sees the
+              whole deal.
+            </p>
+          </li>
+          <li>
+            <span>2</span>
+            <h3>Run the analysis</h3>
+            <p>
+              Lazarus names the blocker in plain language, and whether the deal is recoverable or a
+              flat no.
+            </p>
+          </li>
+          <li>
+            <span>3</span>
+            <h3>The deal updates</h3>
+            <p>
+              Connect HubSpot or Salesforce. Notes come in; the 0–90 day plan writes back to the
+              record.
+            </p>
+          </li>
         </ol>
-        <p>
-          <a className="marketing-text-link" href={SEO_PATHS.stalled}>
-            Stalled deal recovery
-          </a>
-          {" · "}
-          <a className="marketing-text-link" href={SEO_PATHS.closedLost}>
-            Closed-lost deal recovery
-          </a>
-          {" · "}
-          <a className="marketing-text-link" href={SEO_PATHS.plan}>
-            Deal recovery plan
-          </a>
-          {" · "}
-          <a className="marketing-text-link" href={PILLAR_PATH}>
-            4-step framework
-          </a>
-          {" · "}
-          <a className="marketing-text-link" href={SEO_PATHS.dealRecovery}>
-            What deal recovery software is
-          </a>
-          {" · "}
-          <a className="marketing-text-link" href={SEO_PATHS.integrations}>
-            HubSpot and Salesforce
-          </a>
-        </p>
       </section>
 
       <section className="marketing-simple marketing-reveal" id="brief" aria-label="Example brief">
-        <p className="hero-trust-eyebrow">Example brief</p>
-        <h2>What lands on the deal</h2>
+        <h2>What you get</h2>
         <p>
-          An example of the{" "}
-          <a className="marketing-text-link" href={SEO_PATHS.plan}>
-            deal recovery plan
-          </a>
-          . Your deals, your evidence — the blocker, recoverable vs a flat no, and the next 90 days
-          on the HubSpot or Salesforce record.
+          A brief you can take into the forecast call. Your deals, your evidence — not a call recap.
         </p>
         <article className="marketing-brief-preview">
           <p className="marketing-brief-kicker">Recoverable</p>
@@ -153,43 +110,13 @@ export default function MarketingHome({
             <li>Get the champion to book the security review this week.</li>
             <li>Multi-thread to finance so procurement is not the only gate.</li>
           </ol>
-          <p className="marketing-brief-foot">On the HubSpot deal before the forecast call.</p>
+          <p className="marketing-brief-foot">On the HubSpot or Salesforce deal.</p>
         </article>
-      </section>
-
-
-      <section className="marketing-steps marketing-reveal" id="how" aria-label="How it works">
-        <h2>How it works</h2>
-        <ol className="marketing-step-grid">
-          <li>
-            <span>1</span>
-            <h3>Add evidence</h3>
-            <p>
-              A recording, transcript, email thread, or notes from your CRM. Compile them in one
-              run for a full picture of the deal.
-            </p>
-          </li>
-          <li>
-            <span>2</span>
-            <h3>Run analysis</h3>
-            <p>Lazarus scores the deal and names the blocker in plain language.</p>
-          </li>
-          <li>
-            <span>3</span>
-            <h3>Use the brief</h3>
-            <p>
-              Take the recovery plan into forecast. Connect HubSpot or Salesforce and the deal
-              updates.
-            </p>
-          </li>
-        </ol>
       </section>
 
       <section className="marketing-simple marketing-product marketing-reveal" id="layout" aria-label="The workspace">
         <h2>The workspace</h2>
-        <p className="marketing-product-caption">
-          Evidence on the left. Brief on the right. Enter here.
-        </p>
+        <p className="marketing-product-caption">Evidence on the left. Brief on the right.</p>
         <figure className="marketing-product-frame">
           <img
             src="/landing-portal.png"
@@ -200,7 +127,7 @@ export default function MarketingHome({
             decoding="async"
           />
         </figure>
-        <p className="marketing-product-caption">Watch a 4-minute walkthrough</p>
+        <p className="marketing-product-caption">A four-minute walkthrough</p>
         <div className="marketing-video-frame">
           <iframe
             src={WALKTHROUGH_EMBED_URL}
@@ -209,53 +136,52 @@ export default function MarketingHome({
             allowFullScreen
           />
         </div>
-        <ul className="marketing-plain-list">
-          <li>
-            <strong>Left — Drop the evidence.</strong> Call recording, transcript, email thread, or
-            CRM notes — together in one run.
-          </li>
-          <li>
-            <strong>Right — Recovery brief.</strong> Closable vs a flat no, the blocker, and a 0–90
-            day plan on the HubSpot or Salesforce deal.
-          </li>
-        </ul>
       </section>
 
-      <section className="marketing-simple marketing-reveal" id="objections" aria-label="Objections">
-        <p className="hero-trust-eyebrow">Objections</p>
-        <h2>The ones that show up on every call</h2>
-        <p>
-          Recorder, ChatGPT, legal, reps. Same answers we use in the room. Full legal pack is in the
-          footer.
-        </p>
+      <section className="marketing-simple marketing-reveal" id="who" aria-label="Who it is for">
+        <h2>Who it’s for</h2>
+        <div className="marketing-split">
+          <div>
+            <h3>For</h3>
+            <p>
+              Sales managers and VPs who own the forecast call. Mid-market B2B. HubSpot or
+              Salesforce.
+            </p>
+          </div>
+          <div>
+            <h3>Not for</h3>
+            <p>
+              Anyone shopping for an AI SDR, an autonomous closer, a meeting bot, or a Gong
+              replacement. Keep your recorder. Lazarus sits on top and judges the deal.
+            </p>
+          </div>
+        </div>
+      </section>
+
+      <section className="marketing-simple marketing-reveal" id="answers" aria-label="Straight answers">
+        <h2>Straight answers</h2>
+        <p>If we do not have it, we say so.</p>
         <dl className="marketing-qa">
           <div>
-            <dt>We don’t want another bot on the call.</dt>
+            <dt>Do you join the call?</dt>
             <dd>
-              There isn’t one. Lazarus never joins the meeting. You drop the recording, transcript,
-              or email after. Keep your stack.
+              No. Lazarus never joins Meet, Teams, or Zoom. You drop the recording, transcript, or
+              email after. Keep the tools you already use.
             </dd>
           </div>
           <div>
-            <dt>We already have Meet, Teams, or a recorder.</dt>
+            <dt>Why not paste the transcript into ChatGPT?</dt>
             <dd>
-              Keep it. That tool saves the call. Lazarus judges the deal — closable, recoverable, or
-              a flat no. We sit on top, not instead.
+              ChatGPT writes. Paste the same call twice and the answer can change. Lazarus checks
+              quotes against the transcript, then scores with fixed rules you can defend in the
+              room.
             </dd>
           </div>
           <div>
-            <dt>Why not just paste the transcript into ChatGPT?</dt>
-            <dd>
-              ChatGPT writes. Paste the same call twice and the answer can change. Lazarus reads the
-              text, checks quotes against the transcript, then scores with fixed rules you can
-              defend in the room.
-            </dd>
-          </div>
-          <div>
-            <dt>AI makes things up.</dt>
+            <dt>Does the AI invent quotes or people?</dt>
             <dd>
               If a quote or person is not in your upload, the server strips it before the score
-              runs — and tells you it did. You score what is left, not a chatbot essay.
+              runs — and tells you it did. You score what is left.
             </dd>
           </div>
           <div>
@@ -263,33 +189,32 @@ export default function MarketingHome({
             <dd>
               Encrypted in transit and at rest. Your content is not used to train public models.
               Teams only see their own deals. Saved transcripts purge on a 30-day default. We are
-              not SOC 2 certified today — honest fit for pilot and mid-market. Full detail:{" "}
+              not SOC 2 certified today — honest fit for a pilot and mid-market. Full detail:{" "}
               <TrustPackLink slug="security-overview">Security Overview</TrustPackLink>.
             </dd>
           </div>
           <div>
             <dt>Do you read our whole inbox?</dt>
             <dd>
-              No. Mailbox connect is read-only. You search a deal and attach the thread. No silent
+              No. Mailbox connect is read-only. You search a deal and attach that thread. No silent
               scrape.
             </dd>
           </div>
           <div>
-            <dt>Reps won’t upload another tool.</dt>
+            <dt>Will reps have to upload another tool?</dt>
             <dd>
-              They don’t have to. The manager can drop the file or attach email. This is forecast
-              triage, not rep homework.
+              No. The manager can drop the file or attach email. This is forecast triage, not rep
+              homework.
             </dd>
           </div>
         </dl>
       </section>
 
       <section className="marketing-page marketing-band marketing-reveal" id="pricing">
-        <p className="hero-trust-eyebrow">Pricing</p>
-        <h2>Five free analyses a month. Hit the cap? $10 extra, or wait until it renews.</h2>
+        <h2>Five free a month. Then $10 a report, or a monthly plan.</h2>
         <p className="marketing-page-lead">
-          Sign in to save your runs. Price is per analysis, not per seat. Paid plans open Stripe
-          Checkout first; you create an account after payment.
+          You pay per deal analysis, not per seat. Free needs no card. Paid plans go through Stripe
+          — you create an account after checkout.
         </p>
         <PricingPlanCards
           configured={stripeConfigured}
@@ -301,37 +226,6 @@ export default function MarketingHome({
           onStartFree={onPortal}
           onCheckout={onCheckout}
         />
-      </section>
-
-      <section className="marketing-page marketing-reveal" id="about">
-        <p className="hero-trust-eyebrow">About</p>
-        <h2>About Lazarus Deal Recovery</h2>
-        <p className="marketing-page-lead">
-          Built for sales managers and VPs who run forecast calls and need a straight answer on
-          stalled deals.
-        </p>
-        <p>
-          You already have a recorder and HubSpot. What you do not have is a clear call on which
-          deals are still winnable. Lazarus reads the evidence you already have and returns a brief
-          you can defend in the room.
-        </p>
-        <p>
-          A person still runs the deal. Lazarus does not sell, write outreach, or replace your team.
-          Your data stays on your account — not used to train public models.{" "}
-          <TrustPackLink slug="security-overview">Security Overview</TrustPackLink>.
-        </p>
-        <p>
-          Founded by{" "}
-          <a href={FOUNDER_LINKEDIN} target="_blank" rel="noopener noreferrer">{FOUNDER_NAME}</a>.
-          Official site:{" "}
-          <a href="https://www.getldr.ca/">www.getldr.ca</a>.
-        </p>
-        <div className="marketing-hero-actions">
-          <button type="button" className="run-button" onClick={onPortal}>
-            {PORTAL_ENTRY_CTA}
-          </button>
-          <BookLookButton />
-        </div>
       </section>
 
       <ContactSection />
