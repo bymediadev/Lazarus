@@ -1,5 +1,5 @@
 import { HERO_PRIMARY_CTA } from "../lib/cta";
-import { BOOKING_URL, WALKTHROUGH_EMBED_URL } from "../lib/site";
+import { BOOKING_URL, FOUNDER_LINKEDIN, FOUNDER_NAME, WALKTHROUGH_EMBED_URL } from "../lib/site";
 import { scrollToSection } from "../lib/appRoute";
 import { useReveal } from "../lib/useReveal";
 import { PricingPlanCards } from "./PricingGate";
@@ -226,6 +226,31 @@ export default function MarketingHome({
           onStartFree={onPortal}
           onCheckout={onCheckout}
         />
+      </section>
+
+      <section className="marketing-page marketing-reveal" id="about">
+        <h2>About Lazarus Deal Recovery</h2>
+        <p className="marketing-page-lead">
+          Built for sales managers and VPs who run forecast calls and need a straight answer on
+          stalled deals.
+        </p>
+        <p>
+          You already have a recorder and HubSpot. What you do not have is a clear call on which
+          deals are still winnable. Lazarus reads the evidence you already have and returns a brief
+          you can defend in the room.
+        </p>
+        <p>
+          A person still runs the deal. Lazarus does not sell, write outreach, or replace your team.
+          Your data stays on your account — not used to train public models.{" "}
+          <TrustPackLink slug="security-overview">Security Overview</TrustPackLink>.
+        </p>
+        <p>
+          Founded by{" "}
+          <a href={FOUNDER_LINKEDIN} target="_blank" rel="noopener noreferrer">
+            {FOUNDER_NAME}
+          </a>
+          .
+        </p>
       </section>
 
       <ContactSection />
