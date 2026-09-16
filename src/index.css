@@ -5515,7 +5515,13 @@ a.run-button:hover {
   color: var(--teal);
 }
 
-.marketing-step-grid h2 {
+.marketing-steps > h2 {
+  font-size: 1.25rem;
+  margin: 0 0 0.7rem;
+}
+
+.marketing-step-grid h2,
+.marketing-step-grid h3 {
   font-size: 1rem;
   margin: 0.4rem 0 0.4rem;
 }
@@ -5748,7 +5754,7 @@ a.marketing-text-link {
 }
 
 .marketing-hero > * {
-  animation: marketing-fade-up 0.65s ease both;
+  animation: marketing-fade-up 0.65s ease forwards;
 }
 
 .marketing-hero > *:nth-child(1) {

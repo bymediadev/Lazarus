@@ -42,16 +42,15 @@ export default function MarketingHome({
   return (
     <>
       <section className="marketing-hero">
-        <p className="hero-trust-eyebrow">B2B deal recovery software</p>
-        <h1 className="marketing-hero-title">Lazarus Deal Recovery</h1>
+        <p className="hero-trust-eyebrow">B2B Deal Recovery Software</p>
+        <h1 className="marketing-hero-title">Win back stalled sales pipeline</h1>
         <p className="marketing-hero-sub">
-          Diagnose stalled B2B sales. See which deals are recoverable versus a flat no. Leave
-          with a 0–90 day recovery plan for HubSpot or Salesforce notes.
+          Lazarus identifies which stalled and closed-lost deals are still recoverable, why
+          momentum died, and what your team should do next.
         </p>
         <p className="marketing-geo-summary">
-          <strong>In one sentence:</strong> Lazarus Deal Recovery is B2B deal recovery software
-          that tells sales managers which stalled deals are recoverable versus a flat no, names
-          the blocker, and returns a 0–90 day plan for HubSpot or Salesforce notes. No meeting bot.
+          Lazarus Deal Recovery is B2B deal recovery software: recoverable versus a flat no, the
+          blocker, and a 0–90 day plan for HubSpot or Salesforce notes. No meeting bot.
         </p>
         <div className="marketing-hero-actions">
           <button type="button" className="run-button run-button-above-fold" onClick={onPortal}>
@@ -97,8 +96,8 @@ export default function MarketingHome({
         </ul>
       </section>
 
-      <section className="marketing-simple marketing-reveal" id="recover" aria-label="From stalled deal to recovery plan">
-        <h2>From stalled deal to recovery plan</h2>
+      <section className="marketing-simple marketing-reveal" id="recover" aria-label="How do I recover this deal?">
+        <h2>How do I recover this deal?</h2>
         <ol className="marketing-plain-list">
           <li>Audit existing transcript and email evidence.</li>
           <li>Map hidden background stakeholders.</li>
@@ -161,11 +160,11 @@ export default function MarketingHome({
 
 
       <section className="marketing-steps marketing-reveal" id="how" aria-label="How it works">
-        <p className="hero-trust-eyebrow">How it works</p>
+        <h2>How it works</h2>
         <ol className="marketing-step-grid">
           <li>
             <span>1</span>
-            <h2>Add evidence</h2>
+            <h3>Add evidence</h3>
             <p>
               A recording, transcript, email thread, or notes from your CRM. Compile them in one
               run for a full picture of the deal.
@@ -173,12 +172,12 @@ export default function MarketingHome({
           </li>
           <li>
             <span>2</span>
-            <h2>Run analysis</h2>
+            <h3>Run analysis</h3>
             <p>Lazarus scores the deal and names the blocker in plain language.</p>
           </li>
           <li>
             <span>3</span>
-            <h2>Use the brief</h2>
+            <h3>Use the brief</h3>
             <p>
               Take the recovery plan into forecast. Paste a short note into HubSpot — or Salesforce.
             </p>
@@ -304,7 +303,7 @@ export default function MarketingHome({
 
       <section className="marketing-page marketing-reveal" id="about">
         <p className="hero-trust-eyebrow">About</p>
-        <h2>Lazarus Deal Recovery</h2>
+        <h2>About Lazarus Deal Recovery</h2>
         <p className="marketing-page-lead">
           Built for sales managers and VPs who run forecast calls and need a straight answer on
           stalled deals.

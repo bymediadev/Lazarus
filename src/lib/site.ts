@@ -16,10 +16,10 @@ export const FOUNDER_NAME = "Joshua Bennett";
 
 export const FOUNDER_LINKEDIN = "https://www.linkedin.com/in/jjebennett";
 
-export const SITE_TITLE = "Lazarus Deal Recovery | B2B Deal Recovery Software";
+export const SITE_TITLE = "Deal Recovery Software for Stalled B2B Sales | Lazarus";
 
 export const SITE_DESCRIPTION =
-  "Lazarus Deal Recovery is B2B deal recovery software: which stalled deals are recoverable vs a flat no, the blocker, and a 0–90 day plan. Five free analyses.";
+  "Lazarus analyzes stalled and closed-lost B2B deals, identifies why momentum died, and gives sales teams a recovery plan. Five free analyses a month.";
 
 export const SEO_PATHS = {
   dealRecovery: "/deal-recovery",
