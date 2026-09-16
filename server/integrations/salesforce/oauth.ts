@@ -13,7 +13,11 @@ interface TokenResponse {
   token_type?: string;
 }
 
-export function buildSalesforceAuthorizeUrl(state: string): string {
+export function buildSalesforceAuthorizeUrl(
+  state: string,
+  _purpose?: "login" | "connect",
+  extras?: { codeChallenge?: string }
+): string {
   const cfg = getSalesforceConfig();
   if (!cfg) throw new Error("Salesforce OAuth is not configured");
 
@@ -24,6 +28,10 @@ export function buildSalesforceAuthorizeUrl(state: string): string {
     scope: SALESFORCE_OAUTH_SCOPES,
     state,
   });
+  if (extras?.codeChallenge) {
+    params.set("code_challenge", extras.codeChallenge);
+    params.set("code_challenge_method", "S256");
+  }
   return `${cfg.loginUrl}/services/oauth2/authorize?${params.toString()}`;
 }
 
@@ -43,9 +51,17 @@ async function fetchUserEmail(
   }
 }
 
-export async function exchangeSalesforceCode(code: string, userId?: string): Promise<SalesforceTokenRecord> {
+export async function exchangeSalesforceCode(
+  code: string,
+  userId?: string,
+  _purpose?: "login" | "connect",
+  codeVerifier?: string
+): Promise<SalesforceTokenRecord> {
   const cfg = getSalesforceConfig();
   if (!cfg) throw new Error("Salesforce OAuth is not configured");
+  if (!codeVerifier) {
+    throw new Error("Salesforce PKCE code verifier missing");
+  }
 
   const body = new URLSearchParams({
     grant_type: "authorization_code",
@@ -53,6 +69,7 @@ export async function exchangeSalesforceCode(code: string, userId?: string): Pro
     client_secret: cfg.clientSecret,
     redirect_uri: cfg.redirectUri,
     code,
+    code_verifier: codeVerifier,
   });
 
   const res = await fetch(`${cfg.loginUrl}/services/oauth2/token`, {

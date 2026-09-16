@@ -6,7 +6,7 @@ OAuth for Google, Zoom, Teams, Salesforce, and HubSpot is already in the Lazarus
 
 
 
-**Packaged here ≠ approved.** Review queues are days to weeks. Salesforce AppExchange security review is a separate, often paid, process.
+**Packaged here ≠ approved.** Review queues are days to weeks. Salesforce **AgentExchange** security review (the unified AppExchange catalog) is a separate, often paid, process.
 
 
 
@@ -36,7 +36,7 @@ Rebuild uploadable zips: `npm run marketplace:icons` then `npm run marketplace:p
 
 | Microsoft Teams Store | `marketplace/teams/lazarus-deal-recovery-widget-teams.zip` | [teams/listing.md](../marketplace/teams/listing.md) |
 
-| Salesforce Connected App | **No code zip** — Connected App in Setup; AppExchange is security review | [salesforce-setup.md](./salesforce-setup.md) · [salesforce/listing.md](../marketplace/salesforce/listing.md) |
+| Salesforce AgentExchange (app) | **No code zip** — External Client App in Setup; security review | [salesforce-setup.md](./salesforce-setup.md) · [salesforce/listing.md](../marketplace/salesforce/listing.md) |
 
 | HubSpot Marketplace | `marketplace/hubspot/lazarus-hubspot.zip` and/or `hs project upload` | [hubspot/listing.md](../marketplace/hubspot/listing.md) |
 
@@ -74,12 +74,12 @@ Do not add scopes on a vendor form that are not in [`marketplace/allowed-scopes.
 
 - Google **login**: `openid email profile` only. Not Gmail. Not in the Chrome zip.
 - Chrome Web Store: `storage` + POST to `lazarus-4uxi.onrender.com`. Content scripts only on Meet and getldr.ca. No Google OAuth, no `<all_urls>`.
-- Gmail Connect (optional, separate client): `gmail.readonly` (+ calendar/meet space read). Still **Testing** until Google restricted-scope verification.
+- Gmail Connect (optional, separate client): `gmail.readonly` only. Still **Testing** until Google restricted-scope verification. Do not add Calendar or Meet scopes.
 - Zoom: `user:read:user`, `meeting:read:meeting_transcripts`, `meeting:update:participant_rtms_app_status`. No audio/video RTMS, no meeting bot.
 - Teams Store zip: personal tab + meeting side panel. No bot, no `messageTeamMembers`, no Graph in the zip. Entra OAuth for Outlook is `User.Read` + `Mail.Read` only (no transcript.Read.All until that ships).
 - HubSpot: `oauth`, `crm.objects.deals.read`, `crm.objects.deals.write`. No notes.* scopes (2026.03 rejects them). No contacts/companies.
-- Salesforce: `api refresh_token offline_access` — opportunity search, import, user-clicked Push.
+- Salesforce: `api refresh_token offline_access` — opportunity search, import, user-clicked Push. List as an **AgentExchange app**, not an Agentforce agent.
 
 ## Production secrets (fail closed)
 
-On Render: `OAUTH_STATE_SECRET` and `TOKEN_ENCRYPTION_KEY` are required. OAuth tokens encrypt at rest (AES-256-GCM) and persist in Supabase (service role only; RLS denies `anon` / `authenticated`). `.data/*.json` is a local cache, not the production source of truth.
+On Render: `OAUTH_STATE_SECRET` and `TOKEN_ENCRYPTION_KEY` are required. OAuth tokens encrypt at rest (AES-256-GCM). Google dual-writes to Supabase (`google_oauth_tokens`); Salesforce still uses `.data/salesforce-tokens.json` until that dual-write ships — see [salesforce-setup.md](./salesforce-setup.md). RLS denies `anon` / `authenticated` on token tables.

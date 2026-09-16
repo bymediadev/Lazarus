@@ -1,7 +1,8 @@
 # Lazarus — Render Blueprint (API). Public site is GitHub Pages at www.getldr.ca.
 # Manual deploy: New Web Service → build `npm install && npm run build`, start `npm start`, health `/api/health`
-# After DNS cutover to Pages, remove www.getldr.ca / getldr.ca from `domains` so Render is API-only
-# at https://lazarus-4uxi.onrender.com. FRONTEND_ORIGIN should include https://www.getldr.ca first.
+# After DNS cutover to Pages, Render is API-only. Keep the default onrender.com URL
+# plus api.getldr.ca (Google OAuth authorized domain). www/apex belong on GitHub Pages.
+# Manual deploy: New Web Service → build `npm install && npm run build`, start `npm start`, health `/api/health`
 #
 # Public Buy/Subscribe buttons are Stripe Payment Links (do not wait on this service).
 # Free still sleeps after 15 min idle — that delays analyses, OAuth, webhooks, and plan claim.
@@ -15,8 +16,7 @@ services:
     startCommand: npm start
     healthCheckPath: /api/health
     domains:
-      - www.getldr.ca
-      - getldr.ca
+      - api.getldr.ca
     envVars:
       - key: NODE_VERSION
         value: "20"
@@ -72,6 +72,12 @@ services:
       - key: GOOGLE_CLIENT_SECRET
         sync: false
       - key: GOOGLE_REDIRECT_URI
+        sync: false
+      - key: GOOGLE_CONNECT_CLIENT_ID
+        sync: false
+      - key: GOOGLE_CONNECT_CLIENT_SECRET
+        sync: false
+      - key: GOOGLE_CONNECT_REDIRECT_URI
         sync: false
       - key: TEAMS_CLIENT_ID
         sync: false

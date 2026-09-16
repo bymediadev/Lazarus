@@ -1,6 +1,6 @@
 import type { Express } from "express";
 import { registerOAuthConnectRoutes } from "../connectFlow.js";
-import { getGoogleMeetConfig, isGoogleMeetConfigured } from "./config.js";
+import { getGoogleLoginConfig, getGoogleMeetConfig, isGoogleMeetConfigured } from "./config.js";
 import {
   fetchGmailThreadsByQuery,
   formatImportedEmailsAsThread,
@@ -30,7 +30,8 @@ export function registerGoogleMeetRoutes(app: Express): void {
     queryKey: "google",
     loginProvider: "google",
     notConfiguredMessage: "Google Meet OAuth not configured on server",
-    getClientSecret: () => getGoogleMeetConfig()?.clientSecret ?? null,
+    getClientSecret: () =>
+      getGoogleLoginConfig()?.clientSecret ?? getGoogleMeetConfig()?.clientSecret ?? null,
     buildAuthorizeUrl: buildGoogleAuthorizeUrl,
     exchangeCode: exchangeGoogleCode,
     saveForUser: (userId, record) =>

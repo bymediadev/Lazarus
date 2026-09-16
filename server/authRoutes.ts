@@ -3,7 +3,7 @@ import { createClient } from "@supabase/supabase-js";
 import { deleteAccountCascade } from "./accountDelete.js";
 import { isSupabaseAuthConfigured } from "./authMiddleware.js";
 import { resolveAuthUser } from "./founderAuth.js";
-import { isGoogleMeetConfigured } from "./integrations/google/config.js";
+import { isGoogleLoginConfigured } from "./integrations/google/config.js";
 import { isHubSpotConfigured } from "./integrations/hubspot/config.js";
 import { isSalesforceConfigured } from "./integrations/salesforce/config.js";
 import { resolveFrontendOrigin } from "./integrations/oauthShared.js";
@@ -56,7 +56,7 @@ export function registerAuthRoutes(app: Express): void {
     res.json({
       configured: isSupabaseAuthConfigured() && serverReady,
       email: isSupabaseAuthConfigured(),
-      google: isGoogleMeetConfigured() && serverReady,
+      google: isGoogleLoginConfigured() && serverReady,
       hubspot: isHubSpotConfigured() && serverReady,
       salesforce: isSalesforceConfigured() && serverReady,
       note: serverReady

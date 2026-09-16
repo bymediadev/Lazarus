@@ -6,6 +6,30 @@ Two-sentence handoff notes for each build session. Append newest entries at the 
 
 ---
 
+## 2026-09-10 — Salesforce PKCE (missing code challenge)
+
+**Built:** Salesforce authorize now sends S256 `code_challenge`; token exchange sends `code_verifier`. Top-level `/oauth-start` hop sets an httpOnly cookie so the verifier is not lost on the Pages → API cross-site POST.
+
+**Files:** `server/integrations/salesforce/pkce.ts`, `oauth.ts`, `routes.ts`, `server/integrations/connectFlow.ts`, `scripts/test-security-gates.mjs`, `docs/salesforce-setup.md`
+
+**Verified:** `npm run test:security` PKCE roundtrip + authorize URL params. Live login needs a Render deploy.
+
+**Mess / later:** Idle TTL heartbeat, static egress IPs, dual-write Salesforce tokens to Supabase.
+
+---
+
+## 2026-09-09 — Salesforce AgentExchange app listing path
+
+**Built:** Operator guide for Salesforce ECA OAuth + AgentExchange **app** listing (not Agentforce). Documented partner OAuth gaps (PKCE, refresh-token rotation, idle TTL, static egress, token persist).
+
+**Files:** `docs/salesforce-setup.md`, `marketplace/salesforce/listing.md`, `docs/marketplace-listings.md`, `docs/README.md`, `marketplace/screenshots.md`
+
+**Verified:** Docs only — no OAuth code change. Production `/api/health` already `salesforce: true`.
+
+**Mess / later:** Implement PKCE + RTR persist + Supabase token dual-write before flipping ECA security toggles; paid Render static outbound IPs for refresh-token allowlist.
+
+---
+
 ## 2026-08-28 — GitHub Pages frontend + Render API
 
 **Built:** Split production: static Vite site on GitHub Pages (`www.getldr.ca`) calling the existing Render API; CORS and OAuth/Stripe return URLs prefer the custom domain. Render still serves the old monolith until DNS is switched.

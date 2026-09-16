@@ -44,7 +44,7 @@ Paste from [`marketplace/copy.md`](../copy.md). Tighten the short description to
 
 
 
-This extension reads on-page caption text on `meet.google.com` after the user turns **Captions** on, and posts those lines to the Lazarus API for a live Recovery Brief. It does not record audio, does not join as a bot, and does not request Google OAuth.
+This extension shows a Lazarus panel on `meet.google.com`, reads caption text after the user turns **Captions** on, and posts those lines to the Lazarus API for a live Recovery Brief. It does not record audio, does not join as a bot, and does not request Google OAuth.
 
 
 
@@ -58,9 +58,9 @@ Saves the live-session id the user started on getldr.ca so caption lines can be 
 
 
 
-**host_permissions: `https://lazarus-4uxi.onrender.com/*`**  
+**host_permissions: `https://api.getldr.ca/*` and `https://lazarus-4uxi.onrender.com/*`**  
 
-Service worker POSTs caption JSON to `/api/integrations/google/live-captions`. No other hosts are fetched.
+Service worker POSTs caption JSON to `/api/integrations/google/live-captions` on the Lazarus API. No other hosts are fetched.
 
 
 

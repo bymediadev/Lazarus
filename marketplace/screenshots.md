@@ -25,7 +25,7 @@ Source art: `public/logo.png`.
 | Zoom Marketplace | 1280×800 (min 746×420) | 3–5 | Live RTMS / Recovery Brief; Home URL loaded |
 | Teams Store | 1366×768 | 1–4 | Side panel or portal in a meeting context |
 | HubSpot | 1600×900 recommended | 3+ | Deal import, not a fake CRM write-back story |
-| Salesforce AppExchange | 1024×1024 listing logo + 16:9 screens | listing form | Connected App demo org, not a security-review substitute |
+| Salesforce AgentExchange | 1024×1024 listing logo + 16:9 screens | listing form | Demo org only; not a security-review substitute. Do not caption as an Agentforce agent. |
 | Google Workspace Marketplace | 1280×800 | later | Scaffold only this sprint |
 
 ## What not to show

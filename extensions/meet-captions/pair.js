@@ -1,12 +1,11 @@
 function allowedApiBases() {
-  const set = new Set(["https://lazarus-4uxi.onrender.com"]);
-  const perms = chrome.runtime.getManifest().host_permissions || [];
-  const localDev = perms.some(
-    (p) => p.includes("localhost:3001") || p.includes("127.0.0.1:3001")
-  );
-  if (localDev) {
-    set.add("http://localhost:3001");
-    set.add("http://127.0.0.1:3001");
+  const set = new Set(["https://api.getldr.ca", "https://lazarus-4uxi.onrender.com"]);
+  for (const p of chrome.runtime.getManifest().host_permissions || []) {
+    try {
+      set.add(new URL(p.replace("/*", "/")).origin);
+    } catch {
+      /* skip */
+    }
   }
   return set;
 }
@@ -15,12 +14,20 @@ function pairFromDetail(detail) {
   if (!detail || typeof detail !== "object") return;
   const apiBase = String(detail.apiBase ?? "").replace(/\/$/, "");
   if (apiBase && !allowedApiBases().has(apiBase)) return;
-  chrome.runtime.sendMessage({
-    type: "pair",
-    sessionId: detail.sessionId ?? "",
-    sessionSecret: detail.sessionSecret ?? "",
-    apiBase,
-  });
+  chrome.runtime.sendMessage(
+    {
+      type: "pair",
+      sessionId: detail.sessionId ?? "",
+      sessionSecret: detail.sessionSecret ?? "",
+      apiBase,
+    },
+    (res) => {
+      if (chrome.runtime.lastError) return;
+      if (res?.ok && !res.cleared) {
+        window.dispatchEvent(new CustomEvent("lazarus-meet-paired"));
+      }
+    }
+  );
 }
 
 window.addEventListener("message", (event) => {

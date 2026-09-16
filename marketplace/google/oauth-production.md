@@ -8,24 +8,36 @@ Login scopes (must be the only scopes on **this** OAuth client):
 - `email`
 - `profile`
 
-Gmail Connect uses a **second** client (`GOOGLE_CONNECT_CLIENT_ID` / `GOOGLE_CONNECT_CLIENT_SECRET`). Leave that client in Testing until Google restricted-scope verification. Do not add `gmail.readonly` to the login client’s consent screen.
+Gmail Connect uses a **second Cloud project** (`GOOGLE_CONNECT_*`). A second OAuth client in the same project is not enough — Google still shows the unverified / sensitive-info screen for every client in that project.
 
-## One-time split (if you currently have a single mixed-scope client)
+## New Cloud project for Sign in with Google
 
-1. In Google Cloud → Credentials, keep the **existing** Web client (the one that already has Gmail scopes) as **Connect**.
-2. Create a **new** Web application OAuth client named `Lazarus login`.
-3. Authorized redirect URIs on **both** clients:
+Do not reuse the project that ever had Gmail, Calendar, or Meet scopes.
+
+1. [Google Cloud Console](https://console.cloud.google.com/) → project picker → **New project**. Name: `Lazarus Login`.
+2. **Google Auth Platform** (OAuth consent screen):
+   - User type: **External**
+   - App name: **Lazarus Deal Recovery**
+   - Support email: the `supportgetldr` Google Group
+   - Home / privacy / terms on `https://www.getldr.ca`
+   - Authorized domain: `getldr.ca`
+   - **No app logo** (a logo forces brand verification)
+   - Data Access: `openid`, `userinfo.email`, `userinfo.profile` only
+   - Publishing: **In production**
+3. Create a **Web application** client. Redirect URIs:
    ```
    http://localhost:3001/api/integrations/google/callback
-   https://lazarus-4uxi.onrender.com/api/integrations/google/callback
+   https://api.getldr.ca/api/integrations/google/callback
    ```
-4. Authorized JavaScript origins (if prompted): `https://www.getldr.ca`, `https://getldr.ca`, `http://localhost:5173`.
-5. On Render:
-   - Move the **old** client id/secret into `GOOGLE_CONNECT_CLIENT_ID` / `GOOGLE_CONNECT_CLIENT_SECRET` (and optional `GOOGLE_CONNECT_REDIRECT_URI`).
-   - Put the **new login** client into `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET`.
-6. Redeploy. Sign in with Google uses identity scopes only. Connect Gmail still uses the old client.
+   Origins: `https://www.getldr.ca`, `https://getldr.ca`, `http://localhost:5173`.
+4. On Render, **Connect first**, then swap login (or the new project inherits Gmail):
+   - Set `GOOGLE_CONNECT_CLIENT_ID` / `GOOGLE_CONNECT_CLIENT_SECRET` to the **current** `GOOGLE_*` values.
+   - Set `GOOGLE_CONNECT_REDIRECT_URI=https://api.getldr.ca/api/integrations/google/callback`.
+   - Replace `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` with the **new** login client.
+   - Keep `GOOGLE_REDIRECT_URI=https://api.getldr.ca/api/integrations/google/callback`.
+5. Deploy. Sign in uses the new project. Connect Gmail stays on the old client.
 
-Until `GOOGLE_CONNECT_*` is set, Connect falls back to `GOOGLE_*` so existing Gmail users do not break. **You cannot publish login to Production while Gmail scopes remain on that same consent screen.** Do the split first.
+Until `GOOGLE_CONNECT_*` is set, Connect falls back to `GOOGLE_*`.
 
 ## Consent screen → In production
 

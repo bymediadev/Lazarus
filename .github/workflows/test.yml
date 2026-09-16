@@ -44,7 +44,7 @@ jobs:
 
       - name: Build static site for GitHub Pages
         env:
-          VITE_API_URL: https://lazarus-4uxi.onrender.com
+          VITE_API_URL: https://api.getldr.ca
           VITE_LAZARUS_API_KEY: ${{ secrets.VITE_LAZARUS_API_KEY }}
           VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
           VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}

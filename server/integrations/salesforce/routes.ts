@@ -7,6 +7,7 @@ import {
   searchSalesforceOpportunities,
 } from "./deals.js";
 import { buildSalesforceAuthorizeUrl, exchangeSalesforceCode } from "./oauth.js";
+import { beginSalesforcePkce, clearSalesforcePkce, takeSalesforcePkce } from "./pkce.js";
 import {
   clearSalesforceTokens,
   isSalesforceConnected,
@@ -26,6 +27,11 @@ export function registerSalesforceRoutes(app: Express): void {
     getClientSecret: () => getSalesforceConfig()?.clientSecret ?? null,
     buildAuthorizeUrl: buildSalesforceAuthorizeUrl,
     exchangeCode: exchangeSalesforceCode,
+    pkce: {
+      begin: beginSalesforcePkce,
+      take: takeSalesforcePkce,
+      clear: clearSalesforcePkce,
+    },
     saveForUser: (userId, record) =>
       saveSalesforceTokens(userId, {
         access_token: record.access_token,

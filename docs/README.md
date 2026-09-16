@@ -16,12 +16,13 @@ Do not commit secrets — use `.env.example` and host/GitHub secret stores.
 | [google-meet-setup.md](./google-meet-setup.md) | Google OAuth, Gmail search, Meet live captions extension |
 | [teams-setup.md](./teams-setup.md) | Microsoft Entra / Teams / Outlook |
 | [hubspot-setup.md](./hubspot-setup.md) | HubSpot public OAuth app + Lazarus Connect (see also `hubspot-app/`) |
+| [salesforce-setup.md](./salesforce-setup.md) | Salesforce ECA OAuth + AgentExchange **app** listing path |
 | [auth-setup.md](./auth-setup.md) | Login: email magic link, Google, HubSpot/Salesforce bridge + Render Vite env |
 | [billing-setup.md](./billing-setup.md) | Stripe paywall after 5 free analyses ($10 / $99 / $499) |
 | [hosting.md](./hosting.md) | GitHub Pages (site) + Render (API); DNS cutover |
 | [llm-failover.md](./llm-failover.md) | $0 Gemini → OpenRouter failover (no credit card) |
 | [turnstile-setup.md](./turnstile-setup.md) | Cloudflare Turnstile captcha before each analysis |
-| [marketplace-listings.md](./marketplace-listings.md) | Meet / Teams / Zoom store zips and listing kit |
+| [marketplace-listings.md](./marketplace-listings.md) | Meet / Teams / Zoom store zips; Salesforce AgentExchange listing kit |
 
 ---
 

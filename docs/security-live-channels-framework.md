@@ -81,7 +81,7 @@ Lazarus Deal Recovery is a **judgment layer**, not a recorder and not a messenge
 
 | Control | Current practice |
 |---|---|
-| Scope | Gmail: `gmail.readonly` (+ Meet/calendar readonly where used). Outlook: `Mail.Read`, `User.Read` |
+| Scope | Gmail: `gmail.readonly` only. Outlook: `Mail.Read`, `User.Read` |
 | Auth | OAuth 2.0 popup; state parameter; disconnect clears stored tokens |
 | Pull model | Search → expand top matching **threads** → attach to evidence package |
 | Minimization | Import is deal-scoped by user query, not full-mailbox dump into every analysis |
