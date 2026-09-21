@@ -8,6 +8,8 @@ import { join } from "path";
 import tls from "tls";
 import { URL } from "url";
 
+export type SecureFetchInit = RequestInit & { timeoutMs?: number };
+
 function loadExtraCaPem(): string | null {
   const fromEnv = (process.env.NODE_EXTRA_CA_CERTS ?? "").trim();
   if (fromEnv && existsSync(fromEnv)) {
@@ -41,13 +43,26 @@ function getAgent(): https.Agent {
   return agent;
 }
 
+function fetchInit(init?: SecureFetchInit): RequestInit {
+  if (!init) return {};
+  const { timeoutMs: _timeoutMs, ...rest } = init;
+  return rest;
+}
+
+function withTimeoutSignal(init?: SecureFetchInit): RequestInit {
+  const base = fetchInit(init);
+  const timeoutMs = init?.timeoutMs;
+  if (!timeoutMs || timeoutMs <= 0 || base.signal) return base;
+  return { ...base, signal: AbortSignal.timeout(timeoutMs) };
+}
+
 export async function secureFetch(
   input: string | URL,
-  init?: RequestInit
+  init?: SecureFetchInit
 ): Promise<Response> {
   const url = typeof input === "string" ? new URL(input) : input;
   if (url.protocol !== "https:") {
-    return fetch(input, init);
+    return fetch(input, withTimeoutSignal(init));
   }
 
   const method = (init?.method ?? "GET").toUpperCase();
@@ -59,9 +74,22 @@ export async function secureFetch(
       : typeof bodyInit === "string" || Buffer.isBuffer(bodyInit)
         ? bodyInit
         : String(bodyInit);
+  const timeoutMs = init?.timeoutMs;
+  const signal = init?.signal;
 
   try {
     return await new Promise<Response>((resolve, reject) => {
+      let settled = false;
+      let timer: ReturnType<typeof setTimeout> | undefined;
+
+      const finish = (fn: () => void) => {
+        if (settled) return;
+        settled = true;
+        if (timer) clearTimeout(timer);
+        signal?.removeEventListener("abort", onAbort);
+        fn();
+      };
+
       const req = https.request(
         {
           protocol: url.protocol,
@@ -83,17 +111,43 @@ export async function secureFetch(
               if (Array.isArray(v)) v.forEach((item) => responseHeaders.append(k, item));
               else responseHeaders.set(k, v);
             }
-            resolve(
-              new Response(buf, {
-                status: res.statusCode ?? 500,
-                statusText: res.statusMessage,
-                headers: responseHeaders,
-              })
+            finish(() =>
+              resolve(
+                new Response(buf, {
+                  status: res.statusCode ?? 500,
+                  statusText: res.statusMessage,
+                  headers: responseHeaders,
+                })
+              )
             );
           });
+          res.on("error", (err) => finish(() => reject(err)));
         }
       );
-      req.on("error", reject);
+
+      const onAbort = () => {
+        req.destroy();
+        finish(() => reject(new Error("aborted")));
+      };
+
+      const onTimeout = () => {
+        req.destroy();
+        finish(() => reject(new Error("ETIMEDOUT")));
+      };
+
+      if (timeoutMs && timeoutMs > 0) {
+        timer = setTimeout(onTimeout, timeoutMs);
+      }
+
+      if (signal) {
+        if (signal.aborted) {
+          onAbort();
+          return;
+        }
+        signal.addEventListener("abort", onAbort, { once: true });
+      }
+
+      req.on("error", (err) => finish(() => reject(err)));
       if (body != null) req.write(body);
       req.end();
     });
@@ -101,7 +155,7 @@ export async function secureFetch(
     const cause = err instanceof Error ? err.message : String(err);
     if (/certificate|TLS|SSL|UNABLE_TO_VERIFY/i.test(cause)) {
       console.warn("[secureFetch] TLS with extra CA failed, retrying default fetch:", cause);
-      return fetch(input, init);
+      return fetch(input, withTimeoutSignal(init));
     }
     throw err;
   }

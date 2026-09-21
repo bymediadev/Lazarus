@@ -8,6 +8,8 @@ export type LlmProviderId = "gemini" | "cerebras" | "openrouter" | "groq";
 export type LlmCandidate = {
   provider: LlmProviderId;
   model: string;
+  /** OpenRouter native fallbacks — one request, not a sequential cold-load chain. */
+  fallbackModels?: string[];
 };
 
 const CEREBRAS_BASE = "https://api.cerebras.ai/v1";
@@ -24,9 +26,9 @@ const DEFAULT_GROQ_AUTOPSY = [
 ];
 const DEFAULT_GROQ_LIVE = ["llama-3.1-8b-instant"];
 const DEFAULT_OPENROUTER_AUTOPSY = [
+  "nvidia/nemotron-3.5-lightning:free",
   "poolside/laguna-s-2.1:free",
   "minimax/minimax-m2.7:free",
-  "nvidia/nemotron-3.5-lightning:free",
   "google/gemma-4-31b-it:free",
 ];
 const DEFAULT_OPENROUTER_LIVE = [
@@ -123,6 +125,43 @@ export type LlmGenerateOpts = {
   preferOpenWeights?: boolean;
 };
 
+function envMs(name: string, fallback: number): number {
+  const n = Number(process.env[name]);
+  return Number.isFinite(n) && n > 0 ? n : fallback;
+}
+
+/** Skip a hung/cold-loading model instead of waiting on it. */
+export function llmTimeoutMs(job: LlmJob): number {
+  return job === "autopsy"
+    ? envMs("LLM_TIMEOUT_AUTOPSY_MS", 45_000)
+    : envMs("LLM_TIMEOUT_LIVE_MS", 20_000);
+}
+
+function maxTokensForJob(job: LlmJob): number {
+  return job === "autopsy" ? 8192 : 1024;
+}
+
+/** Prefer warm, low-TTFT hosts. Cold Hugging Face loads are deprioritized, not waited on. */
+export function openRouterRoutingPrefs(): Record<string, unknown> {
+  return {
+    sort: { by: "latency", partition: "none" },
+    preferred_max_latency: { p90: 4 },
+    allow_fallbacks: true,
+  };
+}
+
+function candidatesFor(
+  provider: LlmProviderId,
+  models: string[],
+  bundle = false
+): LlmCandidate[] {
+  if (!models.length) return [];
+  if (bundle) {
+    return [{ provider, model: models[0], fallbackModels: models.slice(1) }];
+  }
+  return models.map((model) => ({ provider, model }));
+}
+
 export function llmCandidatesForJob(
   job: LlmJob,
   tier: ModelTier = "free",
@@ -130,25 +169,20 @@ export function llmCandidatesForJob(
 ): LlmCandidate[] {
   const geminiTier = job === "live" ? "free" : tier;
   const gemini: LlmCandidate[] = hasGeminiKey()
-    ? modelCandidatesForTier(geminiTier).map((model) => ({ provider: "gemini" as const, model }))
+    ? candidatesFor("gemini", modelCandidatesForTier(geminiTier))
     : [];
   const cerebras: LlmCandidate[] = hasCerebrasKey()
-    ? (job === "autopsy" ? cerebrasAutopsyModels() : cerebrasLiveModels()).map((model) => ({
-        provider: "cerebras" as const,
-        model,
-      }))
+    ? candidatesFor("cerebras", job === "autopsy" ? cerebrasAutopsyModels() : cerebrasLiveModels())
     : [];
   const openrouter: LlmCandidate[] = hasOpenRouterKey()
-    ? (job === "autopsy" ? openRouterAutopsyModels() : openRouterLiveModels()).map((model) => ({
-        provider: "openrouter" as const,
-        model,
-      }))
+    ? candidatesFor(
+        "openrouter",
+        job === "autopsy" ? openRouterAutopsyModels() : openRouterLiveModels(),
+        true
+      )
     : [];
   const groq: LlmCandidate[] = hasGroqKey()
-    ? (job === "autopsy" ? groqAutopsyModels() : groqLiveModels()).map((model) => ({
-        provider: "groq" as const,
-        model,
-      }))
+    ? candidatesFor("groq", job === "autopsy" ? groqAutopsyModels() : groqLiveModels())
     : [];
 
   if (opts.preferOpenWeights) {
@@ -163,7 +197,7 @@ export function isRetryableLlmError(err: unknown): boolean {
   const msg = err instanceof Error ? err.message : String(err);
   return (
     /\b(429|404|502|503|529)\b/.test(msg) ||
-    /high demand|unavailable|overloaded|rate[_ ]?limit|too many requests|no healthy upstream|model_not_found|fetch failed|ECONNREFUSED|ENOTFOUND|ETIMEDOUT|socket hang up|network/i.test(
+    /high demand|unavailable|overloaded|rate[_ ]?limit|too many requests|no healthy upstream|model_not_found|fetch failed|ECONNREFUSED|ENOTFOUND|ETIMEDOUT|aborted|AbortError|socket hang up|network|currently loading|model is loading/i.test(
       msg
     )
   );
@@ -228,6 +262,10 @@ async function generateOpenAiCompat(opts: {
   messages: { role: "system" | "user"; content: string }[];
   json: boolean;
   extraHeaders?: Record<string, string>;
+  extraBody?: Record<string, unknown>;
+  fallbackModels?: string[];
+  timeoutMs?: number;
+  maxTokens?: number;
 }): Promise<string> {
   const res = await secureFetch(`${opts.baseUrl}/chat/completions`, {
     method: "POST",
@@ -236,11 +274,22 @@ async function generateOpenAiCompat(opts: {
       Authorization: `Bearer ${opts.apiKey}`,
       ...(opts.extraHeaders ?? {}),
     },
+    timeoutMs: opts.timeoutMs,
     body: JSON.stringify({
       model: opts.model,
+      ...(opts.fallbackModels?.length
+        ? {
+            models: [
+              opts.model,
+              ...opts.fallbackModels.filter((model) => model !== opts.model),
+            ],
+          }
+        : {}),
       temperature: 0,
+      max_tokens: opts.maxTokens ?? 4096,
       messages: opts.messages,
       ...(opts.json ? { response_format: { type: "json_object" } } : {}),
+      ...(opts.extraBody ?? {}),
     }),
   });
   const body = await res.text();
@@ -271,15 +320,32 @@ async function generateOpenAiCompat(opts: {
   return content;
 }
 
+async function withTimeout<T>(promise: Promise<T>, ms: number, label: string): Promise<T> {
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  try {
+    return await Promise.race([
+      promise,
+      new Promise<T>((_, reject) => {
+        timer = setTimeout(() => reject(new Error(`${label} ETIMEDOUT`)), ms);
+      }),
+    ]);
+  } finally {
+    if (timer) clearTimeout(timer);
+  }
+}
+
 async function generateWithCandidate(
   candidate: LlmCandidate,
   messages: { role: "system" | "user"; content: string }[],
-  json: boolean
+  json: boolean,
+  job: LlmJob
 ): Promise<string> {
+  const timeoutMs = llmTimeoutMs(job);
+  const maxTokens = maxTokensForJob(job);
   console.log(`LLM: trying ${candidate.provider}/${candidate.model}`);
   if (candidate.provider === "gemini") {
     const parts = messages.map((m) => m.content);
-    return generateGemini(candidate.model, parts, json);
+    return withTimeout(generateGemini(candidate.model, parts, json), timeoutMs, candidate.model);
   }
   if (candidate.provider === "cerebras") {
     return generateOpenAiCompat({
@@ -288,6 +354,8 @@ async function generateWithCandidate(
       model: candidate.model,
       messages,
       json,
+      timeoutMs,
+      maxTokens,
     });
   }
   if (candidate.provider === "groq") {
@@ -297,6 +365,8 @@ async function generateWithCandidate(
       model: candidate.model,
       messages,
       json,
+      timeoutMs,
+      maxTokens,
     });
   }
   return generateOpenAiCompat({
@@ -306,19 +376,24 @@ async function generateWithCandidate(
     messages,
     json,
     extraHeaders: openRouterHeaders(),
+    extraBody: { provider: openRouterRoutingPrefs() },
+    fallbackModels: candidate.fallbackModels,
+    timeoutMs,
+    maxTokens,
   });
 }
 
 async function runCandidates(
   candidates: LlmCandidate[],
   messages: { role: "system" | "user"; content: string }[],
-  json: boolean
+  json: boolean,
+  job: LlmJob
 ): Promise<string> {
   if (candidates.length === 0) throw noProviderError();
   let lastError: unknown;
   for (const candidate of candidates) {
     try {
-      return await generateWithCandidate(candidate, messages, json);
+      return await generateWithCandidate(candidate, messages, json, job);
     } catch (err) {
       lastError = err;
       if (isRetryableLlmError(err)) {
@@ -341,7 +416,7 @@ export async function generateText(
   const candidates = llmCandidatesForJob(job, opts.tier ?? "free", {
     preferOpenWeights: opts.preferOpenWeights,
   });
-  return runCandidates(candidates, [{ role: "user", content: prompt }], true);
+  return runCandidates(candidates, [{ role: "user", content: prompt }], true, job);
 }
 
 export async function generateJson(
@@ -359,7 +434,8 @@ export async function generateJson(
       { role: "system", content: systemPrompt },
       { role: "user", content: userMessage },
     ],
-    true
+    true,
+    job
   );
   try {
     return JSON.parse(extractJsonText(raw)) as Record<string, unknown>;
