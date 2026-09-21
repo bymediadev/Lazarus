@@ -36,7 +36,7 @@ OPENROUTER_MODEL_LIVE=nvidia/nemotron-3.5-lightning:free,liquid/lfm-2.5-2.6b:fre
 
 Do **not** use `openrouter/free` (thinking models break JSON). OpenRouter `:free` slugs churn — Llama/Mistral `:free` were delisted in 2026. If health is green but analyses still fail, probe the current free list and update these defaults.
 
-Free `:free` hosts often **cold-load** (Hugging Face-style “model is loading”). Lazarus sends the fallback list in **one** OpenRouter request, sorts by latency, and times out a hung host (`LLM_TIMEOUT_LIVE_MS` / `LLM_TIMEOUT_AUTOPSY_MS`) instead of waiting on the load.
+Free `:free` hosts often **cold-load** (Hugging Face-style “model is loading”). Lazarus sends up to **3** model IDs in one OpenRouter request (their cap), sorts by latency, and times out a hung host (`LLM_TIMEOUT_LIVE_MS` / `LLM_TIMEOUT_AUTOPSY_MS`) instead of waiting on the load.
 
 ## What uses which models
 

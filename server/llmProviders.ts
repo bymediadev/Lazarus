@@ -29,13 +29,11 @@ const DEFAULT_OPENROUTER_AUTOPSY = [
   "nvidia/nemotron-3.5-lightning:free",
   "poolside/laguna-s-2.1:free",
   "minimax/minimax-m2.7:free",
-  "google/gemma-4-31b-it:free",
 ];
 const DEFAULT_OPENROUTER_LIVE = [
   "nvidia/nemotron-3.5-lightning:free",
   "liquid/lfm-2.5-2.6b:free",
   "poolside/laguna-xs-2.1:free",
-  "google/gemma-4-26b-a4b-it:free",
 ];
 
 function csvEnv(name: string, fallback: string[]): string[] {
@@ -157,7 +155,8 @@ function candidatesFor(
 ): LlmCandidate[] {
   if (!models.length) return [];
   if (bundle) {
-    return [{ provider, model: models[0], fallbackModels: models.slice(1) }];
+    const capped = models.slice(0, 3);
+    return [{ provider, model: capped[0], fallbackModels: capped.slice(1) }];
   }
   return models.map((model) => ({ provider, model }));
 }
@@ -267,6 +266,10 @@ async function generateOpenAiCompat(opts: {
   timeoutMs?: number;
   maxTokens?: number;
 }): Promise<string> {
+  const routedModels = [
+    opts.model,
+    ...(opts.fallbackModels ?? []).filter((model) => model !== opts.model),
+  ].slice(0, 3);
   const res = await secureFetch(`${opts.baseUrl}/chat/completions`, {
     method: "POST",
     headers: {
@@ -277,14 +280,7 @@ async function generateOpenAiCompat(opts: {
     timeoutMs: opts.timeoutMs,
     body: JSON.stringify({
       model: opts.model,
-      ...(opts.fallbackModels?.length
-        ? {
-            models: [
-              opts.model,
-              ...opts.fallbackModels.filter((model) => model !== opts.model),
-            ],
-          }
-        : {}),
+      ...(routedModels.length > 1 ? { models: routedModels } : {}),
       temperature: 0,
       max_tokens: opts.maxTokens ?? 4096,
       messages: opts.messages,
@@ -294,6 +290,9 @@ async function generateOpenAiCompat(opts: {
   });
   const body = await res.text();
   if (!res.ok) {
+    if (/models.? array must have 3 items or fewer/i.test(body) && opts.fallbackModels?.length) {
+      return generateOpenAiCompat({ ...opts, fallbackModels: undefined });
+    }
     if (
       opts.json &&
       (res.status === 400 || /response_format|json_object/i.test(body))

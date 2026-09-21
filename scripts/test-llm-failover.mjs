@@ -63,8 +63,10 @@ try {
     "OpenRouter is one routed request, not a sequential cold-load chain"
   );
   assert(
-    Array.isArray(guestAutopsy[0].fallbackModels) && guestAutopsy[0].fallbackModels.length > 0,
-    "OpenRouter includes fallback models in the same request"
+    Array.isArray(guestAutopsy[0].fallbackModels) &&
+      guestAutopsy[0].fallbackModels.length > 0 &&
+      guestAutopsy[0].fallbackModels.length <= 2,
+    "OpenRouter includes at most two fallbacks (API cap is 3 models total)"
   );
   assert(
     guestAutopsy[0].model === "nvidia/nemotron-3.5-lightning:free",
