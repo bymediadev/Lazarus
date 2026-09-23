@@ -1,9 +1,16 @@
-*,
-*::before,
-*::after {
-  box-sizing: border-box;
-  margin: 0;
-  padding: 0;
+/* Tailwind utilities only — preflight stays off so this stylesheet keeps the site reset. */
+@layer theme, base, components, utilities;
+@import "tailwindcss/theme.css" layer(theme);
+@import "tailwindcss/utilities.css" layer(utilities);
+
+@layer base {
+  *,
+  *::before,
+  *::after {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+  }
 }
 
 :root {
@@ -5309,7 +5316,7 @@ a.run-button:hover {
 .marketing-main {
   flex: 1;
   width: 100%;
-  max-width: 68rem;
+  max-width: 76rem;
   margin: 0 auto;
 }
 

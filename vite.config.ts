@@ -1,5 +1,6 @@
 import { defineConfig, type Plugin } from "vite";
 import react from "@vitejs/plugin-react";
+import tailwindcss from "@tailwindcss/vite";
 import { createReadStream, existsSync } from "fs";
 import path from "path";
 import { fileURLToPath } from "url";
@@ -122,7 +123,7 @@ function trustPackDevPlugin(): Plugin {
 }
 
 export default defineConfig({
-  plugins: [react(), trustPackDevPlugin()],
+  plugins: [tailwindcss(), react(), trustPackDevPlugin()],
   build: {
     sourcemap: false,
   },

@@ -1,9 +1,9 @@
-import { HERO_PRIMARY_CTA } from "../lib/cta";
-import { BOOKING_URL, COMPANY_LINKEDIN, FOUNDER_NAME, WALKTHROUGH_EMBED_URL } from "../lib/site";
+import { COMPANY_LINKEDIN, FOUNDER_NAME, WALKTHROUGH_EMBED_URL } from "../lib/site";
 import { scrollToSection } from "../lib/appRoute";
 import { useReveal } from "../lib/useReveal";
 import { PricingPlanCards } from "./PricingGate";
 import ContactSection from "./ContactSection";
+import HeroFold from "./HeroFold";
 import StakeholderSelector from "./StakeholderSelector";
 import TrustPackLink from "./TrustPackLink";
 import type { CheckoutPlan } from "../lib/billing";
@@ -17,19 +17,6 @@ type Props = {
   checkoutError?: string | null;
 };
 
-function BookLookButton({ className }: { className?: string }) {
-  return (
-    <a
-      className={className ?? "btn-secondary"}
-      href={BOOKING_URL}
-      target="_blank"
-      rel="noopener noreferrer"
-    >
-      Book a 30-minute look
-    </a>
-  );
-}
-
 export default function MarketingHome({
   onSignup,
   onPortal,
@@ -42,27 +29,7 @@ export default function MarketingHome({
 
   return (
     <>
-      <section className="marketing-hero">
-        <p className="hero-trust-eyebrow">B2B deal recovery</p>
-        <h1 className="marketing-hero-title">Win back stalled sales pipeline</h1>
-        <p className="marketing-hero-sub">
-          We tell sales managers which stalled deals are recoverable versus a flat no, name the
-          blocker, and put a 0–90 day plan on the HubSpot or Salesforce deal. We never join the
-          call.
-        </p>
-        <div className="marketing-hero-actions">
-          <button type="button" className="run-button run-button-above-fold" onClick={onPortal}>
-            {HERO_PRIMARY_CTA}
-          </button>
-          <BookLookButton />
-        </div>
-        <p className="marketing-hero-note">
-          No credit card. Five free analyses a month.{" "}
-          <button type="button" className="marketing-text-link" onClick={() => scrollToSection("pricing")}>
-            See pricing
-          </button>
-        </p>
-      </section>
+      <HeroFold onScan={onPortal} />
 
       <StakeholderSelector />
 
