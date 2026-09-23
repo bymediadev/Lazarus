@@ -4,6 +4,7 @@ import { useReveal } from "../lib/useReveal";
 import { PricingPlanCards } from "./PricingGate";
 import ContactSection from "./ContactSection";
 import HeroFold from "./HeroFold";
+import { CrmComparison, FrictionPoints, RevenueChain } from "./MarketingOutcomes";
 import StakeholderSelector from "./StakeholderSelector";
 import TrustPackLink from "./TrustPackLink";
 import type { CheckoutPlan } from "../lib/billing";
@@ -62,6 +63,8 @@ export default function MarketingHome({
           </li>
         </ol>
       </section>
+
+      <FrictionPoints />
 
       <section className="marketing-simple marketing-reveal" id="brief" aria-label="What the report returns">
         <h2>What the report gives you</h2>
@@ -175,25 +178,9 @@ export default function MarketingHome({
         </div>
       </section>
 
-      <section className="marketing-simple marketing-reveal" id="who" aria-label="Who it is for">
-        <h2>Who it’s for</h2>
-        <div className="marketing-split">
-          <div>
-            <h3>For</h3>
-            <p>
-              Sales managers and VPs who own the forecast call. Mid-market B2B. HubSpot or
-              Salesforce.
-            </p>
-          </div>
-          <div>
-            <h3>With your stack</h3>
-            <p>
-              Built to complement your existing conversational intelligence tools by delivering the
-              recovery roadmap they miss.
-            </p>
-          </div>
-        </div>
-      </section>
+      <RevenueChain />
+
+      <CrmComparison />
 
       <section className="marketing-simple marketing-reveal" id="answers" aria-label="Straight answers">
         <h2>Straight answers</h2>
