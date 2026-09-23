@@ -16,5 +16,6 @@ marketplace/.hubspot-staging
 marketplace/.inspect
 
 # Cursor / debug session logs
-.cursor/
+.cursor/*
+!.cursor/environment.json
 debug-*.log
