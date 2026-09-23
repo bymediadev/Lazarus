@@ -10,6 +10,41 @@ const STALL_MIN = 10;
 const STALL_MAX = 80;
 const RECOVERY_RATE = 0.15;
 
+type IndustryId = "saas" | "healthcare" | "finance" | "msp";
+
+/** Planning baselines for the motion. Not a published industry census. */
+const INDUSTRIES: {
+  id: IndustryId;
+  label: string;
+  stallPct: number;
+  criterion: string;
+}[] = [
+  {
+    id: "saas",
+    label: "SaaS",
+    stallPct: 40,
+    criterion: "No buyer-owned next step, or the close date has been pushed twice.",
+  },
+  {
+    id: "healthcare",
+    label: "Healthcare",
+    stallPct: 55,
+    criterion: "Clinical, compliance, or a BAA review is open and the champion has gone quiet.",
+  },
+  {
+    id: "finance",
+    label: "Finance",
+    stallPct: 50,
+    criterion: "Risk, infosec, or procurement opened a review and the economic buyer stopped.",
+  },
+  {
+    id: "msp",
+    label: "MSP / IT",
+    stallPct: 35,
+    criterion: "The technical evaluator or budget owner stalled after the proposal.",
+  },
+];
+
 const usd = new Intl.NumberFormat("en-US", {
   style: "currency",
   currency: "USD",
@@ -84,6 +119,7 @@ function RangeNumberField({
   prefix,
   suffix,
   formatBound,
+  hint,
   onChange,
 }: {
   id: string;
@@ -95,6 +131,7 @@ function RangeNumberField({
   prefix?: string;
   suffix?: string;
   formatBound: (n: number) => string;
+  hint?: string;
   onChange: (n: number) => void;
 }) {
   const [draft, setDraft] = useState<string | null>(null);
@@ -169,6 +206,7 @@ function RangeNumberField({
         <span>{formatBound(min)}</span>
         <span>{formatBound(max)}</span>
       </div>
+      {hint && <p className="text-xs leading-snug text-slate-400">{hint}</p>}
     </div>
   );
 }
@@ -188,9 +226,17 @@ function TrustBadge({ children }: { children: ReactNode }) {
 }
 
 export default function HeroFold({ onScan }: { onScan: () => void }) {
+  const [industryId, setIndustryId] = useState<IndustryId>("saas");
   const [acv, setAcv] = useState(50_000);
   const [deals, setDeals] = useState(100);
   const [stallPct, setStallPct] = useState(40);
+  const industry = INDUSTRIES.find((item) => item.id === industryId) ?? INDUSTRIES[0];
+
+  const selectIndustry = (id: IndustryId) => {
+    const next = INDUSTRIES.find((item) => item.id === id) ?? INDUSTRIES[0];
+    setIndustryId(next.id);
+    setStallPct(next.stallPct);
+  };
   const reducedMotion = usePrefersReducedMotion();
   const headingId = useId();
   const noteId = useId();
@@ -229,13 +275,34 @@ export default function HeroFold({ onScan }: { onScan: () => void }) {
         </ul>
       </div>
 
-      <div className="rounded-2xl border border-white/10 bg-[#0c1433] p-5 shadow-[0_24px_70px_rgba(0,0,0,0.45)] sm:p-7">
+      <div className="rounded-2xl border border-white/10 bg-[#0c1433] p-5 shadow-[0_24px_70px_rgba(0,0,0,0.45)]">
         <p className="font-[var(--mono)] text-[0.68rem] font-semibold uppercase tracking-[0.16em] text-[#3dd6c6]">
           Pipeline impact
         </p>
         <h2 className="mt-2 text-lg font-semibold text-white">What stalled deals cost this year</h2>
+        <div className="mt-4 flex flex-wrap gap-2" role="radiogroup" aria-label="Industry motion">
+          {INDUSTRIES.map((item) => {
+            const selected = item.id === industryId;
+            return (
+              <button
+                key={item.id}
+                type="button"
+                role="radio"
+                aria-checked={selected}
+                onClick={() => selectIndustry(item.id)}
+                className={`rounded-full border px-3 py-1 text-xs font-semibold ${
+                  selected
+                    ? "border-[#3dd6c6] bg-[#3dd6c6]/15 text-[#d7fff8]"
+                    : "border-white/15 text-slate-300 hover:border-white/30"
+                }`}
+              >
+                {item.label}
+              </button>
+            );
+          })}
+        </div>
 
-        <div className="mt-6 grid gap-5">
+        <div className="mt-4 grid gap-3">
           <RangeNumberField
             id="hero-acv"
             label="Average annual deal size (ACV)"
@@ -266,6 +333,7 @@ export default function HeroFold({ onScan }: { onScan: () => void }) {
             step={1}
             suffix="%"
             formatBound={(n) => `${n}%`}
+            hint={`${industry.criterion} Baseline ${industry.stallPct}%.`}
             onChange={(n) => setStallPct(Math.round(n))}
           />
         </div>
@@ -273,7 +341,7 @@ export default function HeroFold({ onScan }: { onScan: () => void }) {
         <p className="sr-only" aria-live="polite">
           Revenue leakage {money(leakage)}. Recoverable revenue {money(recoverable)}.
         </p>
-        <div className="mt-6 grid gap-4 rounded-xl border border-white/10 bg-black/25 p-4">
+        <div className="mt-4 grid gap-3 rounded-xl border border-white/10 bg-black/25 p-3.5">
           <div>
             <p className="text-xs font-semibold uppercase tracking-[0.12em] text-slate-400">
               Revenue leakage
@@ -305,7 +373,7 @@ export default function HeroFold({ onScan }: { onScan: () => void }) {
           type="button"
           onClick={onScan}
           aria-describedby={noteId}
-          className="mt-5 w-full rounded-lg border border-[#5cdb5c]/70 bg-gradient-to-b from-[#7dff7d] to-[#3da832] px-4 py-3.5 text-base font-bold text-[#04140a] shadow-[0_0_28px_rgba(92,219,92,0.35)] transition hover:brightness-110 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#7dff7d]"
+          className="mt-4 w-full rounded-lg border border-[#5cdb5c]/70 bg-gradient-to-b from-[#7dff7d] to-[#3da832] px-4 py-3 text-base font-bold text-[#04140a] shadow-[0_0_28px_rgba(92,219,92,0.35)] transition hover:brightness-110 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#7dff7d]"
         >
           {HERO_PRIMARY_CTA}
         </button>
