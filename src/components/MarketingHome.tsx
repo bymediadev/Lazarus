@@ -4,6 +4,7 @@ import { scrollToSection } from "../lib/appRoute";
 import { useReveal } from "../lib/useReveal";
 import { PricingPlanCards } from "./PricingGate";
 import ContactSection from "./ContactSection";
+import StakeholderSelector from "./StakeholderSelector";
 import TrustPackLink from "./TrustPackLink";
 import type { CheckoutPlan } from "../lib/billing";
 
@@ -62,6 +63,8 @@ export default function MarketingHome({
           </button>
         </p>
       </section>
+
+      <StakeholderSelector />
 
       <section className="marketing-steps marketing-reveal" id="how" aria-label="How it works">
         <h2>How it works</h2>
