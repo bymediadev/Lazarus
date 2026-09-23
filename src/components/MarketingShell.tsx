@@ -31,6 +31,9 @@ export default function MarketingShell({
           <button type="button" onClick={() => scrollToSection("how")}>
             How it works
           </button>
+          <button type="button" onClick={() => scrollToSection("brief")}>
+            The report
+          </button>
           <button type="button" onClick={() => scrollToSection("pricing")}>
             Pricing
           </button>

@@ -1,5 +1,5 @@
 import { HERO_PRIMARY_CTA } from "../lib/cta";
-import { BOOKING_URL, FOUNDER_LINKEDIN, FOUNDER_NAME, WALKTHROUGH_EMBED_URL } from "../lib/site";
+import { BOOKING_URL, COMPANY_LINKEDIN, FOUNDER_NAME, WALKTHROUGH_EMBED_URL } from "../lib/site";
 import { scrollToSection } from "../lib/appRoute";
 import { useReveal } from "../lib/useReveal";
 import { PricingPlanCards } from "./PricingGate";
@@ -93,11 +93,74 @@ export default function MarketingHome({
         </ol>
       </section>
 
-      <section className="marketing-simple marketing-reveal" id="brief" aria-label="Example brief">
-        <h2>What you get</h2>
+      <section className="marketing-simple marketing-reveal" id="brief" aria-label="What the report returns">
+        <h2>What the report gives you</h2>
         <p>
-          A brief you can take into the forecast call. Your deals, your evidence — not a call recap.
+          Read it in this order. The same brief is the 0–90 day plan you put on the deal.
         </p>
+        <ol className="marketing-report-walk">
+          <li>
+            <h3>Forecast snapshot</h3>
+            <p>Five scores sit at the top. Use them when someone asks why the number moved.</p>
+            <ul>
+              <li>
+                <strong>Deal Risk Score</strong> — how likely this deal stalls or drops.
+              </li>
+              <li>
+                <strong>Dept friction</strong> — pushback from Legal, Security, IT, or peers.
+              </li>
+              <li>
+                <strong>Dispersion</strong> — how fragmented the buying group is.
+              </li>
+              <li>
+                <strong>Stall signals</strong> — missed cadence and objections still open.
+              </li>
+              <li>
+                <strong>Recoverability</strong> — still worth manager effort, or a flat no.
+              </li>
+            </ul>
+          </li>
+          <li>
+            <h3>Fast Facts</h3>
+            <p>This is the default view. Three cards, then the button that updates the CRM.</p>
+            <ul>
+              <li>
+                <strong>What this deal is</strong> — status, recoverable versus a flat no, and the
+                core blocker in plain language.
+              </li>
+              <li>
+                <strong>Main detractors</strong> — who can veto it, with the quote from your
+                evidence.
+              </li>
+              <li>
+                <strong>How to save it</strong> — the first actions. Open Concise when you need the
+                full quarter.
+              </li>
+            </ul>
+          </li>
+          <li>
+            <h3>Roll it into the 0–90 day plan</h3>
+            <p>
+              Open Concise. The Resuscitation Plan is what you assign. Copy for CRM, or Push to
+              HubSpot or Salesforce. The note on the deal is that plan.
+            </p>
+            <ul>
+              <li>
+                <strong>This week</strong> — the 0–7 day moves from How to save it.
+              </li>
+              <li>
+                <strong>30 days</strong> — what the owner does while the blocker is still live.
+              </li>
+              <li>
+                <strong>60 days</strong> — the next test if that first move does not land.
+              </li>
+              <li>
+                <strong>90 days</strong> — the last actions before you cut it from the forecast.
+              </li>
+            </ul>
+          </li>
+        </ol>
+        <p>Here is the shape of one recoverable deal.</p>
         <article className="marketing-brief-preview">
           <p className="marketing-brief-kicker">Recoverable</p>
           <h3>The real blocker</h3>
@@ -107,10 +170,14 @@ export default function MarketingHome({
           </p>
           <h3>0–90 day plan</h3>
           <ol>
-            <li>Get the champion to book the security review this week.</li>
-            <li>Multi-thread to finance so procurement is not the only gate.</li>
+            <li>This week: get the champion to book the security review.</li>
+            <li>30 days: send the one-pager they can forward internally.</li>
+            <li>60 days: multi-thread to finance so procurement is not the only gate.</li>
+            <li>90 days: if there is still no buyer-owned step, cut it from the forecast.</li>
           </ol>
-          <p className="marketing-brief-foot">On the HubSpot or Salesforce deal.</p>
+          <p className="marketing-brief-foot">
+            Copy for CRM, or Push to HubSpot or Salesforce. That note is the plan.
+          </p>
         </article>
       </section>
 
@@ -245,9 +312,9 @@ export default function MarketingHome({
           <TrustPackLink slug="security-overview">Security Overview</TrustPackLink>.
         </p>
         <p>
-          Founded by{" "}
-          <a href={FOUNDER_LINKEDIN} target="_blank" rel="noopener noreferrer">
-            {FOUNDER_NAME}
+          Founded by {FOUNDER_NAME}.{" "}
+          <a href={COMPANY_LINKEDIN} target="_blank" rel="noopener noreferrer">
+            Lazarus Deal Recovery on LinkedIn
           </a>
           .
         </p>
