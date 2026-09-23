@@ -186,10 +186,10 @@ export default function MarketingHome({
             </p>
           </div>
           <div>
-            <h3>Not for</h3>
+            <h3>With your stack</h3>
             <p>
-              Anyone shopping for an AI SDR, an autonomous closer, a meeting bot, or a Gong
-              replacement. Keep your recorder. Lazarus sits on top and judges the deal.
+              Built to complement your existing conversational intelligence tools by delivering the
+              recovery roadmap they miss.
             </p>
           </div>
         </div>

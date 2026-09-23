@@ -1,4 +1,5 @@
 import { useId, useState, type KeyboardEvent } from "react";
+import TrustPackLink from "./TrustPackLink";
 
 type RoleId = "legal" | "security" | "revenue";
 
@@ -13,6 +14,16 @@ type Role = {
 
 const ROLES: Role[] = [
   {
+    id: "security",
+    mark: "🛡️",
+    label: "Security & IT Leaders",
+    header: "Not SOC 2 today. The data path is still narrow.",
+    bullets: [
+      "Guest scans are ephemeral. Raw audio is processed in memory and is not saved to disk. Model APIs use zero-retention settings where the provider allows it, and your content is not used to train public models.",
+      "Saved transcript text purges on a 30-day default. Teams only see their own deals. HubSpot and Salesforce stay read-only until you push the plan.",
+    ],
+  },
+  {
     id: "legal",
     mark: "⚖️",
     label: "Legal & Compliance",
@@ -20,16 +31,6 @@ const ROLES: Role[] = [
     bullets: [
       "Bilateral Data Minimization: Lazarus only indexes context related to stagnant metadata. We explicitly omit and scrub personal identifiable financial or health data (PII).",
       "Right-to-Forget Architecture: Fully compliant with GDPR and CCPA protocols. Delete a tenant workspace and all synced records are immediately purged permanently within 24 hours.",
-    ],
-  },
-  {
-    id: "security",
-    mark: "🛡️",
-    label: "Security & IT Leaders",
-    header: "Sacrosanct Data Control & Enterprise-Grade Infrastructure",
-    bullets: [
-      "Zero-Retention Architecture: Transcripts from Zoom and Google Meet are parsed ephemerally in real-time memory to build the deterministic recovery score, then dropped. Raw media files are never stored on Lazarus servers.",
-      "OAuth 2.0 Restricted Scope Sandbox: Connection tokens to Salesforce and HubSpot utilize read-only restricted scopes where applicable, requiring precise tenant admin approval.",
     ],
   },
   {
@@ -62,7 +63,7 @@ function BulletMark() {
 }
 
 export default function StakeholderSelector() {
-  const [activeId, setActiveId] = useState<RoleId>("legal");
+  const [activeId, setActiveId] = useState<RoleId>("security");
   const selectId = useId();
   const panelId = useId();
   const active = ROLES.find((role) => role.id === activeId) ?? ROLES[0];
@@ -155,6 +156,11 @@ export default function StakeholderSelector() {
             </li>
           ))}
         </ul>
+        {active.id === "security" && (
+          <p className="stakeholder-note">
+            Full detail in the <TrustPackLink slug="security-overview">Security Overview</TrustPackLink>.
+          </p>
+        )}
       </article>
     </section>
   );

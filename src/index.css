@@ -5615,6 +5615,12 @@ a.run-button:hover {
   padding: 0;
 }
 
+.stakeholder-note {
+  margin: 0.95rem 0 0;
+  color: var(--muted);
+  font-size: 0.86rem;
+}
+
 .stakeholder-points li {
   display: grid;
   grid-template-columns: 1.35rem 1fr;
