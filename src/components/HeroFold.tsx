@@ -10,40 +10,13 @@ const STALL_MIN = 10;
 const STALL_MAX = 80;
 const RECOVERY_RATE = 0.15;
 
-type IndustryId = "saas" | "healthcare" | "finance" | "msp";
-
-/** Planning baselines for the motion. Not a published industry census. */
-const INDUSTRIES: {
-  id: IndustryId;
-  label: string;
-  stallPct: number;
-  criterion: string;
-}[] = [
-  {
-    id: "saas",
-    label: "SaaS",
-    stallPct: 40,
-    criterion: "No buyer-owned next step, or the close date has been pushed twice.",
-  },
-  {
-    id: "healthcare",
-    label: "Healthcare",
-    stallPct: 55,
-    criterion: "Clinical, compliance, or a BAA review is open and the champion has gone quiet.",
-  },
-  {
-    id: "finance",
-    label: "Finance",
-    stallPct: 50,
-    criterion: "Risk, infosec, or procurement opened a review and the economic buyer stopped.",
-  },
-  {
-    id: "msp",
-    label: "MSP / IT",
-    stallPct: 35,
-    criterion: "The technical evaluator or budget owner stalled after the proposal.",
-  },
-];
+const BENEFITS = [
+  "Find deals worth saving",
+  "Understand why they're stuck",
+  "Identify the real blocker",
+  "Get a deal-specific recovery plan",
+  "Focus sales time where it can have the most impact",
+] as const;
 
 const usd = new Intl.NumberFormat("en-US", {
   style: "currency",
@@ -118,7 +91,6 @@ function RangeNumberField({
   step,
   prefix,
   suffix,
-  formatBound,
   hint,
   onChange,
 }: {
@@ -130,7 +102,6 @@ function RangeNumberField({
   step: number;
   prefix?: string;
   suffix?: string;
-  formatBound: (n: number) => string;
   hint?: string;
   onChange: (n: number) => void;
 }) {
@@ -202,10 +173,6 @@ function RangeNumberField({
           setDraft(null);
         }}
       />
-      <div className="flex justify-between text-[0.7rem] text-slate-500">
-        <span>{formatBound(min)}</span>
-        <span>{formatBound(max)}</span>
-      </div>
       {hint && <p className="text-xs leading-snug text-slate-400">{hint}</p>}
     </div>
   );
@@ -226,17 +193,9 @@ function TrustBadge({ children }: { children: ReactNode }) {
 }
 
 export default function HeroFold({ onScan }: { onScan: () => void }) {
-  const [industryId, setIndustryId] = useState<IndustryId>("saas");
   const [acv, setAcv] = useState(50_000);
   const [deals, setDeals] = useState(100);
   const [stallPct, setStallPct] = useState(40);
-  const industry = INDUSTRIES.find((item) => item.id === industryId) ?? INDUSTRIES[0];
-
-  const selectIndustry = (id: IndustryId) => {
-    const next = INDUSTRIES.find((item) => item.id === id) ?? INDUSTRIES[0];
-    setIndustryId(next.id);
-    setStallPct(next.stallPct);
-  };
   const reducedMotion = usePrefersReducedMotion();
   const headingId = useId();
   const noteId = useId();
@@ -255,20 +214,36 @@ export default function HeroFold({ onScan }: { onScan: () => void }) {
     >
       <div className="max-w-xl">
         <p className="mb-3 font-[var(--mono)] text-[0.68rem] font-semibold uppercase tracking-[0.18em] text-[#3dd6c6]">
-          B2B deal recovery
+          Purpose-built stalled-deal recovery
         </p>
         <h1
           id={headingId}
-          className="text-[clamp(2.05rem,3.5vw,3.15rem)] font-bold leading-[1.12] tracking-tight text-white"
+          className="text-[clamp(1.85rem,3.2vw,2.85rem)] font-bold leading-[1.15] tracking-tight text-white"
         >
-          Stop letting cold deals quietly sink your quarter.
+          Your CRM tells you which deals have stalled.
         </h1>
-        <p className="mt-5 text-base font-medium leading-relaxed text-slate-300 sm:text-lg">
-          Lazarus securely analyzes your HubSpot/Salesforce history, emails, and meeting transcripts
-          to uncover exactly why B2B deals stall—and delivers a deterministic 0–90 day recovery
-          playbook to win them back.
+        <p className="mt-4 text-base font-medium leading-relaxed text-slate-200 sm:text-lg">
+          Lazarus tells you why, whether they&apos;re worth saving, and what to do next.
         </p>
-        <ul className="mt-7 flex flex-wrap gap-2" aria-label="Secure CRM integration">
+        <p className="mt-3 text-sm leading-relaxed text-slate-300 sm:text-base">
+          It reads the evidence behind a stalled deal, names why it stalled, says whether it is
+          recoverable, and gives the team specific next steps. Time goes to the opportunities that
+          still have a path to revenue.
+        </p>
+        <ul className="mt-5 grid gap-2" aria-label="What you get">
+          {BENEFITS.map((benefit) => (
+            <li key={benefit} className="flex items-start gap-2 text-sm font-medium text-slate-100">
+              <svg viewBox="0 0 16 16" className="mt-0.5 h-4 w-4 shrink-0 text-[#7dff7d]" aria-hidden="true">
+                <path
+                  fill="currentColor"
+                  d="M6.2 11.2 2.9 7.9l1.1-1.1 2.2 2.2 5-5 1.1 1.1-6.1 6.1Z"
+                />
+              </svg>
+              {benefit}
+            </li>
+          ))}
+        </ul>
+        <ul className="mt-5 flex flex-wrap gap-2" aria-label="Secure CRM integration">
           <TrustBadge>Encrypted in transit and at rest</TrustBadge>
           <TrustBadge>HubSpot and Salesforce</TrustBadge>
           <TrustBadge>Not used to train public models</TrustBadge>
@@ -277,74 +252,55 @@ export default function HeroFold({ onScan }: { onScan: () => void }) {
 
       <div className="rounded-2xl border border-white/10 bg-[#0c1433] p-5 shadow-[0_24px_70px_rgba(0,0,0,0.45)]">
         <p className="font-[var(--mono)] text-[0.68rem] font-semibold uppercase tracking-[0.16em] text-[#3dd6c6]">
-          Pipeline impact
+          Quick business case
         </p>
-        <h2 className="mt-2 text-lg font-semibold text-white">What stalled deals cost this year</h2>
-        <div className="mt-4 flex flex-wrap gap-2" role="radiogroup" aria-label="Industry motion">
-          {INDUSTRIES.map((item) => {
-            const selected = item.id === industryId;
-            return (
-              <button
-                key={item.id}
-                type="button"
-                role="radio"
-                aria-checked={selected}
-                onClick={() => selectIndustry(item.id)}
-                className={`rounded-full border px-3 py-1 text-xs font-semibold ${
-                  selected
-                    ? "border-[#3dd6c6] bg-[#3dd6c6]/15 text-[#d7fff8]"
-                    : "border-white/15 text-slate-300 hover:border-white/30"
-                }`}
-              >
-                {item.label}
-              </button>
-            );
-          })}
-        </div>
+        <h2 className="mt-2 text-lg font-semibold leading-snug text-white">
+          How much pipeline could be worth recovering?
+        </h2>
+        <p className="mt-1 text-sm text-slate-400">Three numbers. The result is a planning baseline.</p>
 
-        <div className="mt-4 grid gap-3">
+        <div className="mt-4 grid gap-4">
           <RangeNumberField
             id="hero-acv"
-            label="Average annual deal size (ACV)"
+            label="Average deal size"
             value={acv}
             min={ACV_MIN}
             max={ACV_MAX}
             step={ACV_STEP}
             prefix="$"
-            formatBound={(n) => usd.format(n)}
+            hint="What one opportunity is worth."
             onChange={setAcv}
           />
           <RangeNumberField
             id="hero-deals"
-            label="Total annual pipeline volume (deals)"
+            label="Deals in the pipeline"
             value={deals}
             min={DEALS_MIN}
             max={DEALS_MAX}
             step={1}
-            formatBound={(n) => n.toLocaleString("en-US")}
+            hint="Opportunities the team is working this year."
             onChange={(n) => setDeals(Math.round(n))}
           />
           <RangeNumberField
             id="hero-stall"
-            label="Estimated pipeline stall rate"
+            label="Deals that stall"
             value={stallPct}
             min={STALL_MIN}
             max={STALL_MAX}
             step={1}
             suffix="%"
-            formatBound={(n) => `${n}%`}
-            hint={`${industry.criterion} Baseline ${industry.stallPct}%.`}
+            hint="No real next step, or the close date has been pushed twice."
             onChange={(n) => setStallPct(Math.round(n))}
           />
         </div>
 
         <p className="sr-only" aria-live="polite">
-          Revenue leakage {money(leakage)}. Recoverable revenue {money(recoverable)}.
+          Stalled pipeline {money(leakage)}. Worth recovering {money(recoverable)}.
         </p>
         <div className="mt-4 grid gap-3 rounded-xl border border-white/10 bg-black/25 p-3.5">
           <div>
             <p className="text-xs font-semibold uppercase tracking-[0.12em] text-slate-400">
-              Revenue leakage
+              Stalled pipeline
             </p>
             <p
               className="mt-1 text-2xl font-semibold tabular-nums text-white"
@@ -352,10 +308,13 @@ export default function HeroFold({ onScan }: { onScan: () => void }) {
             >
               {money(animatedLeakage)}
             </p>
+            <p className="mt-1 text-sm leading-snug text-slate-400">
+              {deals.toLocaleString("en-US")} deals × {stallPct}% × {money(acv)}. Sitting still.
+            </p>
           </div>
           <div>
             <p className="text-xs font-bold uppercase tracking-[0.14em] text-[#7dff7d]">
-              Recoverable revenue
+              Worth recovering
             </p>
             <p
               className="mt-1 text-[clamp(2.15rem,4vw,3.25rem)] font-extrabold leading-none tabular-nums text-[#7dff7d] drop-shadow-[0_0_22px_rgba(125,255,125,0.35)]"
@@ -363,11 +322,15 @@ export default function HeroFold({ onScan }: { onScan: () => void }) {
             >
               {money(animatedRecoverable)}
             </p>
-            <p className="mt-2 text-sm text-slate-400">
-              Lazarus impact · conservative 15% recovery baseline
+            <p className="mt-2 text-sm leading-snug text-slate-300">
+              15% of stalled pipeline. A conservative planning baseline.
             </p>
           </div>
         </div>
+        <p className="mt-3 text-sm leading-snug text-slate-300">
+          Put one real stalled deal through the test portal and see whether it belongs in this
+          number.
+        </p>
 
         <button
           type="button"

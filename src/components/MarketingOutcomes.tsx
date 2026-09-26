@@ -58,39 +58,46 @@ export function FrictionPoints() {
 export function RevenueChain() {
   return (
     <section className="marketing-reveal px-5 py-10 sm:px-8 lg:px-10" id="who" aria-label="Who it is for">
-      <h2 className="text-2xl font-semibold tracking-tight text-white sm:text-[1.65rem]">
-        Built for the Revenue Chain
+      <p className="font-[var(--mono)] text-[0.68rem] font-semibold uppercase tracking-[0.16em] text-[#3dd6c6]">
+        Purpose-built for one job: recovering stalled deals.
+      </p>
+      <h2 className="mt-3 max-w-3xl text-2xl font-semibold tracking-tight text-white sm:text-[1.65rem]">
+        Sales leaders keep the forecast. Reps can run the deal in front of them.
       </h2>
       <p className="mt-3 max-w-2xl text-base leading-relaxed text-slate-300">
-        Leaders use it to defend the number. Reps can run one stuck deal on their own. It sits on
-        top of the recorder and CRM you already use.
+        Same product either way. It sits on the recorder and CRM you already use. A person still
+        runs the deal.
       </p>
       <div className="mt-6 grid gap-4 md:grid-cols-2">
         <article className="rounded-2xl border border-[#3dd6c6]/40 bg-[#0c1433] p-5 sm:p-6">
           <p className="text-xs font-semibold uppercase tracking-[0.14em] text-[#3dd6c6]">
-            For sales leaders and VPs
+            For sales leaders
           </p>
           <h3 className="mt-2 text-xl font-semibold leading-snug text-white">
-            Protect the forecast and stop pipeline leakage.
+            Recover stalled pipeline across your team.
           </h3>
           <p className="mt-3 text-sm leading-relaxed text-slate-300">
             See which rep-owned deals will close, which are recoverable, and which are a flat no
-            before the forecast call. No new recorder. No rollout project to start.
+            before the forecast call.
           </p>
         </article>
         <article className="rounded-2xl border border-white/10 bg-[#0c1433] p-5 sm:p-6">
           <p className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-400">
-            For account executives
+            For sales reps / agents
           </p>
           <h3 className="mt-2 text-xl font-semibold leading-snug text-white">
-            Resurrect cold deals and save your commission checks.
+            Get a second set of eyes on the deal you&apos;re personally trying to save.
           </h3>
           <p className="mt-3 text-sm leading-relaxed text-slate-300">
-            Five free scans a month, self-serve. Drop the transcript or email on a stuck deal in
-            your territory. No corporate procurement order to start.
+            Drop the transcript or email on that one deal. Five free analyses a month. You still
+            decide the next move.
           </p>
         </article>
       </div>
+      <p className="mt-5 max-w-3xl text-sm leading-relaxed text-slate-300">
+        You could prompt a general AI to analyze a stalled deal. Lazarus is purpose-built to make
+        stalled-deal recovery a repeatable process.
+      </p>
     </section>
   );
 }

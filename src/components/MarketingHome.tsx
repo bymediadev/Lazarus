@@ -196,9 +196,9 @@ export default function MarketingHome({
           <div>
             <dt>Why not paste the transcript into ChatGPT?</dt>
             <dd>
-              ChatGPT writes. Paste the same call twice and the answer can change. Lazarus checks
-              quotes against the transcript, then scores with fixed rules you can defend in the
-              room.
+              You could prompt a general AI to analyze a stalled deal. Lazarus is purpose-built to
+              make stalled-deal recovery a repeatable process. It checks quotes against the
+              transcript, then scores with fixed rules you can defend in the room.
             </dd>
           </div>
           <div>
@@ -227,8 +227,8 @@ export default function MarketingHome({
           <div>
             <dt>Will reps have to upload another tool?</dt>
             <dd>
-              No. The manager can drop the file or attach email. This is forecast triage, not rep
-              homework.
+              No. A manager can drop the file for the team. A rep can also run the one deal they are
+              trying to save. Either way, it is not a new daily tool.
             </dd>
           </div>
         </dl>
@@ -255,8 +255,8 @@ export default function MarketingHome({
       <section className="marketing-page marketing-reveal" id="about">
         <h2>About Lazarus Deal Recovery</h2>
         <p className="marketing-page-lead">
-          Built for sales managers and VPs who run forecast calls and need a straight answer on
-          stalled deals.
+          Purpose-built for one job: recovering stalled deals. Sales leaders use it across the team.
+          A rep can run the deal they are personally trying to save.
         </p>
         <p>
           You already have a recorder and HubSpot. What you do not have is a clear call on which

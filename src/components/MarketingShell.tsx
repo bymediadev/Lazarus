@@ -24,7 +24,7 @@ export default function MarketingShell({
           <img src="/logo.png" alt="Lazarus Deal Recovery" className="header-logo" />
           <div className="header-brand-copy">
             <span className="header-product-name">Lazarus Deal Recovery</span>
-            <span className="tag">For the forecast call</span>
+            <span className="tag">Purpose-built for stalled deals</span>
           </div>
         </button>
         <nav className="marketing-nav" aria-label="Site">
