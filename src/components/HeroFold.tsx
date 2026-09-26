@@ -121,7 +121,7 @@ function RangeNumberField({
         <label id={labelId} htmlFor={id} className="text-sm font-medium leading-snug text-slate-200">
           {label}
         </label>
-        <div className="flex shrink-0 items-center gap-1 rounded-md border border-white/15 bg-[#071028] px-2 py-1.5">
+        <div className="flex shrink-0 items-center gap-1 rounded-md border border-white/15 bg-white/5 px-2 py-1">
           {prefix && (
             <span className="text-sm font-semibold text-slate-400" aria-hidden="true">
               {prefix}
@@ -167,7 +167,7 @@ function RangeNumberField({
         step={step}
         value={clamp(value, min, max)}
         aria-labelledby={labelId}
-        className="h-6 w-full cursor-pointer accent-[#5cdb5c]"
+        className="h-5 w-full cursor-pointer accent-[#5cdb5c]"
         onChange={(e) => {
           onChange(Number(e.target.value));
           setDraft(null);
@@ -210,29 +210,21 @@ export default function HeroFold({ onScan }: { onScan: () => void }) {
   return (
     <section
       aria-labelledby={headingId}
-      className="grid items-center gap-8 px-5 py-8 sm:px-8 lg:grid-cols-2 lg:gap-12 lg:px-10 lg:py-8"
+      className="grid items-start gap-6 px-5 py-6 sm:px-8 md:grid-cols-2 md:gap-8 md:py-8 lg:gap-10 lg:px-10"
     >
       <div className="max-w-xl">
-        <p className="mb-3 font-[var(--mono)] text-[0.68rem] font-semibold uppercase tracking-[0.18em] text-[#3dd6c6]">
+        <p className="mb-2 font-[var(--mono)] text-[0.68rem] font-semibold uppercase tracking-[0.18em] text-[#3dd6c6]">
           Purpose-built stalled-deal recovery
         </p>
         <h1
           id={headingId}
-          className="text-[clamp(1.85rem,3.2vw,2.85rem)] font-bold leading-[1.15] tracking-tight text-white"
+          className="text-[clamp(1.7rem,2.8vw,2.65rem)] font-bold leading-[1.12] tracking-tight text-white"
         >
-          Your CRM tells you which deals have stalled.
+          Find out which stalled deals are worth saving — and exactly what to do next.
         </h1>
-        <p className="mt-4 text-base font-medium leading-relaxed text-slate-200 sm:text-lg">
-          Lazarus tells you why, whether they&apos;re worth saving, and what to do next.
-        </p>
-        <p className="mt-3 text-sm leading-relaxed text-slate-300 sm:text-base">
-          It reads the evidence behind a stalled deal, names why it stalled, says whether it is
-          recoverable, and gives the team specific next steps. Time goes to the opportunities that
-          still have a path to revenue.
-        </p>
-        <ul className="mt-5 grid gap-2" aria-label="What you get">
+        <ul className="mt-4 grid gap-2" aria-label="What you get">
           {BENEFITS.map((benefit) => (
-            <li key={benefit} className="flex items-start gap-2 text-sm font-medium text-slate-100">
+            <li key={benefit} className="flex items-start gap-2 text-[0.95rem] font-medium text-white">
               <svg viewBox="0 0 16 16" className="mt-0.5 h-4 w-4 shrink-0 text-[#7dff7d]" aria-hidden="true">
                 <path
                   fill="currentColor"
@@ -243,23 +235,26 @@ export default function HeroFold({ onScan }: { onScan: () => void }) {
             </li>
           ))}
         </ul>
-        <ul className="mt-5 flex flex-wrap gap-2" aria-label="Secure CRM integration">
+        <p className="mt-4 text-sm leading-relaxed text-slate-300">
+          Your CRM already shows which deals have stalled. Lazarus reads the evidence and scores it
+          with fixed rules, so the same deal does not get a different answer the next time you ask.
+        </p>
+        <ul className="mt-4 flex flex-wrap gap-2" aria-label="Secure CRM integration">
           <TrustBadge>Encrypted in transit and at rest</TrustBadge>
           <TrustBadge>HubSpot and Salesforce</TrustBadge>
           <TrustBadge>Not used to train public models</TrustBadge>
         </ul>
       </div>
 
-      <div className="rounded-2xl border border-white/10 bg-[#0c1433] p-5 shadow-[0_24px_70px_rgba(0,0,0,0.45)]">
+      <div className="rounded-2xl border border-white/10 bg-[#0c1433] p-4 shadow-[0_24px_70px_rgba(0,0,0,0.45)] sm:p-5">
         <p className="font-[var(--mono)] text-[0.68rem] font-semibold uppercase tracking-[0.16em] text-[#3dd6c6]">
           Quick business case
         </p>
-        <h2 className="mt-2 text-lg font-semibold leading-snug text-white">
+        <h2 className="mt-1.5 text-lg font-semibold leading-snug text-white">
           How much pipeline could be worth recovering?
         </h2>
-        <p className="mt-1 text-sm text-slate-400">Three numbers. The result is a planning baseline.</p>
 
-        <div className="mt-4 grid gap-4">
+        <div className="mt-3 grid gap-3">
           <RangeNumberField
             id="hero-acv"
             label="Average deal size"
@@ -297,7 +292,7 @@ export default function HeroFold({ onScan }: { onScan: () => void }) {
         <p className="sr-only" aria-live="polite">
           Stalled pipeline {money(leakage)}. Worth recovering {money(recoverable)}.
         </p>
-        <div className="mt-4 grid gap-3 rounded-xl border border-white/10 bg-black/25 p-3.5">
+        <div className="mt-3 grid gap-2.5 rounded-xl border border-white/10 bg-black/25 p-3">
           <div>
             <p className="text-xs font-semibold uppercase tracking-[0.12em] text-slate-400">
               Stalled pipeline
@@ -317,7 +312,7 @@ export default function HeroFold({ onScan }: { onScan: () => void }) {
               Worth recovering
             </p>
             <p
-              className="mt-1 text-[clamp(2.15rem,4vw,3.25rem)] font-extrabold leading-none tabular-nums text-[#7dff7d] drop-shadow-[0_0_22px_rgba(125,255,125,0.35)]"
+              className="mt-1 text-[clamp(1.85rem,3.2vw,2.7rem)] font-extrabold leading-none tabular-nums text-[#7dff7d] drop-shadow-[0_0_22px_rgba(125,255,125,0.35)]"
               data-recoverable-revenue={Math.round(recoverable)}
             >
               {money(animatedRecoverable)}
@@ -327,16 +322,11 @@ export default function HeroFold({ onScan }: { onScan: () => void }) {
             </p>
           </div>
         </div>
-        <p className="mt-3 text-sm leading-snug text-slate-300">
-          Put one real stalled deal through the test portal and see whether it belongs in this
-          number.
-        </p>
-
         <button
           type="button"
           onClick={onScan}
           aria-describedby={noteId}
-          className="mt-4 w-full rounded-lg border border-[#5cdb5c]/70 bg-gradient-to-b from-[#7dff7d] to-[#3da832] px-4 py-3 text-base font-bold text-[#04140a] shadow-[0_0_28px_rgba(92,219,92,0.35)] transition hover:brightness-110 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#7dff7d]"
+          className="mt-3 w-full rounded-lg border border-[#5cdb5c]/70 bg-gradient-to-b from-[#7dff7d] to-[#3da832] px-4 py-3 text-base font-bold text-[#04140a] shadow-[0_0_28px_rgba(92,219,92,0.35)] transition hover:brightness-110 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#7dff7d]"
         >
           {HERO_PRIMARY_CTA}
         </button>

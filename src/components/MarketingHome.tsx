@@ -196,9 +196,9 @@ export default function MarketingHome({
           <div>
             <dt>Why not paste the transcript into ChatGPT?</dt>
             <dd>
-              You could prompt a general AI to analyze a stalled deal. Lazarus is purpose-built to
-              make stalled-deal recovery a repeatable process. It checks quotes against the
-              transcript, then scores with fixed rules you can defend in the room.
+              ChatGPT writes. Paste the same call twice and the answer can change. A general AI
+              generates an answer. Lazarus checks quotes against the transcript, then scores with
+              fixed rules you can defend in the room.
             </dd>
           </div>
           <div>
