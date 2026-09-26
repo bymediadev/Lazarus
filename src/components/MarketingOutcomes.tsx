@@ -25,7 +25,7 @@ const COMPARE = [
   {
     feature: "Actionable next steps",
     crm: "Tells the rep to follow up.",
-    lazarus: "A 0–7 and 7–14 day plan from the evidence, ready to assign or paste into the CRM.",
+    lazarus: "The next action and the next checkpoint from the evidence. A longer path only if the deal needs one.",
   },
   {
     feature: "Data input reliability",
@@ -109,8 +109,8 @@ export function CrmComparison() {
         Why Traditional CRMs Fall Short
       </h2>
       <p className="mt-3 max-w-3xl text-base leading-relaxed text-slate-300">
-        Your CRM can flag that a deal is inactive. Lazarus isolates the why and builds the 0–90 day
-        playbook to fix it.
+        Your CRM can flag that a deal is inactive. Lazarus isolates the why, then gives the next
+        action, the next checkpoint, and a longer path only when the evidence needs one.
       </p>
       <div className="mt-6 overflow-hidden rounded-2xl border border-white/10">
         <div className="hidden grid-cols-[1.05fr_1fr_1.25fr] bg-white/5 text-xs font-semibold uppercase tracking-[0.12em] text-slate-400 md:grid">

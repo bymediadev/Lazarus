@@ -57,8 +57,8 @@ export default function MarketingHome({
             <span>3</span>
             <h3>The deal updates</h3>
             <p>
-              Connect HubSpot or Salesforce. Notes come in; the 0–90 day plan writes back to the
-              record.
+              Connect HubSpot or Salesforce. Notes come in; the next action and the plan write back
+              to the record.
             </p>
           </li>
         </ol>
@@ -69,7 +69,9 @@ export default function MarketingHome({
       <section className="marketing-simple marketing-reveal" id="brief" aria-label="What the report returns">
         <h2>What the report gives you</h2>
         <p>
-          Read it in this order. The same brief is the 0–90 day plan you put on the deal.
+          Lazarus does not give every stalled deal the same 90-day playbook. It gives you the next
+          action, the next checkpoint, and a longer path only when the evidence needs one. If the
+          deal is a flat no, the plan is to stop.
         </p>
         <ol className="marketing-report-walk">
           <li>
@@ -106,29 +108,30 @@ export default function MarketingHome({
                 evidence.
               </li>
               <li>
-                <strong>How to save it</strong> — the first actions. Open Concise when you need the
-                full quarter.
+                <strong>How to save it</strong> — the next actions. Open Concise when the evidence
+                needs a longer path.
               </li>
             </ul>
           </li>
           <li>
-            <h3>Roll it into the 0–90 day plan</h3>
+            <h3>The recovery plan</h3>
             <p>
-              Open Concise. The Resuscitation Plan is what you assign. Copy for CRM, or Push to
-              HubSpot or Salesforce. The note on the deal is that plan.
+              Open Concise. Assign what is there. Copy for CRM, or Push to HubSpot or Salesforce.
+              Empty later steps stay off the note.
             </p>
             <ul>
               <li>
-                <strong>This week</strong> — the 0–7 day moves from How to save it.
+                <strong>This week (0–7 days)</strong> — the next action.
               </li>
               <li>
-                <strong>30 days</strong> — what the owner does while the blocker is still live.
+                <strong>Inside 30 days</strong> — the checkpoint while that blocker is still live.
               </li>
               <li>
-                <strong>60 days</strong> — the next test if that first move does not land.
+                <strong>30–90 days</strong> — only if procurement, legal, or security still has to
+                move. That is the maximum horizon, not a wait.
               </li>
               <li>
-                <strong>90 days</strong> — the last actions before you cut it from the forecast.
+                <strong>Flat no</strong> — stop. Do not spend another quarter on it.
               </li>
             </ul>
           </li>
@@ -141,13 +144,17 @@ export default function MarketingHome({
             Procurement wants a security review. The champion has not scheduled it. The deal is
             still alive — it is not a flat no.
           </p>
-          <h3>0–90 day plan</h3>
+          <h3>The plan for this deal</h3>
           <ol>
-            <li>This week: get the champion to book the security review.</li>
-            <li>30 days: send the one-pager they can forward internally.</li>
-            <li>60 days: multi-thread to finance so procurement is not the only gate.</li>
-            <li>90 days: if there is still no buyer-owned step, cut it from the forecast.</li>
+            <li>This week (0–7 days): get the champion to book the security review.</li>
+            <li>Inside 30 days: send the one-pager they can forward internally.</li>
+            <li>
+              30–90 days: only if the review is still open. That is the longest horizon, not a wait.
+            </li>
           </ol>
+          <p>
+            A flat no is shorter: stop, and do not spend another quarter on it.
+          </p>
           <p className="marketing-brief-foot">
             Copy for CRM, or Push to HubSpot or Salesforce. That note is the plan.
           </p>

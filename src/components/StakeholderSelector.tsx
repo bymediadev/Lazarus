@@ -40,7 +40,7 @@ const ROLES: Role[] = [
     detail: "CRO / Sales Ops",
     header: "Maximum Pipeline Accuracy & Immediate Time-to-Value",
     bullets: [
-      "Actionable 0–90 Day Playbooks: Moves past basic stall alerts. Identifies hidden champions and detractors inside the target buying committee so reps know exactly who to call.",
+      "A plan sized to the deal: the next action, the next checkpoint, and a longer path only when procurement, legal, or security still has to move. A flat no says stop.",
       "Frictionless Onboarding: Zero engineering hours required from your internal IT team to initiate a 5-deal proof-of-concept.",
     ],
   },
