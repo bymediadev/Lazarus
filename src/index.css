@@ -5278,7 +5278,7 @@ a.run-button:hover {
 }
 
 .marketing-band .pricing-plan-grid {
-  max-width: 72rem;
+  max-width: none;
 }
 
 #how,
@@ -5293,6 +5293,8 @@ a.run-button:hover {
 }
 
 .marketing-qa {
+  display: grid;
+  grid-template-columns: 1fr;
   margin: 1rem 0 0;
 }
 
@@ -5316,7 +5318,7 @@ a.run-button:hover {
 .marketing-main {
   flex: 1;
   width: 100%;
-  max-width: 76rem;
+  max-width: none;
   margin: 0 auto;
 }
 
@@ -5414,7 +5416,7 @@ a.run-button:hover {
 }
 
 .marketing-product {
-  max-width: 68rem;
+  max-width: none;
 }
 
 .marketing-product-caption {
@@ -5650,7 +5652,7 @@ a.run-button:hover {
 }
 
 .marketing-brief-preview {
-  max-width: 36rem;
+  max-width: none;
   margin-top: 1.1rem;
   padding: 1.15rem 1.25rem 1.05rem;
   border: 1px solid rgba(61, 214, 198, 0.28);
@@ -5701,6 +5703,18 @@ a.run-button:hover {
   gap: 0.85rem;
   margin: 1.1rem 0 1.35rem;
   padding: 0;
+}
+
+@media (min-width: 900px) {
+  .marketing-report-walk {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    align-items: stretch;
+  }
+
+  .marketing-qa {
+    grid-template-columns: 1fr 1fr;
+    column-gap: 2.5rem;
+  }
 }
 
 .marketing-report-walk li {
@@ -5854,7 +5868,7 @@ a.run-button:hover {
 .marketing-simple,
 .marketing-page {
   padding: 0.5rem 1.5rem 2.25rem;
-  max-width: 46rem;
+  max-width: none;
 }
 
 .marketing-page {
@@ -5891,7 +5905,36 @@ a.run-button:hover {
 }
 
 .marketing-contact-form {
-  max-width: 28rem;
+  max-width: none;
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 0.85rem 1.25rem;
+}
+
+@media (min-width: 800px) {
+  .marketing-contact-form {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .marketing-contact-form > :not(.login-field),
+  .marketing-contact-form > .login-field:first-child,
+  .marketing-contact-form > .login-field:has(textarea) {
+    grid-column: 1 / -1;
+  }
+}
+
+@media (min-width: 960px) {
+  #about {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    column-gap: 2.5rem;
+    align-items: start;
+  }
+
+  #about > h2,
+  #about > .marketing-page-lead {
+    grid-column: 1 / -1;
+  }
 }
 
 .marketing-contact-form textarea,

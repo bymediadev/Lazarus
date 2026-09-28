@@ -212,7 +212,7 @@ export default function HeroFold({ onScan }: { onScan: () => void }) {
       aria-labelledby={headingId}
       className="grid items-start gap-6 px-5 py-6 sm:px-8 md:grid-cols-2 md:gap-8 md:py-8 lg:gap-10 lg:px-10"
     >
-      <div className="max-w-xl">
+      <div>
         <p className="mb-2 font-[var(--mono)] text-[0.68rem] font-semibold uppercase tracking-[0.18em] text-[#3dd6c6]">
           Purpose-built stalled-deal recovery
         </p>
