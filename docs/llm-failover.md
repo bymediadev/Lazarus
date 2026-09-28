@@ -16,7 +16,7 @@ Skip:
 
 Keep `GEMINI_API_KEY`. When Google is up, **signed-in** analyses still try Gemini first.
 
-**The 5 free runs** (no signup, or Free plan): **OpenRouter first.** If that request times out or is rate-limited, Gemini is the spare. Paid plans stay Gemini-first, with OpenRouter as failover.
+**The 5 free runs** (no signup, or Free plan): **Gemini first** when `GEMINI_API_KEY` is set, so a slow free host cannot use up the request. OpenRouter `:free` is the spare if Gemini times out or is rate-limited. If Gemini is unset, the free run starts on OpenRouter. Paid plans stay Gemini-first, with OpenRouter as failover. A timed-out run does not spend one of the five.
 
 ## Render env
 
@@ -42,8 +42,8 @@ Free `:free` hosts often **cold-load** (Hugging Face-style â€œmodel is loadingâ€
 
 | Job | Paid (Gemini if up) | 5 free runs |
 |-----|---------------------|-------------|
-| Full post-mortem | Flash / Pro / 3.1 Pro by plan | OpenRouter `:free`, then Gemini if that fails |
-| Relevance gate, live triage, objections | Flash | OpenRouter small `:free`, then Gemini if that fails |
+| Full post-mortem | Flash / Pro / 3.1 Pro by plan | Gemini, then OpenRouter `:free` if Gemini fails |
+| Relevance gate, live triage, objections | Flash | Gemini Flash, then OpenRouter small `:free` if Gemini fails |
 
 ## Honest limits
 

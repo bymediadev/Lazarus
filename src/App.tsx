@@ -968,9 +968,11 @@ export default function App() {
                         ? `Cannot reach API (${apiTargetLabel()}). Check VITE_API_URL and CORS.`
             : "Cannot reach API server. Run npm run dev and try again."
         );
+        if (auth.session) void refreshBilling();
       } else {
         setRelevanceBlocked(false);
         setError(err instanceof Error ? err.message : "Something went wrong.");
+        if (auth.session) void refreshBilling();
       }
     } finally {
       resetCaptchaWidget();

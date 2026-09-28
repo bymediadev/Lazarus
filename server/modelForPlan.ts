@@ -11,7 +11,7 @@ export function modelTierFromConsume(consume: ConsumeKind | null | undefined): M
   return "free";
 }
 
-/** The 5 free runs (no signup or Free plan) use OpenRouter. Paid / founder stay Gemini-first. */
+/** The 5 free runs (no signup or Free plan). Paid / founder stay on the paid model order. */
 export function preferOpenWeightsFor(opts: {
   userId?: string | null;
   consume?: ConsumeKind | null;
@@ -22,7 +22,7 @@ export function preferOpenWeightsFor(opts: {
   return !opts.userId;
 }
 
-/** Live routes do not reserve a slot; still route the 5 free runs to OpenRouter. */
+/** Live routes do not reserve a slot; the 5 free runs still use the free model order. */
 export async function consumeForLlmRoute(
   userId?: string | null,
   exempt?: boolean
@@ -53,7 +53,7 @@ export async function resolveModelTierForUser(opts: {
   return "free";
 }
 
-/** Live/gate/guide text. Gemini Flash first unless preferOpenWeights (5 free runs). */
+/** Live/gate/guide text. Free runs and paid runs both start on Gemini Flash when that key exists. */
 export async function generateGeminiText(
   prompt: string,
   _tier?: ModelTier,

@@ -293,6 +293,10 @@ app.post(
   let consumeGuestFree = false;
   let consumeIpMonth = false;
   let consumePpuIp = false;
+  let clientGone = false;
+  res.on("close", () => {
+    if (!res.writableEnded) clientGone = true;
+  });
   try {
     if (await rejectIfAnalysesBlocked(req, res)) return;
     const captcha = await enforceCaptcha(req);
@@ -533,6 +537,9 @@ app.post(
       );
     }
 
+    if (clientGone) {
+      throw new Error("client aborted before the brief was sent");
+    }
     res.json({
       ...result,
       id: savedId,

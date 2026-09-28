@@ -57,28 +57,30 @@ try {
   );
 
   const guestAutopsy = llmCandidatesForJob("autopsy", "free", { preferOpenWeights: true });
-  assert(guestAutopsy[0].provider === "openrouter", "guest 5-free autopsy starts on OpenRouter");
+  assert(guestAutopsy[0].provider === "gemini", "guest 5-free autopsy starts on Gemini");
+  const openRouterGuest = guestAutopsy.find((c) => c.provider === "openrouter");
+  assert(openRouterGuest, "free runs still fail over to OpenRouter");
   assert(
     guestAutopsy.filter((c) => c.provider === "openrouter").length === 1,
     "OpenRouter is one routed request, not a sequential cold-load chain"
   );
   assert(
-    Array.isArray(guestAutopsy[0].fallbackModels) &&
-      guestAutopsy[0].fallbackModels.length > 0 &&
-      guestAutopsy[0].fallbackModels.length <= 2,
+    Array.isArray(openRouterGuest.fallbackModels) &&
+      openRouterGuest.fallbackModels.length > 0 &&
+      openRouterGuest.fallbackModels.length <= 2,
     "OpenRouter includes at most two fallbacks (API cap is 3 models total)"
   );
   assert(
-    guestAutopsy[0].model === "nvidia/nemotron-3.5-lightning:free",
-    "free autopsy prefers the fast OpenRouter model first"
+    openRouterGuest.model === "nvidia/nemotron-3.5-lightning:free",
+    "OpenRouter failover prefers the fast free model first"
   );
   const openRouterAt = guestAutopsy.findIndex((c) => c.provider === "openrouter");
   const geminiAt = guestAutopsy.findIndex((c) => c.provider === "gemini");
-  assert(geminiAt > openRouterAt && geminiAt >= 0, "five free runs fall through to Gemini when OpenRouter fails");
+  assert(geminiAt === 0 && openRouterAt > geminiAt, "five free runs try Gemini before a slow OpenRouter host");
 
   assert(preferOpenWeightsFor({ userId: null }) === true, "anonymous prefers open weights");
   assert(preferOpenWeightsFor({ consume: "guest" }) === true, "guest consume prefers open weights");
-  assert(preferOpenWeightsFor({ userId: "u1", consume: "free" }) === true, "signed-in free plan uses OpenRouter");
+  assert(preferOpenWeightsFor({ userId: "u1", consume: "free" }) === true, "signed-in free plan uses the free model order");
   assert(preferOpenWeightsFor({ userId: "u1", consume: "ppu" }) === false, "paid extra report stays Gemini-first");
   assert(preferOpenWeightsFor({ userId: "u1", exempt: true }) === false, "founder exempt stays Gemini-first");
 

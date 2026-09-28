@@ -185,9 +185,10 @@ export function llmCandidatesForJob(
     : [];
 
   if (opts.preferOpenWeights) {
-    const freePath = [...openrouter, ...groq];
-    // Free runs try OpenRouter first. Gemini is the spare when that request times out or is rate-limited.
-    return freePath.length > 0 ? [...freePath, ...gemini] : gemini;
+    const spare = [...openrouter, ...groq];
+    // The 5 free runs start on Gemini when that key exists. OpenRouter is the spare.
+    // Waiting out a free-host timeout first is what made a free analysis look like it died.
+    return gemini.length > 0 ? [...gemini, ...spare] : spare;
   }
   return [...gemini, ...openrouter, ...groq, ...cerebras];
 }
