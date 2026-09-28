@@ -69,7 +69,7 @@ export function RevenueChain() {
         runs the deal.
       </p>
       <div className="mt-6 grid gap-4 md:grid-cols-2">
-        <article className="rounded-2xl border border-[#3dd6c6]/40 bg-[#0c1433] p-5 sm:p-6">
+        <article id="leaders" className="rounded-2xl border border-[#3dd6c6]/40 bg-[#0c1433] p-5 sm:p-6">
           <p className="text-xs font-semibold uppercase tracking-[0.14em] text-[#3dd6c6]">
             For sales leaders
           </p>
@@ -81,7 +81,7 @@ export function RevenueChain() {
             before the forecast call.
           </p>
         </article>
-        <article className="rounded-2xl border border-white/10 bg-[#0c1433] p-5 sm:p-6">
+        <article id="reps" className="rounded-2xl border border-white/10 bg-[#0c1433] p-5 sm:p-6">
           <p className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-400">
             For sales reps / agents
           </p>

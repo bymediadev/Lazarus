@@ -72,10 +72,9 @@ try {
     guestAutopsy[0].model === "nvidia/nemotron-3.5-lightning:free",
     "free autopsy prefers the fast OpenRouter model first"
   );
-  assert(
-    !guestAutopsy.some((c) => c.provider === "gemini"),
-    "five free runs do not call Gemini when OpenRouter is configured"
-  );
+  const openRouterAt = guestAutopsy.findIndex((c) => c.provider === "openrouter");
+  const geminiAt = guestAutopsy.findIndex((c) => c.provider === "gemini");
+  assert(geminiAt > openRouterAt && geminiAt >= 0, "five free runs fall through to Gemini when OpenRouter fails");
 
   assert(preferOpenWeightsFor({ userId: null }) === true, "anonymous prefers open weights");
   assert(preferOpenWeightsFor({ consume: "guest" }) === true, "guest consume prefers open weights");
@@ -92,6 +91,11 @@ try {
   process.env.OPENROUTER_API_KEY = "or-test";
   const openRouterFirst = llmCandidatesForJob("autopsy", "free");
   assert(openRouterFirst[0].provider === "openrouter", "without Gemini, OpenRouter is first");
+  const guestNoGemini = llmCandidatesForJob("autopsy", "free", { preferOpenWeights: true });
+  assert(
+    !guestNoGemini.some((c) => c.provider === "gemini"),
+    "free runs skip Gemini when that key is unset"
+  );
 
   assert(isRetryableLlmError(new Error("503 high demand")), "503 is retryable");
   assert(isRetryableLlmError(new Error("429 rate_limit")), "429 is retryable");

@@ -28,7 +28,7 @@ const DEFAULT_GROQ_LIVE = ["llama-3.1-8b-instant"];
 const DEFAULT_OPENROUTER_AUTOPSY = [
   "nvidia/nemotron-3.5-lightning:free",
   "poolside/laguna-s-2.1:free",
-  "minimax/minimax-m2.7:free",
+  "google/gemma-4-26b-a4b-it:free",
 ];
 const DEFAULT_OPENROUTER_LIVE = [
   "nvidia/nemotron-3.5-lightning:free",
@@ -186,8 +186,8 @@ export function llmCandidatesForJob(
 
   if (opts.preferOpenWeights) {
     const freePath = [...openrouter, ...groq];
-    // Free runs stay on OpenRouter. Gemini only if no free spare is configured yet.
-    return freePath.length > 0 ? freePath : gemini;
+    // Free runs try OpenRouter first. Gemini is the spare when that request times out or is rate-limited.
+    return freePath.length > 0 ? [...freePath, ...gemini] : gemini;
   }
   return [...gemini, ...openrouter, ...groq, ...cerebras];
 }
@@ -223,7 +223,7 @@ function allFailedError(lastError: unknown): Error {
   const detail =
     lastError instanceof Error ? lastError.message.split("\n")[0] : "all models unavailable";
   return new Error(
-    `All LLM providers failed (Gemini, then OpenRouter).\n\nLast error: ${detail}\n\nAdd a free OPENROUTER_API_KEY at https://openrouter.ai/keys.`
+    `All LLM providers failed.\n\nLast error: ${detail}`
   );
 }
 

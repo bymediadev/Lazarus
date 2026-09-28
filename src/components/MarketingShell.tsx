@@ -31,14 +31,17 @@ export default function MarketingShell({
           <button type="button" onClick={() => scrollToSection("how")}>
             How it works
           </button>
-          <button type="button" onClick={() => scrollToSection("brief")}>
-            The report
+          <button type="button" onClick={() => scrollToSection("see")}>
+            See it work
+          </button>
+          <button type="button" onClick={() => scrollToSection("leaders")}>
+            Leaders
+          </button>
+          <button type="button" onClick={() => scrollToSection("reps")}>
+            Reps
           </button>
           <button type="button" onClick={() => scrollToSection("pricing")}>
             Pricing
-          </button>
-          <button type="button" onClick={() => scrollToSection("contact")}>
-            Contact
           </button>
         </nav>
         <div className="header-right">

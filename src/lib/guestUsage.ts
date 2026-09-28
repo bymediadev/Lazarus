@@ -113,6 +113,12 @@ export function incrementGuestUsage(): number {
   return next;
 }
 
+/** Align client counter with a server-side guest cap hit (does not invent extra free runs). */
+export function markGuestUsageExhausted(): number {
+  writeCount(GUEST_ANALYSIS_CAP);
+  return GUEST_ANALYSIS_CAP;
+}
+
 /**
  * Free-analysis cap applies to everyone except the founder account (and ops role / demo bypass).
  * Regular signed-in users still hit the freemium lock — demos run on the founder login.
@@ -133,7 +139,7 @@ export function guestCapLockMessage(signedIn = false): string {
   if (signedIn) {
     return `You’ve used your ${GUEST_ANALYSIS_CAP} free analyses this month. Buy a $10 extra report to keep going, or wait until next month when your allowance renews.`;
   }
-  return `You’ve used your ${GUEST_ANALYSIS_CAP} free analyses this month. Buy a $10 extra report (then create your account), or wait until next month when the free allowance renews.`;
+  return `You’ve used your ${GUEST_ANALYSIS_CAP} free analyses this month. Buy a $10 extra report (no account required at checkout), or wait until next month. Sign up only if you want to save results.`;
 }
 
 export function guestNearCapMessage(): string {

@@ -232,8 +232,11 @@ function formatApiError(message: string): string {
   if (/unavailable for free|No endpoints found/i.test(message)) {
     return "OpenRouter free models changed. Update OPENROUTER_MODEL_LIVE / OPENROUTER_MODEL_AUTOPSY. See docs/llm-failover.md.";
   }
+  if (message.includes("ETIMEDOUT") || message.includes("aborted")) {
+    return "The analysis timed out. Wait a minute and run the deal again.";
+  }
   if (message.includes("429") || message.includes("quota") || message.includes("All LLM providers failed")) {
-    return "LLM providers are rate-limited or down. Wait a few minutes, or add a free OPENROUTER_API_KEY. See docs/llm-failover.md.";
+    return "The analysis providers are rate-limited or down. Wait a few minutes and run the deal again.";
   }
   if (message.includes("GEMINI_API_KEY") || message.includes("No LLM provider")) {
     return "No LLM key is set. Add GEMINI_API_KEY, or a free OPENROUTER_API_KEY. See docs/llm-failover.md.";

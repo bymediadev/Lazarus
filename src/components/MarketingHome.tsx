@@ -1,9 +1,11 @@
-import { COMPANY_LINKEDIN, FOUNDER_NAME, WALKTHROUGH_EMBED_URL } from "../lib/site";
-import { scrollToSection } from "../lib/appRoute";
+import { COMPANY_LINKEDIN, FOUNDER_NAME } from "../lib/site";
+import { HERO_PRIMARY_CTA, HERO_PRIMARY_CTA_NOTE } from "../lib/cta";
 import { useReveal } from "../lib/useReveal";
 import { PricingPlanCards } from "./PricingGate";
 import ContactSection from "./ContactSection";
 import HeroFold from "./HeroFold";
+import PipelineCalculator from "./PipelineCalculator";
+import StalledDealSeries from "./StalledDealSeries";
 import { CrmComparison, FrictionPoints, RevenueChain } from "./MarketingOutcomes";
 import StakeholderSelector from "./StakeholderSelector";
 import TrustPackLink from "./TrustPackLink";
@@ -31,8 +33,6 @@ export default function MarketingHome({
   return (
     <>
       <HeroFold onScan={onPortal} />
-
-      <StakeholderSelector />
 
       <section className="marketing-steps marketing-reveal" id="how" aria-label="How it works">
         <h2>How it works</h2>
@@ -63,8 +63,6 @@ export default function MarketingHome({
           </li>
         </ol>
       </section>
-
-      <FrictionPoints />
 
       <section className="marketing-simple marketing-reveal" id="brief" aria-label="What the report returns">
         <h2>What the report gives you</h2>
@@ -161,6 +159,8 @@ export default function MarketingHome({
         </article>
       </section>
 
+      <StalledDealSeries />
+
       <section className="marketing-simple marketing-product marketing-reveal" id="layout" aria-label="The workspace">
         <h2>The workspace</h2>
         <p className="marketing-product-caption">Evidence on the left. Brief on the right.</p>
@@ -168,26 +168,58 @@ export default function MarketingHome({
           <img
             src="/landing-portal.png"
             alt="Lazarus Deal Recovery workspace: drop evidence on the left, recovery brief on the right"
-            width={1600}
-            height={900}
+            width={1604}
+            height={1040}
             loading="lazy"
             decoding="async"
           />
         </figure>
-        <p className="marketing-product-caption">A four-minute walkthrough</p>
-        <div className="marketing-video-frame">
-          <iframe
-            src={WALKTHROUGH_EMBED_URL}
-            title="How Lazarus Recovers Stalled Sales Deals"
-            allow="fullscreen; picture-in-picture"
-            allowFullScreen
-          />
-        </div>
+      </section>
+
+      <section className="marketing-simple marketing-reveal" id="method" aria-label="Purpose-built method">
+        <h2>Why not paste the transcript into ChatGPT?</h2>
+        <p>
+          ChatGPT writes. Paste the same call twice and the answer can change. A general AI
+          generates an answer. Lazarus checks quotes against the transcript, then scores with fixed
+          rules you can defend in the room.
+        </p>
+        <ol className="marketing-step-grid">
+          <li>
+            <span>1</span>
+            <h3>Evidence</h3>
+            <p>Lazarus checks quotes against the transcript.</p>
+          </li>
+          <li>
+            <span>2</span>
+            <h3>Score</h3>
+            <p>Then scores with fixed rules.</p>
+          </li>
+          <li>
+            <span>3</span>
+            <h3>Plan</h3>
+            <p>You can defend it in the room.</p>
+          </li>
+        </ol>
+      </section>
+
+      <section className="marketing-page marketing-reveal" id="start" aria-label="Start with one transcript">
+        <h2>Start with one transcript</h2>
+        <p className="marketing-page-lead">
+          You can run one deal without connecting HubSpot or Salesforce. Just paste text.
+        </p>
+        <button type="button" className="run-button marketing-inline-cta" onClick={onPortal}>
+          {HERO_PRIMARY_CTA}
+        </button>
+        <p>{HERO_PRIMARY_CTA_NOTE}</p>
       </section>
 
       <RevenueChain />
 
+      <FrictionPoints />
+
       <CrmComparison />
+
+      <StakeholderSelector />
 
       <section className="marketing-simple marketing-reveal" id="answers" aria-label="Straight answers">
         <h2>Straight answers</h2>
@@ -241,6 +273,10 @@ export default function MarketingHome({
         </dl>
       </section>
 
+      <section className="marketing-reveal px-5 py-10 sm:px-8 lg:px-10" id="calculator" aria-label="Pipeline calculator">
+        <PipelineCalculator onScan={onPortal} />
+      </section>
+
       <section className="marketing-page marketing-band marketing-reveal" id="pricing">
         <h2>Five free a month. Then $10 a report, or a monthly plan.</h2>
         <p className="marketing-page-lead">
@@ -285,6 +321,17 @@ export default function MarketingHome({
       </section>
 
       <ContactSection />
+
+      <section className="marketing-page marketing-reveal" id="test" aria-label="Test a stalled deal">
+        <h2>Test a stalled deal</h2>
+        <p className="marketing-page-lead">
+          You can run one deal without connecting HubSpot or Salesforce. Just paste text.
+        </p>
+        <button type="button" className="run-button marketing-inline-cta" onClick={onPortal}>
+          {HERO_PRIMARY_CTA}
+        </button>
+        <p>{HERO_PRIMARY_CTA_NOTE}</p>
+      </section>
     </>
   );
 }

@@ -16,7 +16,7 @@ Skip:
 
 Keep `GEMINI_API_KEY`. When Google is up, **signed-in** analyses still try Gemini first.
 
-**The 5 free runs** (no signup, or Free plan): **OpenRouter only.** Gemini is not called, so those analyses still run when Google is down. Paid plans stay Gemini-first, with OpenRouter as failover.
+**The 5 free runs** (no signup, or Free plan): **OpenRouter first.** If that request times out or is rate-limited, Gemini is the spare. Paid plans stay Gemini-first, with OpenRouter as failover.
 
 ## Render env
 
@@ -30,7 +30,7 @@ After saving, wait for the service to restart. `/api/health` should show `"openr
 Optional model overrides (comma-separated):
 
 ```
-OPENROUTER_MODEL_AUTOPSY=nvidia/nemotron-3.5-lightning:free,poolside/laguna-s-2.1:free,minimax/minimax-m2.7:free
+OPENROUTER_MODEL_AUTOPSY=nvidia/nemotron-3.5-lightning:free,poolside/laguna-s-2.1:free,google/gemma-4-26b-a4b-it:free
 OPENROUTER_MODEL_LIVE=nvidia/nemotron-3.5-lightning:free,liquid/lfm-2.5-2.6b:free,poolside/laguna-xs-2.1:free
 ```
 
@@ -42,8 +42,8 @@ Free `:free` hosts often **cold-load** (Hugging Face-style â€œmodel is loadingâ€
 
 | Job | Paid (Gemini if up) | 5 free runs |
 |-----|---------------------|-------------|
-| Full post-mortem | Flash / Pro / 3.1 Pro by plan | OpenRouter `:free` only |
-| Relevance gate, live triage, objections | Flash | OpenRouter small `:free` only |
+| Full post-mortem | Flash / Pro / 3.1 Pro by plan | OpenRouter `:free`, then Gemini if that fails |
+| Relevance gate, live triage, objections | Flash | OpenRouter small `:free`, then Gemini if that fails |
 
 ## Honest limits
 

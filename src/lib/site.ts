@@ -7,8 +7,38 @@ export const STRIPE_PAYMENT_LINKS = {
   team: "https://buy.stripe.com/4gM14p1MSgC3bGo6Pd4Ja02",
 } as const;
 
-export const WALKTHROUGH_EMBED_URL =
-  "https://www.loom.com/embed/a4fb54eb44d54202bbbbcac771c8ec59";
+export type StalledDealVerdict = "recoverable" | "flat-no";
+
+/** Newest week first. Add a line; the homepage section picks it up. */
+export type StalledDealEpisode = {
+  id: string;
+  week: string;
+  title: string;
+  situation: string;
+  verdict: StalledDealVerdict;
+  blocker: string;
+  nextAction: string;
+  loomId: string;
+};
+
+export const STALLED_DEAL_SERIES: StalledDealEpisode[] = [
+  {
+    id: "week-1",
+    week: "Week 1",
+    title: "Deterministic Engine to Recover Stalled Deals",
+    situation: "A stalled deal, run through the fixed-rule engine.",
+    verdict: "recoverable",
+    blocker: "A general AI can give a different answer the next time you paste the same call.",
+    nextAction: "Score the deal with fixed rules you can defend in the room.",
+    loomId: "3d22fb3f9c7b48f6ac9b2d3b713b4c39",
+  },
+];
+
+export function loomEmbedUrl(loomId: string): string {
+  return `https://www.loom.com/embed/${loomId}?autoplay=0`;
+}
+
+export const WALKTHROUGH_EMBED_URL = loomEmbedUrl(STALLED_DEAL_SERIES[0].loomId);
 
 export const SITE_ORIGIN = "https://www.getldr.ca";
 

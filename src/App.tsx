@@ -30,6 +30,7 @@ import {
   guestNearCapMessage,
   incrementGuestUsage,
   isGuestUsageLocked,
+  markGuestUsageExhausted,
   shouldEnforceGuestCap,
 } from "./lib/guestUsage";
 import {
@@ -43,7 +44,7 @@ import {
   type BillingMe,
   type CheckoutPlan,
 } from "./lib/billing";
-import PricingGate from "./components/PricingGate";
+import PricingGate, { PricingPlanCards } from "./components/PricingGate";
 import MarketingHome from "./components/MarketingHome";
 import MarketingShell from "./components/MarketingShell";
 import { fetchFounderMe } from "./lib/founderApi";
@@ -129,6 +130,7 @@ export default function App() {
   const [opsChecked, setOpsChecked] = useState(false);
   const [forceProductConsole, setForceProductConsole] = useState(false);
   const [activeTab, setActiveTab] = useState<InputTab>("call");
+  const [moreEvidenceOpen, setMoreEvidenceOpen] = useState(false);
   const [guideOpen, setGuideOpen] = useState(false);
   const [accountPortalOpen, setAccountPortalOpen] = useState(false);
   const [dealsPortalOpen, setDealsPortalOpen] = useState(false);
@@ -781,26 +783,24 @@ export default function App() {
     setError(null);
     setRelevanceBlocked(false);
     try {
-      const { text, source } = await loadDemoSalesTranscript();
+      const { text } = await loadDemoSalesTranscript();
       setCallTranscript((previous) =>
         previous.trim() ? `${previous}\n\n--- SAMPLE TRANSCRIPT ---\n\n${text}` : text
       );
       setActiveTab("call");
-      const sourceLabel =
-        source === "s3-primary"
-          ? "primary S3"
-          : source === "s3-fallback"
-            ? "fallback S3"
-            : source === "local"
-              ? "local demo asset"
-              : "embedded fail-safe";
-      setDemoTranscriptNotice(`Demo sales transcript loaded (${sourceLabel}).`);
+      setDemoTranscriptNotice(
+        "Sample loaded: SyncFlow and Northline Manufacturing. The champion is in. Dave, the VP who signs off on the network, missed the call."
+      );
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to load demo sales transcript.");
     } finally {
       setDemoTranscriptLoading(false);
     }
   };
+
+  useEffect(() => {
+    if (activeTab !== "call") setMoreEvidenceOpen(true);
+  }, [activeTab]);
 
   useEffect(() => {
     if (route !== "app") return;
@@ -833,8 +833,8 @@ export default function App() {
       }) &&
       (auth.session ? billing?.payment_required === true : isGuestUsageLocked())
     ) {
+      // Stay on the portal — show PricingGate. Do not force sign-up for free use.
       setError(guestCapLockMessage(!!auth.session));
-      if (!auth.session) openSignupPortal();
       return;
     }
 
@@ -947,8 +947,9 @@ export default function App() {
         err instanceof PostMortemApiError &&
         (err.code === "GUEST_USAGE_LIMIT" || err.code === "PAYMENT_REQUIRED")
       ) {
+        // Cap hit — keep guest on the tool with inline pricing. Account is optional.
         setError(err.message);
-        if (!auth.session) openSignupPortal();
+        if (!auth.session) setGuestUsage(markGuestUsageExhausted());
         void refreshBilling();
       } else if (
         err instanceof PostMortemApiError &&
@@ -1229,6 +1230,127 @@ export default function App() {
               onOpenGuide={() => setGuideOpen(true)}
             />
 
+            <p className="intake-front-lead">
+              You can run one deal without connecting HubSpot or Salesforce. Just paste text.
+            </p>
+            <div className="input-group input-group-grow">
+              <div className="input-label-row">
+                <label htmlFor="call-transcript">Call transcript</label>
+                <div className="input-label-actions">
+                  <label className="btn-secondary text-upload-control">
+                    Upload text
+                    <input
+                      type="file"
+                      accept={TEXT_ACCEPT}
+                      onChange={(e) => {
+                        void handleTextEvidence(e.target.files?.[0]);
+                        e.target.value = "";
+                      }}
+                    />
+                  </label>
+                </div>
+              </div>
+              <textarea
+                id="call-transcript"
+                className="transcript-textarea intake-transcript"
+                value={callTranscript}
+                onChange={(e) => {
+                  setCallTranscript(e.target.value);
+                  setRelevanceBlocked(false);
+                }}
+                placeholder="Paste call transcript or meeting notes..."
+              />
+              {demoTranscriptNotice && (
+                <p className="demo-transcript-notice">{demoTranscriptNotice}</p>
+              )}
+            </div>
+            <div
+              className={`dropzone dropzone-tab dropzone-unified ${dragOver ? "drag-over" : ""} ${hasUploadedRecording || hasDocument ? "has-file" : ""}`}
+              data-guide-target="guide-upload-tab"
+            >
+              <input
+                id="evidence-upload"
+                className="dropzone-file-input"
+                type="file"
+                accept={UNIFIED_UPLOAD_ACCEPT}
+                onDragEnter={onDragEnter}
+                onDragOver={onDragOver}
+                onDragLeave={onDragLeave}
+                onDrop={onDrop}
+                onChange={(e) => {
+                  handleEvidenceUpload(e.target.files?.[0]);
+                  e.target.value = "";
+                }}
+              />
+              <div className="dropzone-content">
+                <span className="dropzone-icon">
+                  {hasUploadedRecording || hasDocument ? "✓" : "⬆"}
+                </span>
+                <span className="dropzone-text">
+                  {hasUploadedRecording || hasDocument
+                    ? "File attached — drop another to add or replace"
+                    : "Or drop a Word doc, PDF, or call recording"}
+                </span>
+                <span className="dropzone-hint">
+                  .docx · .pdf · .mp3 · .wav · .mp4 · max 10 MB for documents
+                </span>
+              </div>
+            </div>
+            {(hasUploadedRecording || hasDocument) && (
+              <ul className="upload-attachment-list" aria-label="Attached files">
+                {hasDocument && documentFile && (
+                  <li>
+                    <div>
+                      <strong>Document</strong>
+                      <span>
+                        {documentFile.name} · {formatFileSize(documentFile.size)}
+                      </span>
+                    </div>
+                    <button type="button" className="file-clear-btn" onClick={() => setDocumentFile(null)}>
+                      Remove
+                    </button>
+                  </li>
+                )}
+                {hasUploadedRecording && file && (
+                  <li>
+                    <div>
+                      <strong>Recording</strong>
+                      <span>
+                        {file.name} · {formatFileSize(file.size)}
+                      </span>
+                    </div>
+                    <button
+                      type="button"
+                      className="file-clear-btn"
+                      onClick={() => {
+                        setFile(null);
+                        setRecordingSource(null);
+                      }}
+                    >
+                      Remove
+                    </button>
+                  </li>
+                )}
+              </ul>
+            )}
+            <details className="intake-optional">
+              <summary>Deal value and notes (optional)</summary>
+              <div className="input-group" style={{ marginTop: "0.75rem" }}>
+                <label htmlFor="deal-value">Estimated Deal Value ($)</label>
+                <input
+                  id="deal-value"
+                  type="number"
+                  min="0"
+                  value={dealValue}
+                  onChange={(e) => setDealValue(e.target.value)}
+                  placeholder="52000"
+                />
+              </div>
+              <p className="console-tab-hint">
+                Meeting notes can go in the transcript above.
+              </p>
+            </details>
+
             <div className="intake-run-cta" aria-label="Primary analysis action">
               {captchaRequired && captchaSiteKey && (
                 <AnalysisCaptcha
@@ -1255,12 +1377,16 @@ export default function App() {
                     : `${RUN_DEAL_CTA}${channelCount ? ` (${channelCount})` : ""}`}
               </button>
 
+              {enforceGuestCap && !paywalled && !auth.session && (
+                <p className="guest-usage-meta guest-usage-no-account">
+                  No account needed for the free analyses. Sign up later if you want results saved.
+                </p>
+              )}
               {enforceGuestCap && !paywalled && (
                 <p className="guest-usage-meta">
                   {auth.session && billing
                     ? billing.analyses_remaining_label
                     : `Free analyses: ${Math.max(0, GUEST_ANALYSIS_CAP - guestUsage)} of ${GUEST_ANALYSIS_CAP} left`}
-                  {!auth.session && " · Sign up to save results"}
                 </p>
               )}
               {billing?.usage_notice && !paywalled && (
@@ -1274,7 +1400,7 @@ export default function App() {
                   <p>{guestNearCapMessage()}</p>
                   {!auth.session && (
                     <button type="button" className="btn-secondary" onClick={openSignupPortal}>
-                      Sign up
+                      Sign up to save results
                     </button>
                   )}
                 </div>
@@ -1308,6 +1434,12 @@ export default function App() {
               )}
             </div>
 
+            <details
+              className="intake-more"
+              open={moreEvidenceOpen}
+              onToggle={(event) => setMoreEvidenceOpen(event.currentTarget.open)}
+            >
+              <summary>Add more evidence</summary>
             <DealProfilePanel
               accountId={accountId}
               salesCycleDays={salesCycleDays}
@@ -1327,22 +1459,21 @@ export default function App() {
               onLinkedSalesforceOpp={setLinkedSalesforceOppId}
             />
 
-            <div className="console-tabs" role="tablist" aria-label="Additive evidence channels">
-              {tabs.map((tab) => (
+            <div className="console-tabs" role="tablist" aria-label="More evidence">
+              {tabs
+                .filter((tab) => tab.id !== "call")
+                .map((tab) => (
                 <button
                   key={tab.id}
                   type="button"
                   role="tab"
                   aria-selected={activeTab === tab.id}
                   className={`console-tab${activeTab === tab.id ? " console-tab-active" : ""}`}
-                  data-guide-target={
-                    tab.id === "call"
-                      ? "guide-upload-tab"
-                      : tab.id === "live"
-                        ? "guide-live-tab"
-                        : undefined
-                  }
-                  onClick={() => setActiveTab(tab.id)}
+                  data-guide-target={tab.id === "live" ? "guide-live-tab" : undefined}
+                  onClick={() => {
+                    setMoreEvidenceOpen(true);
+                    setActiveTab(tab.id);
+                  }}
                 >
                   {tab.label}
                   {tab.dot && <span className="console-tab-dot" aria-label="Has content" />}
@@ -1352,126 +1483,10 @@ export default function App() {
 
             <div className="console-tab-panel" role="tabpanel">
               {activeTab === "call" && (
-                <div className="console-tab-audio">
-                  <p className="console-tab-hint">
-                    Drop a Word doc, PDF, or call recording here. Add a transcript below if you have
-                    one.
-                  </p>
-                  <div
-                    className={`dropzone dropzone-tab dropzone-unified ${dragOver ? "drag-over" : ""} ${hasUploadedRecording || hasDocument ? "has-file" : ""}`}
-                  >
-                    <input
-                      id="evidence-upload"
-                      className="dropzone-file-input"
-                      type="file"
-                      accept={UNIFIED_UPLOAD_ACCEPT}
-                      onDragEnter={onDragEnter}
-                      onDragOver={onDragOver}
-                      onDragLeave={onDragLeave}
-                      onDrop={onDrop}
-                      onChange={(e) => {
-                        handleEvidenceUpload(e.target.files?.[0]);
-                        e.target.value = "";
-                      }}
-                    />
-                    <div className="dropzone-content">
-                      <span className="dropzone-icon">
-                        {hasUploadedRecording || hasDocument ? "✓" : "⬆"}
-                      </span>
-                      <span className="dropzone-text">
-                        {hasUploadedRecording || hasDocument
-                          ? "File attached — drop another to add or replace"
-                          : "Upload Word, PDF, or call recording"}
-                      </span>
-                      <span className="dropzone-hint">
-                        .docx · .pdf · .mp3 · .wav · .mp4 · max 10 MB for documents
-                      </span>
-                    </div>
-                  </div>
-                  {(hasUploadedRecording || hasDocument) && (
-                    <ul className="upload-attachment-list" aria-label="Attached files">
-                      {hasDocument && documentFile && (
-                        <li>
-                          <div>
-                            <strong>Document</strong>
-                            <span>
-                              {documentFile.name} · {formatFileSize(documentFile.size)}
-                            </span>
-                          </div>
-                          <button
-                            type="button"
-                            className="file-clear-btn"
-                            onClick={() => setDocumentFile(null)}
-                          >
-                            Remove
-                          </button>
-                        </li>
-                      )}
-                      {hasUploadedRecording && file && (
-                        <li>
-                          <div>
-                            <strong>Recording</strong>
-                            <span>
-                              {file.name} · {formatFileSize(file.size)}
-                            </span>
-                          </div>
-                          <button
-                            type="button"
-                            className="file-clear-btn"
-                            onClick={() => {
-                              setFile(null);
-                              setRecordingSource(null);
-                            }}
-                          >
-                            Remove
-                          </button>
-                        </li>
-                      )}
-                    </ul>
-                  )}
-                  <div className="input-group" style={{ marginTop: "1rem" }}>
-                    <label htmlFor="deal-value">Estimated Deal Value ($)</label>
-                    <input
-                      id="deal-value"
-                      type="number"
-                      min="0"
-                      value={dealValue}
-                      onChange={(e) => setDealValue(e.target.value)}
-                      placeholder="52000"
-                    />
-                  </div>
-                  <div className="input-group input-group-grow">
-                    <div className="input-label-row">
-                      <label htmlFor="call-transcript">Call Transcript</label>
-                      <div className="input-label-actions">
-                        <label className="btn-secondary text-upload-control">
-                          Upload text
-                          <input
-                            type="file"
-                            accept={TEXT_ACCEPT}
-                            onChange={(e) => {
-                              void handleTextEvidence(e.target.files?.[0]);
-                              e.target.value = "";
-                            }}
-                          />
-                        </label>
-                      </div>
-                    </div>
-                    <textarea
-                      id="call-transcript"
-                      className="transcript-textarea"
-                      value={callTranscript}
-                      onChange={(e) => {
-                        setCallTranscript(e.target.value);
-                        setRelevanceBlocked(false);
-                      }}
-                      placeholder="Paste call transcript or meeting notes..."
-                    />
-                    {demoTranscriptNotice && (
-                      <p className="demo-transcript-notice">{demoTranscriptNotice}</p>
-                    )}
-                  </div>
-                </div>
+                <p className="console-tab-hint">
+                  Mailbox, a live meeting, or a field recording. The transcript above is enough to
+                  run.
+                </p>
               )}
 
               {activeTab === "email" && (
@@ -1527,6 +1542,31 @@ export default function App() {
                 />
               )}
             </div>
+            </details>
+
+            {result && !auth.session && !paywalled && (
+              <div className="intake-after-brief">
+                <p>Sign up to save this brief. Pricing is how you keep going on the next deal.</p>
+                <button type="button" className="btn-secondary" onClick={openSignupPortal}>
+                  Sign up to save results
+                </button>
+                <details>
+                  <summary>Plans for the next deal</summary>
+                  <PricingPlanCards
+                    configured={directCheckoutReady() || stripeConfigured}
+                    signedIn={false}
+                    busy={checkoutBusy}
+                    error={billingError}
+                    onSignIn={openSignupPortal}
+                    onCheckout={(plan) => void handleCheckout(plan)}
+                    checkoutContext={{
+                      email: auth.user?.email,
+                      userId: auth.user?.id,
+                    }}
+                  />
+                </details>
+              </div>
+            )}
 
             {hasAnyInput && (
               <div className="input-badges">
