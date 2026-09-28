@@ -3,7 +3,7 @@ import { HERO_PRIMARY_CTA, HERO_PRIMARY_CTA_NOTE } from "../lib/cta";
 import { useReveal } from "../lib/useReveal";
 import { PricingPlanCards } from "./PricingGate";
 import ContactSection from "./ContactSection";
-import HeroFold from "./HeroFold";
+import HeroFold, { BenefitsList } from "./HeroFold";
 import HeroSampleBrief from "./HeroSampleBrief";
 import PipelineCalculator from "./PipelineCalculator";
 import StalledDealSeries from "./StalledDealSeries";
@@ -34,6 +34,8 @@ export default function MarketingHome({
   return (
     <>
       <HeroFold onScan={onPortal} />
+
+      <BenefitsList />
 
       <section className="marketing-steps marketing-reveal" id="how" aria-label="How it works">
         <h2>How it works</h2>
@@ -163,22 +165,7 @@ export default function MarketingHome({
 
       <StalledDealSeries onScan={onPortal} />
 
-      <section className="marketing-simple marketing-product marketing-reveal" id="layout" aria-label="The workspace">
-        <h2>The workspace</h2>
-        <p className="marketing-product-caption">Evidence on the left. Brief on the right.</p>
-        <figure className="marketing-product-frame">
-          <img
-            src="/landing-portal.png"
-            alt="Lazarus Deal Recovery workspace: drop evidence on the left, recovery brief on the right"
-            width={1604}
-            height={1040}
-            loading="lazy"
-            decoding="async"
-          />
-        </figure>
-      </section>
-
-      <section className="marketing-simple marketing-reveal" id="method" aria-label="Purpose-built method">
+      <section className="marketing-simple marketing-reveal" id="layout" aria-label="Purpose-built method">
         <h2>Why not paste the transcript into ChatGPT?</h2>
         <p>
           ChatGPT writes. Paste the same call twice and the answer can change. A general AI
@@ -215,11 +202,86 @@ export default function MarketingHome({
         <p>{HERO_PRIMARY_CTA_NOTE}</p>
       </section>
 
+      <section className="marketing-reveal px-5 py-10 sm:px-8 lg:px-10" id="calculator" aria-label="Pipeline calculator">
+        <PipelineCalculator onScan={onPortal} />
+      </section>
+
+      <section className="marketing-page marketing-band marketing-reveal" id="pricing">
+        <h2>Five free a month. Then $10 a report, or a monthly plan.</h2>
+        <p className="marketing-page-lead">
+          You pay per deal analysis, not per seat. Free needs no card. Paid plans go through Stripe
+          — you create an account after checkout.
+        </p>
+        <PricingPlanCards
+          configured={stripeConfigured}
+          signedIn={false}
+          busy={checkoutBusy}
+          error={checkoutError}
+          includeFree
+          onSignIn={onSignup}
+          onStartFree={onPortal}
+          onCheckout={onCheckout}
+        />
+      </section>
+
+      <section className="marketing-page marketing-reveal" id="test" aria-label="Test a stalled deal">
+        <h2>Test a stalled deal</h2>
+        <p className="marketing-page-lead">
+          You can run one deal without connecting HubSpot or Salesforce. Just paste text.
+        </p>
+        <button type="button" className="run-button marketing-inline-cta" onClick={onPortal}>
+          {HERO_PRIMARY_CTA}
+        </button>
+        <p>{HERO_PRIMARY_CTA_NOTE}</p>
+      </section>
+
+      <section className="marketing-simple marketing-product marketing-reveal" id="workspace" aria-label="The workspace">
+        <h2>The workspace</h2>
+        <p className="marketing-product-caption">Evidence on the left. Brief on the right.</p>
+        <figure className="marketing-product-frame">
+          <img
+            src="/landing-portal.png"
+            alt="Lazarus Deal Recovery workspace: drop evidence on the left, recovery brief on the right"
+            width={1604}
+            height={1040}
+            loading="lazy"
+            decoding="async"
+          />
+        </figure>
+      </section>
+
       <RevenueChain />
 
       <FrictionPoints />
 
       <CrmComparison />
+
+      <section className="marketing-page marketing-reveal" id="about">
+        <h2>About Lazarus Deal Recovery</h2>
+        <p className="marketing-page-lead">
+          Purpose-built for one job: recovering stalled deals. Sales leaders use it across the team.
+          A rep can run the deal they are personally trying to save.
+        </p>
+        <p>
+          You already have a recorder and HubSpot. What you do not have is a clear call on which
+          deals are still winnable. Lazarus reads the evidence you already have and returns a brief
+          you can defend in the room.
+        </p>
+        <p>
+          A person still runs the deal. Lazarus does not sell, write outreach, or replace your team.
+          Your data stays on your account — not used to train public models.{" "}
+          <TrustPackLink slug="security-overview">Security Overview</TrustPackLink>.
+        </p>
+        <p>
+          Founded by {FOUNDER_NAME}.{" "}
+          <a href={COMPANY_LINKEDIN} target="_blank" rel="noopener noreferrer">
+            Lazarus Deal Recovery on LinkedIn
+          </a>
+          .
+        </p>
+      </section>
+
+      <ContactSection />
 
       <StakeholderSelector />
 
@@ -288,66 +350,6 @@ export default function MarketingHome({
       </section>
 
       <section className="marketing-page marketing-reveal" aria-label="Test a stalled deal after the answers">
-        <button type="button" className="run-button marketing-inline-cta" onClick={onPortal}>
-          {HERO_PRIMARY_CTA}
-        </button>
-        <p>{HERO_PRIMARY_CTA_NOTE}</p>
-      </section>
-
-      <section className="marketing-reveal px-5 py-10 sm:px-8 lg:px-10" id="calculator" aria-label="Pipeline calculator">
-        <PipelineCalculator onScan={onPortal} />
-      </section>
-
-      <section className="marketing-page marketing-band marketing-reveal" id="pricing">
-        <h2>Five free a month. Then $10 a report, or a monthly plan.</h2>
-        <p className="marketing-page-lead">
-          You pay per deal analysis, not per seat. Free needs no card. Paid plans go through Stripe
-          — you create an account after checkout.
-        </p>
-        <PricingPlanCards
-          configured={stripeConfigured}
-          signedIn={false}
-          busy={checkoutBusy}
-          error={checkoutError}
-          includeFree
-          onSignIn={onSignup}
-          onStartFree={onPortal}
-          onCheckout={onCheckout}
-        />
-      </section>
-
-      <section className="marketing-page marketing-reveal" id="about">
-        <h2>About Lazarus Deal Recovery</h2>
-        <p className="marketing-page-lead">
-          Purpose-built for one job: recovering stalled deals. Sales leaders use it across the team.
-          A rep can run the deal they are personally trying to save.
-        </p>
-        <p>
-          You already have a recorder and HubSpot. What you do not have is a clear call on which
-          deals are still winnable. Lazarus reads the evidence you already have and returns a brief
-          you can defend in the room.
-        </p>
-        <p>
-          A person still runs the deal. Lazarus does not sell, write outreach, or replace your team.
-          Your data stays on your account — not used to train public models.{" "}
-          <TrustPackLink slug="security-overview">Security Overview</TrustPackLink>.
-        </p>
-        <p>
-          Founded by {FOUNDER_NAME}.{" "}
-          <a href={COMPANY_LINKEDIN} target="_blank" rel="noopener noreferrer">
-            Lazarus Deal Recovery on LinkedIn
-          </a>
-          .
-        </p>
-      </section>
-
-      <ContactSection />
-
-      <section className="marketing-page marketing-reveal" id="test" aria-label="Test a stalled deal">
-        <h2>Test a stalled deal</h2>
-        <p className="marketing-page-lead">
-          You can run one deal without connecting HubSpot or Salesforce. Just paste text.
-        </p>
         <button type="button" className="run-button marketing-inline-cta" onClick={onPortal}>
           {HERO_PRIMARY_CTA}
         </button>

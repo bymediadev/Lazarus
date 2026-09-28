@@ -23,6 +23,26 @@ function TrustBadge({ children }: { children: ReactNode }) {
   );
 }
 
+export function BenefitsList() {
+  return (
+    <section className="marketing-reveal px-5 pb-2 sm:px-8 lg:px-10" aria-label="What you get">
+      <ul className="grid gap-2">
+        {BENEFITS.map((benefit) => (
+          <li key={benefit} className="flex items-start gap-2 text-[0.95rem] font-medium text-white">
+            <svg viewBox="0 0 16 16" className="mt-0.5 h-4 w-4 shrink-0 text-[#7dff7d]" aria-hidden="true">
+              <path
+                fill="currentColor"
+                d="M6.2 11.2 2.9 7.9l1.1-1.1 2.2 2.2 5-5 1.1 1.1-6.1 6.1Z"
+              />
+            </svg>
+            {benefit}
+          </li>
+        ))}
+      </ul>
+    </section>
+  );
+}
+
 export default function HeroFold({ onScan }: { onScan: () => void }) {
   const headingId = useId();
 
@@ -41,19 +61,6 @@ export default function HeroFold({ onScan }: { onScan: () => void }) {
         >
           Find out which stalled deals are worth saving — and exactly what to do next.
         </h1>
-        <ul className="mt-4 grid gap-2" aria-label="What you get">
-          {BENEFITS.map((benefit) => (
-            <li key={benefit} className="flex items-start gap-2 text-[0.95rem] font-medium text-white">
-              <svg viewBox="0 0 16 16" className="mt-0.5 h-4 w-4 shrink-0 text-[#7dff7d]" aria-hidden="true">
-                <path
-                  fill="currentColor"
-                  d="M6.2 11.2 2.9 7.9l1.1-1.1 2.2 2.2 5-5 1.1 1.1-6.1 6.1Z"
-                />
-              </svg>
-              {benefit}
-            </li>
-          ))}
-        </ul>
         <p className="mt-4 text-sm leading-relaxed text-slate-300">
           Your CRM already shows which deals have stalled. Lazarus reads the evidence and scores it
           with fixed rules, so the same deal does not get a different answer the next time you ask.
