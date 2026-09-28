@@ -10,67 +10,7 @@ Disallow: /api/
 Disallow: /security-battlecard
 Disallow: /security-battlecard.html
 
-User-agent: GPTBot
-Allow: /
-Disallow: /app
-Disallow: /app/
-Disallow: /portal
-Disallow: /portal/
-Disallow: /login
-Disallow: /login/
-Disallow: /api/
-Disallow: /security-battlecard
-Disallow: /security-battlecard.html
-
-User-agent: ChatGPT-User
-Allow: /
-Disallow: /app
-Disallow: /app/
-Disallow: /portal
-Disallow: /portal/
-Disallow: /login
-Disallow: /login/
-Disallow: /api/
-Disallow: /security-battlecard
-Disallow: /security-battlecard.html
-
 User-agent: OAI-SearchBot
-Allow: /
-Disallow: /app
-Disallow: /app/
-Disallow: /portal
-Disallow: /portal/
-Disallow: /login
-Disallow: /login/
-Disallow: /api/
-Disallow: /security-battlecard
-Disallow: /security-battlecard.html
-
-User-agent: ClaudeBot
-Allow: /
-Disallow: /app
-Disallow: /app/
-Disallow: /portal
-Disallow: /portal/
-Disallow: /login
-Disallow: /login/
-Disallow: /api/
-Disallow: /security-battlecard
-Disallow: /security-battlecard.html
-
-User-agent: Claude-SearchBot
-Allow: /
-Disallow: /app
-Disallow: /app/
-Disallow: /portal
-Disallow: /portal/
-Disallow: /login
-Disallow: /login/
-Disallow: /api/
-Disallow: /security-battlecard
-Disallow: /security-battlecard.html
-
-User-agent: anthropic-ai
 Allow: /
 Disallow: /app
 Disallow: /app/
@@ -94,7 +34,7 @@ Disallow: /api/
 Disallow: /security-battlecard
 Disallow: /security-battlecard.html
 
-User-agent: Google-Extended
+User-agent: ChatGPT-User
 Allow: /
 Disallow: /app
 Disallow: /app/
@@ -106,7 +46,31 @@ Disallow: /api/
 Disallow: /security-battlecard
 Disallow: /security-battlecard.html
 
-User-agent: Applebot-Extended
+User-agent: anthropic-ai
+Allow: /
+Disallow: /app
+Disallow: /app/
+Disallow: /portal
+Disallow: /portal/
+Disallow: /login
+Disallow: /login/
+Disallow: /api/
+Disallow: /security-battlecard
+Disallow: /security-battlecard.html
+
+User-agent: Claude-Web
+Allow: /
+Disallow: /app
+Disallow: /app/
+Disallow: /portal
+Disallow: /portal/
+Disallow: /login
+Disallow: /login/
+Disallow: /api/
+Disallow: /security-battlecard
+Disallow: /security-battlecard.html
+
+User-agent: Perplexity-User
 Allow: /
 Disallow: /app
 Disallow: /app/
@@ -130,7 +94,43 @@ Disallow: /api/
 Disallow: /security-battlecard
 Disallow: /security-battlecard.html
 
-User-agent: Bytespider
+User-agent: MistralAI-User
+Allow: /
+Disallow: /app
+Disallow: /app/
+Disallow: /portal
+Disallow: /portal/
+Disallow: /login
+Disallow: /login/
+Disallow: /api/
+Disallow: /security-battlecard
+Disallow: /security-battlecard.html
+
+User-agent: GPTBot
+Allow: /
+Disallow: /app
+Disallow: /app/
+Disallow: /portal
+Disallow: /portal/
+Disallow: /login
+Disallow: /login/
+Disallow: /api/
+Disallow: /security-battlecard
+Disallow: /security-battlecard.html
+
+User-agent: Google-Extended
+Allow: /
+Disallow: /app
+Disallow: /app/
+Disallow: /portal
+Disallow: /portal/
+Disallow: /login
+Disallow: /login/
+Disallow: /api/
+Disallow: /security-battlecard
+Disallow: /security-battlecard.html
+
+User-agent: ClaudeBot
 Allow: /
 Disallow: /app
 Disallow: /app/
@@ -154,7 +154,7 @@ Disallow: /api/
 Disallow: /security-battlecard
 Disallow: /security-battlecard.html
 
-User-agent: meta-externalagent
+User-agent: Applebot-Extended
 Allow: /
 Disallow: /app
 Disallow: /app/
@@ -166,7 +166,19 @@ Disallow: /api/
 Disallow: /security-battlecard
 Disallow: /security-battlecard.html
 
-User-agent: cohere-ai
+User-agent: Bytespider
+Allow: /
+Disallow: /app
+Disallow: /app/
+Disallow: /portal
+Disallow: /portal/
+Disallow: /login
+Disallow: /login/
+Disallow: /api/
+Disallow: /security-battlecard
+Disallow: /security-battlecard.html
+
+User-agent: Meta-ExternalAgent
 Allow: /
 Disallow: /app
 Disallow: /app/
