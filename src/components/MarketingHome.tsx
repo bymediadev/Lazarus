@@ -4,6 +4,7 @@ import { useReveal } from "../lib/useReveal";
 import { PricingPlanCards } from "./PricingGate";
 import ContactSection from "./ContactSection";
 import HeroFold from "./HeroFold";
+import HeroSampleBrief from "./HeroSampleBrief";
 import PipelineCalculator from "./PipelineCalculator";
 import StalledDealSeries from "./StalledDealSeries";
 import { CrmComparison, FrictionPoints, RevenueChain } from "./MarketingOutcomes";
@@ -71,7 +72,8 @@ export default function MarketingHome({
           action, the next checkpoint, and a longer path only when the evidence needs one. If the
           deal is a flat no, the plan is to stop.
         </p>
-        <ol className="marketing-report-walk">
+        <HeroSampleBrief onScan={onPortal} assemble prominent />
+        <ol className="marketing-report-walk marketing-report-walk-secondary">
           <li>
             <h3>Forecast snapshot</h3>
             <p>Five scores sit at the top. Use them when someone asks why the number moved.</p>
@@ -159,7 +161,7 @@ export default function MarketingHome({
         </article>
       </section>
 
-      <StalledDealSeries />
+      <StalledDealSeries onScan={onPortal} />
 
       <section className="marketing-simple marketing-product marketing-reveal" id="layout" aria-label="The workspace">
         <h2>The workspace</h2>
@@ -224,53 +226,72 @@ export default function MarketingHome({
       <section className="marketing-simple marketing-reveal" id="answers" aria-label="Straight answers">
         <h2>Straight answers</h2>
         <p>If we do not have it, we say so.</p>
-        <dl className="marketing-qa">
-          <div>
-            <dt>Do you join the call?</dt>
-            <dd>
-              No. Lazarus never joins Meet, Teams, or Zoom. You drop the recording, transcript, or
-              email after. Keep the tools you already use.
-            </dd>
-          </div>
-          <div>
-            <dt>Why not paste the transcript into ChatGPT?</dt>
-            <dd>
-              ChatGPT writes. Paste the same call twice and the answer can change. A general AI
-              generates an answer. Lazarus checks quotes against the transcript, then scores with
-              fixed rules you can defend in the room.
-            </dd>
-          </div>
-          <div>
-            <dt>Does the AI invent quotes or people?</dt>
-            <dd>
-              If a quote or person is not in your upload, the server strips it before the score
-              runs — and tells you it did. You score what is left.
-            </dd>
-          </div>
-          <div>
-            <dt>Is our data safe? Do you have SOC 2?</dt>
-            <dd>
-              Encrypted in transit and at rest. Your content is not used to train public models.
-              Teams only see their own deals. Saved transcripts purge on a 30-day default. We are
-              not SOC 2 certified today — honest fit for a pilot and mid-market. Full detail:{" "}
-              <TrustPackLink slug="security-overview">Security Overview</TrustPackLink>.
-            </dd>
-          </div>
-          <div>
-            <dt>Do you read our whole inbox?</dt>
-            <dd>
-              No. Mailbox connect is read-only. You search a deal and attach that thread. No silent
-              scrape.
-            </dd>
-          </div>
-          <div>
-            <dt>Will reps have to upload another tool?</dt>
-            <dd>
-              No. A manager can drop the file for the team. A rep can also run the one deal they are
-              trying to save. Either way, it is not a new daily tool.
-            </dd>
-          </div>
-        </dl>
+        <div className="marketing-qa">
+          <details className="marketing-qa-item" open>
+            <summary>Do you join the call?</summary>
+            <div className="marketing-qa-panel">
+              <p>
+                No. Lazarus never joins Meet, Teams, or Zoom. You drop the recording, transcript, or
+                email after. Keep the tools you already use.
+              </p>
+            </div>
+          </details>
+          <details className="marketing-qa-item">
+            <summary>Why not paste the transcript into ChatGPT?</summary>
+            <div className="marketing-qa-panel">
+              <p>
+                ChatGPT writes. Paste the same call twice and the answer can change. A general AI
+                generates an answer. Lazarus checks quotes against the transcript, then scores with
+                fixed rules you can defend in the room.
+              </p>
+            </div>
+          </details>
+          <details className="marketing-qa-item">
+            <summary>Does the AI invent quotes or people?</summary>
+            <div className="marketing-qa-panel">
+              <p>
+                If a quote or person is not in your upload, the server strips it before the score
+                runs — and tells you it did. You score what is left.
+              </p>
+            </div>
+          </details>
+          <details className="marketing-qa-item">
+            <summary>Is our data safe? Do you have SOC 2?</summary>
+            <div className="marketing-qa-panel">
+              <p>
+                Encrypted in transit and at rest. Your content is not used to train public models.
+                Teams only see their own deals. Saved transcripts purge on a 30-day default. We are
+                not SOC 2 certified today — honest fit for a pilot and mid-market. Full detail:{" "}
+                <TrustPackLink slug="security-overview">Security Overview</TrustPackLink>.
+              </p>
+            </div>
+          </details>
+          <details className="marketing-qa-item">
+            <summary>Do you read our whole inbox?</summary>
+            <div className="marketing-qa-panel">
+              <p>
+                No. Mailbox connect is read-only. You search a deal and attach that thread. No silent
+                scrape.
+              </p>
+            </div>
+          </details>
+          <details className="marketing-qa-item">
+            <summary>Will reps have to upload another tool?</summary>
+            <div className="marketing-qa-panel">
+              <p>
+                No. A manager can drop the file for the team. A rep can also run the one deal they are
+                trying to save. Either way, it is not a new daily tool.
+              </p>
+            </div>
+          </details>
+        </div>
+      </section>
+
+      <section className="marketing-page marketing-reveal" aria-label="Test a stalled deal after the answers">
+        <button type="button" className="run-button marketing-inline-cta" onClick={onPortal}>
+          {HERO_PRIMARY_CTA}
+        </button>
+        <p>{HERO_PRIMARY_CTA_NOTE}</p>
       </section>
 
       <section className="marketing-reveal px-5 py-10 sm:px-8 lg:px-10" id="calculator" aria-label="Pipeline calculator">

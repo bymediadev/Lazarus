@@ -29,8 +29,8 @@ export default function IntakeHowTo({
     <aside className="intake-how-to" data-guide-target="guide-intake" aria-label="How to run Lazarus Deal Recovery">
       <div>
         <h2 className="intake-how-to-title">Deal evidence</h2>
-        <p className="intake-how-to-entry">
-          Paste a transcript or drop a file. That is enough to run one deal.
+        <p className="intake-how-to-hint">
+          You can run one deal without connecting HubSpot or Salesforce. Just paste text.
         </p>
         <p className="intake-how-to-hint">
           Add a recording, transcript, email thread, or notes from your CRM. Compile them in one

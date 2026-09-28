@@ -1220,18 +1220,8 @@ export default function App() {
       <div className="app-main">
         <div className="workspace">
           <section className="panel panel-left intake-viewport">
-            <IntakeHowTo
-              hasInput={hasAnyInput}
-              hasResult={!!result}
-              loading={loading}
-              sourceCount={channelCount}
-              demoLoading={demoTranscriptLoading}
-              onLoadDemo={handleLoadDemoTranscript}
-              onOpenGuide={() => setGuideOpen(true)}
-            />
-
-            <p className="intake-front-lead">
-              You can run one deal without connecting HubSpot or Salesforce. Just paste text.
+            <p className="intake-desk-lead">
+              Paste a transcript or drop a file. That is enough to run one deal.
             </p>
             <div className="input-group input-group-grow">
               <div className="input-label-row">
@@ -1333,24 +1323,6 @@ export default function App() {
                 )}
               </ul>
             )}
-            <details className="intake-optional">
-              <summary>Deal value and notes (optional)</summary>
-              <div className="input-group" style={{ marginTop: "0.75rem" }}>
-                <label htmlFor="deal-value">Estimated Deal Value ($)</label>
-                <input
-                  id="deal-value"
-                  type="number"
-                  min="0"
-                  value={dealValue}
-                  onChange={(e) => setDealValue(e.target.value)}
-                  placeholder="52000"
-                />
-              </div>
-              <p className="console-tab-hint">
-                Meeting notes can go in the transcript above.
-              </p>
-            </details>
-
             <div className="intake-run-cta" aria-label="Primary analysis action">
               {captchaRequired && captchaSiteKey && (
                 <AnalysisCaptcha
@@ -1433,6 +1405,34 @@ export default function App() {
                 />
               )}
             </div>
+
+            <IntakeHowTo
+              hasInput={hasAnyInput}
+              hasResult={!!result}
+              loading={loading}
+              sourceCount={channelCount}
+              demoLoading={demoTranscriptLoading}
+              onLoadDemo={handleLoadDemoTranscript}
+              onOpenGuide={() => setGuideOpen(true)}
+            />
+
+            <details className="intake-optional">
+              <summary>Deal value and notes (optional)</summary>
+              <div className="input-group" style={{ marginTop: "0.75rem" }}>
+                <label htmlFor="deal-value">Estimated Deal Value ($)</label>
+                <input
+                  id="deal-value"
+                  type="number"
+                  min="0"
+                  value={dealValue}
+                  onChange={(e) => setDealValue(e.target.value)}
+                  placeholder="52000"
+                />
+              </div>
+              <p className="console-tab-hint">
+                Meeting notes can go in the transcript above.
+              </p>
+            </details>
 
             <details
               className="intake-more"

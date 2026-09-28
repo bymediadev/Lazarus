@@ -1,11 +1,12 @@
 import { useState } from "react";
+import { HERO_PRIMARY_CTA, HERO_PRIMARY_CTA_NOTE } from "../lib/cta";
 import { STALLED_DEAL_SERIES, loomEmbedUrl, type StalledDealEpisode } from "../lib/site";
 
 function verdictLabel(verdict: StalledDealEpisode["verdict"]): string {
   return verdict === "flat-no" ? "Flat no" : "Recoverable";
 }
 
-export default function StalledDealSeries() {
+export default function StalledDealSeries({ onScan }: { onScan: () => void }) {
   const episodes = STALLED_DEAL_SERIES;
   const latest = episodes[0];
   const [activeId, setActiveId] = useState(latest?.id ?? "");
@@ -55,6 +56,10 @@ export default function StalledDealSeries() {
           </p>
         </article>
       </div>
+      <button type="button" className="run-button marketing-inline-cta series-cta" onClick={onScan}>
+        {HERO_PRIMARY_CTA}
+      </button>
+      <p className="series-cta-note">{HERO_PRIMARY_CTA_NOTE}</p>
       {older.length > 0 && (
         <div className="series-older" role="list">
           {older.map((episode) => (

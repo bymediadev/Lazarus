@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { HERO_PRIMARY_CTA, HERO_PRIMARY_CTA_NOTE } from "../lib/cta";
 import { usePrefersReducedMotion } from "../lib/usePrefersReducedMotion";
 
@@ -44,24 +44,56 @@ const BEATS = [
   },
 ] as const;
 
-export default function HeroSampleBrief({ onScan }: { onScan: () => void }) {
+export default function HeroSampleBrief({
+  onScan,
+  assemble = false,
+  prominent = false,
+}: {
+  onScan: () => void;
+  assemble?: boolean;
+  prominent?: boolean;
+}) {
   const reduced = usePrefersReducedMotion();
-  const [shown, setShown] = useState(reduced ? BEATS.length : 0);
+  const rootRef = useRef<HTMLDivElement>(null);
+  const [shown, setShown] = useState(assemble && !reduced ? 0 : BEATS.length);
 
   useEffect(() => {
-    if (reduced) {
+    if (!assemble || reduced) {
       setShown(BEATS.length);
       return;
     }
-    setShown(0);
-    const timers = BEATS.map((_, index) =>
-      window.setTimeout(() => setShown(index + 1), 120 * (index + 1))
+
+    const node = rootRef.current;
+    if (!node) return;
+
+    let timers: number[] = [];
+    const start = () => {
+      setShown(0);
+      timers = BEATS.map((_, index) =>
+        window.setTimeout(() => setShown(index + 1), 120 * (index + 1))
+      );
+    };
+
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (!entry?.isIntersecting) return;
+        observer.disconnect();
+        start();
+      },
+      { threshold: 0.35 }
     );
-    return () => timers.forEach((id) => window.clearTimeout(id));
-  }, [reduced]);
+    observer.observe(node);
+    return () => {
+      observer.disconnect();
+      timers.forEach((id) => window.clearTimeout(id));
+    };
+  }, [assemble, reduced]);
 
   return (
-    <div className="rounded-2xl border border-white/10 bg-[#0c1433] p-4 sm:p-5">
+    <div
+      ref={rootRef}
+      className={`hero-brief-card rounded-2xl border border-white/10 bg-[#0c1433] p-4 sm:p-5${prominent ? " hero-brief-card-prominent" : ""}`}
+    >
       <p className="font-[var(--mono)] text-[0.68rem] font-semibold uppercase tracking-[0.16em] text-[#3dd6c6]">
         Recovery brief
       </p>

@@ -5305,21 +5305,56 @@ a.run-button:hover {
   margin: 1rem 0 0;
 }
 
-.marketing-qa > div {
-  padding: 0.95rem 0;
+.marketing-qa-item {
   border-top: 1px solid var(--panel-border);
+  padding: 0;
 }
 
-.marketing-qa dt {
+.marketing-qa-item summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  cursor: pointer;
   color: var(--text);
   font-weight: 600;
-  margin-bottom: 0.35rem;
+  line-height: 1.4;
+  padding: 0.95rem 0;
+  list-style: none;
 }
 
-.marketing-qa dd {
+.marketing-qa-item summary::-webkit-details-marker {
+  display: none;
+}
+
+.marketing-qa-item summary::after {
+  content: "+";
+  flex: 0 0 auto;
+  color: var(--teal);
+  font-weight: 500;
+}
+
+.marketing-qa-item[open] summary::after {
+  content: "–";
+}
+
+.marketing-qa-item > .marketing-qa-panel {
+  display: grid;
+  grid-template-rows: 0fr;
+  transition: grid-template-rows 0.35s ease;
+}
+
+.marketing-qa-item[open] .marketing-qa-panel {
+  grid-template-rows: 1fr;
+}
+
+.marketing-qa-panel > p {
+  overflow: hidden;
+  min-height: 0;
+  margin: 0;
+  padding-bottom: 0.95rem;
   color: var(--muted);
   line-height: 1.6;
-  margin: 0;
 }
 
 .marketing-main {
@@ -5336,7 +5371,31 @@ a.run-button:hover {
   margin-bottom: 0.85rem;
 }
 
-.hero-brief-beat {
+.hero-brief-card-prominent {
+  margin-top: 1.25rem;
+  padding: 1.35rem 1.4rem 1.2rem;
+  border-color: rgba(61, 214, 198, 0.4);
+  box-shadow: 0 16px 48px rgba(0, 0, 0, 0.32);
+}
+
+.marketing-report-walk-secondary {
+  opacity: 0.92;
+}
+
+.marketing-report-walk-secondary li {
+  background: transparent;
+}
+
+.series-cta {
+  margin-top: 1.25rem;
+}
+
+.series-cta-note {
+  margin: 0.55rem 0 0;
+  color: var(--muted);
+}
+
+.hero-brief-card-prominent .hero-brief-beat {
   animation: marketing-fade-up 0.35s ease both;
 }
 
@@ -5468,14 +5527,25 @@ a.run-button:hover {
   }
 }
 
-.intake-front-lead {
+.intake-desk-lead {
   margin: 0 0 0.85rem;
-  color: var(--muted);
-  line-height: 1.5;
+  color: var(--teal, #3dd6c6);
+  font-size: 0.95rem;
+  font-weight: 650;
+  line-height: 1.45;
+}
+
+.panel-left > .intake-how-to {
+  margin-top: 0.85rem;
+}
+
+.intake-viewport .dropzone-unified {
+  min-height: 8.5rem;
+  padding: 1.15rem 1rem;
 }
 
 .intake-transcript {
-  min-height: 11rem;
+  min-height: 8.5rem;
 }
 
 .intake-optional,
@@ -5890,10 +5960,6 @@ a.run-button:hover {
     align-items: stretch;
   }
 
-  .marketing-qa {
-    grid-template-columns: 1fr 1fr;
-    column-gap: 2.5rem;
-  }
 }
 
 .marketing-report-walk li {
@@ -6301,7 +6367,8 @@ a.marketing-text-link {
   .stakeholder-panel,
   .stakeholder-tab,
   .hero-brief-beat,
-  .series-player-swap {
+  .series-player-swap,
+  .marketing-qa-panel {
     animation: none !important;
     opacity: 1;
     transform: none;
