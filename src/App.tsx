@@ -1,22 +1,8 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import AnalysisReport from "./components/AnalysisReport";
-import DealProfilePanel, { parseHistoricalCrmJson } from "./components/DealProfilePanel";
-import MeetingCompanion from "./components/MeetingCompanion";
-import LiveTriageBrief from "./components/LiveTriageBrief";
-import FieldRecorder from "./components/FieldRecorder";
+import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import SiteFooter from "./components/SiteFooter";
 import TrustPackLink from "./components/TrustPackLink";
 import TrustPackModal from "./components/TrustPackModal";
-import IntakeHowTo from "./components/IntakeHowTo";
-import AnalysisCaptcha from "./components/AnalysisCaptcha";
-import LazarusGuide from "./components/LazarusGuide";
-import EmailProviderControls from "./components/EmailProviderControls";
 import { useAuth } from "./components/AuthProvider";
-import LoginScreen from "./components/LoginScreen";
-import PasswordRecoveryScreen from "./components/PasswordRecoveryScreen";
-import AccountPortal from "./components/AccountPortal";
-import DealLifecyclePanel from "./components/DealLifecyclePanel";
-import FounderCommandCenter from "./components/FounderCommandCenter";
 import { isPasswordRecoveryPending } from "./lib/passwordRecovery";
 import { pushHubSpotNote } from "./lib/hubspotIntegration";
 import { pushSalesforceNote } from "./lib/salesforceIntegration";
@@ -44,7 +30,6 @@ import {
   type BillingMe,
   type CheckoutPlan,
 } from "./lib/billing";
-import PricingGate, { PricingPlanCards } from "./components/PricingGate";
 import MarketingHome from "./components/MarketingHome";
 import MarketingShell from "./components/MarketingShell";
 import { fetchFounderMe } from "./lib/founderApi";
@@ -72,6 +57,25 @@ import { RUN_DEAL_CTA } from "./lib/cta";
 import { applyDocumentMeta, SITE_DESCRIPTION, SITE_TITLE } from "./lib/site";
 import { bakedCaptchaSiteKey } from "./lib/captcha";
 import { bootTeamsHost } from "./lib/teamsHost";
+
+const AnalysisReport = lazy(() => import("./components/AnalysisReport"));
+const DealProfilePanel = lazy(() => import("./components/DealProfilePanel"));
+const MeetingCompanion = lazy(() => import("./components/MeetingCompanion"));
+const LiveTriageBrief = lazy(() => import("./components/LiveTriageBrief"));
+const FieldRecorder = lazy(() => import("./components/FieldRecorder"));
+const IntakeHowTo = lazy(() => import("./components/IntakeHowTo"));
+const AnalysisCaptcha = lazy(() => import("./components/AnalysisCaptcha"));
+const LazarusGuide = lazy(() => import("./components/LazarusGuide"));
+const EmailProviderControls = lazy(() => import("./components/EmailProviderControls"));
+const LoginScreen = lazy(() => import("./components/LoginScreen"));
+const PasswordRecoveryScreen = lazy(() => import("./components/PasswordRecoveryScreen"));
+const AccountPortal = lazy(() => import("./components/AccountPortal"));
+const DealLifecyclePanel = lazy(() => import("./components/DealLifecyclePanel"));
+const FounderCommandCenter = lazy(() => import("./components/FounderCommandCenter"));
+const PricingGate = lazy(() => import("./components/PricingGate"));
+const PricingPlanCards = lazy(() =>
+  import("./components/PricingGate").then((mod) => ({ default: mod.PricingPlanCards }))
+);
 
 const ACCEPTED_EXT = [".mp3", ".wav", ".mp4", ".m4a", ".webm", ".mpeg", ".mpga"];
 const ACCEPT_ATTR = ".mp3,.wav,.mp4,.m4a,.webm,audio/*,video/mp4,video/webm";
@@ -848,6 +852,7 @@ export default function App() {
       return;
     }
 
+    const { parseHistoricalCrmJson } = await import("./components/DealProfilePanel");
     const historicalCrmContext = parseHistoricalCrmJson(historicalCrmJson);
     if (historicalCrmJson.trim() && historicalCrmContext === null) {
       setError("Historical CRM context must be valid JSON array.");
@@ -1085,6 +1090,13 @@ export default function App() {
   const showLoginPage = route === "login" && !auth.session;
 
   return (
+    <Suspense
+      fallback={
+        <div className="login-screen">
+          <p className="login-sub">Loading…</p>
+        </div>
+      }
+    >
     <div className={`app${guideHighlight ? ` guide-highlighting` : ""}`}>
       {runtimePause && (
         <div className="warning-banner ops-runtime-banner" role="status">
@@ -1741,5 +1753,6 @@ export default function App() {
         </>
       )}
     </div>
+    </Suspense>
   );
 }
