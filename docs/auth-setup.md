@@ -6,7 +6,7 @@ End users sign into **Lazarus Deal Recovery** — not the Supabase website. Supa
 
 | Path | Flow |
 |------|------|
-| **Sign in / Create account** | Optional — header **Login** / **Sign up** open a portal. Guests get **5 free analyses**, then must sign up to continue. Analyses save only when signed in. |
+| **Sign in / Create account** | Optional — header **Login** / **Sign up** open a portal. Guests get **5 free analyses** with no account. After the free five: buy a $10 report (checkout does not require signup) or wait until next month. Sign up only to **save** results. |
 | **Forgot password** | Server mints a recovery session (bypasses inbox rate limits) → **Save new password** screen. Best-effort email still attempted when the mailer allows it. |
 | **Account portal** | Signed-in users: view email, change password, sign out |
 | **Google / HubSpot / Salesforce** | Existing Lazarus OAuth popup → session bridge |

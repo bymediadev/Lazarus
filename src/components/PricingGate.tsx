@@ -145,7 +145,7 @@ export default function PricingGate({
       <p className="pricing-plan-footnote">
         {extrasOnly
           ? "Your monthly plan renews on its billing date. Until then, $10 buys one extra report."
-          : "Paid plans open Stripe Checkout. Create or sign in to your Lazarus account after payment to unlock analyses."}
+          : "Paid plans open Stripe Checkout. You can buy first without an account, then create or sign in to unlock analyses on this login."}
       </p>
       <PricingPlanCards
         configured={configured}

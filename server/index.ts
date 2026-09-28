@@ -57,10 +57,13 @@ import { registerSeoPageRoutes, sendIndexedHtml } from "./seoPages.js";
 import { optionalAuthUserId } from "./authMiddleware.js";
 import {
   isAnonymousGuestRateLimited,
+  consumeAnonymousGuestSlot,
   isFreemiumExempt,
   isIpDailyRateLimited,
+  consumeIpMonthlySlot,
   ipDailyLimitMessage,
   isPpuIpRateLimited,
+  consumePpuIpSlot,
   ppuIpLimitMessage,
   guestServerLimitMessage,
 } from "./guestRateLimit.js";
@@ -287,6 +290,9 @@ app.post(
   let reservation: ConsumeKind | null = null;
   let reservationUserId: string | undefined;
   let committed = false;
+  let consumeGuestFree = false;
+  let consumeIpMonth = false;
+  let consumePpuIp = false;
   try {
     if (await rejectIfAnalysesBlocked(req, res)) return;
     const captcha = await enforceCaptcha(req);
@@ -305,6 +311,7 @@ app.post(
           (skipsIpMonthlyCap(billingRow) || evaluateCanAnalyze(billingRow).consume === "ppu")
         );
       }
+      // Peek only — failed analyses must not burn free slots.
       if (!skipIpCeiling && (await isIpDailyRateLimited(req))) {
         res.status(429).json({
           error: ipDailyLimitMessage(),
@@ -312,14 +319,16 @@ app.post(
         });
         return;
       }
+      if (!skipIpCeiling) consumeIpMonth = true;
       if (!authUserIdEarly) {
         if (await isAnonymousGuestRateLimited(req)) {
           res.status(402).json({
             error: guestServerLimitMessage(),
-            code: "PAYMENT_REQUIRED",
+            code: "GUEST_USAGE_LIMIT",
           });
           return;
         }
+        consumeGuestFree = true;
       } else {
         const decision = await reserveAnalysis(authUserIdEarly);
         if (!decision.ok) {
@@ -331,12 +340,15 @@ app.post(
         }
         reservation = decision.consume;
         reservationUserId = authUserIdEarly;
-        if (reservation === "ppu" && (await isPpuIpRateLimited(req))) {
-          res.status(429).json({
-            error: ppuIpLimitMessage(),
-            code: "PPU_IP_LIMIT",
-          });
-          return;
+        if (reservation === "ppu") {
+          if (await isPpuIpRateLimited(req)) {
+            res.status(429).json({
+              error: ppuIpLimitMessage(),
+              code: "PPU_IP_LIMIT",
+            });
+            return;
+          }
+          consumePpuIp = true;
         }
       }
     }
@@ -540,6 +552,11 @@ app.post(
   } finally {
     if (!committed && reservation && reservationUserId) {
       await releaseReservation(reservationUserId, reservation);
+    }
+    if (committed) {
+      if (consumeGuestFree) await consumeAnonymousGuestSlot(req);
+      if (consumeIpMonth) await consumeIpMonthlySlot(req);
+      if (consumePpuIp) await consumePpuIpSlot(req);
     }
   }
 });

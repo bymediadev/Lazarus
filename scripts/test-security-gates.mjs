@@ -16,8 +16,11 @@ import { buildSalesforceAuthorizeUrl } from "../server/integrations/salesforce/o
 import { createHash } from "crypto";
 import {
   isAnonymousGuestRateLimited,
+  consumeAnonymousGuestSlot,
   isIpDailyRateLimited,
+  consumeIpMonthlySlot,
   isPpuIpRateLimited,
+  consumePpuIpSlot,
   resetGuestRateLimitBuckets,
 } from "../server/guestRateLimit.ts";
 import { requireEmailDelivery } from "../server/authRoutes.ts";
@@ -260,11 +263,16 @@ const guestReq = (ip) => ({
 });
 let guestHits = 0;
 for (let i = 0; i < 5; i++) {
-  if (!(await isAnonymousGuestRateLimited(guestReq("203.0.113.9")))) guestHits += 1;
+  if (await isAnonymousGuestRateLimited(guestReq("203.0.113.9"))) break;
+  if (!(await consumeAnonymousGuestSlot(guestReq("203.0.113.9")))) guestHits += 1;
 }
 check("guest free cap allows 5 per IP per calendar month", guestHits === 5);
 check(
   "guest free cap blocks the 6th from the same IP",
+  (await isAnonymousGuestRateLimited(guestReq("203.0.113.9"))) === true
+);
+check(
+  "guest free peek does not burn a slot",
   (await isAnonymousGuestRateLimited(guestReq("203.0.113.9"))) === true
 );
 check(
@@ -275,7 +283,8 @@ resetGuestRateLimitBuckets();
 process.env.GUEST_IP_MONTHLY_LIMIT = "3";
 let ipHits = 0;
 for (let i = 0; i < 3; i++) {
-  if (!(await isIpDailyRateLimited(guestReq("198.51.100.7")))) ipHits += 1;
+  if (await isIpDailyRateLimited(guestReq("198.51.100.7"))) break;
+  if (!(await consumeIpMonthlySlot(guestReq("198.51.100.7")))) ipHits += 1;
 }
 check("IP monthly ceiling allows configured max", ipHits === 3);
 check("IP monthly ceiling blocks the next request", (await isIpDailyRateLimited(guestReq("198.51.100.7"))) === true);
@@ -283,7 +292,8 @@ resetGuestRateLimitBuckets();
 process.env.PPU_IP_MONTHLY_LIMIT = "2";
 let ppuHits = 0;
 for (let i = 0; i < 2; i++) {
-  if (!(await isPpuIpRateLimited(guestReq("198.51.100.9")))) ppuHits += 1;
+  if (await isPpuIpRateLimited(guestReq("198.51.100.9"))) break;
+  if (!(await consumePpuIpSlot(guestReq("198.51.100.9")))) ppuHits += 1;
 }
 check("PPU IP ceiling allows configured max", ppuHits === 2);
 check("PPU IP ceiling blocks the next request", (await isPpuIpRateLimited(guestReq("198.51.100.9"))) === true);

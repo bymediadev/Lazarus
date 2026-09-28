@@ -59,7 +59,7 @@ function pruneExpired(now: number): void {
   }
 }
 
-function bumpMemory(key: string, max: number): boolean {
+function memoryState(key: string): { count: number; resetAt: number } {
   const now = Date.now();
   pruneExpired(now);
   let bucket = buckets.get(key);
@@ -67,18 +67,31 @@ function bumpMemory(key: string, max: number): boolean {
     bucket = { count: 0, resetAt: nextUtcMonthStart(now) };
     buckets.set(key, bucket);
   }
+  return bucket;
+}
+
+function peekMemory(key: string, max: number): boolean {
+  return memoryState(key).count >= max;
+}
+
+/** Returns true when the slot could not be consumed (already at cap). */
+function consumeMemory(key: string, max: number): boolean {
+  const bucket = memoryState(key);
   if (bucket.count >= max) return true;
   bucket.count += 1;
   return false;
 }
 
-async function bumpPersisted(kind: string, ip: string, max: number): Promise<boolean> {
+async function readPersisted(
+  kind: string,
+  ip: string
+): Promise<{ count: number; windowEnd: Date; memoryKey: string } | null> {
   const memoryKey = `${kind}:${ip}`;
   if ((process.env.GUEST_LIMIT_MEMORY_ONLY ?? "").trim() === "true") {
-    return bumpMemory(memoryKey, max);
+    return null;
   }
   const sb = serviceRoleClient();
-  if (!sb) return bumpMemory(memoryKey, max);
+  if (!sb) return null;
 
   const hash = ipHash(ip);
   const now = new Date();
@@ -91,35 +104,60 @@ async function bumpPersisted(kind: string, ip: string, max: number): Promise<boo
       .maybeSingle();
     if (error) {
       console.warn("[guest-limit] persist read failed:", error.message);
-      return bumpMemory(memoryKey, max);
+      return null;
     }
-
     const windowEnd = data?.window_end ? new Date(String(data.window_end)) : null;
     const fresh = !data || !windowEnd || windowEnd.getTime() <= now.getTime();
-    const count = fresh ? 0 : Number(data.count) || 0;
-    if (count >= max) return true;
-
-    const nextCount = count + 1;
-    const nextEnd = fresh ? new Date(nextUtcMonthStart(now.getTime())) : windowEnd;
-    const { error: writeError } = await sb.from("ip_analysis_usage").upsert(
-      {
-        ip_hash: hash,
-        kind,
-        count: nextCount,
-        window_end: nextEnd.toISOString(),
-        updated_at: now.toISOString(),
-      },
-      { onConflict: "ip_hash,kind" }
-    );
-    if (writeError) {
-      console.warn("[guest-limit] persist write failed:", writeError.message);
-      return bumpMemory(memoryKey, max);
-    }
-    return false;
+    return {
+      count: fresh ? 0 : Number(data.count) || 0,
+      windowEnd: fresh ? new Date(nextUtcMonthStart(now.getTime())) : (windowEnd as Date),
+      memoryKey,
+    };
   } catch (err) {
     console.warn("[guest-limit] persist failed:", err instanceof Error ? err.message : err);
-    return bumpMemory(memoryKey, max);
+    return null;
   }
+}
+
+async function peekPersisted(kind: string, ip: string, max: number): Promise<boolean> {
+  const memoryKey = `${kind}:${ip}`;
+  const row = await readPersisted(kind, ip);
+  if (!row) return peekMemory(memoryKey, max);
+  return row.count >= max;
+}
+
+/** Returns true when blocked (at cap). Call only after a successful analysis. */
+async function consumePersisted(kind: string, ip: string, max: number): Promise<boolean> {
+  const memoryKey = `${kind}:${ip}`;
+  const row = await readPersisted(kind, ip);
+  if (!row) return consumeMemory(memoryKey, max);
+
+  if (row.count >= max) return true;
+
+  const sb = serviceRoleClient();
+  if (!sb) return consumeMemory(memoryKey, max);
+
+  const hash = ipHash(ip);
+  const now = new Date();
+  const { error: writeError } = await sb.from("ip_analysis_usage").upsert(
+    {
+      ip_hash: hash,
+      kind,
+      count: row.count + 1,
+      window_end: row.windowEnd.toISOString(),
+      updated_at: now.toISOString(),
+    },
+    { onConflict: "ip_hash,kind" }
+  );
+  if (writeError) {
+    console.warn("[guest-limit] persist write failed:", writeError.message);
+    return consumeMemory(memoryKey, max);
+  }
+  // Keep memory mirror in sync when persist works.
+  const mem = memoryState(memoryKey);
+  mem.count = row.count + 1;
+  mem.resetAt = row.windowEnd.getTime();
+  return false;
 }
 
 export function isFounderUnlimitedEmail(email: string | null | undefined): boolean {
@@ -137,23 +175,38 @@ export async function isFreemiumExempt(req: Request): Promise<boolean> {
   return isFounderUnlimitedEmail(user.email);
 }
 
-/** 5 free analyses per IP per calendar month — clearing the browser does not reset this. */
+/** True when this IP already used its 5 free guest analyses this month. Does not burn a slot. */
 export async function isAnonymousGuestRateLimited(req: Request): Promise<boolean> {
-  return bumpPersisted("guest-free", clientIp(req), guestFreePerIpLimit());
+  return peekPersisted("guest-free", clientIp(req), guestFreePerIpLimit());
 }
 
-/** 100 analyses per IP per calendar month across guests and unpaid accounts. */
+/** Consume one guest free slot after a successful analysis. */
+export async function consumeAnonymousGuestSlot(req: Request): Promise<boolean> {
+  return consumePersisted("guest-free", clientIp(req), guestFreePerIpLimit());
+}
+
+/** True when unpaid IP monthly ceiling is hit. Does not burn a slot. */
 export async function isIpDailyRateLimited(req: Request): Promise<boolean> {
-  return bumpPersisted("ip-month", clientIp(req), guestIpMonthlyLimit());
+  return peekPersisted("ip-month", clientIp(req), guestIpMonthlyLimit());
+}
+
+/** Consume one unpaid IP monthly slot after a successful analysis. */
+export async function consumeIpMonthlySlot(req: Request): Promise<boolean> {
+  return consumePersisted("ip-month", clientIp(req), guestIpMonthlyLimit());
 }
 
 export function ipDailyLimitMessage(): string {
   return `This network has reached the ${guestIpMonthlyLimit()} analyses / month limit. Access resumes next month, or use a paid plan.`;
 }
 
-/** $10 extras only — Entry/Team included runs do not count here. */
+/** True when PPU IP ceiling is hit. Does not burn a slot. */
 export async function isPpuIpRateLimited(req: Request): Promise<boolean> {
-  return bumpPersisted("ppu-ip", clientIp(req), ppuIpMonthlyLimit());
+  return peekPersisted("ppu-ip", clientIp(req), ppuIpMonthlyLimit());
+}
+
+/** Consume one $10 pay-per-report IP slot after a successful analysis. */
+export async function consumePpuIpSlot(req: Request): Promise<boolean> {
+  return consumePersisted("ppu-ip", clientIp(req), ppuIpMonthlyLimit());
 }
 
 export function ppuIpLimitMessage(): string {
@@ -170,7 +223,7 @@ export function isDemoUsageBypassAllowed(req: Request): boolean {
 }
 
 export function guestServerLimitMessage(): string {
-  return "You’ve used your 5 free analyses this month. Buy a $10 extra report (then create your account), or wait until next month when the free allowance renews.";
+  return "You’ve used your 5 free analyses this month. Buy a $10 extra report (no account required at checkout), or wait until next month when the free allowance renews. Sign up only if you want to save results.";
 }
 
 export function resetGuestRateLimitBuckets(): void {
