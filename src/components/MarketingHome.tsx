@@ -296,8 +296,10 @@ export default function MarketingHome({
             <div className="marketing-qa-panel">
               <p>
                 While the deal is still open, the report stays. That is the score, the status, and
-                the next actions. Thirty days after the deal is marked won, or a flat no, the report
-                is deleted. A deal that is still stalled, or still recoverable, is not on that clock.
+                the next actions. When HubSpot or Salesforce marks the deal complete, the report is
+                deleted then. If the CRM is not connected, the report is deleted 30 days after the
+                deal is marked won, or a flat no. A deal that is still stalled, or still recoverable,
+                is not on that clock.
               </p>
             </div>
           </details>

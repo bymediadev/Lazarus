@@ -172,7 +172,7 @@
     <tr><td>Browser exposure</td><td>Service role and Gemini keys never shipped to client</td></tr>
     <tr><td>AI data use</td><td>APIs configured for zero retention / no public model training where available</td></tr>
     <tr><td>Anti-hallucination</td><td>Server-side grounding audit; invented content stripped before scoring</td></tr>
-    <tr><td>Retention</td><td>The transcript and quotes are not saved. The report stays while the deal is open, and is deleted 30 days after a win or a flat no. A stalled or recoverable deal is not on that clock</td></tr>
+    <tr><td>Retention</td><td>The transcript and quotes are not saved. The report stays while the deal is open. When HubSpot or Salesforce marks the deal complete, the report is deleted then. Otherwise it is deleted 30 days after a win or a flat no. A stalled or recoverable deal is not on that clock</td></tr>
     <tr><td>API hardening (prod)</td><td>Optional <code>LAZARUS_API_KEY</code>, CORS allowlist, IP rate limits (API / auth / analyses), Cloudflare Turnstile on every analysis, cron secret for purge / alert jobs, freemium soft limits</td></tr>
     <tr><td>Authentication</td><td>Email confirmation required; magic-link and password-reset tokens never returned in JSON; OAuth login uses a one-time 5-minute ticket</td></tr>
     <tr><td>Integrations</td><td>Bearer session required; tokens stored per user (not a global singleton); HubSpot / Zoom / Salesforce webhooks refuse traffic if the secret is unset</td></tr>

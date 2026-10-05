@@ -106,7 +106,7 @@ export async function searchHubSpotDeals(
           ],
         },
       ],
-      properties: ["dealname", "dealstage", "amount", "closedate", "createdate"],
+      properties: ["dealname", "dealstage", "hs_is_closed", "amount", "closedate", "createdate"],
       limit: capped,
       sorts: [{ propertyName: "hs_lastmodifieddate", direction: "DESCENDING" }],
     }),
@@ -121,7 +121,7 @@ export async function searchHubSpotDeals(
 
 async function fetchDealById(userId: string, dealId: string): Promise<HubSpotApiDeal> {
   const params = new URLSearchParams({
-    properties: ["dealname", "dealstage", "amount", "closedate", "createdate"].join(","),
+    properties: ["dealname", "dealstage", "hs_is_closed", "amount", "closedate", "createdate"].join(","),
   });
   const res = await hubspotFetch(userId,`/objects/deals/${encodeURIComponent(dealId)}?${params}`);
   const data = (await res.json()) as HubSpotApiDeal & { message?: string };

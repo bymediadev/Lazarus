@@ -3,6 +3,7 @@ import {
   normalizeVetoHolders,
 } from "../../shared/deepContextTypes.js";
 import { MAX_SALES_CYCLE_DAYS } from "../deepContext.js";
+import { isCrmDealComplete } from "../crmClose.js";
 import { secretsEqual } from "../cryptoSecrets.js";
 
 /** Minimal HubSpot deal snapshot shape (workflow webhook or enriched payload). */
@@ -39,6 +40,7 @@ export interface HubSpotMappedDeepContext {
   deal_id?: string;
   dealname?: string;
   dealstage?: string;
+  closed?: boolean;
 }
 
 function asStringArray(value: unknown): string[] {
@@ -102,6 +104,7 @@ export function mapHubSpotDealToDeepContext(
   const dealId = String(deal.deal_id ?? readProp(deal, "hs_object_id") ?? "").trim();
   const dealname = String(deal.dealname ?? readProp(deal, "dealname") ?? "").trim();
   const dealstage = String(deal.dealstage ?? readProp(deal, "dealstage") ?? "").trim();
+  const closed = isCrmDealComplete(dealstage, readProp(deal, "hs_is_closed"));
   const daysRaw = deal.days_in_pipeline ?? readProp(deal, "days_in_pipeline");
   const sales_cycle_days = parseDaysInPipeline(daysRaw) ?? MAX_SALES_CYCLE_DAYS;
 
@@ -135,6 +138,7 @@ export function mapHubSpotDealToDeepContext(
     ...(dealId ? { deal_id: dealId } : {}),
     ...(dealname ? { dealname } : {}),
     ...(dealstage ? { dealstage } : {}),
+    ...(closed ? { closed: true } : {}),
   };
 }
 

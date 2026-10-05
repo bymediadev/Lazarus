@@ -258,3 +258,24 @@ export async function saveRescueOutcome(input: SaveRescueOutcomeInput): Promise<
 
   return data.id;
 }
+
+/** Delete one saved report now, and the CRM links that point at it. Rescue outcomes stay. */
+export async function deleteStoredReport(postMortemId: string): Promise<boolean> {
+  const url = process.env.SUPABASE_URL;
+  const key = process.env.SUPABASE_SERVICE_ROLE_KEY ?? process.env.SUPABASE_ANON_KEY;
+  const id = postMortemId.trim();
+  if (!url || !key || !id) return false;
+
+  const supabase = createClient(url, key);
+  const { error: linkError } = await supabase.from("crm_deal_links").delete().eq("post_mortem_id", id);
+  if (linkError) {
+    console.error("CRM link wipe failed:", linkError.message);
+    return false;
+  }
+  const { data, error } = await supabase.from("call_post_mortems").delete().eq("id", id).select("id");
+  if (error) {
+    console.error("Report wipe failed:", error.message);
+    return false;
+  }
+  return (data?.length ?? 0) > 0;
+}

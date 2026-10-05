@@ -3,6 +3,7 @@ import type { HistoricalCrmContextEntry } from "../shared/deepContextTypes.js";
 import { tenantIdForUser } from "./tenantMembership.js";
 import { crmLinkWriteFields } from "./reportSanitize.js";
 import { tenantStampForWrite } from "./tenantScope.js";
+import { deleteStoredReport } from "./supabase.js";
 
 export type CrmProvider = "hubspot" | "salesforce";
 
@@ -83,6 +84,16 @@ export async function stampCrmLinkTenantFromUser(linkId: string, userId: string)
   if (error) {
     console.error("crm_deal_links tenant stamp failed:", error.message);
   }
+}
+
+/** CRM marked the deal complete. Delete the saved report on our side. */
+export async function wipeReportForClosedCrmDeal(
+  provider: CrmProvider,
+  externalDealId: string
+): Promise<boolean> {
+  const existing = await getCrmDealLinkByExternalId(provider, externalDealId);
+  if (!existing?.post_mortem_id) return false;
+  return deleteStoredReport(existing.post_mortem_id);
 }
 
 export async function getCrmDealLinkByExternalId(

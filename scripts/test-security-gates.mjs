@@ -2,7 +2,8 @@
  * Security gate regressions (no live network).
  * Usage: npm run test:security
  */
-import { verifyHubSpotWebhookSecret } from "../server/integrations/hubspot.ts";
+import { verifyHubSpotWebhookSecret, mapHubSpotDealToDeepContext } from "../server/integrations/hubspot.ts";
+import { isCrmDealComplete } from "../server/crmClose.ts";
 import { createSignedOAuthState, verifySignedOAuthState, readSignedOAuthState, oauthFrontendReturnUrl } from "../server/integrations/oauthShared.ts";
 import { secretsEqual } from "../server/cryptoSecrets.ts";
 import { consumeRateLimit } from "../server/rateLimit.ts";
@@ -77,6 +78,18 @@ function check(label, condition) {
 check("hubspot webhook fail-closed when secret missing", verifyHubSpotWebhookSecret("anything", "") === false);
 check("hubspot webhook reject wrong secret", verifyHubSpotWebhookSecret("nope", "expected") === false);
 check("hubspot webhook accept matching secret", verifyHubSpotWebhookSecret("expected", "expected") === true);
+check("closed won stage is complete", isCrmDealComplete("closedwon") === true);
+check("closed lost label is complete", isCrmDealComplete("Closed Lost") === true);
+check("hubspot closed flag is complete", isCrmDealComplete("appointmentscheduled", "true") === true);
+check("open stage is not complete", isCrmDealComplete("qualifiedtobuy") === false);
+check(
+  "hubspot mapper marks closedwon",
+  mapHubSpotDealToDeepContext({ deal: { deal_id: "1", dealstage: "closedwon" } })?.closed === true
+);
+check(
+  "hubspot mapper leaves an open deal",
+  mapHubSpotDealToDeepContext({ deal: { deal_id: "1", dealstage: "qualifiedtobuy" } })?.closed !== true
+);
 
 check("secretsEqual rejects empty", secretsEqual("", "abc") === false);
 check("secretsEqual matches", secretsEqual("same", "same") === true);

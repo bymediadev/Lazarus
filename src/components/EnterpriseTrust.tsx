@@ -80,6 +80,7 @@ export default function EnterpriseTrust() {
           <span className="trust-meta-key">Data retention</span>
           <span className="trust-meta-val">
             The transcript and quotes are not saved. The report stays while the deal is open, and is
+            deleted when HubSpot or Salesforce marks the deal complete. If the CRM is not connected, it is
             deleted 30 days after a win or a flat no. A stalled or recoverable deal is not on that clock.
           </span>
         </div>

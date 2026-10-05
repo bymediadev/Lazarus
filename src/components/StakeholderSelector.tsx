@@ -20,7 +20,7 @@ const ROLES: Role[] = [
     header: "Not SOC 2 today. The data path is still narrow.",
     bullets: [
       "The call, the email, and the quotes are used to write the report, then not saved. Audio is processed in memory and is not written to disk. A guest run is not saved to an account.",
-      "The report stays while the deal is still open. Thirty days after it is marked won, or a flat no, the report is deleted. A deal that is still stalled, or still recoverable, is not on that clock.",
+      "The report stays while the deal is still open. When HubSpot or Salesforce marks the deal complete, the report is deleted then. If the CRM is not connected, it is deleted 30 days after a win or a flat no.",
       "Each company only sees its own reports. A company key is shown once. We store a hash, not the key. Their server sends the deal in. The transcript stays on their side.",
       "Your content is not used to train public models. HubSpot and Salesforce stay read-only until someone pushes the plan.",
     ],
@@ -33,7 +33,7 @@ const ROLES: Role[] = [
     bullets: [
       "You own the recording, the transcript, and the notes you upload. We process them only to write the report. We do not sell that content or train public models on it.",
       "The transcript and the quotes are not saved. We keep the score, the status, and the next actions.",
-      "That report stays while the deal is open. It is deleted 30 days after a win or a flat no.",
+      "That report stays while the deal is open. When HubSpot or Salesforce marks the deal complete, it is deleted then. If the CRM is not connected, it is deleted 30 days after a win or a flat no.",
       "A signed-in user can delete the account from Account. Or email support@getldr.ca. We do not sell personal information.",
       "We are not SOC 2 certified, and we do not claim a finished GDPR or CCPA program. Read the Privacy Policy, the DPA, and the Security Overview before a larger contract.",
     ],

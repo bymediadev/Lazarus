@@ -9,7 +9,7 @@ import {
   loadHubSpotTokens,
   saveHubSpotTokens,
 } from "./tokens.js";
-import { upsertCrmDealLink } from "../../crmDealLinks.js";
+import { upsertCrmDealLink, wipeReportForClosedCrmDeal } from "../../crmDealLinks.js";
 import { getAuthUserId, requireAuthUser } from "../../requireUser.js";
 
 export function registerHubSpotRoutes(app: Express): void {
@@ -89,6 +89,19 @@ export function registerHubSpotRoutes(app: Express): void {
     }
     try {
       const result = await importHubSpotDealNotes(userId, dealId);
+      if (result.mapped.closed) {
+        const wiped = await wipeReportForClosedCrmDeal("hubspot", dealId);
+        res.json({
+          ok: true,
+          provider: "hubspot",
+          deal: result.deal,
+          wiped,
+          note_count: 0,
+          historical_crm_context: [],
+          source: result.mapped.source,
+        });
+        return;
+      }
       await upsertCrmDealLink({
         provider: "hubspot",
         externalDealId: dealId,

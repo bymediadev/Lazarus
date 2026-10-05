@@ -48,6 +48,7 @@ import {
   upsertCrmDealLink,
   getCrmDealLinkByExternalId,
   updateCrmDealLinkContext,
+  wipeReportForClosedCrmDeal,
   stampCrmLinkTenantFromUser,
 } from "./crmDealLinks.js";
 import { registerAuthRoutes } from "./authRoutes.js";
@@ -602,6 +603,11 @@ app.post("/api/webhooks/hubspot", async (req, res) => {
     }
     const externalId = String(mapped.deal_id ?? mapped.account_id ?? "").trim();
     let linkId: string | null = null;
+    if (externalId && mapped.closed) {
+      const wiped = await wipeReportForClosedCrmDeal("hubspot", externalId);
+      res.json({ ok: true, mapped, wiped, synced: wiped });
+      return;
+    }
     if (externalId) {
       const existing = await getCrmDealLinkByExternalId("hubspot", externalId);
       if (existing?.user_id) {

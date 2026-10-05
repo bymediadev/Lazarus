@@ -119,7 +119,7 @@
     <tr><td>Guest analysis runs</td><td>Not saved to an account; request processing is ephemeral aside from security/abuse logs</td></tr>
     <tr><td>Raw audio uploads</td><td>Processed in memory; not persisted by default</td></tr>
     <tr><td>Transcript, quotes, and CRM payload</td><td>Used to write the report, then not saved. A company API key can return the full brief to the customer’s own server</td></tr>
-    <tr><td>Saved report (scores, status, rescue tasks)</td><td>The transcript and quotes are not saved. The report stays while the deal is open, and is deleted 30 days after a win or a flat no. A stalled or recoverable deal is not on that clock</td></tr>
+    <tr><td>Saved report (scores, status, rescue tasks)</td><td>The transcript and quotes are not saved. The report stays while the deal is open. When HubSpot or Salesforce marks the deal complete, the report is deleted then. Otherwise it is deleted 30 days after a win or a flat no. A stalled or recoverable deal is not on that clock</td></tr>
     <tr><td>CRM link metadata</td><td>Deleted with the report</td></tr>
     <tr><td>Rescue feedback (anonymous metadata)</td><td>Retained without transcript text for product improvement</td></tr>
     <tr><td>Account data</td><td>Until account deletion + reasonable backup window</td></tr>

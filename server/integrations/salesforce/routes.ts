@@ -14,7 +14,7 @@ import {
   loadSalesforceTokens,
   saveSalesforceTokens,
 } from "./tokens.js";
-import { upsertCrmDealLink, getCrmDealLinkByExternalId, updateCrmDealLinkContext, stampCrmLinkTenantFromUser } from "../../crmDealLinks.js";
+import { upsertCrmDealLink, getCrmDealLinkByExternalId, updateCrmDealLinkContext, stampCrmLinkTenantFromUser, wipeReportForClosedCrmDeal } from "../../crmDealLinks.js";
 import { getAuthUserId, requireAuthUser } from "../../requireUser.js";
 import { secretsEqual } from "../../cryptoSecrets.js";
 
@@ -107,6 +107,20 @@ export function registerSalesforceRoutes(app: Express): void {
     }
     try {
       const result = await importSalesforceOpportunityNotes(userId, opportunityId);
+      if (result.mapped.closed) {
+        const wiped = await wipeReportForClosedCrmDeal("salesforce", opportunityId);
+        res.json({
+          ok: true,
+          provider: "salesforce",
+          opportunity: result.opportunity,
+          wiped,
+          note_count: 0,
+          historical_crm_context: [],
+          source: result.mapped.source,
+          deal_id: result.mapped.deal_id,
+        });
+        return;
+      }
       await upsertCrmDealLink({
         provider: "salesforce",
         externalDealId: opportunityId,
@@ -206,6 +220,11 @@ export function registerSalesforceRoutes(app: Express): void {
         return;
       }
       const imported = await importSalesforceOpportunityNotes(existing.user_id, opportunityId);
+      if (imported.mapped.closed) {
+        const wiped = await wipeReportForClosedCrmDeal("salesforce", opportunityId);
+        res.json({ ok: true, wiped, link_id: existing.id, synced: false });
+        return;
+      }
       await updateCrmDealLinkContext(existing.id, {
         historical_crm_context: imported.mapped.historical_crm_context,
         sales_cycle_days: imported.mapped.sales_cycle_days,

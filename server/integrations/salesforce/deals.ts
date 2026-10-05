@@ -1,4 +1,5 @@
 import type { HistoricalCrmContextEntry } from "../../../shared/deepContextTypes.js";
+import { isCrmDealComplete } from "../../crmClose.js";
 import { getValidSalesforceAccessToken } from "./oauth.js";
 
 export interface SalesforceOppHit {
@@ -17,6 +18,7 @@ export interface SalesforceMappedDeepContext {
   deal_id: string;
   dealname?: string;
   dealstage?: string;
+  closed?: boolean;
 }
 
 async function sfFetch(userId: string, path: string, init?: RequestInit): Promise<Response> {
@@ -77,12 +79,13 @@ export async function importSalesforceOpportunityNotes(
   if (!id) throw new Error("opportunityId is required");
 
   const oppRes = await sfFetch(userId,
-    `/services/data/v59.0/sobjects/Opportunity/${encodeURIComponent(id)}?fields=Id,Name,StageName,Amount,CloseDate,CreatedDate`
+    `/services/data/v59.0/sobjects/Opportunity/${encodeURIComponent(id)}?fields=Id,Name,StageName,IsClosed,Amount,CloseDate,CreatedDate`
   );
   const opp = (await oppRes.json()) as {
     Id?: string;
     Name?: string;
     StageName?: string;
+    IsClosed?: boolean;
     Amount?: number | null;
     CloseDate?: string | null;
     CreatedDate?: string;
@@ -135,6 +138,7 @@ export async function importSalesforceOpportunityNotes(
       deal_id: opp.Id,
       dealname: opportunity.name,
       dealstage: opportunity.stageName,
+      ...(isCrmDealComplete(opportunity.stageName, opp.IsClosed) ? { closed: true } : {}),
     },
   };
 }
