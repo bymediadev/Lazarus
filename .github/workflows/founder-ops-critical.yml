@@ -18,7 +18,7 @@ jobs:
           body="/tmp/founder-alert-body.txt"
           for i in 1 2 3 4 5; do
             code=$(curl -sS --max-time 45 -o "$body" -w "%{http_code}" -X POST "$url" \
-              -H "x-cron-secret: ${{ secrets.PURGE_CRON_SECRET }}" || true)
+              -H "x-cron-secret: ${{ secrets.FOUNDER_ALERT_CRON_SECRET }}" || true)
             if [ "$code" = "200" ]; then
               cat "$body"
               exit 0

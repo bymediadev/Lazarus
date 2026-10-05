@@ -37,8 +37,10 @@ async function importLegacyGoogleRows(): Promise<void> {
     const userId = String(row.id ?? "").trim();
     if (!userId || userId === "default" || !row.access_token) continue;
     if (store.load(userId)?.access_token) continue;
+    const accessToken = unwrapToken(row.access_token);
+    if (!accessToken) continue;
     store.save(userId, {
-      access_token: unwrapToken(row.access_token),
+      access_token: accessToken,
       refresh_token: unwrapToken(row.refresh_token),
       expires_at: row.expires_at,
       account_email: row.account_email ?? undefined,
