@@ -20,7 +20,7 @@ const ROLES: Role[] = [
     header: "Not SOC 2 today. The data path is still narrow.",
     bullets: [
       "Guest scans are ephemeral. Raw audio is processed in memory and is not saved to disk. Model APIs use zero-retention settings where the provider allows it, and your content is not used to train public models.",
-      "The transcript, quotes, and CRM payload are not saved. The report stays while the deal is open. Thirty days after it is won or a flat no, that report is deleted. Each company only sees its own reports. HubSpot and Salesforce stay read-only until you push the plan.",
+      "The transcript and quotes are not saved. Reports stay open during active pipeline actions and clear out exactly 30 days after terminal closing metrics (won or flat no). Each company only sees its own reports. HubSpot and Salesforce stay read-only until you push the plan.",
     ],
   },
   {

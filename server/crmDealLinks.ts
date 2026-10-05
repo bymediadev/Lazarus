@@ -1,6 +1,7 @@
 import { createClient } from "@supabase/supabase-js";
 import type { HistoricalCrmContextEntry } from "../shared/deepContextTypes.js";
 import { tenantIdForUser } from "./tenantMembership.js";
+import { crmLinkWriteFields } from "./reportSanitize.js";
 import { tenantStampForWrite } from "./tenantScope.js";
 
 export type CrmProvider = "hubspot" | "salesforce";
@@ -38,6 +39,7 @@ export async function upsertCrmDealLink(input: {
 }): Promise<string | null> {
   const supabase = adminClient();
   if (!supabase) return null;
+  void input.historicalCrmContext;
 
   const row: Record<string, unknown> = {
     provider: input.provider,
@@ -48,9 +50,7 @@ export async function upsertCrmDealLink(input: {
   if (input.userId !== undefined) row.user_id = input.userId;
   if (input.accountId !== undefined) row.account_id = input.accountId;
   if (input.salesCycleDays !== undefined) row.sales_cycle_days = input.salesCycleDays;
-  if (input.historicalCrmContext !== undefined) {
-    row.historical_crm_context = input.historicalCrmContext;
-  }
+  Object.assign(row, crmLinkWriteFields(row));
   if (input.lastInboundAt) row.last_inbound_at = input.lastInboundAt;
   if (input.lastOutboundAt) row.last_outbound_at = input.lastOutboundAt;
   if (input.userId) {
@@ -121,7 +121,10 @@ export async function updateCrmDealLinkContext(
 
   const { error } = await supabase
     .from("crm_deal_links")
-    .update({ ...patch, updated_at: new Date().toISOString() })
+    .update({
+      ...crmLinkWriteFields(patch as Record<string, unknown>),
+      updated_at: new Date().toISOString(),
+    })
     .eq("id", id);
 
   if (error) {

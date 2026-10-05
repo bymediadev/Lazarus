@@ -322,8 +322,9 @@ export default function MarketingHome({
             <div className="marketing-qa-panel">
               <p>
                 Encrypted in transit and at rest. Your content is not used to train public models.
-                The transcript and quotes are not saved. The report stays while the deal is open.
-                Thirty days after it is won or a flat no, that report is deleted. Each company only
+                The transcript and quotes are not saved. Reports stay open during active pipeline
+                actions and clear out exactly 30 days after terminal closing metrics (won or flat no).
+                Each company only
                 sees its own reports. A company key lets their own
                 server send a deal in. We are not SOC 2 certified today — honest fit for a pilot and
                 mid-market. Full detail:{" "}

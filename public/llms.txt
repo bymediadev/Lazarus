@@ -2,7 +2,7 @@
 
 > Lazarus Deal Recovery is B2B deal recovery software for sales managers and VPs of Sales. It identifies which stalled and closed-lost deals are still recoverable versus a flat no, why momentum died, and what to do in the next 0-90 days. Human-led, AI-assisted. Not an AI SDR, autonomous closer, or meeting bot.
 
-Lazarus reads a recording, transcript, email thread, and HubSpot or Salesforce notes once you connect. It names the blocker and writes a 0-90 day plan back to the deal. The call, the quotes, and the CRM payload are used to write the report and are not saved. The portal keeps the score, the status, and the rescue tasks while the deal is open. Thirty days after it is won or a flat no, that report is deleted. A company API key lets their own server send a deal and keep the evidence. No copy-paste. Five free analyses a month; paid plans are priced per deal analysis, not per seat. After a monthly cap you wait until next month, or buy a $10 extra report. Keep Meet, Teams, or Zoom — Lazarus never joins the call.
+Lazarus reads a recording, transcript, email thread, and HubSpot or Salesforce notes once you connect. It names the blocker and writes a 0-90 day plan back to the deal. The transcript and quotes are not saved. Reports stay open during active pipeline actions and clear out exactly 30 days after terminal closing metrics (won or flat no). A company API key lets their own server send a deal and keep the evidence. No copy-paste. Five free analyses a month; paid plans are priced per deal analysis, not per seat. After a monthly cap you wait until next month, or buy a $10 extra report. Keep Meet, Teams, or Zoom — Lazarus never joins the call.
 
 Official site: https://www.getldr.ca/
 

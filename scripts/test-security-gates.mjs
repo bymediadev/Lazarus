@@ -46,8 +46,13 @@ import {
 } from "../server/tenantScope.ts";
 import {
   containsEvidence,
+  crmLinkWriteFields,
+  NARRATIVE_FIELDS,
+  purgeAfterForRescueOutcome,
   purgeAfterForStatus,
+  retentionPurgePlan,
   storedAnalysisJson,
+  storedReportColumns,
   tenantForReportWrite,
 } from "../server/reportSanitize.ts";
 import { decideApiKey } from "../server/tenantApiKey.ts";
@@ -451,6 +456,149 @@ check(
   "a later open status does not keep a closed purge date",
   purgeAfterForStatus("CLOSED WON", purgeNow) !== null &&
     purgeAfterForStatus("STALLED — RECOVERABLE", purgeNow) === null
+);
+
+const closedClock = purgeAfterForStatus("CLOSED WON", purgeNow);
+const reopenedClock = purgeAfterForStatus("ACTIVE", purgeNow);
+check(
+  "transitioning an active status removes the purge_after assignment",
+  closedClock !== null && reopenedClock === null
+);
+for (const outcome of ["still_stalled", "unknown"]) {
+  check(
+    `rescue outcome ${outcome} clears purge_after`,
+    purgeAfterForRescueOutcome(outcome, purgeNow) === null
+  );
+}
+for (const outcome of ["closed_won", "lost"]) {
+  const at = purgeAfterForRescueOutcome(outcome, purgeNow);
+  const daysOut = at ? (new Date(at).getTime() - purgeNow.getTime()) / 86_400_000 : 0;
+  check(`rescue outcome ${outcome} sets purge_after about 30 days out`, daysOut > 29 && daysOut < 31);
+}
+
+const injectedBody = {
+  transcript_text: "raw call that must not be stored",
+  purge_after: "2000-01-01T00:00:00.000Z",
+  tenant_id: companyB,
+  quotes: ["Buyer said the budget is frozen"],
+  historical_crm_context: [{ note: "CRM note that must not stick" }],
+};
+const written = storedReportColumns({
+  dealStatus: "STALLED — RECOVERABLE",
+  analysisJson: fullBrief,
+  dealMemorySummary: {
+    deal_risk_index: 70,
+    deal_status: "STALLED — RECOVERABLE",
+    rescue_triage_plan: { immediate_0_30_days: ["Deliver the pilot proposal"] },
+    historical_crm_context: [{ note: "past CRM block" }],
+    evidence: "We cannot fund this until Q3",
+  },
+  injected: injectedBody,
+  now: purgeNow,
+});
+check(
+  "body injections are discarded on the stored report",
+  written.transcript_text === null &&
+    written.purge_after === null &&
+    written.purge_after !== injectedBody.purge_after &&
+    containsEvidence(written.analysis_json) === false &&
+    containsEvidence(written.deal_memory_summary) === false &&
+    written.analysis_json.proprietary_indices.deal_risk_index === 70 &&
+    written.deal_memory_summary.deal_status === "STALLED — RECOVERABLE" &&
+    written.deal_memory_summary.rescue_triage_plan.immediate_0_30_days[0] ===
+      "Deliver the pilot proposal"
+);
+const finishedWrite = storedReportColumns({
+  dealStatus: "CLOSED LOST — UNLIKELY",
+  analysisJson: fullBrief,
+  injected: injectedBody,
+  now: purgeNow,
+});
+const finishedDays = finishedWrite.purge_after
+  ? (new Date(finishedWrite.purge_after).getTime() - purgeNow.getTime()) / 86_400_000
+  : 0;
+check(
+  "a finished status ignores an injected purge date and sets 30 days",
+  finishedDays > 29 && finishedDays < 31 && finishedWrite.transcript_text === null
+);
+
+const crmStored = crmLinkWriteFields({
+  provider: "hubspot",
+  external_deal_id: "deal-1",
+  sales_cycle_days: 180,
+  historical_crm_context: [{ note: "do not store" }],
+  transcript_text: "do not store",
+  quotes: ["no"],
+});
+check(
+  "CRM link writes drop note text and quotes",
+  crmStored.provider === "hubspot" &&
+    crmStored.external_deal_id === "deal-1" &&
+    crmStored.sales_cycle_days === 180 &&
+    crmStored.historical_crm_context === null &&
+    crmStored.transcript_text === undefined &&
+    crmStored.quotes === undefined
+);
+
+const deadline = new Date("2026-07-02T00:00:00.000Z");
+const expiredReport = {
+  id: "report-expired",
+  purge_after: "2026-07-01T00:00:00.000Z",
+  transcript_text: "full dialogue that must disappear",
+  why_it_stalled: "Buyer narrative that must disappear",
+  restart_plan: "Rescue narrative that must disappear",
+  stall_cause: "Headline narrative",
+  analysis_json: { quote: "raw quote", proprietary_indices: { deal_risk_index: 80 } },
+  deal_memory_summary: { historical_crm_context: [{ note: "crm" }] },
+};
+const openReport = {
+  id: "report-open",
+  purge_after: null,
+  transcript_text: null,
+  why_it_stalled: "Still in the pipeline",
+  analysis_json: { proprietary_indices: { deal_risk_index: 40 } },
+};
+const futureReport = {
+  id: "report-future",
+  purge_after: "2026-08-01T00:00:00.000Z",
+  transcript_text: null,
+  why_it_stalled: "Won, still inside the window",
+};
+const rescueOutcomes = [{ id: "outcome-1", post_mortem_id: "report-expired", outcome: "lost" }];
+const plan = retentionPurgePlan(
+  [expiredReport, openReport, futureReport],
+  [
+    { id: "link-expired", post_mortem_id: "report-expired" },
+    { id: "link-open", post_mortem_id: "report-open" },
+    { id: "link-unattached", post_mortem_id: null },
+  ],
+  deadline
+);
+const remainingIds = new Set(plan.remaining.map((row) => row.id));
+const narrativeLeft = plan.remaining.flatMap((row) =>
+  NARRATIVE_FIELDS.map((field) => row[field]).filter((value) => value != null && value !== "")
+);
+check(
+  "expired reports and their CRM links are deleted together",
+  plan.reportIds.length === 1 &&
+    plan.reportIds[0] === "report-expired" &&
+    plan.linkIds.length === 1 &&
+    plan.linkIds[0] === "link-expired"
+);
+check(
+  "open and not-yet-due reports stay",
+  remainingIds.has("report-open") && remainingIds.has("report-future") && !remainingIds.has("report-expired")
+);
+check(
+  "narrative properties on an expired report are gone with the row",
+  !narrativeLeft.includes(expiredReport.transcript_text) &&
+    !narrativeLeft.includes(expiredReport.why_it_stalled) &&
+    !narrativeLeft.includes(expiredReport.restart_plan) &&
+    !plan.remaining.some((row) => row.analysis_json?.quote)
+);
+check(
+  "anonymized rescue outcomes are outside the report delete set",
+  rescueOutcomes.length === 1 && !plan.reportIds.includes(rescueOutcomes[0].id)
 );
 
 if (failed) {

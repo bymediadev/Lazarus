@@ -6,7 +6,12 @@ import {
   type StakeholderIndexInput,
 } from "./scoring.js";
 import { tenantIdForUser } from "./tenantMembership.js";
-import { purgeAfterForStatus, storedAnalysisJson, tenantForReportWrite } from "./reportSanitize.js";
+import {
+  purgeAfterForRescueOutcome,
+  storedReportColumns,
+  tenantForReportWrite,
+} from "./reportSanitize.js";
+import { tenantStampForWrite } from "./tenantScope.js";
 
 export interface SavePostMortemInput {
   userId?: string;
@@ -34,6 +39,12 @@ export async function savePostMortem(input: SavePostMortemInput): Promise<string
 
   const supabase = createClient(url, key);
 
+  const stored = storedReportColumns({
+    dealStatus: input.dealStatus,
+    analysisJson: input.analysisJson,
+    dealMemorySummary: input.dealMemorySummary,
+    injected: input,
+  });
   const row: Record<string, unknown> = {
     user_id: input.userId ?? null,
     client_name: input.clientName,
@@ -42,16 +53,15 @@ export async function savePostMortem(input: SavePostMortemInput): Promise<string
     stall_cause: input.headline,
     why_it_stalled: input.diagnosis,
     restart_plan: input.actionPlan,
-    transcript_text: null,
+    transcript_text: stored.transcript_text,
     source_ref: (input.sourceRef ?? "").trim() || null,
-    purge_after: purgeAfterForStatus(input.dealStatus),
+    purge_after: stored.purge_after,
   };
-  const storedAnalysis = storedAnalysisJson(input.analysisJson);
-  if (storedAnalysis) {
-    row.analysis_json = storedAnalysis;
+  if (stored.analysis_json) {
+    row.analysis_json = stored.analysis_json;
   }
-  if (input.dealMemorySummary) {
-    row.deal_memory_summary = input.dealMemorySummary;
+  if (stored.deal_memory_summary) {
+    row.deal_memory_summary = stored.deal_memory_summary;
   }
   const membershipTenantId = input.userId ? await tenantIdForUser(input.userId) : null;
   row.tenant_id = tenantForReportWrite({
@@ -161,7 +171,7 @@ export async function purgeExpiredTranscripts(retentionDays?: number): Promise<{
   return { purged, reportsDeleted, retentionDays: days };
 }
 
-/** Delete reports whose deal finished at least 30 days ago. Rescue outcomes stay. */
+/** Delete reports whose purge_after has passed. Rescue outcomes stay. CRM links for those reports go first. */
 async function deleteFinishedReports(supabase: ReturnType<typeof createClient>): Promise<number> {
   const now = new Date().toISOString();
   const { data, error } = await supabase
@@ -234,6 +244,16 @@ export async function saveRescueOutcome(input: SaveRescueOutcomeInput): Promise<
   if (error) {
     console.error("Rescue outcome save failed:", error.message);
     return null;
+  }
+
+  if (input.postMortemId) {
+    const { error: purgeError } = await supabase
+      .from("call_post_mortems")
+      .update({ purge_after: purgeAfterForRescueOutcome(input.outcome) })
+      .eq("id", input.postMortemId);
+    if (purgeError) {
+      console.error("Rescue outcome purge clock update failed:", purgeError.message);
+    }
   }
 
   return data.id;

@@ -79,8 +79,8 @@ export default function EnterpriseTrust() {
         <div className="trust-meta-item">
           <span className="trust-meta-key">Data retention</span>
           <span className="trust-meta-val">
-            The transcript, quotes, and CRM payload are not saved. The report stays while the deal
-            is open. Thirty days after it is won or a flat no, that report is deleted.
+            The transcript and quotes are not saved. Reports stay open during active pipeline
+            actions and clear out exactly 30 days after terminal closing metrics (won or flat no).
           </span>
         </div>
         <div className="trust-meta-item">

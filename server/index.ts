@@ -17,7 +17,6 @@ import {
 import { extractDocumentText, DOCUMENT_MAX_BYTES } from "./documents.js";
 import {
   savePostMortem,
-  purgeExpiredTranscripts,
   saveRescueOutcome,
   getPostMortemUserId,
 } from "./supabase.js";
@@ -774,31 +773,6 @@ app.post(
   } catch (err) {
     res.status(500).json({
       error: err instanceof Error ? err.message : "Failed to save rescue outcome",
-    });
-  }
-});
-
-/** Cron-only: purge transcript_text past retention window. Requires PURGE_CRON_SECRET header. */
-app.post("/api/admin/purge-retention", async (req, res) => {
-  const secret = (process.env.PURGE_CRON_SECRET ?? "").trim();
-  const provided = (req.headers["x-cron-secret"] as string | undefined)?.trim();
-  if (!secret || !secretsEqual(provided, secret)) {
-    res.status(401).json({ error: "Unauthorized" });
-    return;
-  }
-  try {
-    const days = req.body?.retention_days
-      ? parseInt(String(req.body.retention_days), 10)
-      : undefined;
-    const result = await purgeExpiredTranscripts(days);
-    if (!result) {
-      res.status(503).json({ error: "Supabase not configured" });
-      return;
-    }
-    res.json({ ok: true, ...result });
-  } catch (err) {
-    res.status(500).json({
-      error: err instanceof Error ? err.message : "Purge failed",
     });
   }
 });

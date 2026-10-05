@@ -16,6 +16,8 @@ import { getBillingSnapshot } from "./billing.js";
 import { resolveFrontendOrigin } from "./integrations/oauthShared.js";
 import { saveRuntimeConfig } from "./runtimeConfig.js";
 import { captureRestoreSnapshot } from "./opsRestore.js";
+import { secretsEqual } from "./cryptoSecrets.js";
+import { purgeExpiredTranscripts } from "./supabase.js";
 
 async function writeAudit(
   actorUserId: string | null,
@@ -53,6 +55,36 @@ async function emailForUserId(userId: string): Promise<string | null> {
 }
 
 export function registerFounderRoutes(app: Express): void {
+  /** Cron-only. Deletes reports whose purge_after has passed, and their CRM links. */
+  app.post("/api/admin/purge-retention", async (req, res) => {
+    const secret = (process.env.PURGE_CRON_SECRET ?? "").trim();
+    const provided = (req.headers["x-cron-secret"] as string | undefined)?.trim();
+    if (!secret || !secretsEqual(provided, secret)) {
+      res.status(401).json({ error: "Unauthorized" });
+      return;
+    }
+    try {
+      const days = req.body?.retention_days
+        ? parseInt(String(req.body.retention_days), 10)
+        : undefined;
+      const result = await purgeExpiredTranscripts(days);
+      if (!result) {
+        res.status(503).json({ error: "Supabase not configured" });
+        return;
+      }
+      res.json({
+        ok: true,
+        success: true,
+        purgedCount: result.reportsDeleted,
+        ...result,
+      });
+    } catch (err) {
+      res.status(500).json({
+        error: err instanceof Error ? err.message : "Purge failed",
+      });
+    }
+  });
+
   app.get("/api/founder/me", async (req, res) => {
     const user = await resolveAuthUser(req);
     if (!user) {
