@@ -15,11 +15,9 @@ export function setApiBearerToken(token: string | null): void {
   apiBearerToken = token?.trim() || null;
 }
 
-/** Sent as X-Api-Key when VITE_LAZARUS_API_KEY is set (must match server LAZARUS_API_KEY). */
+/** Browser calls are anonymous or use the signed-in bearer. Company keys are not baked into the site. */
 export function apiAuthHeaders(json = false): Record<string, string> {
   const headers: Record<string, string> = {};
-  const key = (viteEnv?.VITE_LAZARUS_API_KEY ?? "").trim();
-  if (key) headers["X-Api-Key"] = key;
   if (apiBearerToken) headers["Authorization"] = `Bearer ${apiBearerToken}`;
   if (json) headers["Content-Type"] = "application/json";
   return headers;
@@ -196,16 +194,7 @@ export async function runPostMortem(payload: PostMortemPayload): Promise<PostMor
   return data;
 }
 
-export async function checkHealth(): Promise<{
-  status: string;
-  gemini: boolean;
-  cerebras?: boolean;
-  groq?: boolean;
-  openrouter?: boolean;
-  llm?: boolean;
-  assemblyai: boolean;
-  supabase: boolean;
-}> {
+export async function checkHealth(): Promise<{ status: string }> {
   const res = await fetch(`${API_BASE}/api/health`);
   return res.json();
 }

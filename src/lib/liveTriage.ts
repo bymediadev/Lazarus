@@ -20,10 +20,14 @@ export async function fetchLiveTriage(input: {
   platform?: MeetingPlatformId | null;
   dealValue?: string;
   objections?: LiveObjection[];
+  captchaToken?: string;
 }): Promise<LiveTriageResult> {
+  const headers = apiAuthHeaders(true);
+  const captcha = input.captchaToken?.trim();
+  if (captcha) headers["X-Captcha-Token"] = captcha;
   const res = await fetch(`${API_BASE}/api/live/triage`, {
     method: "POST",
-    headers: apiAuthHeaders(true),
+    headers,
     body: JSON.stringify({
       full_transcript: input.transcript,
       platform: input.platform ?? "live",

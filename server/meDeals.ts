@@ -1,6 +1,6 @@
 import type { Express, Request, Response, NextFunction } from "express";
 import { optionalAuthUserId } from "./authMiddleware.js";
-import { serviceRoleClient } from "./founderAuth.js";
+import { bearerTokenFrom, serviceRoleClient, userScopedClient } from "./founderAuth.js";
 import { isFreemiumExempt } from "./guestRateLimit.js";
 import { getFeatureAccess, LIFECYCLE_REQUIRED_MESSAGE } from "./billing.js";
 import { tenantIdForUser } from "./tenantMembership.js";
@@ -259,7 +259,8 @@ export function registerMeDealRoutes(app: Express): void {
       const userId = authUserId(req);
       const tenantId = await requireDealTenant(req, res);
       if (!tenantId) return;
-      const supabase = serviceRoleClient();
+      const token = bearerTokenFrom(req);
+      const supabase = (token && userScopedClient(token)) || null;
       if (!supabase) {
         res.status(503).json({ error: "Database not configured" });
         return;
@@ -432,7 +433,8 @@ export function registerMeDealRoutes(app: Express): void {
         res.status(400).json({ error: "Missing deal id" });
         return;
       }
-      const supabase = serviceRoleClient();
+      const token = bearerTokenFrom(req);
+      const supabase = (token && userScopedClient(token)) || null;
       if (!supabase) {
         res.status(503).json({ error: "Database not configured" });
         return;

@@ -35,19 +35,27 @@ export function buildSalesforceAuthorizeUrl(
   return `${cfg.loginUrl}/services/oauth2/authorize?${params.toString()}`;
 }
 
-async function fetchUserEmail(
+async function fetchUserIdentity(
   instanceUrl: string,
   accessToken: string
-): Promise<string | undefined> {
+): Promise<{ email?: string; email_verified: boolean; provider_sub?: string }> {
   try {
     const res = await fetch(`${instanceUrl}/services/oauth2/userinfo`, {
       headers: { Authorization: `Bearer ${accessToken}` },
     });
-    if (!res.ok) return undefined;
-    const data = (await res.json()) as { email?: string };
-    return data.email?.trim() || undefined;
+    if (!res.ok) return { email_verified: false };
+    const data = (await res.json()) as {
+      email?: string;
+      email_verified?: boolean;
+      user_id?: string;
+    };
+    return {
+      email: data.email?.trim() || undefined,
+      email_verified: data.email_verified === true,
+      provider_sub: data.user_id?.trim() || undefined,
+    };
   } catch {
-    return undefined;
+    return { email_verified: false };
   }
 }
 
@@ -85,13 +93,15 @@ export async function exchangeSalesforceCode(
   }
 
   const existing = userId ? loadSalesforceTokens(userId) : null;
-  const email = await fetchUserEmail(data.instance_url, data.access_token);
+  const identity = await fetchUserIdentity(data.instance_url, data.access_token);
   const record: SalesforceTokenRecord = {
     access_token: data.access_token,
     refresh_token: data.refresh_token ?? existing?.refresh_token ?? "",
     instance_url: data.instance_url,
     expires_at: new Date(Date.now() + 2 * 60 * 60 * 1000).toISOString(),
-    account_email: email ?? existing?.account_email,
+    account_email: identity.email ?? existing?.account_email,
+    email_verified: identity.email_verified,
+    provider_sub: identity.provider_sub,
     connected_at: new Date().toISOString(),
   };
   if (userId) saveSalesforceTokens(userId, record);

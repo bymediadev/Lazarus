@@ -49,3 +49,35 @@ CREATE INDEX IF NOT EXISTS idx_call_post_mortems_created_at ON call_post_mortems
 CREATE INDEX IF NOT EXISTS idx_call_post_mortems_user_id ON call_post_mortems (user_id);
 
 -- Server API saves use SUPABASE_SERVICE_ROLE_KEY (bypasses RLS — never expose to browser)
+
+-- Least privilege from 016, plus the authenticated grants restored in 021 so
+-- user-scoped deal reads work under RLS. Anon stays revoked.
+REVOKE ALL ON ALL TABLES IN SCHEMA public FROM anon, authenticated, PUBLIC;
+REVOKE ALL ON ALL SEQUENCES IN SCHEMA public FROM anon, authenticated, PUBLIC;
+REVOKE ALL ON ALL FUNCTIONS IN SCHEMA public FROM anon, authenticated, PUBLIC;
+
+ALTER DEFAULT PRIVILEGES FOR ROLE postgres IN SCHEMA public
+  REVOKE ALL ON TABLES FROM anon, authenticated, PUBLIC;
+
+GRANT SELECT, INSERT, UPDATE, DELETE ON public.call_post_mortems TO authenticated;
+
+-- Tables created by later migrations. Skip them on a post-mortems-only bootstrap.
+DO $$
+BEGIN
+  IF to_regclass('public.rescue_outcomes') IS NOT NULL THEN
+    EXECUTE 'GRANT SELECT, INSERT ON public.rescue_outcomes TO authenticated';
+  END IF;
+  IF to_regclass('public.crm_deal_links') IS NOT NULL THEN
+    EXECUTE 'GRANT SELECT, INSERT, UPDATE, DELETE ON public.crm_deal_links TO authenticated';
+  END IF;
+  IF to_regclass('public.purge_audit_log') IS NOT NULL THEN
+    EXECUTE 'ALTER TABLE public.purge_audit_log ENABLE ROW LEVEL SECURITY';
+    EXECUTE 'ALTER TABLE public.purge_audit_log FORCE ROW LEVEL SECURITY';
+    EXECUTE 'REVOKE ALL ON TABLE public.purge_audit_log FROM anon, authenticated, PUBLIC';
+    EXECUTE 'GRANT ALL ON TABLE public.purge_audit_log TO postgres, service_role';
+  END IF;
+  IF to_regclass('public.founder_audit_log') IS NOT NULL THEN
+    EXECUTE 'REVOKE UPDATE, DELETE ON TABLE public.founder_audit_log FROM anon, authenticated, PUBLIC, service_role';
+    EXECUTE 'GRANT INSERT, SELECT ON TABLE public.founder_audit_log TO service_role';
+  END IF;
+END $$;

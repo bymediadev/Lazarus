@@ -143,28 +143,49 @@ export async function signInWithPassword(email: string, password: string): Promi
  * Create Lazarus account with email + password.
  * Confirmation email is required — the session is not minted until the inbox link is used.
  */
+const PENDING_PASSWORD_KEY = "lazarus_pending_password";
+
 export async function signUpWithPassword(email: string, password: string): Promise<void> {
   await ensureAuthConfig();
   assertPassword(password);
   const trimmed = email.trim();
+  try {
+    sessionStorage.setItem(PENDING_PASSWORD_KEY, password);
+  } catch {
+    /* the confirmation link can still create the account; set a password after sign-in */
+  }
 
   const res = await fetch(`${API_BASE}/api/auth/signup`, {
     method: "POST",
     headers: apiAuthHeaders(true),
-    body: JSON.stringify({
-      email: trimmed,
-      password,
-      session_id: (() => {
-        try {
-          return sessionStorage.getItem("lazarus_checkout_session") || undefined;
-        } catch {
-          return undefined;
-        }
-      })(),
-    }),
+    body: JSON.stringify({ email: trimmed }),
   });
   const data = (await res.json()) as { error?: string; ok?: boolean; message?: string };
-  if (!res.ok) throw new Error(data.error ?? "Could not create account");
+  if (!res.ok) {
+    try {
+      sessionStorage.removeItem(PENDING_PASSWORD_KEY);
+    } catch {
+      /* ignore */
+    }
+    throw new Error(data.error ?? "Could not create account");
+  }
+}
+
+/** After the confirmation link creates a session, set the password chosen on this browser. */
+export async function applyPendingSignupPassword(): Promise<void> {
+  let pending = "";
+  try {
+    pending = sessionStorage.getItem(PENDING_PASSWORD_KEY) ?? "";
+  } catch {
+    return;
+  }
+  if (pending.length < 8) return;
+  await updatePassword(pending);
+  try {
+    sessionStorage.removeItem(PENDING_PASSWORD_KEY);
+  } catch {
+    /* ignore */
+  }
 }
 
 /** Change password for the signed-in user. */

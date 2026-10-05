@@ -3,6 +3,7 @@ import Stripe from "stripe";
 import { serviceRoleClient } from "./founderAuth.js";
 import { resolveFrontendOrigin } from "./integrations/oauthShared.js";
 import { maybeNotifyTeamUsage, teamUsageBanner } from "./teamUsageNotice.js";
+import { claimCheckoutAllowed } from "./oauthIdentity.js";
 
 export const FREE_ANALYSIS_CAP = 5;
 export const ENTRY_PERIOD_CAP = 20;
@@ -797,25 +798,34 @@ async function findUnclaimedPaidSessionForEmail(
 
 export async function claimPaidCheckout(
   user: { id: string; email?: string | null },
-  opts: { sessionId?: string | null } = {}
+  opts: { sessionId?: string | null; emailConfirmed?: boolean } = {}
 ): Promise<{ claimed: boolean; reason?: string }> {
+  const gate = claimCheckoutAllowed({
+    emailConfirmed: opts.emailConfirmed === true,
+    sessionId: opts.sessionId,
+  });
+  if (gate.reason === "unconfirmed") return { claimed: false, reason: "unconfirmed" };
   if (!isStripeConfigured()) return { claimed: false, reason: "not_configured" };
   const stripe = getStripe();
   if (!stripe) return { claimed: false, reason: "not_configured" };
 
   const sessionId = (opts.sessionId ?? "").trim();
+  const email = (user.email ?? "").trim().toLowerCase();
   try {
-    if (sessionId.startsWith("cs_")) {
+    if (gate.allowSession && sessionId.startsWith("cs_")) {
       const session = await stripe.checkout.sessions.retrieve(sessionId);
       if (!sessionIsPaid(session)) {
         return { claimed: false, reason: "unpaid" };
+      }
+      const paidEmail = sessionEmail(session);
+      if (!email || !paidEmail || paidEmail !== email) {
+        return { claimed: false, reason: "email_mismatch" };
       }
       await attachCheckoutToUser(user.id, session);
       return { claimed: true };
     }
 
-    const email = (user.email ?? "").trim().toLowerCase();
-    if (!email || !email.includes("@")) {
+    if (!gate.searchByEmail || !email || !email.includes("@")) {
       return { claimed: false, reason: "no_session" };
     }
     const session = await findUnclaimedPaidSessionForEmail(email);

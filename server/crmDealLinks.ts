@@ -4,6 +4,7 @@ import { tenantIdForUser } from "./tenantMembership.js";
 import { crmLinkWriteFields } from "./reportSanitize.js";
 import { tenantStampForWrite } from "./tenantScope.js";
 import { deleteStoredReport } from "./supabase.js";
+import { crmLinkWriteAllowed } from "./oauthIdentity.js";
 
 export type CrmProvider = "hubspot" | "salesforce";
 
@@ -30,6 +31,7 @@ function adminClient() {
 export async function upsertCrmDealLink(input: {
   provider: CrmProvider;
   externalDealId: string;
+  portalId?: string | null;
   postMortemId?: string | null;
   userId?: string | null;
   accountId?: string;
@@ -42,30 +44,45 @@ export async function upsertCrmDealLink(input: {
   if (!supabase) return null;
   void input.historicalCrmContext;
 
+  const portalId = (input.portalId ?? "").trim();
+  const existing = await getCrmDealLinkByExternalId(input.provider, input.externalDealId, portalId);
+  if (existing && !crmLinkWriteAllowed(existing.user_id, input.userId)) {
+    console.error("crm_deal_links ownership conflict");
+    return null;
+  }
+
   const row: Record<string, unknown> = {
     provider: input.provider,
+    portal_id: portalId,
     external_deal_id: input.externalDealId,
     updated_at: new Date().toISOString(),
   };
   if (input.postMortemId !== undefined) row.post_mortem_id = input.postMortemId;
-  if (input.userId !== undefined) row.user_id = input.userId;
+  if (input.userId && (!existing?.user_id || existing.user_id === input.userId)) {
+    row.user_id = input.userId;
+  }
   if (input.accountId !== undefined) row.account_id = input.accountId;
   if (input.salesCycleDays !== undefined) row.sales_cycle_days = input.salesCycleDays;
   Object.assign(row, crmLinkWriteFields(row));
   if (input.lastInboundAt) row.last_inbound_at = input.lastInboundAt;
   if (input.lastOutboundAt) row.last_outbound_at = input.lastOutboundAt;
-  if (input.userId) {
+  if (input.userId && row.user_id) {
     row.tenant_id = tenantStampForWrite(await tenantIdForUser(input.userId), input);
   }
 
-  const { data, error } = await supabase
-    .from("crm_deal_links")
-    .upsert(row, { onConflict: "provider,external_deal_id" })
-    .select("id")
-    .single();
+  if (existing) {
+    const { error } = await supabase.from("crm_deal_links").update(row).eq("id", existing.id);
+    if (error) {
+      console.error("crm_deal_links update failed:", error.message);
+      return null;
+    }
+    return existing.id;
+  }
+
+  const { data, error } = await supabase.from("crm_deal_links").insert(row).select("id").single();
 
   if (error) {
-    console.error("crm_deal_links upsert failed:", error.message);
+    console.error("crm_deal_links insert failed:", error.message);
     return null;
   }
   return data.id as string;
@@ -89,16 +106,18 @@ export async function stampCrmLinkTenantFromUser(linkId: string, userId: string)
 /** CRM marked the deal complete. Delete the saved report on our side. */
 export async function wipeReportForClosedCrmDeal(
   provider: CrmProvider,
-  externalDealId: string
+  externalDealId: string,
+  portalId = ""
 ): Promise<boolean> {
-  const existing = await getCrmDealLinkByExternalId(provider, externalDealId);
+  const existing = await getCrmDealLinkByExternalId(provider, externalDealId, portalId);
   if (!existing?.post_mortem_id) return false;
   return deleteStoredReport(existing.post_mortem_id);
 }
 
 export async function getCrmDealLinkByExternalId(
   provider: CrmProvider,
-  externalDealId: string
+  externalDealId: string,
+  portalId = ""
 ): Promise<CrmDealLinkRow | null> {
   const supabase = adminClient();
   if (!supabase) return null;
@@ -107,6 +126,7 @@ export async function getCrmDealLinkByExternalId(
     .from("crm_deal_links")
     .select("*")
     .eq("provider", provider)
+    .eq("portal_id", portalId)
     .eq("external_deal_id", externalDealId)
     .maybeSingle();
 

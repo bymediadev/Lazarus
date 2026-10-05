@@ -27,7 +27,11 @@ export interface LiveSession {
 export interface CreatedLiveSession {
   sessionId: string;
   sessionSecret: string;
+  streamTicket: string;
 }
+
+const STREAM_TICKET_MS = 60_000;
+const streamTickets = new Map<string, { sessionId: string; exp: number }>();
 
 const sessions = new Map<string, LiveSession>();
 const SESSION_TTL_MS = 4 * 60 * 60 * 1000;
@@ -64,7 +68,30 @@ export function createLiveSession(
     subscribers: new Set(),
     lastCaptionKeys: [],
   });
-  return { sessionId: id, sessionSecret };
+  return { sessionId: id, sessionSecret, streamTicket: issueStreamTicket(id) ?? "" };
+}
+
+export function issueStreamTicket(sessionId: string): string | null {
+  if (!sessions.has(sessionId)) return null;
+  const ticket = crypto.randomBytes(24).toString("hex");
+  streamTickets.set(ticket, { sessionId, exp: Date.now() + STREAM_TICKET_MS });
+  return ticket;
+}
+
+/** Single-use. A reconnect must ask for a new ticket with the session secret in the body. */
+export function consumeStreamTicket(ticket: string | undefined): string | null {
+  const key = String(ticket ?? "").trim();
+  if (!key) return null;
+  const row = streamTickets.get(key);
+  streamTickets.delete(key);
+  if (!row || row.exp <= Date.now()) return null;
+  return row.sessionId;
+}
+
+export function dropLiveSessionsForUser(userId: string): void {
+  for (const [id, session] of sessions) {
+    if (session.ownerUserId === userId) sessions.delete(id);
+  }
 }
 
 export function createZoomLiveSession(ownerUserId: string): CreatedLiveSession {

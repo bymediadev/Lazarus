@@ -36,11 +36,15 @@ export function createObjection(
 
 export async function scanLiveObjections(
   fullTranscript: string,
-  existing: LiveObjection[]
+  existing: LiveObjection[],
+  captchaToken?: string
 ): Promise<LiveObjectionScanResult> {
+  const headers = apiAuthHeaders(true);
+  const captcha = captchaToken?.trim();
+  if (captcha) headers["X-Captcha-Token"] = captcha;
   const res = await fetch(`${API_BASE}/api/live/objections`, {
     method: "POST",
-    headers: apiAuthHeaders(true),
+    headers,
     body: JSON.stringify({
       full_transcript: fullTranscript,
       existing_objections: existing.map((o) => ({

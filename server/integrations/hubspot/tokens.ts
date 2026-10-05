@@ -1,4 +1,4 @@
-import { createUserTokenStore } from "../userTokenStore.js";
+import { createPersistedTokenStore } from "../oauthConnections.js";
 
 export interface HubSpotTokenRecord {
   access_token: string;
@@ -10,7 +10,9 @@ export interface HubSpotTokenRecord {
   connected_at: string;
 }
 
-const store = createUserTokenStore<HubSpotTokenRecord>("hubspot-tokens.json");
+const store = createPersistedTokenStore<HubSpotTokenRecord>("hubspot", "hubspot-tokens.json", {
+  portalId: (record) => record.hub_id,
+});
 
 export function loadHubSpotTokens(userId: string): HubSpotTokenRecord | null {
   return store.load(userId);
@@ -24,10 +26,18 @@ export function clearHubSpotTokens(userId: string): void {
   store.clear(userId);
 }
 
+export async function clearHubSpotTokensAndWait(userId: string): Promise<void> {
+  await store.clearAndWait(userId);
+}
+
 export function isHubSpotConnected(userId: string): boolean {
   return !!store.load(userId)?.access_token;
 }
 
 export function hasAnyHubSpotTokens(): boolean {
   return store.hasAny();
+}
+
+export function hydrateHubSpotTokens(): Promise<void> {
+  return store.hydrate();
 }

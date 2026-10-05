@@ -18,6 +18,7 @@ import { saveRuntimeConfig } from "./runtimeConfig.js";
 import { captureRestoreSnapshot } from "./opsRestore.js";
 import { secretsEqual } from "./cryptoSecrets.js";
 import { purgeExpiredTranscripts } from "./supabase.js";
+import { getRequestId } from "./apiEvents.js";
 
 async function writeAudit(
   actorUserId: string | null,
@@ -67,7 +68,10 @@ export function registerFounderRoutes(app: Express): void {
       const days = req.body?.retention_days
         ? parseInt(String(req.body.retention_days), 10)
         : undefined;
-      const result = await purgeExpiredTranscripts(days);
+      const requestId =
+        getRequestId(req) ??
+        (typeof req.headers["x-request-id"] === "string" ? req.headers["x-request-id"] : null);
+      const result = await purgeExpiredTranscripts(days, requestId);
       if (!result) {
         res.status(503).json({ error: "Supabase not configured" });
         return;
@@ -101,8 +105,9 @@ export function registerFounderRoutes(app: Express): void {
     });
   });
 
-  app.get("/api/founder/overview", requireOps, async (_req, res) => {
+  app.get("/api/founder/overview", requireOps, async (req, res) => {
     try {
+      await writeAudit(getOpsUser(req)?.id ?? null, "read_overview", null, null);
       const supabase = serviceRoleClient();
       const system = await buildSystemStatus();
       const since24 = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
@@ -213,8 +218,9 @@ export function registerFounderRoutes(app: Express): void {
     }
   });
 
-  app.get("/api/founder/system", requireOps, async (_req, res) => {
+  app.get("/api/founder/system", requireOps, async (req, res) => {
     try {
+      await writeAudit(getOpsUser(req)?.id ?? null, "read_system", null, null);
       const system = await buildSystemStatus();
       res.json(system);
     } catch (err) {
@@ -222,8 +228,9 @@ export function registerFounderRoutes(app: Express): void {
     }
   });
 
-  app.get("/api/founder/workspaces", requireOps, async (_req, res) => {
+  app.get("/api/founder/workspaces", requireOps, async (req, res) => {
     try {
+      await writeAudit(getOpsUser(req)?.id ?? null, "read_workspaces", null, null);
       const workspaces = await buildWorkspaceHealth();
       res.json({ workspaces });
     } catch (err) {
@@ -256,6 +263,7 @@ export function registerFounderRoutes(app: Express): void {
 
   app.get("/api/founder/issues", requireOps, async (req, res) => {
     try {
+      await writeAudit(getOpsUser(req)?.id ?? null, "read_issues", null, null);
       const supabase = serviceRoleClient();
       if (!supabase) {
         res.status(503).json({ error: "Supabase not configured" });
@@ -306,6 +314,7 @@ export function registerFounderRoutes(app: Express): void {
 
   app.get("/api/founder/usage", requireOps, async (req, res) => {
     try {
+      await writeAudit(getOpsUser(req)?.id ?? null, "read_usage", null, null);
       const supabase = serviceRoleClient();
       if (!supabase) {
         res.status(503).json({ error: "Supabase not configured" });
@@ -339,8 +348,9 @@ export function registerFounderRoutes(app: Express): void {
   });
 
   /** Consolidated under-the-hood: outages, category shifts, usage, billing signals. */
-  app.get("/api/founder/apis", requireOps, async (_req, res) => {
+  app.get("/api/founder/apis", requireOps, async (req, res) => {
     try {
+      await writeAudit(getOpsUser(req)?.id ?? null, "read_apis", null, null);
       const inventory = await buildApisInventory();
       res.json(inventory);
     } catch (err) {
@@ -348,8 +358,9 @@ export function registerFounderRoutes(app: Express): void {
     }
   });
 
-  app.get("/api/founder/contact-inquiries", requireOps, async (_req, res) => {
+  app.get("/api/founder/contact-inquiries", requireOps, async (req, res) => {
     try {
+      await writeAudit(getOpsUser(req)?.id ?? null, "read_contact_inquiries", null, null);
       const supabase = serviceRoleClient();
       if (!supabase) {
         res.status(503).json({ error: "Supabase not configured" });
@@ -372,6 +383,9 @@ export function registerFounderRoutes(app: Express): void {
 
   app.get("/api/founder/lookup", requireOps, async (req, res) => {
     try {
+      await writeAudit(getOpsUser(req)?.id ?? null, "read_lookup", null, null, {
+        email: String(req.query.email ?? "").trim().toLowerCase() || null,
+      });
       const email = String(req.query.email ?? "")
         .trim()
         .toLowerCase();
@@ -491,6 +505,9 @@ export function registerFounderRoutes(app: Express): void {
         return;
       }
       const showTranscript = String(req.query.transcript ?? "") === "1";
+      await writeAudit(getOpsUser(req)?.id ?? null, "read_deal", req.params.userId, req.params.dealId, {
+        transcript_revealed: showTranscript,
+      });
       const { data, error } = await supabase
         .from("call_post_mortems")
         .select("*")
@@ -678,6 +695,7 @@ export function registerFounderRoutes(app: Express): void {
 
   app.get("/api/founder/crashes", requireOps, async (req, res) => {
     try {
+      await writeAudit(getOpsUser(req)?.id ?? null, "read_crashes", null, null);
       const supabase = serviceRoleClient();
       if (!supabase) {
         res.status(503).json({ error: "Supabase not configured" });

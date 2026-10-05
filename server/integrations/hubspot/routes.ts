@@ -1,7 +1,7 @@
 import type { Express } from "express";
 import { registerOAuthConnectRoutes } from "../connectFlow.js";
 import { getHubSpotConfig, isHubSpotConfigured, HUBSPOT_OAUTH_SCOPES } from "./config.js";
-import { importHubSpotDealNotes, pushNoteToHubSpotDeal, searchHubSpotDeals } from "./deals.js";
+import { importHubSpotDealNotes, pushNoteToHubSpotDeal, searchHubSpotDeals, userOwnsHubSpotDeal } from "./deals.js";
 import { buildHubSpotAuthorizeUrl, exchangeHubSpotCode } from "./oauth.js";
 import {
   clearHubSpotTokens,
@@ -16,7 +16,6 @@ export function registerHubSpotRoutes(app: Express): void {
   registerOAuthConnectRoutes(app, {
     slug: "hubspot",
     queryKey: "hubspot",
-    loginProvider: "hubspot",
     notConfiguredMessage: "HubSpot OAuth not configured on server",
     getClientSecret: () => getHubSpotConfig()?.clientSecret ?? null,
     buildAuthorizeUrl: buildHubSpotAuthorizeUrl,
@@ -102,9 +101,11 @@ export function registerHubSpotRoutes(app: Express): void {
         });
         return;
       }
+      const portalId = loadHubSpotTokens(userId)?.hub_id ?? "";
       await upsertCrmDealLink({
         provider: "hubspot",
         externalDealId: dealId,
+        portalId,
         accountId: result.mapped.account_id,
         salesCycleDays: result.mapped.sales_cycle_days,
         historicalCrmContext: result.mapped.historical_crm_context,
@@ -147,10 +148,16 @@ export function registerHubSpotRoutes(app: Express): void {
       return;
     }
     try {
+      const owned = await userOwnsHubSpotDeal(userId, dealId);
+      if (!owned.ok) {
+        res.status(404).json({ error: "That deal is not in the connected HubSpot portal." });
+        return;
+      }
       const pushed = await pushNoteToHubSpotDeal(userId, dealId, noteBody);
       const linkId = await upsertCrmDealLink({
         provider: "hubspot",
         externalDealId: dealId,
+        portalId: owned.portalId,
         postMortemId: postMortemId || null,
         userId,
         lastOutboundAt: new Date().toISOString(),

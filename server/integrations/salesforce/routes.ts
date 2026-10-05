@@ -5,18 +5,21 @@ import {
   importSalesforceOpportunityNotes,
   pushNoteToSalesforceOpportunity,
   searchSalesforceOpportunities,
+  userOwnsSalesforceOpportunity,
 } from "./deals.js";
 import { buildSalesforceAuthorizeUrl, exchangeSalesforceCode } from "./oauth.js";
 import { beginSalesforcePkce, clearSalesforcePkce, takeSalesforcePkce } from "./pkce.js";
 import {
   clearSalesforceTokens,
+  findSalesforceUserByWebhookSecret,
+  hydrateSalesforceTokens,
   isSalesforceConnected,
   loadSalesforceTokens,
   saveSalesforceTokens,
 } from "./tokens.js";
 import { upsertCrmDealLink, getCrmDealLinkByExternalId, updateCrmDealLinkContext, stampCrmLinkTenantFromUser, wipeReportForClosedCrmDeal } from "../../crmDealLinks.js";
 import { getAuthUserId, requireAuthUser } from "../../requireUser.js";
-import { secretsEqual } from "../../cryptoSecrets.js";
+import { readSalesforceWebhookSecret } from "../../oauthIdentity.js";
 
 export function registerSalesforceRoutes(app: Express): void {
   registerOAuthConnectRoutes(app, {
@@ -51,6 +54,7 @@ export function registerSalesforceRoutes(app: Express): void {
       connected: isSalesforceConnected(userId),
       account_email: tokens?.account_email ?? null,
       instance_url: tokens?.instance_url ?? null,
+      webhook_secret: tokens?.webhook_secret ?? null,
       connected_at: tokens?.connected_at ?? null,
       scopes: SALESFORCE_OAUTH_SCOPES,
       note: isSalesforceConfigured()
@@ -108,7 +112,11 @@ export function registerSalesforceRoutes(app: Express): void {
     try {
       const result = await importSalesforceOpportunityNotes(userId, opportunityId);
       if (result.mapped.closed) {
-        const wiped = await wipeReportForClosedCrmDeal("salesforce", opportunityId);
+        const wiped = await wipeReportForClosedCrmDeal(
+          "salesforce",
+          opportunityId,
+          loadSalesforceTokens(userId)?.instance_url ?? ""
+        );
         res.json({
           ok: true,
           provider: "salesforce",
@@ -121,9 +129,11 @@ export function registerSalesforceRoutes(app: Express): void {
         });
         return;
       }
+      const portalId = loadSalesforceTokens(userId)?.instance_url ?? "";
       await upsertCrmDealLink({
         provider: "salesforce",
         externalDealId: opportunityId,
+        portalId,
         accountId: result.mapped.account_id,
         salesCycleDays: result.mapped.sales_cycle_days,
         historicalCrmContext: result.mapped.historical_crm_context,
@@ -170,9 +180,15 @@ export function registerSalesforceRoutes(app: Express): void {
     }
     try {
       const pushed = await pushNoteToSalesforceOpportunity(userId, opportunityId, noteBody);
+      const owned = await userOwnsSalesforceOpportunity(userId, opportunityId);
+      if (!owned.ok) {
+        res.status(404).json({ error: "That opportunity is not in the connected Salesforce org." });
+        return;
+      }
       const linkId = await upsertCrmDealLink({
         provider: "salesforce",
         externalDealId: opportunityId,
+        portalId: owned.portalId,
         postMortemId: postMortemId || null,
         userId,
         lastOutboundAt: new Date().toISOString(),
@@ -193,14 +209,14 @@ export function registerSalesforceRoutes(app: Express): void {
   });
 
   app.post("/api/webhooks/salesforce", async (req, res) => {
-    const expected = (process.env.SALESFORCE_WEBHOOK_SECRET ?? "").trim();
-    const provided =
-      (req.headers["x-webhook-secret"] as string | undefined)?.trim() ??
-      String(req.query.secret ?? "").trim();
-    if (!expected || !secretsEqual(provided, expected)) {
+    const provided = readSalesforceWebhookSecret(req.headers, req.query);
+    await hydrateSalesforceTokens();
+    const userId = findSalesforceUserByWebhookSecret(provided);
+    if (!userId) {
       res.status(401).json({ error: "Unauthorized" });
       return;
     }
+    const portalId = loadSalesforceTokens(userId)?.instance_url ?? "";
 
     try {
       const opportunityId = String(
@@ -210,7 +226,7 @@ export function registerSalesforceRoutes(app: Express): void {
         res.status(400).json({ error: "opportunityId required" });
         return;
       }
-      const existing = await getCrmDealLinkByExternalId("salesforce", opportunityId);
+      const existing = await getCrmDealLinkByExternalId("salesforce", opportunityId, portalId);
       if (!existing?.user_id) {
         res.status(404).json({ error: "No owner-linked Salesforce deal for this id" });
         return;
@@ -221,7 +237,7 @@ export function registerSalesforceRoutes(app: Express): void {
       }
       const imported = await importSalesforceOpportunityNotes(existing.user_id, opportunityId);
       if (imported.mapped.closed) {
-        const wiped = await wipeReportForClosedCrmDeal("salesforce", opportunityId);
+        const wiped = await wipeReportForClosedCrmDeal("salesforce", opportunityId, portalId);
         res.json({ ok: true, wiped, link_id: existing.id, synced: false });
         return;
       }

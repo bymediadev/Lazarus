@@ -4,6 +4,7 @@ import {
 } from "../../shared/deepContextTypes.js";
 import { MAX_SALES_CYCLE_DAYS } from "../deepContext.js";
 import { isCrmDealComplete } from "../crmClose.js";
+import crypto from "crypto";
 import { secretsEqual } from "../cryptoSecrets.js";
 
 /** Minimal HubSpot deal snapshot shape (workflow webhook or enriched payload). */
@@ -142,10 +143,30 @@ export function mapHubSpotDealToDeepContext(
   };
 }
 
-export function verifyHubSpotWebhookSecret(
-  provided: string | undefined,
-  expected: string | undefined
-): boolean {
-  if (!expected?.trim() || !provided?.trim()) return false;
-  return secretsEqual(provided.trim(), expected.trim());
+const HUBSPOT_SIGNATURE_WINDOW_MS = 5 * 60 * 1000;
+
+/**
+ * HubSpot v3: base64 HMAC-SHA256 of method + full URI + raw body + timestamp.
+ * Rejects a timestamp outside five minutes.
+ */
+export function verifyHubSpotV3Signature(input: {
+  method: string;
+  uri: string;
+  rawBody: string;
+  signature: string | undefined;
+  timestamp: string | undefined;
+  clientSecret: string;
+  now?: number;
+}): boolean {
+  const signature = (input.signature ?? "").trim();
+  const timestamp = (input.timestamp ?? "").trim();
+  const secret = input.clientSecret.trim();
+  if (!signature || !timestamp || !secret) return false;
+  const ts = Number(timestamp);
+  if (!Number.isFinite(ts)) return false;
+  const now = input.now ?? Date.now();
+  if (Math.abs(now - ts) > HUBSPOT_SIGNATURE_WINDOW_MS) return false;
+  const source = `${input.method.toUpperCase()}${input.uri}${input.rawBody}${timestamp}`;
+  const digest = crypto.createHmac("sha256", secret).update(source).digest("base64");
+  return secretsEqual(digest, signature);
 }

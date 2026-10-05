@@ -1,5 +1,6 @@
 import type { Express, Request } from "express";
 import { serviceRoleClient } from "./founderAuth.js";
+import { clientIp } from "./rateLimit.js";
 
 export const CONTACT_TOPICS = ["feedback", "sales", "technical", "support"] as const;
 export type ContactTopic = (typeof CONTACT_TOPICS)[number];
@@ -61,11 +62,6 @@ function fromCandidates(): string[] {
     list.push(addr);
   }
   return list;
-}
-
-function clientIp(req: Request): string {
-  const xf = (req.headers["x-forwarded-for"] as string | undefined)?.split(",")[0]?.trim();
-  return xf || req.socket.remoteAddress || "unknown";
 }
 
 function isRateLimited(req: Request): boolean {

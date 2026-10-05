@@ -80,13 +80,21 @@ export async function exchangeGoogleCode(
   }
 
   let account_email: string | undefined;
+  let email_verified = false;
+  let provider_sub: string | undefined;
   try {
     const userRes = await secureFetch(USERINFO_URL, {
       headers: { Authorization: `Bearer ${data.access_token}` },
     });
     if (userRes.ok) {
-      const user = (await userRes.json()) as { email?: string };
+      const user = (await userRes.json()) as {
+        email?: string;
+        email_verified?: boolean;
+        sub?: string;
+      };
       account_email = user.email;
+      email_verified = user.email_verified === true;
+      provider_sub = typeof user.sub === "string" ? user.sub : undefined;
     }
   } catch {
     /* optional */
@@ -98,6 +106,8 @@ export async function exchangeGoogleCode(
     refresh_token: data.refresh_token ?? existing?.refresh_token ?? "",
     expires_at: new Date(Date.now() + data.expires_in * 1000).toISOString(),
     account_email,
+    email_verified,
+    provider_sub,
     connected_at: new Date().toISOString(),
   };
   if (userId) saveGoogleTokens(userId, record);

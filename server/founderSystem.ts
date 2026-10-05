@@ -307,6 +307,8 @@ export function classifyIssue(route: string, statusCode: number, errorCode: stri
 } {
   const err = (errorCode ?? "").toLowerCase();
   const r = route.toLowerCase();
+  // api_events stores http_401 when the handler did not set a message. That is a status code, not a Gemini rejection.
+  const providerMessage = /^http_\d{3}$/.test(err) ? "" : err;
 
   if (statusCode === 402 || err.includes("payment_required")) {
     return {
@@ -321,22 +323,40 @@ export function classifyIssue(route: string, statusCode: number, errorCode: stri
     };
   }
   if (
-    err.includes("401") ||
-    err.includes("api key") ||
-    err.includes("gemini_api_key") ||
+    providerMessage.includes("401") ||
+    providerMessage.includes("api key") ||
+    providerMessage.includes("gemini_api_key") ||
     (!err && r.includes("post-mortem") && statusCode === 500)
   ) {
-    if (err.includes("gemini") || err.includes("api key") || err.includes("401")) {
+    if (
+      providerMessage.includes("gemini") ||
+      providerMessage.includes("api key") ||
+      providerMessage.includes("401")
+    ) {
       return {
         category: "AI",
         likely_fix: "Check GEMINI_API_KEY and OPENROUTER_API_KEY on Render. See docs/llm-failover.md.",
       };
     }
   }
+  if (
+    (r.includes("hubspot") || r.includes("salesforce")) &&
+    (providerMessage.includes("not connected") ||
+      providerMessage.includes("token") ||
+      providerMessage.includes("oauth"))
+  ) {
+    return {
+      category: "CRM",
+      likely_fix: "CRM OAuth token missing or expired — reconnect HubSpot/Salesforce in the product.",
+    };
+  }
   if (r.includes("/auth") || statusCode === 401) {
+    const integrationStatus = /\/api\/integrations\/[^/]+\/status$/.test(r);
     return {
       category: "Auth",
-      likely_fix: "Auth/session issue — confirm Supabase Auth URL config and user login path.",
+      likely_fix: integrationStatus
+        ? "Sign-in rejected. This status route returns 401 before the integration is checked. Have the user sign in again so a valid Supabase session is sent."
+        : "Auth/session issue — confirm Supabase Auth URL config and user login path.",
     };
   }
   if (r.includes("hubspot") || r.includes("salesforce") || err.includes("token")) {

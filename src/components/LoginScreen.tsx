@@ -228,7 +228,7 @@ export default function LoginScreen({
         {billingNotice
           ? billingNotice
           : mode === "signup"
-          ? "Create your Lazarus account — email and password are stored securely in your auth database."
+          ? "We email a confirmation link. This password is set on this browser after you confirm."
           : mode === "reset"
             ? "We’ll email a password reset link if mail delivery is configured."
             : "Sign in to save analyses. You can keep using Lazarus for demos without an account."}
@@ -368,16 +368,6 @@ export default function LoginScreen({
           onClick={() => startProvider("google")}
         >
           {busy === "google" ? "Waiting for Google…" : "Google"}
-        </button>
-      )}
-      {providers.hubspot !== false && (
-        <button
-          type="button"
-          className="btn-secondary login-oauth"
-          disabled={!!busy}
-          onClick={() => startProvider("hubspot")}
-        >
-          {busy === "hubspot" ? "Waiting for HubSpot…" : "HubSpot"}
         </button>
       )}
       {providers.salesforce !== false && (

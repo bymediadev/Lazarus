@@ -75,14 +75,14 @@ export function decideApiKey(input: {
 }): ApiKeyDecision {
   const header = (input.header ?? "").trim();
   const siteKey = (input.siteKey ?? "").trim();
-  if (header && siteKey && secretsEqual(header, siteKey)) {
+  if (!header) return { ok: true, tenantId: null };
+  if (siteKey && secretsEqual(header, siteKey)) {
     return { ok: true, tenantId: null };
   }
   if (input.tenantIdForHeader) {
     return { ok: true, tenantId: input.tenantIdForHeader };
   }
-  if (siteKey) return { ok: false, status: 401 };
-  return { ok: true, tenantId: null };
+  return { ok: false, status: 401 };
 }
 
 export async function findTenantIdByApiKey(raw: string | null | undefined): Promise<string | null> {

@@ -167,3 +167,19 @@ export async function pushNoteToSalesforceOpportunity(
   }
   return { feedItemId: data.id };
 }
+
+/** True only when this user's Salesforce token can read the opportunity. */
+export async function userOwnsSalesforceOpportunity(
+  userId: string,
+  opportunityId: string
+): Promise<{ ok: boolean; portalId: string }> {
+  const auth = await getValidSalesforceAccessToken(userId);
+  const id = opportunityId.trim();
+  if (!auth || !id) return { ok: false, portalId: auth?.instanceUrl ?? "" };
+  const res = await fetch(
+    `${auth.instanceUrl}/services/data/v59.0/sobjects/Opportunity/${encodeURIComponent(id)}?fields=Id`,
+    { headers: { Authorization: `Bearer ${auth.accessToken}` } }
+  );
+  if (!res.ok) return { ok: false, portalId: auth.instanceUrl };
+  return { ok: true, portalId: auth.instanceUrl };
+}

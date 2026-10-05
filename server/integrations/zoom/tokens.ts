@@ -1,4 +1,4 @@
-import { createUserTokenStore } from "../userTokenStore.js";
+import { createPersistedTokenStore } from "../oauthConnections.js";
 
 export interface ZoomTokenRecord {
   access_token: string;
@@ -9,7 +9,9 @@ export interface ZoomTokenRecord {
   connected_at: string;
 }
 
-const store = createUserTokenStore<ZoomTokenRecord>("zoom-tokens.json");
+const store = createPersistedTokenStore<ZoomTokenRecord>("zoom", "zoom-tokens.json", {
+  portalId: (record) => record.account_id,
+});
 
 export function loadZoomTokens(userId: string): ZoomTokenRecord | null {
   return store.load(userId);
@@ -21,6 +23,10 @@ export function saveZoomTokens(userId: string, record: ZoomTokenRecord): void {
 
 export function clearZoomTokens(userId: string): void {
   store.clear(userId);
+}
+
+export async function clearZoomTokensAndWait(userId: string): Promise<void> {
+  await store.clearAndWait(userId);
 }
 
 export function isZoomConnected(userId: string): boolean {
@@ -39,4 +45,8 @@ export function findZoomUserIdByAccount(email?: string, accountId?: string): str
     if (e && (row.account_email ?? "").trim().toLowerCase() === e) return true;
     return false;
   });
+}
+
+export function hydrateZoomTokens(): Promise<void> {
+  return store.hydrate();
 }

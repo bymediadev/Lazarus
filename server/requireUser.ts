@@ -1,5 +1,6 @@
 import type { NextFunction, Request, Response } from "express";
 import { optionalAuthUserId } from "./authMiddleware.js";
+import { setApiErrorLocal } from "./apiEvents.js";
 import { resolveAuthUser } from "./founderAuth.js";
 import type { User } from "@supabase/supabase-js";
 
@@ -13,6 +14,7 @@ export function requireAuthUser(req: Request, res: Response, next: NextFunction)
   void (async () => {
     const user = await resolveAuthUser(req);
     if (!user) {
+      setApiErrorLocal(res, "Sign in required");
       res.status(401).json({ error: "Sign in required" });
       return;
     }

@@ -109,6 +109,8 @@ try {
   const routing = openRouterRoutingPrefs();
   assert(routing.sort?.by === "latency", "OpenRouter sorts by latency, not a hung load");
   assert(routing.sort?.partition === "none", "OpenRouter picks the fastest warm endpoint across fallbacks");
+  assert(routing.data_collection === "deny", "OpenRouter requests deny data collection");
+  assert(routing.allow_fallbacks === false, "OpenRouter does not fall through to other providers");
   assert(llmTimeoutMs("live") === 20_000, "live jobs time out instead of waiting on a load");
   assert(llmTimeoutMs("autopsy") === 45_000, "autopsy jobs time out instead of waiting on a load");
 

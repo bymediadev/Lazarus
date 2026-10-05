@@ -103,18 +103,20 @@ export async function getPostMortemUserId(id: string): Promise<string | null> {
 async function insertPurgeAuditLog(
   supabase: ReturnType<typeof createClient>,
   rowsAffected: number,
-  retentionDays: number
+  retentionDays: number,
+  requestId?: string | null
 ): Promise<void> {
   const { error } = await supabase.from("purge_audit_log").insert({
     rows_affected: rowsAffected,
     retention_days: retentionDays,
+    request_id: requestId ?? null,
   });
   if (error) {
     console.warn("Purge audit log insert failed:", error.message);
   }
 }
 
-export async function purgeExpiredTranscripts(retentionDays?: number): Promise<{
+export async function purgeExpiredTranscripts(retentionDays?: number, requestId?: string | null): Promise<{
   purged: number;
   reportsDeleted: number;
   retentionDays: number;
@@ -155,7 +157,12 @@ export async function purgeExpiredTranscripts(retentionDays?: number): Promise<{
 
     const { data, error } = await supabase
       .from("call_post_mortems")
-      .update({ transcript_text: null })
+      .update({
+        transcript_text: null,
+        why_it_stalled: null,
+        restart_plan: null,
+        stall_cause: null,
+      })
       .lt("created_at", cutoffIso)
       .not("transcript_text", "is", null)
       .select("id");
@@ -167,7 +174,7 @@ export async function purgeExpiredTranscripts(retentionDays?: number): Promise<{
   }
 
   const reportsDeleted = await deleteFinishedReports(supabase);
-  await insertPurgeAuditLog(supabase, purged + reportsDeleted, days);
+  await insertPurgeAuditLog(supabase, purged + reportsDeleted, days, requestId);
   return { purged, reportsDeleted, retentionDays: days };
 }
 

@@ -10,30 +10,10 @@ function utcMonthStamp(): string {
   return `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, "0")}`;
 }
 
-/** Founder demo account — the only email with uncapped free analyses. */
-export const FOUNDER_UNLIMITED_EMAILS = ["joshua.bennett003@gmail.com"] as const;
-
-function normalizeEmail(email: string | null | undefined): string {
-  return (email ?? "").trim().toLowerCase();
-}
-
-/** True for the founder account that skips free-analysis limits. */
+/** Ops limits are enforced on the server from app_metadata.role, not from an email constant. */
 export function isFounderUnlimitedEmail(email: string | null | undefined): boolean {
-  const e = normalizeEmail(email);
-  if (!e) return false;
-  if ((FOUNDER_UNLIMITED_EMAILS as readonly string[]).includes(e)) return true;
-  try {
-    const viteEnv = (
-      import.meta as ImportMeta & { env?: Record<string, string | undefined> }
-    ).env;
-    const extra = (viteEnv?.VITE_FOUNDER_EMAILS ?? "")
-      .split(",")
-      .map((x: string) => x.trim().toLowerCase())
-      .filter(Boolean);
-    return extra.includes(e);
-  } catch {
-    return false;
-  }
+  void email;
+  return false;
 }
 
 function readCount(): number {

@@ -90,7 +90,7 @@ Set `GOOGLE_SITE_VERIFICATION` on Render to inject the Search Console HTML-tag t
 | DPA-001 | Data Processing Addendum | `/dpa` |
 | SEC-001 | Security Overview | `/security-overview` |
 
-Founder-only sales enablement (owner: `joshua.bennett003@gmail.com`; Bearer auth required; open from Founder Ops):
+Founder-only sales enablement (ops role with MFA; open from Founder Ops):
 
 | ID | Doc | Path |
 |----|-----|------|

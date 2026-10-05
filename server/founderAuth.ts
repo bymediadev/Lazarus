@@ -1,5 +1,6 @@
 import type { Request, Response, NextFunction } from "express";
 import { createClient, type User } from "@supabase/supabase-js";
+import { secretsEqual } from "./cryptoSecrets.js";
 
 export type OpsUser = {
   id: string;
@@ -31,10 +32,25 @@ export function alertEmailAllowlist(): string[] {
 export function isOpsUser(user: Pick<User, "email" | "app_metadata"> | null | undefined): boolean {
   if (!user) return false;
   const role = String(user.app_metadata?.role ?? "").toLowerCase();
-  if (role === "founder" || role === "ops") return true;
-  const email = (user.email ?? "").trim().toLowerCase();
-  if (!email) return false;
-  return opsEmailAllowlist().has(email);
+  return role === "founder" || role === "ops";
+}
+
+/** Read `aal` from a bearer token that `getUser` already accepted. */
+export function accessTokenAal(token: string | null | undefined): string | null {
+  const part = String(token ?? "").split(".")[1];
+  if (!part) return null;
+  try {
+    const json = JSON.parse(Buffer.from(part, "base64url").toString("utf8")) as { aal?: unknown };
+    return typeof json.aal === "string" ? json.aal : null;
+  } catch {
+    return null;
+  }
+}
+
+export function bearerTokenFrom(req: Request): string | null {
+  const header = req.headers.authorization?.trim() ?? "";
+  const match = header.match(/^Bearer\s+(.+)$/i);
+  return match?.[1]?.trim() || null;
 }
 
 export async function resolveAuthUser(req: Request): Promise<User | null> {
@@ -80,6 +96,13 @@ export function requireOps(
       res.status(403).json({ error: "Forbidden — ops access required" });
       return;
     }
+    if (accessTokenAal(bearerTokenFrom(req)) !== "aal2") {
+      res.status(403).json({
+        error: "Ops access requires MFA. Enroll an authenticator, sign in again, then retry.",
+        code: "MFA_REQUIRED",
+      });
+      return;
+    }
     (req as Request & { opsUser?: OpsUser }).opsUser = {
       id: user.id,
       email: user.email ?? null,
@@ -94,7 +117,20 @@ export function getOpsUser(req: Request): OpsUser | null {
 }
 
 export function cronSecretOk(req: Request): boolean {
-  const secret = (process.env.PURGE_CRON_SECRET ?? process.env.FOUNDER_ALERT_CRON_SECRET ?? "").trim();
+  const secret = (process.env.FOUNDER_ALERT_CRON_SECRET ?? "").trim();
   if (!secret) return false;
-  return req.headers["x-cron-secret"] === secret;
+  const provided = (req.headers["x-cron-secret"] as string | undefined)?.trim();
+  return secretsEqual(provided, secret);
+}
+
+/** Anon key + the caller's bearer, so RLS applies to customer reads. */
+export function userScopedClient(accessToken: string) {
+  const url = (process.env.SUPABASE_URL ?? "").trim();
+  const anon = (process.env.SUPABASE_ANON_KEY ?? "").trim();
+  const token = accessToken.trim();
+  if (!url || !anon || !token) return null;
+  return createClient(url, anon, {
+    global: { headers: { Authorization: `Bearer ${token}` } },
+    auth: { persistSession: false, autoRefreshToken: false },
+  });
 }

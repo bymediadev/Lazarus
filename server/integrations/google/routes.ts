@@ -17,8 +17,10 @@ import {
 import { getAuthUserId, requireAuthUser } from "../../requireUser.js";
 import { consumeRateLimit, clientRateKey } from "../../rateLimit.js";
 import {
+  consumeStreamTicket,
   createMeetLiveSession,
   getLiveSession,
+  issueStreamTicket,
   publishToSession,
   sessionSecretOk,
   subscribeLiveSession,
@@ -98,11 +100,27 @@ export function registerGoogleMeetRoutes(app: Express): void {
     res.json({ ok: true, accepted: published });
   });
 
-  app.get("/api/integrations/google/live-transcript/stream", (req, res) => {
-    const sessionId = String(req.query.sessionId ?? "");
-    const sessionSecret = String(req.query.sessionSecret ?? "");
+  app.post("/api/integrations/google/live-transcript/ticket", (req, res) => {
+    const sessionId = String(req.body?.sessionId ?? "");
+    const sessionSecret = String(req.body?.sessionSecret ?? "");
     const session = getLiveSession(sessionId);
     if (!session || session.platform !== "meet" || !sessionSecretOk(session, sessionSecret)) {
+      res.status(404).json({ error: "Live session not found or expired" });
+      return;
+    }
+    const ticket = issueStreamTicket(sessionId);
+    if (!ticket) {
+      res.status(404).json({ error: "Live session not found or expired" });
+      return;
+    }
+    res.json({ ticket });
+  });
+
+  app.get("/api/integrations/google/live-transcript/stream", (req, res) => {
+    const ticket = String(req.query.ticket ?? "");
+    const sessionId = consumeStreamTicket(ticket) ?? "";
+    const session = getLiveSession(sessionId);
+    if (!session || session.platform !== "meet") {
       res.status(404).json({ error: "Live session not found or expired" });
       return;
     }

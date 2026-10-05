@@ -4,21 +4,10 @@ import { deleteAccountCascade } from "./accountDelete.js";
 import { isSupabaseAuthConfigured } from "./authMiddleware.js";
 import { resolveAuthUser } from "./founderAuth.js";
 import { isGoogleLoginConfigured } from "./integrations/google/config.js";
-import { isHubSpotConfigured } from "./integrations/hubspot/config.js";
 import { isSalesforceConfigured } from "./integrations/salesforce/config.js";
 import { resolveFrontendOrigin } from "./integrations/oauthShared.js";
-import { claimPaidCheckout } from "./billing.js";
 import { consumeLoginCode } from "./loginTickets.js";
 import { rateLimit } from "./rateLimit.js";
-
-function adminAuth() {
-  const url = (process.env.SUPABASE_URL ?? "").trim();
-  const key = (process.env.SUPABASE_SERVICE_ROLE_KEY ?? "").trim();
-  if (!url || !key) return null;
-  return createClient(url, key, {
-    auth: { persistSession: false, autoRefreshToken: false },
-  });
-}
 
 /** Production defaults on. Set AUTH_REQUIRE_EMAIL_DELIVERY=false only for local SMTP-less debugging. */
 export function requireEmailDelivery(): boolean {
@@ -26,21 +15,6 @@ export function requireEmailDelivery(): boolean {
   if (v === "false" || v === "0" || v === "off") return false;
   if (v === "true" || v === "1" || v === "on") return true;
   return (process.env.NODE_ENV ?? "").trim() === "production";
-}
-
-async function claimBillingBestEffort(
-  userId: string,
-  email: string | null | undefined,
-  sessionId?: string | null
-): Promise<void> {
-  try {
-    await claimPaidCheckout({ id: userId, email: email ?? null }, { sessionId });
-  } catch (err) {
-    console.warn(
-      "[auth-billing-claim]",
-      err instanceof Error ? err.message : err
-    );
-  }
 }
 
 /**
@@ -57,10 +31,10 @@ export function registerAuthRoutes(app: Express): void {
       configured: isSupabaseAuthConfigured() && serverReady,
       email: isSupabaseAuthConfigured(),
       google: isGoogleLoginConfigured() && serverReady,
-      hubspot: isHubSpotConfigured() && serverReady,
+      hubspot: false,
       salesforce: isSalesforceConfigured() && serverReady,
       note: serverReady
-        ? "Lazarus login ready — email/password accounts; Google/HubSpot/Salesforce via app OAuth."
+        ? "Lazarus login ready — email confirmation, then a password; Google and Salesforce via verified OAuth."
         : "Add SUPABASE_URL + SUPABASE_SERVICE_ROLE_KEY (and VITE_SUPABASE_*) to enable login.",
     });
   });
@@ -90,76 +64,54 @@ export function registerAuthRoutes(app: Express): void {
     });
   });
 
-  /** Create Lazarus account (email + password) in Supabase Auth.users. */
+  /**
+   * Create the account only when the confirmation link is opened.
+   * The password is set afterwards by the signed-in browser, never before confirmation.
+   */
   app.post("/api/auth/signup", async (req, res) => {
     const email = String(req.body?.email ?? "")
       .trim()
       .toLowerCase();
-    const password = String(req.body?.password ?? "");
     if (!email || !email.includes("@")) {
       res.status(400).json({ error: "Enter a valid work email." });
       return;
     }
-    if (password.length < 8) {
-      res.status(400).json({ error: "Password must be at least 8 characters." });
-      return;
-    }
 
-    const admin = adminAuth();
-    if (!admin) {
+    const anonKey = (process.env.SUPABASE_ANON_KEY ?? "").trim();
+    const url = (process.env.SUPABASE_URL ?? "").trim();
+    if (!url || !anonKey) {
       res.status(503).json({
-        error: "Account signup requires SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY.",
+        error: "Account signup requires SUPABASE_URL and SUPABASE_ANON_KEY.",
       });
       return;
     }
 
     try {
-      const created = await admin.auth.admin.createUser({
-        email,
-        password,
-        email_confirm: false,
-        app_metadata: { login_provider: "password" },
+      const redirectTo = resolveFrontendOrigin();
+      const pub = createClient(url, anonKey, {
+        auth: { persistSession: false, autoRefreshToken: false },
       });
-      if (created.error || !created.data.user) {
-        const msg = created.error?.message ?? "Failed to create account";
-        if (/already|registered|exists/i.test(msg)) {
-          res.status(409).json({
-            error: "An account with this email already exists. Sign in instead.",
+      const otp = await pub.auth.signInWithOtp({
+        email,
+        options: { emailRedirectTo: redirectTo, shouldCreateUser: true },
+      });
+      if (otp.error) {
+        if (/rate limit/i.test(otp.error.message)) {
+          res.status(429).json({
+            error: "Too many confirmation emails. Wait about an hour, then try again.",
           });
           return;
         }
-        throw created.error ?? new Error(msg);
-      }
-
-      const sessionId = String(req.body?.session_id ?? "").trim() || null;
-      await claimBillingBestEffort(created.data.user.id, email, sessionId);
-
-      const redirectTo = resolveFrontendOrigin();
-      const anonKey = (process.env.SUPABASE_ANON_KEY ?? "").trim();
-      const url = (process.env.SUPABASE_URL ?? "").trim();
-      let emailed = false;
-      if (url && anonKey) {
-        const pub = createClient(url, anonKey, {
-          auth: { persistSession: false, autoRefreshToken: false },
-        });
-        const otp = await pub.auth.signInWithOtp({
-          email,
-          options: { emailRedirectTo: redirectTo, shouldCreateUser: false },
-        });
-        emailed = !otp.error;
-        if (otp.error) console.warn("[auth-signup] confirm email:", otp.error.message);
-      }
-      if (!emailed) {
+        console.warn("[auth-signup] confirm email:", otp.error.message);
         res.status(503).json({
-          error:
-            "Account created, but we could not send the confirmation email. Configure Supabase Auth SMTP, then try Sign in.",
+          error: "Could not send the confirmation email. Configure Supabase Auth SMTP.",
         });
         return;
       }
       res.json({
         ok: true,
         emailed: true,
-        message: "Check your email to confirm your account, then sign in.",
+        message: "Check your email to confirm your account. This browser will set your password after you open the link.",
       });
     } catch (err) {
       console.error("[auth-signup]", err);

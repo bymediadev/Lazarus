@@ -1,5 +1,6 @@
 import type { Express, Request, Response } from "express";
 import { resolveAuthUser, isOpsUser } from "./founderAuth.js";
+import { clientIp } from "./rateLimit.js";
 import { isFounderUnlimitedEmail } from "./guestRateLimit.js";
 import {
   claimGuestCap,
@@ -21,11 +22,6 @@ const guestCheckoutHits = new Map<string, { count: number; resetAt: number }>();
 function asCheckoutPlan(value: unknown): CheckoutPlan | null {
   const v = String(value ?? "");
   return CHECKOUT_PLANS.has(v as CheckoutPlan) ? (v as CheckoutPlan) : null;
-}
-
-function clientIp(req: Request): string {
-  const xf = (req.headers["x-forwarded-for"] as string | undefined)?.split(",")[0]?.trim();
-  return xf || req.socket.remoteAddress || "unknown";
 }
 
 function isGuestCheckoutRateLimited(req: Request): boolean {
@@ -161,7 +157,7 @@ export function registerBillingRoutes(app: Express): void {
       const sessionId = String(req.body?.session_id ?? "").trim() || null;
       const result = await claimPaidCheckout(
         { id: user.id, email: user.email ?? null },
-        { sessionId }
+        { sessionId, emailConfirmed: Boolean(user.email_confirmed_at) }
       );
       const billing = await getBillingSnapshot(user.id);
       res.json({ ...result, billing });

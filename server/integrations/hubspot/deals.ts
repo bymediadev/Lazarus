@@ -4,6 +4,7 @@ import {
   type HubSpotMappedDeepContext,
 } from "../hubspot.js";
 import { getValidHubSpotAccessToken } from "./oauth.js";
+import { loadHubSpotTokens } from "./tokens.js";
 
 const CRM_BASE = "https://api.hubapi.com/crm/v3";
 
@@ -287,4 +288,20 @@ export async function pushNoteToHubSpotDeal(
   }
 
   return { noteId: created.id };
+}
+
+/** True only when this user's HubSpot token can read the deal. */
+export async function userOwnsHubSpotDeal(
+  userId: string,
+  dealId: string
+): Promise<{ ok: boolean; portalId: string }> {
+  const portalId = loadHubSpotTokens(userId)?.hub_id ?? "";
+  const token = await getValidHubSpotAccessToken(userId);
+  const id = dealId.trim();
+  if (!token || !id) return { ok: false, portalId };
+  const res = await fetch(`${CRM_BASE}/objects/deals/${encodeURIComponent(id)}?properties=dealname`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  if (!res.ok) return { ok: false, portalId };
+  return { ok: true, portalId };
 }

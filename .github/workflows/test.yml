@@ -19,6 +19,7 @@ jobs:
 
       - run: npm ci
       - run: npm test
+      - run: npm audit --omit=dev --audit-level=high
       - run: npm run build
 
   deploy-pages:
@@ -45,7 +46,6 @@ jobs:
       - name: Build static site for GitHub Pages
         env:
           VITE_API_URL: https://api.getldr.ca
-          VITE_LAZARUS_API_KEY: ${{ secrets.VITE_LAZARUS_API_KEY }}
           VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
           VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
           VITE_TURNSTILE_SITE_KEY: ${{ secrets.VITE_TURNSTILE_SITE_KEY }}

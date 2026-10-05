@@ -2,11 +2,14 @@
  * Security gate regressions (no live network).
  * Usage: npm run test:security
  */
-import { verifyHubSpotWebhookSecret, mapHubSpotDealToDeepContext } from "../server/integrations/hubspot.ts";
+import { verifyHubSpotV3Signature, mapHubSpotDealToDeepContext } from "../server/integrations/hubspot.ts";
+import { createHash, createHmac } from "crypto";
+import express from "express";
+import http from "http";
 import { isCrmDealComplete } from "../server/crmClose.ts";
 import { createSignedOAuthState, verifySignedOAuthState, readSignedOAuthState, oauthFrontendReturnUrl } from "../server/integrations/oauthShared.ts";
 import { secretsEqual } from "../server/cryptoSecrets.ts";
-import { consumeRateLimit } from "../server/rateLimit.ts";
+import { clientIp, consumeRateLimit } from "../server/rateLimit.ts";
 import { consumeLoginCode, issueLoginCode } from "../server/loginTickets.ts";
 import {
   createSalesforcePkce,
@@ -14,8 +17,8 @@ import {
   sealSalesforcePkceCookie,
 } from "../server/integrations/salesforce/pkce.ts";
 import { buildSalesforceAuthorizeUrl } from "../server/integrations/salesforce/oauth.ts";
-import { createHash } from "crypto";
 import {
+  isDemoUsageBypassAllowed,
   isAnonymousGuestRateLimited,
   consumeAnonymousGuestSlot,
   isIpDailyRateLimited,
@@ -31,6 +34,16 @@ import {
   enforceCaptcha,
   verifyTurnstileToken,
 } from "../server/captcha.ts";
+import { zoomTimestampFresh } from "../server/integrations/zoom/rtmsHub.ts";
+import {
+  claimCheckoutAllowed,
+  crmLinkWriteAllowed,
+  decideOAuthLogin,
+  readSalesforceWebhookSecret,
+} from "../server/oauthIdentity.ts";
+import { founderOnlyFilesIn } from "./assert-no-founder-docs.mjs";
+import { claimPaidCheckout } from "../server/billing.ts";
+import { openRouterRoutingPrefs } from "../server/llmProviders.ts";
 import {
   bindZoomRtmsToSession,
   createZoomLiveSession,
@@ -75,9 +88,63 @@ function check(label, condition) {
   }
 }
 
-check("hubspot webhook fail-closed when secret missing", verifyHubSpotWebhookSecret("anything", "") === false);
-check("hubspot webhook reject wrong secret", verifyHubSpotWebhookSecret("nope", "expected") === false);
-check("hubspot webhook accept matching secret", verifyHubSpotWebhookSecret("expected", "expected") === true);
+{
+  const now = 1_700_000_000_000;
+  const method = "POST";
+  const uri = "https://api.getldr.ca/api/integrations/hubspot/webhook";
+  const rawBody = '{"event":"deal"}';
+  const timestamp = String(now);
+  const secret = "hubspot-client-secret";
+  const digest = createHmac("sha256", secret).update(`${method}${uri}${rawBody}${timestamp}`).digest("base64");
+  check(
+    "hubspot v3 signature accepts a fresh matching digest",
+    verifyHubSpotV3Signature({
+      method,
+      uri,
+      rawBody,
+      signature: digest,
+      timestamp,
+      clientSecret: secret,
+      now,
+    }) === true
+  );
+  check(
+    "hubspot v3 signature rejects a wrong digest",
+    verifyHubSpotV3Signature({
+      method,
+      uri,
+      rawBody,
+      signature: "nope",
+      timestamp,
+      clientSecret: secret,
+      now,
+    }) === false
+  );
+  check(
+    "hubspot v3 signature rejects a timestamp outside five minutes",
+    verifyHubSpotV3Signature({
+      method,
+      uri,
+      rawBody,
+      signature: digest,
+      timestamp,
+      clientSecret: secret,
+      now: now + 6 * 60 * 1000,
+    }) === false
+  );
+  check(
+    "hubspot v3 signature fails closed without a client secret",
+    verifyHubSpotV3Signature({
+      method,
+      uri,
+      rawBody,
+      signature: digest,
+      timestamp,
+      clientSecret: "",
+      now,
+    }) === false
+  );
+}
 check("closed won stage is complete", isCrmDealComplete("closedwon") === true);
 check("closed lost label is complete", isCrmDealComplete("Closed Lost") === true);
 check("hubspot closed flag is complete", isCrmDealComplete("appointmentscheduled", "true") === true);
@@ -642,6 +709,132 @@ check(
   "anonymized rescue outcomes are outside the report delete set",
   rescueOutcomes.length === 1 && !plan.reportIds.includes(rescueOutcomes[0].id)
 );
+
+check(
+  "missing key is anonymous even when a site key is configured",
+  decideApiKey({ header: "", siteKey: "site-secret", tenantIdForHeader: null }).ok === true &&
+    decideApiKey({ header: "", siteKey: "site-secret", tenantIdForHeader: null }).tenantId === null
+);
+
+const oauthBase = {
+  emailVerified: true,
+  providerSub: "sub-1",
+  email: "rep@example.com",
+  opsEmails: ["ops@example.com"],
+  identityUserId: null,
+  identityIsOps: false,
+  emailOwnerUserId: null,
+};
+check(
+  "oauth refuses an unverified email",
+  decideOAuthLogin({ ...oauthBase, emailVerified: false }).ok === false
+);
+check(
+  "oauth refuses an email that already belongs to an account",
+  decideOAuthLogin({ ...oauthBase, emailOwnerUserId: "other-user" }).reason === "account_exists"
+);
+check(
+  "oauth refuses an ops allowlist email",
+  decideOAuthLogin({ ...oauthBase, email: "ops@example.com" }).reason === "ops_password_only"
+);
+
+const prevBypass = process.env.GUEST_USAGE_DEMO_BYPASS;
+delete process.env.GUEST_USAGE_DEMO_BYPASS;
+check(
+  "demo bypass header is ignored unless the env flag is true",
+  isDemoUsageBypassAllowed({ headers: { "x-lazarus-demo-bypass": "1" } }) === false
+);
+process.env.GUEST_USAGE_DEMO_BYPASS = "true";
+check(
+  "demo bypass header is honored when the env flag is true",
+  isDemoUsageBypassAllowed({ headers: { "x-lazarus-demo-bypass": "1" } }) === true
+);
+if (prevBypass === undefined) delete process.env.GUEST_USAGE_DEMO_BYPASS;
+else process.env.GUEST_USAGE_DEMO_BYPASS = prevBypass;
+
+check("crm link refuses a different owner", crmLinkWriteAllowed("user-a", "user-b") === false);
+check("crm link allows the same owner", crmLinkWriteAllowed("user-a", "user-a") === true);
+check(
+  "salesforce webhook secret uses the header and ignores the query",
+  readSalesforceWebhookSecret({ "x-webhook-secret": "header-secret" }, { secret: "query-secret" }) ===
+    "header-secret"
+);
+check(
+  "salesforce webhook secret is empty when only the query has a value",
+  readSalesforceWebhookSecret({}, { secret: "query-secret" }) === ""
+);
+
+const zoomNow = 1_700_000_000_000;
+check(
+  "zoom timestamp inside five minutes is fresh",
+  zoomTimestampFresh(String(Math.floor(zoomNow / 1000)), zoomNow) === true
+);
+check(
+  "zoom timestamp outside five minutes is stale",
+  zoomTimestampFresh(String(Math.floor((zoomNow - 6 * 60 * 1000) / 1000)), zoomNow) === false
+);
+check(
+  "founder battlecard is detected beside the server",
+  founderOnlyFilesIn("server/private-docs").includes("security-battlecard.html")
+);
+check("founder battlecard is absent from public", founderOnlyFilesIn("public").length === 0);
+check(
+  "unconfirmed checkout is refused before Stripe",
+  claimCheckoutAllowed({ emailConfirmed: false, sessionId: "cs_test" }).reason === "unconfirmed"
+);
+const routing = openRouterRoutingPrefs();
+check("openrouter denies data collection", routing.data_collection === "deny");
+check("openrouter disables provider fallbacks", routing.allow_fallbacks === false);
+
+const unconfirmedClaim = await claimPaidCheckout(
+  { id: "user-1", email: "rep@example.com" },
+  { emailConfirmed: false, sessionId: "cs_test" }
+);
+check(
+  "claimPaidCheckout returns unconfirmed before Stripe",
+  unconfirmedClaim.claimed === false && unconfirmedClaim.reason === "unconfirmed"
+);
+
+await new Promise((resolve, reject) => {
+  const app = express();
+  app.set("trust proxy", 1);
+  app.get("/ip", (req, res) => {
+    res.json({ ip: clientIp(req) });
+  });
+  const server = app.listen(0, "127.0.0.1", () => {
+    const address = server.address();
+    const port = typeof address === "object" && address ? address.port : 0;
+    const req = http.request(
+      {
+        hostname: "127.0.0.1",
+        port,
+        path: "/ip",
+        headers: { "x-forwarded-for": "8.8.8.8, 9.9.9.9" },
+      },
+      (res) => {
+        let body = "";
+        res.on("data", (chunk) => {
+          body += chunk;
+        });
+        res.on("end", () => {
+          server.close();
+          try {
+            const ip = JSON.parse(body).ip;
+            check("client ip does not trust the first X-Forwarded-For hop", ip !== "8.8.8.8");
+            resolve();
+          } catch (err) {
+            reject(err);
+          }
+        });
+      }
+    );
+    req.on("error", (err) => {
+      server.close();
+      reject(err);
+    });
+    req.end();
+  });
+});
 
 if (failed) {
   console.error(`${failed} security gate(s) failed`);

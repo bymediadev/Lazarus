@@ -1,6 +1,6 @@
 ## Auth setup (Lazarus login)
 
-End users sign into **Lazarus Deal Recovery** — not the Supabase website. Supabase Auth stores accounts (`auth.users`) with email + password; the app also supports Google / HubSpot / Salesforce OAuth popups.
+End users sign into **Lazarus Deal Recovery** — not the Supabase website. Supabase Auth stores accounts (`auth.users`) with email + password. Google and Salesforce can sign in after the provider verifies the email. HubSpot is connect-only (deals and notes), not a login.
 
 ### How login works
 
@@ -9,7 +9,8 @@ End users sign into **Lazarus Deal Recovery** — not the Supabase website. Supa
 | **Sign in / Create account** | Optional — header **Login** / **Sign up** open a portal. Guests get **5 free analyses** with no account. After the free five: buy a $10 report (checkout does not require signup) or wait until next month. Sign up only to **save** results. |
 | **Forgot password** | Server mints a recovery session (bypasses inbox rate limits) → **Save new password** screen. Best-effort email still attempted when the mailer allows it. |
 | **Account portal** | Signed-in users: view email, change password, sign out |
-| **Google / HubSpot / Salesforce** | Existing Lazarus OAuth popup → session bridge |
+| **Google / Salesforce** | OAuth popup → session only when the provider marks the email verified and the subject is already bound, or the email is unused |
+| **HubSpot** | Connect from the deal workspace. It does not sign you in |
 
 ### Guest freemium
 
@@ -19,7 +20,7 @@ End users sign into **Lazarus Deal Recovery** — not the Supabase website. Supa
 | Signed-in free user | 5 analyses / calendar month | Yes |
 | Entry ($99) | 20 analyses / Stripe billing month, then wait | Yes |
 | Team ($499) | Unlimited. Usage heads-up email at 100 / 200 / 400 in the billing period | Yes |
-| **Founder only** (`joshua.bennett003@gmail.com`) / ops role | **Unlimited** — use this account for demos | Yes |
+| Ops (`app_metadata.role` is `founder` or `ops`, plus MFA) | Unlimited analyses. Email alone does not grant this | Yes |
 | Demo machine | `?demo=1` (tab session) or `VITE_GUEST_USAGE_BYPASS=true` | Unlocks that browser tab |
 
 No other email skips the free-analysis blocker. Guests get **5 free analyses per IP per calendar month** (clearing the browser does not reset this). All unpaid traffic from one IP is also capped at **100 analyses / calendar month** (`GUEST_IP_MONTHLY_LIMIT`). **$10 pay-per-report** extras are capped separately at **100 / IP / calendar month** (`PPU_IP_MONTHLY_LIMIT`) — after that they wait, or subscribe; the lock copy tells them Entry/Team is more cost-effective. Production demo header bypass requires `GUEST_USAGE_DEMO_BYPASS=true`.
@@ -92,9 +93,9 @@ OPS_EMAILS=hire@company.com
 FOUNDER_ALERT_EMAILS=you@company.com,hire@company.com
 ```
 
-`FOUNDER_EMAILS` and `OPS_EMAILS` both unlock the command center. `FOUNDER_ALERT_EMAILS` receives morning / afternoon / evening status emails (and CRITICAL break-throughs).
+`FOUNDER_EMAILS` and `OPS_EMAILS` refuse OAuth login for those inboxes during cutover and route alerts. They do not authorize Founder Ops. Set `app_metadata.role` to `founder` or `ops` and enroll TOTP before using the command center. `FOUNDER_ALERT_EMAILS` receives morning / afternoon / evening status emails (and CRITICAL break-throughs).
 
-After you sign in with an allowlisted account, Lazarus opens **Founder Ops Command Center** by default (Overview / Issues / Lookup / System). From the product console, use **Under the hood** in the header to return. Only that account (and other ops emails you add) see this button.
+After you sign in with an account whose `app_metadata.role` is `founder` or `ops`, and the session is `aal2`, Lazarus opens **Founder Ops Command Center**. From the product console, use **Under the hood** in the header to return. Email allowlists do not show that button.
 
 4. Apply SQL migration [`supabase/migrations/010_founder_ops.sql`](../supabase/migrations/010_founder_ops.sql) in the Supabase SQL editor (creates `api_events`, audit, alert state, notes).
 
@@ -116,7 +117,7 @@ In Ops HQ, open **APIs & usage** for a single consolidated view:
 - **Billing / end-of-usage** signals (Gemini 429s, volume spikes)
 - 7-day usage series and per-provider status
 
-GitHub Actions workflows `founder-ops-digests.yml` and `founder-ops-critical.yml` call `/api/founder/alerts/digest` and `/api/founder/alerts/run` with the same `PURGE_CRON_SECRET` / `LAZARUS_API_URL` secrets as retention purge.
+GitHub Actions workflows `founder-ops-digests.yml` and `founder-ops-critical.yml` call `/api/founder/alerts/digest` and `/api/founder/alerts/run` with `FOUNDER_ALERT_CRON_SECRET` and `LAZARUS_API_URL`. The purge job uses `PURGE_CRON_SECRET`; that secret does not authorize ops routes.
 
 From System tab in the command center you can send a **test digest** (requires Resend + allowlist).
 

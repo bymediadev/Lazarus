@@ -5,8 +5,9 @@ type Bucket = { count: number; resetAt: number };
 const buckets = new Map<string, Bucket>();
 
 export function clientIp(req: Request): string {
-  const xf = (req.headers["x-forwarded-for"] as string | undefined)?.split(",")[0]?.trim();
-  return xf || req.socket.remoteAddress || "unknown";
+  const ip = typeof req.ip === "string" ? req.ip.trim() : "";
+  if (ip) return ip;
+  return req.socket?.remoteAddress || "unknown";
 }
 
 function prune(now: number): void {

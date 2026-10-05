@@ -173,13 +173,25 @@ export function zoomWebhookValidationResponse(
   return { plainToken, encryptedToken };
 }
 
+const ZOOM_TIMESTAMP_WINDOW_MS = 5 * 60 * 1000;
+
+/** Zoom sends epoch seconds. Values that already look like milliseconds are kept. */
+export function zoomTimestampFresh(timestamp: string | undefined, now = Date.now()): boolean {
+  const raw = Number(String(timestamp ?? "").trim());
+  if (!Number.isFinite(raw)) return false;
+  const ms = raw < 1e12 ? raw * 1000 : raw;
+  return Math.abs(now - ms) <= ZOOM_TIMESTAMP_WINDOW_MS;
+}
+
 export function verifyZoomWebhookSignature(
   rawBody: string,
   signature: string | undefined,
   timestamp: string | undefined,
-  secret: string
+  secret: string,
+  now = Date.now()
 ): boolean {
   if (!signature || !timestamp || !secret) return false;
+  if (!zoomTimestampFresh(timestamp, now)) return false;
   const message = `v0:${timestamp}:${rawBody}`;
   const hash = crypto.createHmac("sha256", secret).update(message).digest("hex");
   return secretsEqual(signature, `v0=${hash}`);

@@ -1,6 +1,7 @@
 import type { Express, Request } from "express";
 import { optionalAuthUserId } from "./authMiddleware.js";
 import { serviceRoleClient } from "./founderAuth.js";
+import { clientIp } from "./rateLimit.js";
 
 type Bucket = { count: number; resetAt: number };
 const buckets = new Map<string, Bucket>();
@@ -8,9 +9,7 @@ const HOUR_MS = 60 * 60 * 1000;
 const HOUR_CAP = 12;
 
 function clientKey(req: Request): string {
-  const xf = (req.headers["x-forwarded-for"] as string | undefined)?.split(",")[0]?.trim();
-  const ip = xf || req.socket.remoteAddress || "unknown";
-  return `crash:${ip}`;
+  return `crash:${clientIp(req)}`;
 }
 
 function overHourlyCap(req: Request): boolean {

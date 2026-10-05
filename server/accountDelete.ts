@@ -1,5 +1,11 @@
 import { cancelBillingOnAccountDelete } from "./billing.js";
 import { serviceRoleClient } from "./founderAuth.js";
+import { deleteOAuthConnectionsForUser } from "./integrations/oauthConnections.js";
+import { clearGoogleTokens } from "./integrations/google/tokens.js";
+import { clearZoomTokensAndWait } from "./integrations/zoom/tokens.js";
+import { clearHubSpotTokensAndWait } from "./integrations/hubspot/tokens.js";
+import { clearSalesforceTokensAndWait } from "./integrations/salesforce/tokens.js";
+import { clearTeamsTokensAndWait } from "./integrations/teams/tokens.js";
 
 export type AccountDeleteResult = {
   ok: true;
@@ -17,6 +23,14 @@ export async function deleteAccountCascade(userId: string): Promise<AccountDelet
   }
 
   await cancelBillingOnAccountDelete(userId);
+  await Promise.all([
+    clearGoogleTokens(userId),
+    clearZoomTokensAndWait(userId),
+    clearHubSpotTokensAndWait(userId),
+    clearSalesforceTokensAndWait(userId),
+    clearTeamsTokensAndWait(userId),
+    deleteOAuthConnectionsForUser(userId),
+  ]);
 
   const { count: analyses } = await supabase
     .from("call_post_mortems")

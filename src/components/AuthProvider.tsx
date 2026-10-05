@@ -9,6 +9,7 @@ import {
 } from "react";
 import { setApiBearerToken } from "../lib/api";
 import {
+  applyPendingSignupPassword,
   completeProviderSignIn,
   ensureAuthConfig,
   getSession,
@@ -103,6 +104,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           setPasswordRecovery(true);
         }
         setSession(next);
+        if (next) {
+          void applyPendingSignupPassword().catch(() => {
+            /* confirmation still succeeded; the user can set a password from the account screen */
+          });
+        }
         setApiBearerToken(next?.access_token ?? null);
       });
       unsubscribe = () => sub.subscription.unsubscribe();

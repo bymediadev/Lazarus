@@ -1,5 +1,6 @@
 import type { Express, Request } from "express";
 import { sendResendEmail } from "./founderAlerts.js";
+import { clientIp } from "./rateLimit.js";
 
 type Bucket = { count: number; resetAt: number };
 
@@ -7,11 +8,6 @@ const buckets = new Map<string, Bucket>();
 const HOUR_MS = 60 * 60 * 1000;
 const MAX_PER_HOUR = 8;
 const MAX_MESSAGE = 4000;
-
-function clientIp(req: Request): string {
-  const xf = (req.headers["x-forwarded-for"] as string | undefined)?.split(",")[0]?.trim();
-  return xf || req.socket.remoteAddress || "unknown";
-}
 
 function isLimited(ip: string): boolean {
   const now = Date.now();
@@ -26,11 +22,7 @@ function isLimited(ip: string): boolean {
 }
 
 function feedbackRecipients(): string[] {
-  const raw = (
-    process.env.FOUNDER_ALERT_EMAILS ||
-    process.env.FOUNDER_EMAILS ||
-    "joshua.bennett003@gmail.com"
-  ).trim();
+  const raw = (process.env.FOUNDER_ALERT_EMAILS || process.env.FOUNDER_EMAILS || "").trim();
   return [...new Set(raw.split(/[,;\s]+/).map((e) => e.trim().toLowerCase()).filter(Boolean))];
 }
 

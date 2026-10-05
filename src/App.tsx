@@ -296,9 +296,12 @@ export default function App() {
         const data = (await res.json()) as {
           analyses_paused?: boolean;
           pause_message?: string;
+          stripe?: boolean;
           captcha?: { required?: boolean; site_key?: string | null };
         };
         if (cancelled) return;
+        if (data.stripe === false) setStripeConfigured(false);
+        else if (data.stripe === true) setStripeConfigured(true);
         setRuntimePause(data.analyses_paused ? data.pause_message || "Analyses are paused." : null);
         setCaptchaRequired(data.captcha?.required === true);
         const runtimeKey = (data.captcha?.site_key ?? "").trim();

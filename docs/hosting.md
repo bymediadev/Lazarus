@@ -19,8 +19,7 @@ Repo → Settings → Secrets and variables → Actions:
 
 | Secret | Value |
 |--------|--------|
-| `VITE_API_URL` | Optional — workflow defaults to `https://lazarus-4uxi.onrender.com` |
-| `VITE_LAZARUS_API_KEY` | Same string as Render `LAZARUS_API_KEY` (required if that key is set on Render) |
+| `VITE_API_URL` | Optional. The workflow defaults to `https://api.getldr.ca`. Do not bake `LAZARUS_API_KEY` into the site. A missing `X-Api-Key` is an anonymous browser call. |
 | `VITE_SUPABASE_URL` | Same as `SUPABASE_URL` |
 | `VITE_SUPABASE_ANON_KEY` | Same as `SUPABASE_ANON_KEY` (public anon key) |
 | `VITE_TURNSTILE_SITE_KEY` | Optional. Same as Render `TURNSTILE_SITE_KEY` so the widget can render while the API is cold |
@@ -126,3 +125,27 @@ Copy [`.env.example`](../.env.example). Minimum for a usable API:
 - `PUBLIC_API_URL` = `https://lazarus-4uxi.onrender.com`
 
 Stripe, Zoom, HubSpot, etc. stay optional until you need those features. See [auth-setup.md](./auth-setup.md) and [billing-setup.md](./billing-setup.md).
+
+Set `TOKEN_ENCRYPTION_KEY` to the material that already encrypted OAuth tokens before deploying the fail-closed writer. New token writes throw when that key is missing. A different key cannot decrypt existing ciphertext.
+
+Before shipping the MFA gate, set `app_metadata.role` to `founder` on the operator account and enroll TOTP. Founder Ops returns 403 `MFA_REQUIRED` until the session is `aal2`.
+
+### Single instance
+
+Rate-limit buckets, login tickets, and live transcript sessions live in process memory. Run one Render instance. A second instance will not see those maps, so a login code or a live stream ticket issued on one process fails on the other.
+
+### Cloudflare headers for www
+
+GitHub Pages cannot set CSP or HSTS. On the Cloudflare zone for `www.getldr.ca` and `getldr.ca`, add:
+
+- `Strict-Transport-Security: max-age=31536000; includeSubDomains`
+- `Content-Security-Policy: frame-ancestors 'self' https://*.zoom.us https://teams.microsoft.com`
+- `Referrer-Policy: strict-origin-when-cross-origin`
+- `Permissions-Policy: camera=(), microphone=(self), geolocation=()`
+- A SPA `Content-Security-Policy` that allows the Pages origin, `https://api.getldr.ca`, Supabase, Stripe, and Cloudflare Turnstile in `connect-src` and `script-src`
+
+The API sets its own connect-src. These headers cover the static site.
+
+### Database grants
+
+After `021_security_sweep.sql`, no public table should grant to `anon`. `authenticated` may `SELECT`/`INSERT`/`UPDATE`/`DELETE` only on `call_post_mortems` and `crm_deal_links`, and `SELECT`/`INSERT` on `rescue_outcomes`, under the existing RLS policies. Everything else stays service-role only. `founder_audit_log` allows `INSERT` and `SELECT` for `service_role` and revokes `UPDATE` and `DELETE`.

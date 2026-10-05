@@ -18,8 +18,6 @@ const buckets = new Map<string, Bucket>();
 /** Matches src/lib/guestUsage.ts — advertised free analyses. */
 export const GUEST_FREE_CAP = 5;
 
-const FOUNDER_UNLIMITED_EMAILS = new Set(["joshua.bennett003@gmail.com"]);
-
 function envInt(name: string, fallback: number): number {
   const n = Number((process.env[name] ?? "").trim());
   return Number.isFinite(n) && n > 0 ? Math.floor(n) : fallback;
@@ -129,42 +127,32 @@ async function peekPersisted(kind: string, ip: string, max: number): Promise<boo
 /** Returns true when blocked (at cap). Call only after a successful analysis. */
 async function consumePersisted(kind: string, ip: string, max: number): Promise<boolean> {
   const memoryKey = `${kind}:${ip}`;
-  const row = await readPersisted(kind, ip);
-  if (!row) return consumeMemory(memoryKey, max);
-
-  if (row.count >= max) return true;
-
   const sb = serviceRoleClient();
   if (!sb) return consumeMemory(memoryKey, max);
 
   const hash = ipHash(ip);
-  const now = new Date();
-  const { error: writeError } = await sb.from("ip_analysis_usage").upsert(
-    {
-      ip_hash: hash,
-      kind,
-      count: row.count + 1,
-      window_end: row.windowEnd.toISOString(),
-      updated_at: now.toISOString(),
-    },
-    { onConflict: "ip_hash,kind" }
-  );
-  if (writeError) {
-    console.warn("[guest-limit] persist write failed:", writeError.message);
+  const windowEnd = new Date(nextUtcMonthStart()).toISOString();
+  const { data, error } = await sb.rpc("consume_ip_usage", {
+    p_ip_hash: hash,
+    p_kind: kind,
+    p_window_end: windowEnd,
+    p_max: max,
+  });
+  if (error) {
+    console.warn("[guest-limit] persist write failed:", error.message);
     return consumeMemory(memoryKey, max);
   }
-  // Keep memory mirror in sync when persist works.
-  const mem = memoryState(memoryKey);
-  mem.count = row.count + 1;
-  mem.resetAt = row.windowEnd.getTime();
-  return false;
+  const blocked = data === true;
+  if (!blocked) {
+    const mem = memoryState(memoryKey);
+    mem.count += 1;
+  }
+  return blocked;
 }
 
 export function isFounderUnlimitedEmail(email: string | null | undefined): boolean {
-  const e = (email ?? "").trim().toLowerCase();
-  if (!e) return false;
-  if (FOUNDER_UNLIMITED_EMAILS.has(e)) return true;
-  return isOpsUser({ email: e, app_metadata: {} });
+  void email;
+  return false;
 }
 
 export async function isFreemiumExempt(req: Request): Promise<boolean> {
@@ -217,9 +205,7 @@ export function ppuIpLimitMessage(): string {
 export function isDemoUsageBypassAllowed(req: Request): boolean {
   const header = String(req.headers["x-lazarus-demo-bypass"] ?? "").trim();
   if (header !== "1") return false;
-  const envOn = (process.env.GUEST_USAGE_DEMO_BYPASS ?? "").trim().toLowerCase() === "true";
-  const isProd = process.env.NODE_ENV === "production";
-  return envOn || !isProd;
+  return (process.env.GUEST_USAGE_DEMO_BYPASS ?? "").trim().toLowerCase() === "true";
 }
 
 export function guestServerLimitMessage(): string {

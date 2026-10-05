@@ -120,7 +120,8 @@
     <tr><td>Web console</td><td>Evidence intake, report display, optional login</td><td>No database credentials; calls private API only</td></tr>
     <tr><td>API server</td><td>Transcription, Gemini extract, scoring, OAuth connectors, persistence, freemium limits</td><td>Service role (server-side only)</td></tr>
     <tr><td>Supabase Auth + PostgreSQL</td><td>Optional login; RLS-isolated saves for signed-in users</td><td>Per-user rows via <code>user_id</code>; service role for API writes</td></tr>
-    <tr><td>Google Gemini</td><td>Text extraction API</td><td>Transcript / stitched evidence sent per request; zero-training config where available</td></tr>
+    <tr><td>Google Gemini</td><td>Text extraction API for paid runs</td><td>Transcript / stitched evidence sent per request; zero-training config where available</td></tr>
+    <tr><td>OpenRouter</td><td>Free-tier model routing</td><td>Same request text, with data collection denied and provider fallbacks off. Paid runs use Gemini.</td></tr>
     <tr><td>AssemblyAI</td><td>Speech-to-text when Customer uploads audio</td><td>Audio buffer sent per request; not stored by Lazarus Deal Recovery</td></tr>
     <tr><td>Google (Gmail / Meet)</td><td>Optional read-only mailbox + meeting connect</td><td>User-authorized OAuth; thread text only when searched/attached</td></tr>
     <tr><td>Microsoft Graph (Outlook / Teams)</td><td>Optional read-only mailbox + meeting connect</td><td>User-authorized OAuth; conversation text when searched/attached</td></tr>

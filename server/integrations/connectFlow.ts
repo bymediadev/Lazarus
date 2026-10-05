@@ -1,6 +1,7 @@
 import type { Express, Request, Response } from "express";
 import { issueLoginCode, type LoginTicketProvider } from "../loginTickets.js";
 import { createVerifiedSupabaseSession } from "../oauthLogin.js";
+import { OAuthLoginError } from "../oauthIdentity.js";
 import { requireAuthUser, getAuthUserId } from "../requireUser.js";
 import {
   createSignedOAuthState,
@@ -16,6 +17,8 @@ type Tokenish = {
   refresh_token?: string;
   expires_at: string;
   account_email?: string;
+  email_verified?: boolean;
+  provider_sub?: string;
   instance_url?: string;
   hub_id?: string;
   hub_domain?: string;
@@ -180,7 +183,25 @@ export function registerOAuthConnectRoutes(
           bounce({ [opts.queryKey]: "error", reason: "no_email" });
           return;
         }
-        const minted = await createVerifiedSupabaseSession(email, opts.loginProvider);
+        if (!record.email_verified || !record.provider_sub) {
+          bounce({ [opts.queryKey]: "error", reason: "email_unverified" });
+          return;
+        }
+        let minted;
+        try {
+          minted = await createVerifiedSupabaseSession({
+            email,
+            emailVerified: true,
+            provider: opts.loginProvider,
+            providerSub: record.provider_sub,
+          });
+        } catch (err) {
+          if (err instanceof OAuthLoginError) {
+            bounce({ [opts.queryKey]: "error", reason: err.reason });
+            return;
+          }
+          throw err;
+        }
         // Login uses sign-in scopes (no refresh token). Do not overwrite Gmail/CRM tokens.
         if (record.refresh_token) {
           await opts.saveForUser(minted.userId, record);

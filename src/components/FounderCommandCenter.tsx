@@ -23,7 +23,6 @@ import {
   type FounderWorkspaceHealth,
   type VendorDashboard,
 } from "../lib/founderApi";
-import { isFounderUnlimitedEmail } from "../lib/guestUsage";
 import { trustPackUrl } from "../lib/trustPack";
 
 type Tab = "overview" | "apis" | "issues" | "lookup" | "system" | "controls";
@@ -138,7 +137,7 @@ export default function FounderCommandCenter({ opsEmail, onOpenProduct }: Props)
 
   const maxPeak = Math.max(1, ...(overview?.peak_hours.map((p) => p.count) ?? [1]));
   const maxDayTotal = Math.max(1, ...(apis?.usage.series.map((d) => d.total) ?? [1]));
-  const showBattlecard = isFounderUnlimitedEmail(opsEmail);
+  const showBattlecard = true;
 
   const openSecurityBattlecard = async () => {
     setNotice(null);

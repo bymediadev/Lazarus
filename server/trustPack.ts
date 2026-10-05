@@ -2,8 +2,11 @@ import type { NextFunction, Request, Response } from "express";
 import type { Express } from "express";
 import { existsSync } from "fs";
 import path from "path";
-import { resolveAuthUser } from "./founderAuth.js";
-import { isFounderUnlimitedEmail } from "./guestRateLimit.js";
+import { fileURLToPath } from "url";
+import { isOpsUser, resolveAuthUser } from "./founderAuth.js";
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const privateDocsPath = path.join(__dirname, "private-docs");
 
 /** slug → source file in public/ */
 export const TRUST_PACK_FILES: Record<string, string> = {
@@ -63,7 +66,7 @@ export function redirectLegacyTrustPack(req: Request, res: Response, next: NextF
 
 async function authorizeFounderTrustPack(req: Request, res: Response): Promise<boolean> {
   const user = await resolveAuthUser(req);
-  if (!user || !isFounderUnlimitedEmail(user.email)) {
+  if (!user || !isOpsUser(user)) {
     res
       .status(403)
       .type("html")
@@ -71,9 +74,7 @@ async function authorizeFounderTrustPack(req: Request, res: Response): Promise<b
         `<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"/><title>Forbidden</title></head>` +
           `<body style="font-family:system-ui;padding:2rem;max-width:36rem">` +
           `<h1>Founder access required</h1>` +
-          `<p>The Security Battlecard (SEC-002) is an internal sales enablement artifact for the ` +
-          `Lazarus founder account (<code>joshua.bennett003@gmail.com</code>). ` +
-          `Sign in with that account and open it from Founder Ops.</p>` +
+          `<p>The Security Battlecard is an internal sales document. Sign in with an ops account and open it from Founder Ops.</p>` +
           `<p><a href="/">Return to Lazarus</a></p></body></html>`
       );
     return false;
@@ -110,7 +111,9 @@ export function registerTrustPackRoutes(app: Express, publicPath: string): void 
         if (!ok) return;
       }
 
-      const filePath = path.join(publicPath, file);
+      const filePath = FOUNDER_ONLY_TRUST_PACK.has(slug)
+        ? path.join(privateDocsPath, file)
+        : path.join(publicPath, file);
       if (!existsSync(filePath)) {
         res.status(404).json({ error: "Trust pack file missing on server" });
         return;

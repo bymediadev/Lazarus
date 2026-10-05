@@ -1,4 +1,4 @@
-import { createUserTokenStore } from "../userTokenStore.js";
+import { createPersistedTokenStore } from "../oauthConnections.js";
 
 export interface TeamsTokenRecord {
   access_token: string;
@@ -8,7 +8,7 @@ export interface TeamsTokenRecord {
   connected_at: string;
 }
 
-const store = createUserTokenStore<TeamsTokenRecord>("teams-tokens.json");
+const store = createPersistedTokenStore<TeamsTokenRecord>("teams", "teams-tokens.json");
 
 export function loadTeamsTokens(userId: string): TeamsTokenRecord | null {
   return store.load(userId);
@@ -22,10 +22,18 @@ export function clearTeamsTokens(userId: string): void {
   store.clear(userId);
 }
 
+export async function clearTeamsTokensAndWait(userId: string): Promise<void> {
+  await store.clearAndWait(userId);
+}
+
 export function isTeamsConnected(userId: string): boolean {
   return !!store.load(userId)?.access_token;
 }
 
 export function hasAnyTeamsTokens(): boolean {
   return store.hasAny();
+}
+
+export function hydrateTeamsTokens(): Promise<void> {
+  return store.hydrate();
 }

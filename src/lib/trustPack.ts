@@ -13,7 +13,7 @@ export const TRUST_PACK_NAV: { slug: TrustPackSlug; label: string }[] = [
   { slug: "security-overview", label: "Security Overview" },
 ];
 
-/** Founder-owned sales enablement — gated to joshua.bennett003@gmail.com on the API. */
+/** Founder-owned sales enablement — gated to an ops role with MFA on the API. */
 export const FOUNDER_TRUST_PACK_NAV: { slug: TrustPackSlug; label: string }[] = [
   { slug: "battlecard", label: "Security Battlecard" },
 ];

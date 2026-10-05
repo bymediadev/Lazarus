@@ -109,6 +109,7 @@ export default function MeetingCompanion({
 }: Props) {
   const [platform, setPlatform] = useState<MeetingPlatformId | null>(() => getLinkedPlatform());
   const [phase, setPhase] = useState<SessionPhase>("idle");
+  const [zoomConsent, setZoomConsent] = useState(false);
   const [turns, setTurns] = useState<LiveTranscriptTurn[]>([]);
   const [noteInput, setNoteInput] = useState("");
   const [objections, setObjections] = useState<LiveObjection[]>([]);
@@ -302,6 +303,11 @@ export default function MeetingCompanion({
     meetUnsubRef.current = null;
 
     if (platform === "zoom" && zoomStatus?.connected) {
+      if (!zoomConsent) {
+        setError("Confirm that participants know this meeting transcript is being analyzed.");
+        setPhase("idle");
+        return;
+      }
       try {
         const created = await startZoomLiveSession();
         zoomSessionIdRef.current = created.sessionId;
@@ -309,7 +315,8 @@ export default function MeetingCompanion({
           created.sessionId,
           created.sessionSecret,
           (chunk) => appendTurn(chunk.speaker, chunk.dialogue),
-          (msg) => setError(msg)
+          (msg) => setError(msg),
+          created.streamTicket
         );
         setZoomStreamActive(true);
       } catch (e) {
@@ -328,7 +335,8 @@ export default function MeetingCompanion({
           created.sessionId,
           created.sessionSecret,
           (chunk) => appendTurn(chunk.speaker, chunk.dialogue),
-          (msg) => setError(msg)
+          (msg) => setError(msg),
+          created.streamTicket
         );
         setMeetStreamActive(true);
       } catch (e) {
@@ -519,10 +527,24 @@ export default function MeetingCompanion({
 
       {phase === "idle" ? (
         <div className="meeting-session-idle">
+          {platform === "zoom" && zoomStatus?.connected && (
+            <label className="meeting-consent">
+              <input
+                type="checkbox"
+                checked={zoomConsent}
+                onChange={(e) => setZoomConsent(e.target.checked)}
+              />
+              Participants know this meeting transcript is being analyzed.
+            </label>
+          )}
           <button
             type="button"
             className="btn-primary meeting-start-btn"
-            disabled={!platform || apiOnline === false}
+            disabled={
+              !platform ||
+              apiOnline === false ||
+              (platform === "zoom" && zoomStatus?.connected && !zoomConsent)
+            }
             onClick={startSession}
           >
             Start live session

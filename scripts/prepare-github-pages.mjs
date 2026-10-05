@@ -8,6 +8,7 @@
 import { copyFileSync, existsSync, mkdirSync, readFileSync, writeFileSync } from "fs";
 import { dirname, join } from "path";
 import { fileURLToPath } from "url";
+import { founderOnlyFilesIn } from "./assert-no-founder-docs.mjs";
 
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 const dist = join(root, "dist");
@@ -105,6 +106,12 @@ for (const slug of staticHtmlFolders) {
   const dir = join(dist, slug);
   mkdirSync(dir, { recursive: true });
   copyFileSync(src, join(dir, "index.html"));
+}
+
+const leaked = founderOnlyFilesIn(dist);
+if (leaked.length) {
+  console.error(`Founder-only file in dist: ${leaked.join(", ")}`);
+  process.exit(1);
 }
 
 console.log(

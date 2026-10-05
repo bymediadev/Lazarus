@@ -29,20 +29,23 @@ import { classifySalesRelevance } from "./relevanceGate.js";
 import { canonicalTrustPackPath, registerTrustPackRoutes, trustPackSlugFromPath } from "./trustPack.js";
 import {
   mapHubSpotDealToDeepContext,
-  verifyHubSpotWebhookSecret,
+  verifyHubSpotV3Signature,
   type HubSpotWebhookPayload,
 } from "./integrations/hubspot.js";
 import { registerZoomRoutes, registerZoomWebhook } from "./integrations/zoom/routes.js";
-import { isZoomConfigured } from "./integrations/zoom/config.js";
 import { registerGoogleMeetRoutes } from "./integrations/google/routes.js";
-import { isGoogleMeetConfigured } from "./integrations/google/config.js";
 import { hydrateGoogleTokens } from "./integrations/google/tokens.js";
 import { registerTeamsRoutes } from "./integrations/teams/routes.js";
-import { isTeamsConfigured } from "./integrations/teams/config.js";
 import { registerHubSpotRoutes } from "./integrations/hubspot/routes.js";
-import { isHubSpotConfigured } from "./integrations/hubspot/config.js";
+import { getHubSpotConfig } from "./integrations/hubspot/config.js";
+import { userOwnsHubSpotDeal } from "./integrations/hubspot/deals.js";
+import { userOwnsSalesforceOpportunity } from "./integrations/salesforce/deals.js";
+import { hydrateHubSpotTokens } from "./integrations/hubspot/tokens.js";
+import { hydrateSalesforceTokens } from "./integrations/salesforce/tokens.js";
+import { hydrateTeamsTokens } from "./integrations/teams/tokens.js";
+import { hydrateZoomTokens } from "./integrations/zoom/tokens.js";
+import { resolveAuthUser } from "./founderAuth.js";
 import { registerSalesforceRoutes } from "./integrations/salesforce/routes.js";
-import { isSalesforceConfigured } from "./integrations/salesforce/config.js";
 import { answerGuideQuestion } from "./guide.js";
 import {
   upsertCrmDealLink,
@@ -78,22 +81,17 @@ import {
 } from "./billing.js";
 import { consumeForLlmRoute, preferOpenWeightsFor, resolveModelTierForUser } from "./modelForPlan.js";
 import { registerBillingRoutes, registerBillingWebhook } from "./billingRoutes.js";
-import { registerFeedbackRoutes } from "./feedback.js";
 import { apiEventsMiddleware, setApiErrorLocal } from "./apiEvents.js";
 import { registerFounderRoutes } from "./founderRoutes.js";
 import { registerTenantKeyRoutes } from "./tenantKeyRoutes.js";
 import { registerMeDealRoutes } from "./meDeals.js";
 import { registerTelemetryRoutes } from "./telemetry.js";
 import { getRuntimeConfig, rejectIfAnalysesBlocked } from "./runtimeConfig.js";
-import { isContactConfigured, registerContactRoutes } from "./contact.js";
+import { registerContactRoutes } from "./contact.js";
 import { corsAllowedOrigins } from "./integrations/oauthShared.js";
 import { secretsEqual } from "./cryptoSecrets.js";
 import { rateLimit, skipPublicAndWebhooks } from "./rateLimit.js";
-import {
-  captchaConfigured,
-  enforceCaptcha,
-  publicCaptchaConfig,
-} from "./captcha.js";
+import { enforceCaptcha, publicCaptchaConfig } from "./captcha.js";
 import { requireAuthUser, getAuthUserId } from "./requireUser.js";
 import { decideApiKey, findTenantIdByApiKey } from "./tenantApiKey.js";
 
@@ -102,6 +100,7 @@ const distPath = path.join(__dirname, "../dist");
 const publicPath = path.join(__dirname, "../public");
 
 const app = express();
+app.disable("x-powered-by");
 app.set("trust proxy", 1);
 
 const CANONICAL_HOST = "www.getldr.ca";
@@ -125,7 +124,7 @@ app.use((req, res, next) => {
 
 const upload = multer({
   storage: multer.memoryStorage(),
-  limits: { fileSize: 100 * 1024 * 1024 },
+  limits: { fileSize: 25 * 1024 * 1024 },
 });
 const uploadFields = upload.fields([
   { name: "recording", maxCount: 1 },
@@ -181,7 +180,7 @@ app.use((_req, res, next) => {
       "style-src 'self' 'unsafe-inline'",
       "img-src 'self' data: https:",
       "font-src 'self' data:",
-      "connect-src 'self' https: wss:",
+      "connect-src 'self' https://*.supabase.co wss://*.supabase.co https://api.stripe.com https://openrouter.ai https://generativelanguage.googleapis.com https://api.assemblyai.com https://challenges.cloudflare.com https://*.zoom.us wss://*.zoom.us https://login.microsoftonline.com https://graph.microsoft.com",
       "frame-src 'self' https://*.zoom.us https://www.loom.com https://*.loom.com https://challenges.cloudflare.com",
       "frame-ancestors 'self' https://*.zoom.us https://zoom.us https://teams.microsoft.com https://*.teams.microsoft.com https://*.cloud.microsoft",
       "object-src 'none'",
@@ -195,35 +194,17 @@ app.use((_req, res, next) => {
 registerZoomWebhook(app);
 registerBillingWebhook(app);
 
-app.use(express.json());
+app.use(
+  express.json({
+    verify: (req, _res, buf) => {
+      (req as express.Request & { rawBody?: string }).rawBody = buf.toString("utf8");
+    },
+  })
+);
 app.use(apiEventsMiddleware);
 
 app.get("/api/health", (_req, res) => {
-  const geminiKey = (process.env.GEMINI_API_KEY ?? "").trim();
-  const geminiKeyValid = /^AIza/.test(geminiKey) || /^AQ\./.test(geminiKey);
-  const groqKey = (process.env.GROQ_API_KEY ?? "").trim();
-  const openRouterKey = (process.env.OPENROUTER_API_KEY ?? "").trim();
-  const cerebrasKey = (process.env.CEREBRAS_API_KEY ?? "").trim();
-  res.json({
-    status: "ok",
-    gemini: !!geminiKey,
-    gemini_key_format_valid: geminiKeyValid,
-    cerebras: !!cerebrasKey,
-    groq: !!groqKey,
-    openrouter: !!openRouterKey,
-    llm: !!(geminiKey || cerebrasKey || groqKey || openRouterKey),
-    assemblyai: !!process.env.ASSEMBLYAI_API_KEY,
-    supabase: !!process.env.SUPABASE_URL,
-    zoom: isZoomConfigured(),
-    google_meet: isGoogleMeetConfigured(),
-    teams: isTeamsConfigured(),
-    hubspot: isHubSpotConfigured(),
-    salesforce: isSalesforceConfigured(),
-    whitewhale: false,
-    stripe: isStripeConfigured(),
-    contact: isContactConfigured(),
-    captcha: captchaConfigured(),
-  });
+  res.json({ status: "ok" });
 });
 
 function formatApiError(message: string): string {
@@ -295,6 +276,17 @@ app.post(
   "/api/post-mortem",
   rateLimit({ windowMs: 60_000, max: 12, name: "post-mortem" }),
   requireApiKey,
+  (req, res, next) => {
+    void enforceCaptcha(req)
+      .then((captcha) => {
+        if (!captcha.ok) {
+          res.status(captcha.status).json({ error: captcha.error, code: captcha.code });
+          return;
+        }
+        next();
+      })
+      .catch(next);
+  },
   uploadFields,
   async (req, res) => {
   let reservation: ConsumeKind | null = null;
@@ -309,11 +301,6 @@ app.post(
   });
   try {
     if (await rejectIfAnalysesBlocked(req, res)) return;
-    const captcha = await enforceCaptcha(req);
-    if (!captcha.ok) {
-      res.status(captcha.status).json({ error: captcha.error, code: captcha.code });
-      return;
-    }
     const authUserIdEarly = (await optionalAuthUserId(req)) ?? undefined;
     const freemiumExempt = await isFreemiumExempt(req);
     if (!freemiumExempt) {
@@ -508,33 +495,55 @@ app.post(
 
     const linkedHubSpotDealId = String(req.body?.hubspot_deal_id ?? "").trim();
     const linkedSalesforceOppId = String(req.body?.salesforce_opportunity_id ?? "").trim();
+    const linkWarnings: string[] = [];
     if (savedId && linkedHubSpotDealId) {
-      await upsertCrmDealLink({
-        provider: "hubspot",
-        externalDealId: linkedHubSpotDealId,
-        postMortemId: savedId,
-        userId: authUserId,
-        accountId: deepContext.accountId,
-        salesCycleDays: deepContext.salesCycleDays,
-        historicalCrmContext: deepContext.historicalCrmContext,
-      });
+      if (!authUserId) {
+        linkWarnings.push("HubSpot deal was not linked — sign in and connect HubSpot first.");
+      } else {
+        const owned = await userOwnsHubSpotDeal(authUserId, linkedHubSpotDealId);
+        if (!owned.ok) {
+          linkWarnings.push("HubSpot deal was not linked — it is not in the connected portal.");
+        } else {
+          await upsertCrmDealLink({
+            provider: "hubspot",
+            externalDealId: linkedHubSpotDealId,
+            portalId: owned.portalId,
+            postMortemId: savedId,
+            userId: authUserId,
+            accountId: deepContext.accountId,
+            salesCycleDays: deepContext.salesCycleDays,
+            historicalCrmContext: deepContext.historicalCrmContext,
+          });
+        }
+      }
     }
     if (savedId && linkedSalesforceOppId) {
-      await upsertCrmDealLink({
-        provider: "salesforce",
-        externalDealId: linkedSalesforceOppId,
-        postMortemId: savedId,
-        userId: authUserId,
-        accountId: deepContext.accountId,
-        salesCycleDays: deepContext.salesCycleDays,
-        historicalCrmContext: deepContext.historicalCrmContext,
-      });
+      if (!authUserId) {
+        linkWarnings.push("Salesforce opportunity was not linked — sign in and connect Salesforce first.");
+      } else {
+        const owned = await userOwnsSalesforceOpportunity(authUserId, linkedSalesforceOppId);
+        if (!owned.ok) {
+          linkWarnings.push("Salesforce opportunity was not linked — it is not in the connected org.");
+        } else {
+          await upsertCrmDealLink({
+            provider: "salesforce",
+            externalDealId: linkedSalesforceOppId,
+            portalId: owned.portalId,
+            postMortemId: savedId,
+            userId: authUserId,
+            accountId: deepContext.accountId,
+            salesCycleDays: deepContext.salesCycleDays,
+            historicalCrmContext: deepContext.historicalCrmContext,
+          });
+        }
+      }
     }
 
     const warnings: string[] = [];
     const addWarning = (msg: string) => {
       if (!warnings.includes(msg)) warnings.push(msg);
     };
+    for (const msg of linkWarnings) addWarning(msg);
     if (forceAnalysis && relevance.label === "not_sales") {
       addWarning(
         `Relevance override used — classifier flagged this as not sales/deal evidence (${relevance.reason}).`
@@ -585,13 +594,23 @@ app.post(
 
 /** HubSpot deal webhook → deep-context upsert into crm_deal_links (CRM → Lazarus). */
 app.post("/api/webhooks/hubspot", async (req, res) => {
-  const expectedSecret = (process.env.HUBSPOT_WEBHOOK_SECRET ?? "").trim();
-  const providedSecret =
-    (req.headers["x-hubspot-signature"] as string | undefined) ??
-    (req.headers["x-webhook-secret"] as string | undefined);
-
-  if (!expectedSecret || !verifyHubSpotWebhookSecret(providedSecret, expectedSecret)) {
-    res.status(401).json({ error: "Unauthorized — invalid HubSpot webhook secret" });
+  const cfg = getHubSpotConfig();
+  const rawBody = (req as express.Request & { rawBody?: string }).rawBody ?? "";
+  const proto = String(req.headers["x-forwarded-proto"] ?? req.protocol);
+  const host = req.get("host") ?? "";
+  const uri = `${proto}://${host}${req.originalUrl}`;
+  const signatureOk =
+    !!cfg &&
+    verifyHubSpotV3Signature({
+      method: req.method,
+      uri,
+      rawBody,
+      signature: req.headers["x-hubspot-signature-v3"] as string | undefined,
+      timestamp: req.headers["x-hubspot-request-timestamp"] as string | undefined,
+      clientSecret: cfg.clientSecret,
+    });
+  if (!signatureOk) {
+    res.status(401).json({ error: "Unauthorized — invalid HubSpot webhook signature" });
     return;
   }
 
@@ -601,15 +620,17 @@ app.post("/api/webhooks/hubspot", async (req, res) => {
       res.status(400).json({ error: "No deal payload found — expected deal or deals[]" });
       return;
     }
+    const body = req.body as { portalId?: unknown; portal_id?: unknown };
+    const portalId = String(body.portalId ?? body.portal_id ?? "").trim();
     const externalId = String(mapped.deal_id ?? mapped.account_id ?? "").trim();
     let linkId: string | null = null;
     if (externalId && mapped.closed) {
-      const wiped = await wipeReportForClosedCrmDeal("hubspot", externalId);
+      const wiped = await wipeReportForClosedCrmDeal("hubspot", externalId, portalId);
       res.json({ ok: true, mapped, wiped, synced: wiped });
       return;
     }
     if (externalId) {
-      const existing = await getCrmDealLinkByExternalId("hubspot", externalId);
+      const existing = await getCrmDealLinkByExternalId("hubspot", externalId, portalId);
       if (existing?.user_id) {
         await updateCrmDealLinkContext(existing.id, {
           historical_crm_context: mapped.historical_crm_context,
@@ -651,12 +672,24 @@ app.post("/api/guide/chat", requireApiKey, async (req, res) => {
   }
 });
 
+async function allowLiveCaller(req: express.Request, res: express.Response): Promise<boolean> {
+  const user = await resolveAuthUser(req);
+  if (user) return true;
+  const captcha = await enforceCaptcha(req);
+  if (!captcha.ok) {
+    res.status(captcha.status).json({ error: captcha.error, code: captcha.code });
+    return false;
+  }
+  return true;
+}
+
 app.post(
   "/api/live/objections",
   rateLimit({ windowMs: 60_000, max: 30, name: "live-ai" }),
   requireApiKey,
   async (req, res) => {
   try {
+    if (!(await allowLiveCaller(req, res))) return;
     if (await rejectIfAnalysesBlocked(req, res)) return;
     const full_transcript = String(req.body?.full_transcript ?? "");
     const existing_objections = Array.isArray(req.body?.existing_objections)
@@ -690,6 +723,7 @@ app.post(
   requireApiKey,
   async (req, res) => {
   try {
+    if (!(await allowLiveCaller(req, res))) return;
     if (await rejectIfAnalysesBlocked(req, res)) return;
     const userId = (await optionalAuthUserId(req)) ?? undefined;
     const exempt = await isFreemiumExempt(req);
@@ -807,6 +841,7 @@ app.get("/api/runtime", async (_req, res) => {
       analyses_paused: cfg.analyses_paused,
       pause_message: cfg.pause_message,
       captcha: publicCaptchaConfig(),
+      stripe: isStripeConfigured(),
     });
   } catch (err) {
     res.status(500).json({
@@ -850,8 +885,14 @@ if (process.env.NODE_ENV === "production" || existsSync(distPath)) {
 }
 
 const PORT = Number(process.env.PORT ?? 3001);
-void hydrateGoogleTokens().catch((err) => {
-  console.warn("[google-tokens] hydrate failed:", err instanceof Error ? err.message : err);
+void Promise.all([
+  hydrateGoogleTokens(),
+  hydrateZoomTokens(),
+  hydrateHubSpotTokens(),
+  hydrateSalesforceTokens(),
+  hydrateTeamsTokens(),
+]).catch((err) => {
+  console.warn("[oauth-tokens] hydrate failed:", err instanceof Error ? err.message : err);
 });
 app.listen(PORT, "0.0.0.0", () => {
   console.log(`Lazarus Deal Recovery API running on http://0.0.0.0:${PORT}`);

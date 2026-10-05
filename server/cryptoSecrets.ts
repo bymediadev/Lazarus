@@ -1,11 +1,7 @@
 import crypto from "crypto";
 
 function keyMaterial(): string {
-  return (
-    (process.env.TOKEN_ENCRYPTION_KEY ?? "").trim() ||
-    (process.env.OAUTH_STATE_SECRET ?? "").trim() ||
-    (process.env.SUPABASE_SERVICE_ROLE_KEY ?? "").trim()
-  );
+  return (process.env.TOKEN_ENCRYPTION_KEY ?? "").trim();
 }
 
 export function secretsEqual(provided: string | undefined, expected: string | undefined): boolean {
@@ -24,7 +20,9 @@ function aesKey(): Buffer | null {
 export function encryptSecretJson(value: unknown): string {
   const key = aesKey();
   const json = JSON.stringify(value);
-  if (!key) return json;
+  if (!key) {
+    throw new Error("TOKEN_ENCRYPTION_KEY is required to store secrets");
+  }
   const iv = crypto.randomBytes(12);
   const cipher = crypto.createCipheriv("aes-256-gcm", key, iv);
   const enc = Buffer.concat([cipher.update(json, "utf8"), cipher.final()]);

@@ -144,7 +144,8 @@ export function openRouterRoutingPrefs(): Record<string, unknown> {
   return {
     sort: { by: "latency", partition: "none" },
     preferred_max_latency: { p90: 4 },
-    allow_fallbacks: true,
+    data_collection: "deny",
+    allow_fallbacks: false,
   };
 }
 

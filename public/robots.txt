@@ -7,9 +7,6 @@ Disallow: /portal/
 Disallow: /login
 Disallow: /login/
 Disallow: /api/
-Disallow: /security-battlecard
-Disallow: /security-battlecard.html
-
 User-agent: OAI-SearchBot
 Allow: /
 Disallow: /app
@@ -19,9 +16,6 @@ Disallow: /portal/
 Disallow: /login
 Disallow: /login/
 Disallow: /api/
-Disallow: /security-battlecard
-Disallow: /security-battlecard.html
-
 User-agent: PerplexityBot
 Allow: /
 Disallow: /app
@@ -31,9 +25,6 @@ Disallow: /portal/
 Disallow: /login
 Disallow: /login/
 Disallow: /api/
-Disallow: /security-battlecard
-Disallow: /security-battlecard.html
-
 User-agent: ChatGPT-User
 Allow: /
 Disallow: /app
@@ -43,9 +34,6 @@ Disallow: /portal/
 Disallow: /login
 Disallow: /login/
 Disallow: /api/
-Disallow: /security-battlecard
-Disallow: /security-battlecard.html
-
 User-agent: anthropic-ai
 Allow: /
 Disallow: /app
@@ -55,9 +43,6 @@ Disallow: /portal/
 Disallow: /login
 Disallow: /login/
 Disallow: /api/
-Disallow: /security-battlecard
-Disallow: /security-battlecard.html
-
 User-agent: Claude-Web
 Allow: /
 Disallow: /app
@@ -67,9 +52,6 @@ Disallow: /portal/
 Disallow: /login
 Disallow: /login/
 Disallow: /api/
-Disallow: /security-battlecard
-Disallow: /security-battlecard.html
-
 User-agent: Perplexity-User
 Allow: /
 Disallow: /app
@@ -79,9 +61,6 @@ Disallow: /portal/
 Disallow: /login
 Disallow: /login/
 Disallow: /api/
-Disallow: /security-battlecard
-Disallow: /security-battlecard.html
-
 User-agent: Amazonbot
 Allow: /
 Disallow: /app
@@ -91,9 +70,6 @@ Disallow: /portal/
 Disallow: /login
 Disallow: /login/
 Disallow: /api/
-Disallow: /security-battlecard
-Disallow: /security-battlecard.html
-
 User-agent: MistralAI-User
 Allow: /
 Disallow: /app
@@ -103,9 +79,6 @@ Disallow: /portal/
 Disallow: /login
 Disallow: /login/
 Disallow: /api/
-Disallow: /security-battlecard
-Disallow: /security-battlecard.html
-
 User-agent: GPTBot
 Allow: /
 Disallow: /app
@@ -115,9 +88,6 @@ Disallow: /portal/
 Disallow: /login
 Disallow: /login/
 Disallow: /api/
-Disallow: /security-battlecard
-Disallow: /security-battlecard.html
-
 User-agent: Google-Extended
 Allow: /
 Disallow: /app
@@ -127,9 +97,6 @@ Disallow: /portal/
 Disallow: /login
 Disallow: /login/
 Disallow: /api/
-Disallow: /security-battlecard
-Disallow: /security-battlecard.html
-
 User-agent: ClaudeBot
 Allow: /
 Disallow: /app
@@ -139,9 +106,6 @@ Disallow: /portal/
 Disallow: /login
 Disallow: /login/
 Disallow: /api/
-Disallow: /security-battlecard
-Disallow: /security-battlecard.html
-
 User-agent: CCBot
 Allow: /
 Disallow: /app
@@ -151,9 +115,6 @@ Disallow: /portal/
 Disallow: /login
 Disallow: /login/
 Disallow: /api/
-Disallow: /security-battlecard
-Disallow: /security-battlecard.html
-
 User-agent: Applebot-Extended
 Allow: /
 Disallow: /app
@@ -163,9 +124,6 @@ Disallow: /portal/
 Disallow: /login
 Disallow: /login/
 Disallow: /api/
-Disallow: /security-battlecard
-Disallow: /security-battlecard.html
-
 User-agent: Bytespider
 Allow: /
 Disallow: /app
@@ -175,9 +133,6 @@ Disallow: /portal/
 Disallow: /login
 Disallow: /login/
 Disallow: /api/
-Disallow: /security-battlecard
-Disallow: /security-battlecard.html
-
 User-agent: Meta-ExternalAgent
 Allow: /
 Disallow: /app
@@ -187,8 +142,5 @@ Disallow: /portal/
 Disallow: /login
 Disallow: /login/
 Disallow: /api/
-Disallow: /security-battlecard
-Disallow: /security-battlecard.html
-
 Sitemap: https://www.getldr.ca/sitemap.xml
 # https://www.getldr.ca/llms.txt
