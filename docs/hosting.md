@@ -136,7 +136,7 @@ Rate-limit buckets, login tickets, and live transcript sessions live in process 
 
 ### Cloudflare headers for www
 
-GitHub Pages cannot set CSP or HSTS. On the Cloudflare zone for `www.getldr.ca` and `getldr.ca`, add:
+`www.getldr.ca` is a GitHub Pages site behind GoDaddy nameservers (`ns67` / `ns68.domaincontrol.com`). GitHub Pages cannot set CSP or HSTS, and there is no Cloudflare zone in front of it today, so these headers are not live. If the zone is later proxied through Cloudflare, add:
 
 - `Strict-Transport-Security: max-age=31536000; includeSubDomains`
 - `Content-Security-Policy: frame-ancestors 'self' https://*.zoom.us https://teams.microsoft.com`
