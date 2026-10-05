@@ -4,6 +4,7 @@ import TrustPackLink from "./components/TrustPackLink";
 import TrustPackModal from "./components/TrustPackModal";
 import { useAuth } from "./components/AuthProvider";
 import { isPasswordRecoveryPending } from "./lib/passwordRecovery";
+import { authenticatorStepUpRequired } from "./lib/mfa";
 import { pushHubSpotNote } from "./lib/hubspotIntegration";
 import { pushSalesforceNote } from "./lib/salesforceIntegration";
 import { TRUST_PACK_NAV, TRUST_PACK_OPEN_EVENT, type TrustPackSlug } from "./lib/trustPack";
@@ -69,6 +70,7 @@ const LazarusGuide = lazy(() => import("./components/LazarusGuide"));
 const EmailProviderControls = lazy(() => import("./components/EmailProviderControls"));
 const LoginScreen = lazy(() => import("./components/LoginScreen"));
 const PasswordRecoveryScreen = lazy(() => import("./components/PasswordRecoveryScreen"));
+const AuthenticatorCodeScreen = lazy(() => import("./components/AuthenticatorCodeScreen"));
 const AccountPortal = lazy(() => import("./components/AccountPortal"));
 const DealLifecyclePanel = lazy(() => import("./components/DealLifecyclePanel"));
 const FounderCommandCenter = lazy(() => import("./components/FounderCommandCenter"));
@@ -132,6 +134,8 @@ export default function App() {
   const auth = useAuth();
   const [opsUser, setOpsUser] = useState(false);
   const [opsChecked, setOpsChecked] = useState(false);
+  const [mfaRequired, setMfaRequired] = useState(false);
+  const [mfaChecked, setMfaChecked] = useState(false);
   const [forceProductConsole, setForceProductConsole] = useState(false);
   const [activeTab, setActiveTab] = useState<InputTab>("call");
   const [moreEvidenceOpen, setMoreEvidenceOpen] = useState(false);
@@ -457,6 +461,32 @@ export default function App() {
     },
     [auth.user?.email, auth.user?.id]
   );
+
+  useEffect(() => {
+    let cancelled = false;
+    if (!auth.session) {
+      setMfaRequired(false);
+      setMfaChecked(true);
+      return;
+    }
+    setMfaChecked(false);
+    void authenticatorStepUpRequired()
+      .then((needed) => {
+        if (!cancelled) {
+          setMfaRequired(needed);
+          setMfaChecked(true);
+        }
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setMfaRequired(false);
+          setMfaChecked(true);
+        }
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [auth.session?.access_token]);
 
   useEffect(() => {
     let cancelled = false;
@@ -1111,6 +1141,12 @@ export default function App() {
       {trustPack && <TrustPackModal slug={trustPack} onClose={() => setTrustPack(null)} />}
       {auth.session && (auth.passwordRecovery || isPasswordRecoveryPending()) ? (
         <PasswordRecoveryScreen />
+      ) : auth.session && !mfaChecked ? (
+        <div className="login-screen">
+          <p className="login-sub">Loading…</p>
+        </div>
+      ) : auth.session && mfaRequired ? (
+        <AuthenticatorCodeScreen />
       ) : auth.loading && (isMarketingRoute(route) || route === "login") ? (
         <div className="login-screen">
           <p className="login-sub">Loading…</p>
