@@ -36,7 +36,7 @@
     <img src="/logo.png" alt="Lazarus Deal Recovery" />
     <h1>Privacy Policy</h1>
     <p class="legal-meta">
-      <strong>Version:</strong> 1.4 · August 2026 · Aligned to Lazarus Deal Recovery (guest freemium + optional accounts)<br />
+      <strong>Version:</strong> 1.5 · October 2026 · Aligned to the current deal-recovery service<br />
       <strong>Controller / Provider:</strong> Lazarus Deal Recovery (&ldquo;we,&rdquo; &ldquo;us&rdquo;) — Lazarus Revenue Intelligence Inc., Ontario, Canada<br />
       <strong>Contact:</strong> <a href="mailto:support@getldr.ca">support@getldr.ca</a>
     </p>
@@ -72,10 +72,19 @@
 
   <h2>3. Ownership of your content</h2>
   <p>
-    You retain ownership of recordings, transcripts, and related business content. We receive a limited
-    license to process that content solely to provide the service, as stated in our
-    <a href="/terms">Terms of Service</a>. We do <strong>not</strong> sell customer content or use
-    it to train public AI models.
+    You retain ownership of recordings, transcripts, and related business content. You are the
+    controller. We are the processor. We receive a limited license to process that content solely to
+    provide the service, as stated in our <a href="/terms">Terms of Service</a>.
+  </p>
+  <p>
+    We read the call, the email, or the notes to say whether the deal is recoverable or a flat no,
+    what is blocking it, and what to do next. Then the transcript and the quotes are not saved. We do
+    <strong>not</strong> sell customer content, use it for advertising, or use it to train public AI models.
+  </p>
+  <p>
+    A signed-in company can create a key for its own server. The key is shown once. We store a hash of
+    the key, not the key itself. Their server sends the deal in. The transcript stays on their side.
+    We return the report.
   </p>
 
   <h2>4. Recording consent (critical)</h2>
@@ -110,15 +119,18 @@
     <tr><td>Guest analysis runs</td><td>Not saved to an account; request processing is ephemeral aside from security/abuse logs</td></tr>
     <tr><td>Raw audio uploads</td><td>Processed in memory; not persisted by default</td></tr>
     <tr><td>Transcript, quotes, and CRM payload</td><td>Used to write the report, then not saved. A company API key can return the full brief to the customer’s own server</td></tr>
-    <tr><td>Saved report (scores, status, rescue tasks)</td><td>The transcript and quotes are not saved. Reports stay open during active pipeline actions and clear out exactly 30 days after terminal closing metrics (won or flat no)</td></tr>
+    <tr><td>Saved report (scores, status, rescue tasks)</td><td>The transcript and quotes are not saved. The report stays while the deal is open, and is deleted 30 days after a win or a flat no. A stalled or recoverable deal is not on that clock</td></tr>
     <tr><td>CRM link metadata</td><td>Deleted with the report</td></tr>
     <tr><td>Rescue feedback (anonymous metadata)</td><td>Retained without transcript text for product improvement</td></tr>
     <tr><td>Account data</td><td>Until account deletion + reasonable backup window</td></tr>
   </table>
   <p>
     Signed-in users can delete their account in <strong>Account → Delete my account</strong> (two-step confirm).
-    You can also email <a href="mailto:support@getldr.ca">support@getldr.ca</a>.
-    Upon contract termination, see <a href="/dpa">DPA §8</a>.
+    You can also email <a href="mailto:support@getldr.ca">support@getldr.ca</a>. A written deletion
+    request is handled within 30 days where deletion is technically feasible. When a contract ends,
+    customer personal data is deleted from production within 30 days. See <a href="/dpa">DPA §8</a>.
+    The report also deletes on its own 30 days after a win or a flat no. A stalled or recoverable deal
+    is not on that clock.
   </p>
 
   <h2>7. Sub-processors</h2>
@@ -134,7 +146,8 @@
     <tr><td>Google (Gmail / Meet APIs)</td><td>Optional read-only mailbox and meeting connect</td><td>United States</td></tr>
     <tr><td>Microsoft (Graph)</td><td>Optional read-only Outlook / Teams connect</td><td>United States / customer tenant region</td></tr>
     <tr><td>Zoom</td><td>Optional live meeting transcript stream (RTMS)</td><td>United States / customer Zoom region</td></tr>
-    <tr><td>HubSpot</td><td>Optional read-only deals and notes import</td><td>United States / customer HubSpot region</td></tr>
+    <tr><td>HubSpot</td><td>Optional read-only deals and notes import; a note is written only when you push the plan</td><td>United States / customer HubSpot region</td></tr>
+    <tr><td>Salesforce</td><td>Optional CRM connect; a note is written only when you push the plan</td><td>United States / customer Salesforce region</td></tr>
   </table>
   <p>Optional connectors and enrichment run only when configured and used. Material sub-processor changes will be communicated per the DPA.</p>
 
@@ -163,6 +176,8 @@
     contracts, regulated industries, or large-scale call processing, have legal counsel review this
     policy together with the <a href="/terms">Terms</a>, <a href="/dpa">DPA</a>, and
     <a href="/security-overview">Security Overview</a>. Lazarus Deal Recovery is not SOC 2 certified today.
+    We do not offer SSO, a HIPAA business associate agreement, on-premises hosting, or an uptime SLA.
+    Default hosting is North America. A different region is only by written agreement.
   </p>
 </body>
 </html>

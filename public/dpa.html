@@ -36,7 +36,7 @@
     <img src="/logo.png" alt="Lazarus Deal Recovery" />
     <h1>Data Processing Addendum (DPA)</h1>
     <p class="legal-meta">
-      <strong>Version:</strong> 1.3 · August 2026 · Aligned to Lazarus Deal Recovery (guest freemium + optional accounts)<br />
+      <strong>Version:</strong> 1.4 · October 2026 · Aligned to the current deal-recovery service<br />
       <strong>Processor:</strong> Lazarus Deal Recovery — Lazarus Revenue Intelligence Inc., Ontario, Canada<br />
       <strong>Contact:</strong> <a href="mailto:support@getldr.ca">support@getldr.ca</a>
     </p>
@@ -76,6 +76,7 @@
     <li>Process personal data only to provide the service and as documented in this DPA</li>
     <li>Not sell personal data or use it for advertising</li>
     <li>Not use Customer content to train public AI models</li>
+    <li>Use the call, email, or notes only to say whether the deal is recoverable or a flat no, what is blocking it, and what to do next, then not save the transcript or the quotes</li>
     <li>Ensure personnel with data access are bound by confidentiality</li>
     <li>Assist Customer with reasonable data subject requests (at Customer&rsquo;s expense if excessive)</li>
     <li>Delete or return data upon termination per §8 below</li>
@@ -108,7 +109,8 @@
     <tr><td>Google LLC (Gmail / Meet)</td><td>Optional read-only mailbox / meeting connect</td><td>Thread or meeting text authorized by Customer</td></tr>
     <tr><td>Microsoft Corporation (Graph)</td><td>Optional read-only Outlook / Teams connect</td><td>Conversation or meeting text authorized by Customer</td></tr>
     <tr><td>Zoom Video Communications</td><td>Optional live RTMS transcript stream</td><td>Live transcript turns during Customer-started sessions</td></tr>
-    <tr><td>HubSpot, Inc.</td><td>Optional read-only deals + notes import</td><td>Deal metadata and note text authorized by Customer</td></tr>
+    <tr><td>HubSpot, Inc.</td><td>Optional read-only deals and notes; a note is written only when Customer pushes the plan</td><td>Deal metadata and note text authorized by Customer</td></tr>
+    <tr><td>Salesforce</td><td>Optional CRM connect; a note is written only when Customer pushes the plan</td><td>Deal metadata and note text authorized by Customer</td></tr>
   </table>
   <p>
     Lazarus Deal Recovery will notify Customer of intended changes to sub-processors. Customer may object on reasonable
@@ -133,10 +135,19 @@
     <tr><th>Trigger</th><th>Action</th><th>Timeline</th></tr>
     <tr><td>Contract termination</td><td>Delete Customer personal data from production systems</td><td>Within 30 days</td></tr>
     <tr><td>Written deletion request</td><td>Delete specified data where technically feasible</td><td>Within 30 days</td></tr>
-    <tr><td>Retention policy</td><td>The transcript and quotes are not saved. Reports stay open during active pipeline actions and clear out exactly 30 days after terminal closing metrics (won or flat no)</td><td>At save time for source evidence. 30 days after won or a flat no for the report</td></tr>
+    <tr><td>Retention policy</td><td>The transcript and quotes are not saved. The report stays while the deal is open, and is deleted 30 days after a win or a flat no. A stalled or recoverable deal is not on that clock</td><td>At save time for source evidence. 30 days after won or a flat no for the report</td></tr>
     <tr><td>Guest runs</td><td>No account-persisted analysis JSON to delete</td><td>N/A (ephemeral processing)</td></tr>
   </table>
+  <p>
+    A signed-in company may create an API key for its own server. The key is shown once. Lazarus Deal Recovery
+    stores a hash of the key, not the key. The customer’s server sends the deal in. The transcript stays on
+    the customer’s side. Lazarus Deal Recovery returns the report.
+  </p>
   <p>Analysis metadata and anonymized rescue vectors may be retained where they no longer contain personal data.</p>
+  <p>
+    This DPA does not include a HIPAA business associate agreement, SSO, or on-premises hosting. We do not
+    claim a finished GDPR certification. Where GDPR applies, section 10 below is the transfer position.
+  </p>
 
   <h2>9. Audits</h2>
   <p>

@@ -41,7 +41,7 @@
     <img src="/logo.png" alt="Lazarus Deal Recovery" />
     <h1>Security Overview</h1>
     <p class="legal-meta">
-      <strong>Version:</strong> 1.6 · August 2026 · Aligned to Lazarus Deal Recovery (guest freemium + optional accounts)<br />
+      <strong>Version:</strong> 1.7 · October 2026 · Aligned to the current deal-recovery service<br />
       <strong>Provider:</strong> Lazarus Deal Recovery — Lazarus Revenue Intelligence Inc., Ontario, Canada<br />
       <strong>Contact:</strong> <a href="mailto:support@getldr.ca">support@getldr.ca</a>
     </p>
@@ -51,6 +51,9 @@
   <p>
     This document summarizes security and data-handling controls for InfoSec and procurement reviews.
     It describes the <strong>current</strong> Lazarus Deal Recovery architecture — not a certification claim.
+    The customer owns the recording, the transcript, and the notes. We process them only to write the report:
+    whether the deal is recoverable or a flat no, what is blocking it, and what to do next. The transcript
+    and the quotes are not saved. We do not sell that content or train public models on it.
   </p>
 
   <h2>1. Product summary (shipped)</h2>
@@ -70,8 +73,8 @@
       <td>Unlimited public analyses without a plan</td>
     </tr>
     <tr>
-      <td>Account-scoped save of analyses for signed-in users (guests do not persist)</td>
-      <td>Org-wide multi-seat admin with SSO (SAML)</td>
+      <td>Account-scoped save of the report for signed-in users. Guests do not persist. A company key is shown once; we store a hash, not the key</td>
+      <td>Org-wide multi-seat admin with SSO (SAML). No HIPAA business associate agreement. No on-premises install. No uptime SLA</td>
     </tr>
     <tr>
       <td>Per-deal autopsy from audio, transcript, Word/PDF, and email threads</td>
@@ -156,7 +159,7 @@
     <tr><td>Derived intelligence</td><td>Scores, status, rescue tasks</td><td>Saved to that company’s workspace; no public model training</td></tr>
     <tr><td>Anonymous metadata</td><td>Rescue outcome vectors (no transcript)</td><td>Retained post-purge for product analytics</td></tr>
     <tr><td>Operational telemetry</td><td>API event logs for founder/ops</td><td>Internal diagnostics; not used to train public models</td></tr>
-    <tr><td>Credentials</td><td>API keys, service role</td><td>Environment variables; never in frontend</td></tr>
+    <tr><td>Credentials</td><td>Company API key, service role</td><td>Company key shown once and stored as a hash. Service role stays on the server and never ships to the browser</td></tr>
   </table>
 
   <h2>4. Security controls</h2>
@@ -169,7 +172,7 @@
     <tr><td>Browser exposure</td><td>Service role and Gemini keys never shipped to client</td></tr>
     <tr><td>AI data use</td><td>APIs configured for zero retention / no public model training where available</td></tr>
     <tr><td>Anti-hallucination</td><td>Server-side grounding audit; invented content stripped before scoring</td></tr>
-    <tr><td>Retention</td><td>The transcript and quotes are not saved. Reports stay open during active pipeline actions and clear out exactly 30 days after terminal closing metrics (won or flat no)</td></tr>
+    <tr><td>Retention</td><td>The transcript and quotes are not saved. The report stays while the deal is open, and is deleted 30 days after a win or a flat no. A stalled or recoverable deal is not on that clock</td></tr>
     <tr><td>API hardening (prod)</td><td>Optional <code>LAZARUS_API_KEY</code>, CORS allowlist, IP rate limits (API / auth / analyses), Cloudflare Turnstile on every analysis, cron secret for purge / alert jobs, freemium soft limits</td></tr>
     <tr><td>Authentication</td><td>Email confirmation required; magic-link and password-reset tokens never returned in JSON; OAuth login uses a one-time 5-minute ticket</td></tr>
     <tr><td>Integrations</td><td>Bearer session required; tokens stored per user (not a global singleton); HubSpot / Zoom / Salesforce webhooks refuse traffic if the secret is unset</td></tr>
@@ -255,6 +258,9 @@
   <ul>
     <li>SOC 2 Type II — not yet obtained</li>
     <li>Single sign-on (SAML/OIDC) for customer orgs</li>
+    <li>HIPAA business associate agreement</li>
+    <li>On-premises or customer-VPC hosting</li>
+    <li>Uptime SLA</li>
     <li>Formal penetration test report pack for RFPs</li>
     <li>Dedicated KMS / hardware-backed OAuth token vault (application AES-GCM is in place today)</li>
     <li>Salesforce bi-directional sync / HubSpot write-back</li>

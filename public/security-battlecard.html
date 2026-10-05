@@ -108,7 +108,7 @@
 
   <div class="objection">
     <strong>Lucy — &ldquo;You delete data after 30 days. Our deals take 6+ months.&rdquo;</strong>
-    The transcript and quotes are not saved. Reports stay open during active pipeline actions and clear out exactly 30 days after terminal closing metrics (won or flat no).
+    The transcript and quotes are not saved. The report stays while the deal is open, and is deleted 30 days after a win or a flat no. A stalled or recoverable deal is not on that clock.
     The portal keeps the report: risk score, status, and the rescue tasks.
     We can also load past CRM notes so we never judge one call by itself.
     <br /><br />
@@ -153,7 +153,7 @@
 
   <table class="legal-table">
     <tr><th>Worry</th><th>Our answer</th><th>Ready?</th></tr>
-    <tr><td>Long deals (Lucy)</td><td>The transcript and quotes are not saved. Reports stay open during active pipeline actions and clear out exactly 30 days after terminal closing metrics (won or flat no). The call stays on your side</td><td>✅ Yes (API)</td></tr>
+    <tr><td>Long deals (Lucy)</td><td>The transcript and quotes are not saved. The report stays while the deal is open, and is deleted 30 days after a win or a flat no. A stalled or recoverable deal is not on that clock. The call stays on your side</td><td>✅ Yes (API)</td></tr>
     <tr><td>Real buyer words (Jordan)</td><td>What changed + math-based risk score</td><td>✅ Yes</td></tr>
     <tr><td>Deal memory (Monika)</td><td>Today linked to past objections</td><td>✅ Yes (API) · timeline screen coming</td></tr>
     <tr><td>Rep value vs recorder (James)</td><td>Deal verdict + People Map + 30-day rescue steps — not talk-ratio coaching</td><td>✅ Yes</td></tr>
@@ -257,7 +257,7 @@
     <tr><td>AI training</td><td>Your content is not used to train public AI models</td></tr>
     <tr><td>Encryption</td><td>Locked in transit and at rest; audio is not saved to disk</td></tr>
     <tr><td>Who sees your data</td><td>Each signed-in customer only sees their own rows; guests do not persist analyses</td></tr>
-    <tr><td>How long we keep stuff</td><td>The transcript and quotes are not saved. Reports stay open during active pipeline actions and clear out exactly 30 days after terminal closing metrics (won or flat no)</td></tr>
+    <tr><td>How long we keep stuff</td><td>The transcript and quotes are not saved. The report stays while the deal is open, and is deleted 30 days after a win or a flat no. A stalled or recoverable deal is not on that clock</td></tr>
     <tr><td>Recording calls</td><td>We don&rsquo;t record calls. You upload what you already have the right to use (see Terms)</td></tr>
     <tr><td>Legal docs (public)</td><td><a href="/privacy">Privacy Policy</a> · <a href="/terms">Terms of Service</a> · <a href="/dpa">Data Processing Addendum</a> · <a href="/security-overview">Security Overview</a></td></tr>
   </table>
@@ -293,7 +293,7 @@
     <tr><th>&ldquo;You purge data — how do you remember?&rdquo;</th><td>You keep the call. The portal keeps the score, the status, and the rescue tasks.</td></tr>
     <tr><th>&ldquo;Where did this score come from?&rdquo;</th><td>Your evidence → Gemini extracts → server grounds quotes → <code>scoring.ts</code> computes DRI. Formula shown in report.</td></tr>
     <tr><th>&ldquo;What systems touch our data?&rdquo;</th><td>Lazarus Deal Recovery API, Gemini (extract), AssemblyAI (if audio), optional Google/Microsoft/Zoom/HubSpot connectors, Supabase (if signed-in save). Full table in this battlecard + SEC-001.</td></tr>
-    <tr><th>&ldquo;Is our data safe?&rdquo;</th><td>Encryption, contracts, no public AI training. The transcript and quotes are not saved. Reports stay open during active pipeline actions and clear out exactly 30 days after terminal closing metrics (won or flat no). Each company only sees its own reports. Guests don&rsquo;t persist.</td></tr>
+    <tr><th>&ldquo;Is our data safe?&rdquo;</th><td>Encryption, contracts, no public AI training. The transcript and quotes are not saved. The report stays while the deal is open, and is deleted 30 days after a win or a flat no. A stalled or recoverable deal is not on that clock. Each company only sees its own reports. Guests don&rsquo;t persist.</td></tr>
     <tr><th>&ldquo;SOC 2?&rdquo;</th><td>Not yet. See Security Overview for the roadmap. Good fit for pilot and mid-market today.</td></tr>
     <tr><th>&ldquo;Do I need an account?&rdquo;</th><td>No for a free try. Sign in if you want analyses saved to your account.</td></tr>
   </table>

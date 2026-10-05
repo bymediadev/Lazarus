@@ -19,18 +19,23 @@ const ROLES: Role[] = [
     label: "Security & IT Leaders",
     header: "Not SOC 2 today. The data path is still narrow.",
     bullets: [
-      "Guest scans are ephemeral. Raw audio is processed in memory and is not saved to disk. Model APIs use zero-retention settings where the provider allows it, and your content is not used to train public models.",
-      "The transcript and quotes are not saved. Reports stay open during active pipeline actions and clear out exactly 30 days after terminal closing metrics (won or flat no). Each company only sees its own reports. HubSpot and Salesforce stay read-only until you push the plan.",
+      "The call, the email, and the quotes are used to write the report, then not saved. Audio is processed in memory and is not written to disk. A guest run is not saved to an account.",
+      "The report stays while the deal is still open. Thirty days after it is marked won, or a flat no, the report is deleted. A deal that is still stalled, or still recoverable, is not on that clock.",
+      "Each company only sees its own reports. A company key is shown once. We store a hash, not the key. Their server sends the deal in. The transcript stays on their side.",
+      "Your content is not used to train public models. HubSpot and Salesforce stay read-only until someone pushes the plan.",
     ],
   },
   {
     id: "legal",
     mark: "⚖️",
     label: "Legal & Compliance",
-    header: "Automated Data Governance & Privacy Peace of Mind",
+    header: "What we keep, and when it goes.",
     bullets: [
-      "Bilateral Data Minimization: Lazarus only indexes context related to stagnant metadata. We explicitly omit and scrub personal identifiable financial or health data (PII).",
-      "Right-to-Forget Architecture: Fully compliant with GDPR and CCPA protocols. Delete a tenant workspace and all synced records are immediately purged permanently within 24 hours.",
+      "You own the recording, the transcript, and the notes you upload. We process them only to write the report. We do not sell that content or train public models on it.",
+      "The transcript and the quotes are not saved. We keep the score, the status, and the next actions.",
+      "That report stays while the deal is open. It is deleted 30 days after a win or a flat no.",
+      "A signed-in user can delete the account from Account. Or email support@getldr.ca. We do not sell personal information.",
+      "We are not SOC 2 certified, and we do not claim a finished GDPR or CCPA program. Read the Privacy Policy, the DPA, and the Security Overview before a larger contract.",
     ],
   },
   {
@@ -38,10 +43,10 @@ const ROLES: Role[] = [
     mark: "🚀",
     label: "Revenue Leadership",
     detail: "CRO / Sales Ops",
-    header: "Maximum Pipeline Accuracy & Immediate Time-to-Value",
+    header: "Which stalled deals still belong on the forecast.",
     bullets: [
-      "A plan sized to the deal: the next action, the next checkpoint, and a longer path only when procurement, legal, or security still has to move. A flat no says stop.",
-      "Frictionless Onboarding: Zero engineering hours required from your internal IT team to initiate a 5-deal proof-of-concept.",
+      "Recoverable or a flat no, what is blocking it, and the next conversation.",
+      "Start with one transcript. Five free analyses. No credit card. Connecting HubSpot or Salesforce is optional.",
     ],
   },
 ];

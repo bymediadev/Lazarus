@@ -1,4 +1,4 @@
-import { COMPANY_LINKEDIN, FOUNDER_NAME } from "../lib/site";
+import { FOUNDER_NAME } from "../lib/site";
 import { HERO_PRIMARY_CTA, HERO_PRIMARY_CTA_NOTE } from "../lib/cta";
 import { useReveal } from "../lib/useReveal";
 import { PricingPlanCards } from "./PricingGate";
@@ -240,16 +240,9 @@ export default function MarketingHome({
         </p>
         <p>
           A person still runs the deal. Lazarus does not sell, write outreach, or replace your team.
-          Your data stays on your account — not used to train public models.{" "}
-          <TrustPackLink slug="security-overview">Security Overview</TrustPackLink>.
+          Your data stays on your account — not used to train public models.
         </p>
-        <p>
-          Founded by {FOUNDER_NAME}.{" "}
-          <a href={COMPANY_LINKEDIN} target="_blank" rel="noopener noreferrer">
-            Lazarus Deal Recovery on LinkedIn
-          </a>
-          .
-        </p>
+        <p>Founded by {FOUNDER_NAME}.</p>
       </section>
 
       <ContactSection />
@@ -289,17 +282,135 @@ export default function MarketingHome({
             </div>
           </details>
           <details className="marketing-qa-item">
-            <summary>Is our data safe? Do you have SOC 2?</summary>
+            <summary>Do you save the call?</summary>
             <div className="marketing-qa-panel">
               <p>
-                Encrypted in transit and at rest. Your content is not used to train public models.
-                The transcript and quotes are not saved. Reports stay open during active pipeline
-                actions and clear out exactly 30 days after terminal closing metrics (won or flat no).
-                Each company only
-                sees its own reports. A company key lets their own
-                server send a deal in. We are not SOC 2 certified today — honest fit for a pilot and
-                mid-market. Full detail:{" "}
-                <TrustPackLink slug="security-overview">Security Overview</TrustPackLink>.
+                No. The transcript and the quotes are used to write the report, then not saved.
+                Audio is processed in memory and is not written to disk. A guest run is not saved to
+                an account.
+              </p>
+            </div>
+          </details>
+          <details className="marketing-qa-item">
+            <summary>How long do you keep the report?</summary>
+            <div className="marketing-qa-panel">
+              <p>
+                While the deal is still open, the report stays. That is the score, the status, and
+                the next actions. Thirty days after the deal is marked won, or a flat no, the report
+                is deleted. A deal that is still stalled, or still recoverable, is not on that clock.
+              </p>
+            </div>
+          </details>
+          <details className="marketing-qa-item">
+            <summary>Who can see our deals?</summary>
+            <div className="marketing-qa-panel">
+              <p>
+                Each company only sees its own reports. Another customer’s workspace cannot read
+                them.
+              </p>
+            </div>
+          </details>
+          <details className="marketing-qa-item">
+            <summary>What does a company key do?</summary>
+            <div className="marketing-qa-panel">
+              <p>
+                A signed-in company can create a key for its own server. The key is shown once. We
+                store a hash, not the key. Their server sends the deal in. The transcript stays on
+                their side. Lazarus returns the report.
+              </p>
+            </div>
+          </details>
+          <details className="marketing-qa-item">
+            <summary>Do you train models on our calls?</summary>
+            <div className="marketing-qa-panel">
+              <p>No. Your content is not used to train public models.</p>
+            </div>
+          </details>
+          <details className="marketing-qa-item">
+            <summary>Who owns our data?</summary>
+            <div className="marketing-qa-panel">
+              <p>
+                You do. You keep ownership of the recording, the transcript, and the notes you upload.
+                Lazarus has a limited right to process that content only to write the report. You are
+                the controller. We are the processor. The report is yours to use inside the business.
+                That is in the <TrustPackLink slug="terms">Terms of Service</TrustPackLink> and the{" "}
+                <TrustPackLink slug="dpa">Data Processing Addendum</TrustPackLink>.
+              </p>
+            </div>
+          </details>
+          <details className="marketing-qa-item">
+            <summary>What do you do with the call?</summary>
+            <div className="marketing-qa-panel">
+              <p>
+                We read it to say whether the deal is recoverable or a flat no, what is blocking it,
+                and what to do next. Then the transcript and the quotes are not saved. We do not sell
+                the content, use it for ads, or train public models on it.
+              </p>
+            </div>
+          </details>
+          <details className="marketing-qa-item">
+            <summary>Where does the data go?</summary>
+            <div className="marketing-qa-panel">
+              <p>
+                North America, by default. If you are signed in, the report is stored with Supabase.
+                The transcript is sent to Google Gemini to extract the brief, then we do not save it.
+                If you upload audio, AssemblyAI transcribes it, and we do not save the audio. Stripe
+                sees billing only if you pay. Gmail, Outlook, Zoom, Teams, HubSpot, and Salesforce
+                run only when you connect them. The full list is in the{" "}
+                <TrustPackLink slug="dpa">Data Processing Addendum</TrustPackLink>.
+              </p>
+            </div>
+          </details>
+          <details className="marketing-qa-item">
+            <summary>Can your team read our deals?</summary>
+            <div className="marketing-qa-panel">
+              <p>
+                The transcript is not kept, so there is no call library to open later. Other companies
+                cannot see your reports. The service that writes the report runs on our server. An
+                allowlisted ops login can reach operational tools. We do not use your deals to train
+                models, and we do not sell them.
+              </p>
+            </div>
+          </details>
+          <details className="marketing-qa-item">
+            <summary>How do we delete our data?</summary>
+            <div className="marketing-qa-panel">
+              <p>
+                Delete the account from Account, or email support@getldr.ca. A written request is
+                handled within 30 days where we can technically delete it. When a contract ends,
+                customer personal data is deleted from production within 30 days. The transcript was
+                not saved. The report also deletes on its own 30 days after a win or a flat no.
+              </p>
+            </div>
+          </details>
+          <details className="marketing-qa-item">
+            <summary>Do you have SSO, a HIPAA agreement, or on-prem hosting?</summary>
+            <div className="marketing-qa-panel">
+              <p>
+                No. Not today. Hosting is North America by default. A different region is only by
+                written agreement. We do not have SSO, a HIPAA business associate agreement, or an
+                on-prem install.
+              </p>
+            </div>
+          </details>
+          <details className="marketing-qa-item">
+            <summary>Do you offer an uptime guarantee?</summary>
+            <div className="marketing-qa-panel">
+              <p>
+                No. The service is provided as available. We do not offer an uptime SLA today. That
+                is in the <TrustPackLink slug="terms">Terms of Service</TrustPackLink>.
+              </p>
+            </div>
+          </details>
+          <details className="marketing-qa-item">
+            <summary>Are you SOC 2 certified?</summary>
+            <div className="marketing-qa-panel">
+              <p>
+                No. Not today. That is an honest fit for a pilot and for mid-market. Before a larger
+                contract, read the{" "}
+                <TrustPackLink slug="security-overview">Security Overview</TrustPackLink>, the{" "}
+                <TrustPackLink slug="privacy">Privacy Policy</TrustPackLink>, and the{" "}
+                <TrustPackLink slug="dpa">Data Processing Addendum</TrustPackLink>.
               </p>
             </div>
           </details>
@@ -318,6 +429,69 @@ export default function MarketingHome({
               <p>
                 No. A manager can drop the file for the team. A rep can also run the one deal they are
                 trying to save. Either way, it is not a new daily tool.
+              </p>
+            </div>
+          </details>
+          <details className="marketing-qa-item">
+            <summary>Do you replace our recorder or our CRM?</summary>
+            <div className="marketing-qa-panel">
+              <p>
+                No. Keep the recorder and the CRM. Lazarus reads what you already have and says
+                whether the deal is recoverable, what is blocking it, and what to do next.
+              </p>
+            </div>
+          </details>
+          <details className="marketing-qa-item">
+            <summary>Do you email buyers or close the deal for us?</summary>
+            <div className="marketing-qa-panel">
+              <p>
+                No. Lazarus does not write outreach, email buyers, or close the deal. A person still
+                runs it.
+              </p>
+            </div>
+          </details>
+          <details className="marketing-qa-item">
+            <summary>Do you promise the deal will close?</summary>
+            <div className="marketing-qa-panel">
+              <p>
+                No. The brief is something you can defend in the forecast. You still decide. We do
+                not promise a deal will close.
+              </p>
+            </div>
+          </details>
+          <details className="marketing-qa-item">
+            <summary>Who is responsible for recording consent?</summary>
+            <div className="marketing-qa-panel">
+              <p>
+                You are. Upload only calls and emails you already have the right to use. We do not
+                join the meeting, and we do not check consent for you.
+              </p>
+            </div>
+          </details>
+          <details className="marketing-qa-item">
+            <summary>Will this write over HubSpot or Salesforce?</summary>
+            <div className="marketing-qa-panel">
+              <p>
+                No, not on its own. HubSpot and Salesforce stay read-only until someone pushes the
+                plan.
+              </p>
+            </div>
+          </details>
+          <details className="marketing-qa-item">
+            <summary>Do we pay per person?</summary>
+            <div className="marketing-qa-panel">
+              <p>
+                No. You pay per deal analysis. Five a month are free, then $10 a report. Entry is $99
+                a month for 20. Team is $499 a month for unlimited. Not per seat.
+              </p>
+            </div>
+          </details>
+          <details className="marketing-qa-item">
+            <summary>Can we try one deal before we buy?</summary>
+            <div className="marketing-qa-panel">
+              <p>
+                Yes. Five analyses a month are free. No credit card. Paste one transcript. Sign in
+                only if you want the report saved.
               </p>
             </div>
           </details>
