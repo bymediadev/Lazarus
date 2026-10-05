@@ -8,6 +8,7 @@ import {
   fetchFounderOverview,
   fetchFounderSystem,
   fetchFounderWorkspaces,
+  founderCreateWorkspaceKey,
   founderDeleteDeal,
   founderLookup,
   founderPasswordReset,
@@ -49,6 +50,12 @@ export default function FounderCommandCenter({ opsEmail, onOpenProduct }: Props)
   );
   const [apis, setApis] = useState<FounderApisInventory | null>(null);
   const [workspaces, setWorkspaces] = useState<FounderWorkspaceHealth["workspaces"]>([]);
+  const [issuedKey, setIssuedKey] = useState<{
+    tenantId: string;
+    companyName: string;
+    prefix: string;
+    apiKey: string;
+  } | null>(null);
   const [crashes, setCrashes] = useState<
     Awaited<ReturnType<typeof fetchFounderCrashes>>["crashes"]
   >([]);
@@ -944,6 +951,38 @@ export default function FounderCommandCenter({ opsEmail, onOpenProduct }: Props)
                     · Salesforce {workspace.integrations.salesforce} · Zoom {workspace.integrations.zoom}{" "}
                     · Teams {workspace.integrations.teams}
                   </p>
+                  <button
+                    type="button"
+                    className="btn-secondary"
+                    onClick={async () => {
+                      try {
+                        const created = await founderCreateWorkspaceKey(workspace.tenant_id);
+                        setIssuedKey({
+                          tenantId: created.tenant_id,
+                          companyName: created.company_name,
+                          prefix: created.prefix,
+                          apiKey: created.api_key,
+                        });
+                        setNotice(`API key created for ${created.company_name}. Copy it now.`);
+                      } catch (err) {
+                        setError(err instanceof Error ? err.message : "API key failed");
+                      }
+                    }}
+                  >
+                    Create API key
+                  </button>
+                  {issuedKey?.tenantId === workspace.tenant_id ? (
+                    <p className="ops-fix">
+                      {issuedKey.prefix} · {issuedKey.apiKey}{" "}
+                      <button
+                        type="button"
+                        className="btn-secondary"
+                        onClick={() => void copyText(issuedKey.apiKey)}
+                      >
+                        Copy
+                      </button>
+                    </p>
+                  ) : null}
                 </li>
               ))}
             </ul>

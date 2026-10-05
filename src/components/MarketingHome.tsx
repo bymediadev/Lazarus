@@ -322,8 +322,11 @@ export default function MarketingHome({
             <div className="marketing-qa-panel">
               <p>
                 Encrypted in transit and at rest. Your content is not used to train public models.
-                Teams only see their own deals. Saved transcripts purge on a 30-day default. We are
-                not SOC 2 certified today — honest fit for a pilot and mid-market. Full detail:{" "}
+                The transcript and quotes are not saved. The report stays while the deal is open.
+                Thirty days after it is won or a flat no, that report is deleted. Each company only
+                sees its own reports. A company key lets their own
+                server send a deal in. We are not SOC 2 certified today — honest fit for a pilot and
+                mid-market. Full detail:{" "}
                 <TrustPackLink slug="security-overview">Security Overview</TrustPackLink>.
               </p>
             </div>

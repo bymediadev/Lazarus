@@ -57,7 +57,7 @@
   <table class="legal-table">
     <tr><th>Category</th><th>Examples</th><th>Purpose</th></tr>
     <tr><td>Account data</td><td>Email, name, organization (when you create or use a login)</td><td>Authentication, support, billing readiness, account-scoped saves</td></tr>
-    <tr><td>Customer content</td><td>Call recordings (processed in memory), transcripts, documents, mailbox threads you attach, live session turns, field capture, HubSpot notes</td><td>Per-deal analysis and optional storage of outputs for signed-in users</td></tr>
+    <tr><td>Customer content</td><td>Call recordings (processed in memory), transcripts, documents, mailbox threads you attach, live session turns, field capture, HubSpot notes</td><td>Write the report. That source evidence is not saved</td></tr>
     <tr><td>Connector account data</td><td>OAuth tokens and connected account email when you link Gmail, Outlook, Zoom, HubSpot, or similar</td><td>Read-only evidence import; disconnect clears tokens</td></tr>
     <tr><td>Saved analyses &amp; CRM link metadata</td><td>Scores, reports, optional HubSpot/Salesforce deal IDs linked to a saved analysis</td><td>Account history and deal lifecycle features for signed-in users</td></tr>
     <tr><td>Usage / freemium telemetry</td><td>Analysis counts, IP/user-agent soft limits for guests and non-founder accounts</td><td>Abuse prevention and free-tier enforcement</td></tr>
@@ -65,8 +65,8 @@
   </table>
   <p>
     <strong>Guest vs signed-in:</strong> Guests may run a limited number of free analyses. Guest runs are
-    <strong>not persisted</strong> to an account. When you are signed in, analysis outputs may be saved to your
-    user account in Supabase (with Row-Level Security). See
+    <strong>not persisted</strong> to an account. When you are signed in, or when your company calls with its
+    API key, the report is saved to that company. The transcript, quotes, and CRM payload are not. See
     <a href="/security-overview">Security Overview §2</a>.
   </p>
 
@@ -109,9 +109,9 @@
     <tr><th>Data type</th><th>Default retention</th></tr>
     <tr><td>Guest analysis runs</td><td>Not saved to an account; request processing is ephemeral aside from security/abuse logs</td></tr>
     <tr><td>Raw audio uploads</td><td>Processed in memory; not persisted by default</td></tr>
-    <tr><td>Transcript text (signed-in saves)</td><td>Configurable; default automatic purge/null after <strong>30 days</strong></td></tr>
-    <tr><td>Analysis outputs (JSON, scores)</td><td>Retained for signed-in accounts until deleted by the user, founder/ops support action, or contract termination</td></tr>
-    <tr><td>CRM link metadata</td><td>Retained with the linked saved analysis</td></tr>
+    <tr><td>Transcript, quotes, and CRM payload</td><td>Used to write the report, then not saved. A company API key can return the full brief to the customer’s own server</td></tr>
+    <tr><td>Saved report (scores, status, rescue tasks)</td><td>Kept while the deal is open. Deleted 30 days after it is won or a flat no</td></tr>
+    <tr><td>CRM link metadata</td><td>Deleted with the report</td></tr>
     <tr><td>Rescue feedback (anonymous metadata)</td><td>Retained without transcript text for product improvement</td></tr>
     <tr><td>Account data</td><td>Until account deletion + reasonable backup window</td></tr>
   </table>

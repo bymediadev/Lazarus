@@ -44,6 +44,13 @@ import {
   tenantStampForWrite,
   workspaceNameFromEmail,
 } from "../server/tenantScope.ts";
+import {
+  containsEvidence,
+  purgeAfterForStatus,
+  storedAnalysisJson,
+  tenantForReportWrite,
+} from "../server/reportSanitize.ts";
+import { decideApiKey } from "../server/tenantApiKey.ts";
 
 let failed = 0;
 
@@ -366,6 +373,84 @@ check(
     health.analysis_json === undefined &&
     health.access_token === undefined &&
     health.integrations.hubspot === "expired"
+);
+
+const fullBrief = {
+  proprietary_indices: { deal_risk_index: 70 },
+  deal_classification: { status: "STALLED — RECOVERABLE" },
+  rescue_triage_plan: { immediate_0_30_days: ["Deliver the pilot proposal"] },
+  viability_state: { viability_score: 40 },
+  causal_forces: [{ factor: "Budget", evidence: "We cannot fund this until Q3" }],
+  historical_crm_context: [{ note: "Buyer said no on the last call" }],
+  transcript: "raw call text",
+};
+const stored = storedAnalysisJson(JSON.stringify(fullBrief));
+check(
+  "stored report drops evidence quotes and CRM text",
+  stored &&
+    containsEvidence(stored) === false &&
+    stored.proprietary_indices.deal_risk_index === 70 &&
+    stored.rescue_triage_plan.immediate_0_30_days[0] === "Deliver the pilot proposal"
+);
+check("caller brief still contains the evidence", containsEvidence(fullBrief) === true);
+check(
+  "company key stamps company A and ignores a body tenant id",
+  tenantForReportWrite({
+    userId: null,
+    tenantIdFromKey: companyA,
+    body: { tenant_id: companyB },
+  }) === companyA
+);
+check(
+  "signed-in membership wins over a company key",
+  tenantForReportWrite({
+    userId: "user-1",
+    membershipTenantId: companyA,
+    tenantIdFromKey: companyB,
+    body: { tenant_id: companyB },
+  }) === companyA
+);
+check(
+  "site key reaches analyze without a company stamp",
+  decideApiKey({ header: "site-secret", siteKey: "site-secret", tenantIdForHeader: null }).ok === true &&
+    decideApiKey({ header: "site-secret", siteKey: "site-secret", tenantIdForHeader: null }).tenantId === null
+);
+check(
+  "company key attaches that tenant",
+  decideApiKey({ header: "ldr_company", siteKey: "site-secret", tenantIdForHeader: companyA }).tenantId === companyA
+);
+check(
+  "unknown key is rejected when a site key is configured",
+  decideApiKey({ header: "nope", siteKey: "site-secret", tenantIdForHeader: null }).ok === false
+);
+check(
+  "missing key still reaches analyze when no site key is configured",
+  decideApiKey({ header: "", siteKey: "", tenantIdForHeader: null }).ok === true
+);
+
+const purgeNow = new Date("2026-06-01T15:00:00.000Z");
+const openStatuses = [
+  "ACTIVE",
+  "STALLED — RECOVERABLE",
+  "STALLED — UNCERTAIN",
+  "STALLED — HIGH RISK",
+  "CLOSED LOST — RECOVERABLE",
+];
+for (const status of openStatuses) {
+  check(`open status ${status} clears purge_after`, purgeAfterForStatus(status, purgeNow) === null);
+}
+for (const status of ["CLOSED WON", "CLOSED LOST — UNLIKELY"]) {
+  const purgeAt = purgeAfterForStatus(status, purgeNow);
+  const daysOut = purgeAt ? (new Date(purgeAt).getTime() - purgeNow.getTime()) / 86_400_000 : 0;
+  check(
+    `finished status ${status} sets purge_after about 30 days out`,
+    daysOut > 29 && daysOut < 31
+  );
+}
+check(
+  "a later open status does not keep a closed purge date",
+  purgeAfterForStatus("CLOSED WON", purgeNow) !== null &&
+    purgeAfterForStatus("STALLED — RECOVERABLE", purgeNow) === null
 );
 
 if (failed) {

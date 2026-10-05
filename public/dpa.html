@@ -92,13 +92,13 @@
     <li>Row-Level Security (RLS) tenant isolation on customer tables; signed-in saves scoped by <code>user_id</code></li>
     <li>Server-side-only privileged credentials (service role never exposed to browsers)</li>
     <li>Grounding audit and anti-hallucination controls on AI outputs</li>
-    <li>Scheduled transcript retention purge (default 30 days for raw transcript text on saved records)</li>
+    <li>Source evidence is not saved: transcript text, evidence quotes, and CRM payloads are dropped after the report is written</li>
   </ul>
 
   <h2>5. Sub-processors</h2>
   <table class="legal-table">
     <tr><th>Sub-processor</th><th>Purpose</th><th>Data processed</th></tr>
-    <tr><td>Supabase Inc.</td><td>Database, auth, storage</td><td>Account data, transcripts (when saved), analysis JSON, CRM link metadata</td></tr>
+    <tr><td>Supabase Inc.</td><td>Database, auth, storage</td><td>Account data, saved report (scores, status, rescue tasks), CRM link metadata. Transcripts and evidence quotes are not stored</td></tr>
     <tr><td>Render</td><td>API application hosting</td><td>Application logs and request metadata; Customer data in transit to the API</td></tr>
     <tr><td>GitHub, Inc. (Pages)</td><td>Static site hosting</td><td>No Customer deal data; public marketing and app UI assets</td></tr>
     <tr><td>Cloudflare, Inc.</td><td>Turnstile bot protection on analysis submit</td><td>Bot-check tokens; IP as processed by Cloudflare</td></tr>
@@ -133,7 +133,7 @@
     <tr><th>Trigger</th><th>Action</th><th>Timeline</th></tr>
     <tr><td>Contract termination</td><td>Delete Customer personal data from production systems</td><td>Within 30 days</td></tr>
     <tr><td>Written deletion request</td><td>Delete specified data where technically feasible</td><td>Within 30 days</td></tr>
-    <tr><td>Retention policy</td><td>Automatic nulling of raw transcript text on saved records</td><td>Default 30 days from creation</td></tr>
+    <tr><td>Retention policy</td><td>Transcript text, evidence quotes, and CRM payloads are not written. The saved report is deleted after the deal is won or a flat no</td><td>At save time for source evidence. 30 days after close for the report</td></tr>
     <tr><td>Guest runs</td><td>No account-persisted analysis JSON to delete</td><td>N/A (ephemeral processing)</td></tr>
   </table>
   <p>Analysis metadata and anonymized rescue vectors may be retained where they no longer contain personal data.</p>

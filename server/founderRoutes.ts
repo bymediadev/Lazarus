@@ -11,6 +11,7 @@ import { runCriticalAlertPass, runDigestAlert, isDigestHour } from "./founderAle
 import { buildSystemStatus, classifyIssue } from "./founderSystem.js";
 import { buildApisInventory } from "./founderApis.js";
 import { buildWorkspaceHealth } from "./workspaceHealth.js";
+import { createTenantApiKey } from "./tenantApiKey.js";
 import { getBillingSnapshot } from "./billing.js";
 import { resolveFrontendOrigin } from "./integrations/oauthShared.js";
 import { saveRuntimeConfig } from "./runtimeConfig.js";
@@ -195,6 +196,44 @@ export function registerFounderRoutes(app: Express): void {
       res.json({ workspaces });
     } catch (err) {
       res.status(500).json({ error: err instanceof Error ? err.message : "Workspace health failed" });
+    }
+  });
+
+  app.post("/api/founder/workspaces/:tenantId/api-key", requireOps, async (req, res) => {
+    try {
+      const tenantId = String(req.params.tenantId ?? "").trim();
+      const supabase = serviceRoleClient();
+      if (!supabase) {
+        res.status(503).json({ error: "Supabase not configured" });
+        return;
+      }
+      if (!tenantId) {
+        res.status(400).json({ error: "Missing company" });
+        return;
+      }
+      const created = createTenantApiKey();
+      const { data, error } = await supabase
+        .from("tenants")
+        .update({ api_key_hash: created.hash, api_key_prefix: created.prefix })
+        .eq("id", tenantId)
+        .select("id, company_name, api_key_prefix")
+        .maybeSingle();
+      if (error) {
+        res.status(500).json({ error: error.message });
+        return;
+      }
+      if (!data) {
+        res.status(404).json({ error: "Company not found" });
+        return;
+      }
+      res.json({
+        tenant_id: data.id,
+        company_name: data.company_name,
+        prefix: created.prefix,
+        api_key: created.raw,
+      });
+    } catch (err) {
+      res.status(500).json({ error: err instanceof Error ? err.message : "API key failed" });
     }
   });
 

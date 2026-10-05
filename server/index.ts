@@ -11,7 +11,6 @@ import { analyzeTranscript } from "./gemini.js";
 import {
   formatLiveTranscriptPayload,
   parseDeepContextFromBody,
-  buildIngestMetadata,
   buildDealMemorySummary,
   detectRecurringVetoHolders,
 } from "./deepContext.js";
@@ -95,6 +94,7 @@ import {
   publicCaptchaConfig,
 } from "./captcha.js";
 import { requireAuthUser, getAuthUserId } from "./requireUser.js";
+import { decideApiKey, findTenantIdByApiKey } from "./tenantApiKey.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const distPath = path.join(__dirname, "../dist");
@@ -265,21 +265,29 @@ function normalizeTextField(value: unknown): string {
   return "";
 }
 
-/** Optional — set LAZARUS_API_KEY in production to require X-Api-Key header. */
+/** Site key unlocks the browser. A company key stamps that workspace. */
 function requireApiKey(req: express.Request, res: express.Response, next: express.NextFunction) {
-  const expected = (process.env.LAZARUS_API_KEY ?? "").trim();
-  if (!expected) {
+  void (async () => {
+    const header = (req.headers["x-api-key"] as string | undefined)?.trim() ?? "";
+    const siteKey = (process.env.LAZARUS_API_KEY ?? "").trim();
+    let tenantIdForHeader: string | null = null;
+    if (header && !(siteKey && secretsEqual(header, siteKey))) {
+      tenantIdForHeader = await findTenantIdByApiKey(header);
+    }
+    const decision = decideApiKey({
+      header,
+      siteKey,
+      tenantIdForHeader,
+    });
+    if (!decision.ok) {
+      res.status(decision.status).json({ error: "Unauthorized — invalid or missing API key" });
+      return;
+    }
+    if (decision.tenantId) {
+      (req as express.Request & { tenantIdFromKey?: string }).tenantIdFromKey = decision.tenantId;
+    }
     next();
-    return;
-  }
-  const provided =
-    (req.headers["x-api-key"] as string | undefined)?.trim() ??
-    req.headers.authorization?.replace(/^Bearer\s+/i, "")?.trim();
-  if (!secretsEqual(provided, expected)) {
-    res.status(401).json({ error: "Unauthorized — invalid or missing API key" });
-    return;
-  }
-  next();
+  })().catch(next);
 }
 
 app.post(
@@ -465,33 +473,37 @@ app.post(
     const recurringVetoHolders = deepContext.historicalCrmContext?.length
       ? detectRecurringVetoHolders(deepContext.historicalCrmContext)
       : [];
-    const ingestMetadata = buildIngestMetadata(deepContext);
     const dealMemorySummary = buildDealMemorySummary(
       result as unknown as Record<string, unknown>,
       recurringVetoHolders
     );
 
     const authUserId = authUserIdEarly;
-    // Guests run without a company. Signed-in saves stamp tenant_id from membership
-    // inside savePostMortem. A tenant_id on the body is ignored.
-    const savedId = authUserId
-      ? await savePostMortem({
-          userId: authUserId,
-          clientName: result.client_name,
-          dealValue,
-          dealStatus: result.deal_classification.status,
-          headline: result.executive_summary,
-          diagnosis: result.diagnosis,
-          actionPlan: result.action_plan.join("\n"),
-          transcriptText: rawTranscript,
-          analysisJson: JSON.stringify({
-            ...result,
-            processed_at: processedAt,
-          }),
-          ...(ingestMetadata ? { ingestMetadata: ingestMetadata as Record<string, unknown> } : {}),
-          dealMemorySummary: dealMemorySummary as Record<string, unknown>,
-        })
-      : null;
+    const tenantIdFromKey =
+      (req as express.Request & { tenantIdFromKey?: string }).tenantIdFromKey ?? null;
+    const sourceRef = String(req.body?.source_ref ?? "").trim();
+    // Guests with no company key are not stored. Signed-in users and company keys are.
+    // The response below still returns the full brief. The saved row does not keep evidence.
+    const savedId =
+      authUserId || tenantIdFromKey
+        ? await savePostMortem({
+            userId: authUserId || undefined,
+            tenantIdFromKey,
+            sourceRef: sourceRef || null,
+            clientName: result.client_name,
+            dealValue,
+            dealStatus: result.deal_classification.status,
+            headline: result.executive_summary,
+            diagnosis: result.diagnosis,
+            actionPlan: result.action_plan.join("\n"),
+            transcriptText: rawTranscript,
+            analysisJson: JSON.stringify({
+              ...result,
+              processed_at: processedAt,
+            }),
+            dealMemorySummary: dealMemorySummary as Record<string, unknown>,
+          })
+        : null;
 
     const linkedHubSpotDealId = String(req.body?.hubspot_deal_id ?? "").trim();
     const linkedSalesforceOppId = String(req.body?.salesforce_opportunity_id ?? "").trim();

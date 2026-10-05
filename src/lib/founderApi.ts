@@ -140,6 +140,17 @@ export async function fetchFounderWorkspaces(): Promise<FounderWorkspaceHealth> 
   return founderFetch<FounderWorkspaceHealth>("/api/founder/workspaces");
 }
 
+export async function founderCreateWorkspaceKey(tenantId: string): Promise<{
+  tenant_id: string;
+  company_name: string;
+  prefix: string;
+  api_key: string;
+}> {
+  return founderFetch(`/api/founder/workspaces/${encodeURIComponent(tenantId)}/api-key`, {
+    method: "POST",
+  });
+}
+
 export async function fetchFounderIssues() {
   return founderFetch<{
     issues: Array<{

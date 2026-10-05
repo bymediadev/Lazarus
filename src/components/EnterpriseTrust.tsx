@@ -4,7 +4,7 @@ import { TRUST_PACK_NAV } from "../lib/trustPack";
 const TRUST_PILLARS = [
   {
     title: "Your data stays yours",
-    body: "Customer content is not used to train public AI models. APIs run with zero-retention settings where available.",
+    body: "The call, the email, and the CRM notes are read to write the report and are not saved. Your system can keep that evidence. The portal keeps the score and the rescue tasks.",
   },
   {
     title: "Locked down by default",
@@ -12,7 +12,7 @@ const TRUST_PILLARS = [
   },
   {
     title: "Each customer walled off",
-    body: "Database row-level security so teams only see their own deals. Admin keys never ship to the browser.",
+    body: "Each company only sees its own reports. A company key lets their server send a deal in. Admin keys never ship to the browser.",
   },
 ];
 
@@ -40,8 +40,8 @@ export function HeroTrustBanner() {
           email + field into one story.
         </li>
         <li>
-          <strong>The guardrail:</strong> Published Trust Pack, encryption, purge options, and no
-          public model training on your content.
+          <strong>The guardrail:</strong> You keep the call. We keep the score and the recovery plan.
+          No public model training on your content.
         </li>
       </ul>
       <p className="hero-trust-legal">
@@ -79,8 +79,8 @@ export default function EnterpriseTrust() {
         <div className="trust-meta-item">
           <span className="trust-meta-key">Data retention</span>
           <span className="trust-meta-val">
-            Raw transcript text: configurable purge (30-day default). Deal scores and reports: kept
-            for the life of the deal.
+            The transcript, quotes, and CRM payload are not saved. The report stays while the deal
+            is open. Thirty days after it is won or a flat no, that report is deleted.
           </span>
         </div>
         <div className="trust-meta-item">

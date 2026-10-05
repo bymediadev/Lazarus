@@ -12,9 +12,8 @@ async function main() {
   }
 
   console.log(
-    `Done. Purged ${result.purged} transcript(s). Retention window: ${result.retentionDays} days.`
+    `Done. Nulled ${result.purged} transcript(s). Deleted ${result.reportsDeleted} finished report(s). Retention window: ${result.retentionDays} days.`
   );
-  console.log("analysis_json and deal metadata retained for audit.");
 }
 
 main().catch((err) => {

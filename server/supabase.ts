@@ -6,10 +6,12 @@ import {
   type StakeholderIndexInput,
 } from "./scoring.js";
 import { tenantIdForUser } from "./tenantMembership.js";
-import { tenantStampForWrite } from "./tenantScope.js";
+import { purgeAfterForStatus, storedAnalysisJson, tenantForReportWrite } from "./reportSanitize.js";
 
 export interface SavePostMortemInput {
   userId?: string;
+  tenantIdFromKey?: string | null;
+  sourceRef?: string | null;
   clientName: string;
   dealValue: number;
   dealStatus: string;
@@ -40,19 +42,24 @@ export async function savePostMortem(input: SavePostMortemInput): Promise<string
     stall_cause: input.headline,
     why_it_stalled: input.diagnosis,
     restart_plan: input.actionPlan,
-    transcript_text: input.transcriptText ?? null,
+    transcript_text: null,
+    source_ref: (input.sourceRef ?? "").trim() || null,
+    purge_after: purgeAfterForStatus(input.dealStatus),
   };
-  if (input.analysisJson) {
-    row.analysis_json = input.analysisJson;
-  }
-  if (input.ingestMetadata) {
-    row.ingest_metadata = input.ingestMetadata;
+  const storedAnalysis = storedAnalysisJson(input.analysisJson);
+  if (storedAnalysis) {
+    row.analysis_json = storedAnalysis;
   }
   if (input.dealMemorySummary) {
     row.deal_memory_summary = input.dealMemorySummary;
   }
-  const membershipTenantId = await tenantIdForUser(input.userId);
-  row.tenant_id = tenantStampForWrite(membershipTenantId, input);
+  const membershipTenantId = input.userId ? await tenantIdForUser(input.userId) : null;
+  row.tenant_id = tenantForReportWrite({
+    userId: input.userId,
+    membershipTenantId,
+    tenantIdFromKey: input.tenantIdFromKey,
+    body: input,
+  });
 
   const { data, error } = await supabase
     .from("call_post_mortems")
@@ -99,6 +106,7 @@ async function insertPurgeAuditLog(
 
 export async function purgeExpiredTranscripts(retentionDays?: number): Promise<{
   purged: number;
+  reportsDeleted: number;
   retentionDays: number;
 } | null> {
   const url = process.env.SUPABASE_URL;
@@ -116,40 +124,69 @@ export async function purgeExpiredTranscripts(retentionDays?: number): Promise<{
 
   const supabase = createClient(url, key);
 
+  let purged = 0;
   const { data: rpcCount, error: rpcError } = await supabase.rpc("purge_expired_transcripts", {
     retention_days: days,
   });
 
   if (!rpcError && typeof rpcCount === "number") {
-    await insertPurgeAuditLog(supabase, rpcCount, days);
-    return { purged: rpcCount, retentionDays: days };
+    purged = rpcCount;
+  } else {
+    if (rpcError) {
+      console.warn(
+        "purge_expired_transcripts RPC failed, falling back to direct UPDATE:",
+        rpcError.message
+      );
+    }
+
+    const cutoff = new Date();
+    cutoff.setDate(cutoff.getDate() - days);
+    const cutoffIso = cutoff.toISOString();
+
+    const { data, error } = await supabase
+      .from("call_post_mortems")
+      .update({ transcript_text: null })
+      .lt("created_at", cutoffIso)
+      .not("transcript_text", "is", null)
+      .select("id");
+
+    if (error) {
+      throw new Error(`Purge failed: ${error.message}`);
+    }
+    purged = data?.length ?? 0;
   }
 
-  if (rpcError) {
-    console.warn(
-      "purge_expired_transcripts RPC failed, falling back to direct UPDATE:",
-      rpcError.message
-    );
-  }
+  const reportsDeleted = await deleteFinishedReports(supabase);
+  await insertPurgeAuditLog(supabase, purged + reportsDeleted, days);
+  return { purged, reportsDeleted, retentionDays: days };
+}
 
-  const cutoff = new Date();
-  cutoff.setDate(cutoff.getDate() - days);
-  const cutoffIso = cutoff.toISOString();
-
+/** Delete reports whose deal finished at least 30 days ago. Rescue outcomes stay. */
+async function deleteFinishedReports(supabase: ReturnType<typeof createClient>): Promise<number> {
+  const now = new Date().toISOString();
   const { data, error } = await supabase
     .from("call_post_mortems")
-    .update({ transcript_text: null })
-    .lt("created_at", cutoffIso)
-    .not("transcript_text", "is", null)
-    .select("id");
+    .select("id")
+    .lte("purge_after", now)
+    .not("purge_after", "is", null);
 
   if (error) {
-    throw new Error(`Purge failed: ${error.message}`);
+    throw new Error(`Finished-report lookup failed: ${error.message}`);
   }
 
-  const purged = data?.length ?? 0;
-  await insertPurgeAuditLog(supabase, purged, days);
-  return { purged, retentionDays: days };
+  const ids = (data ?? []).map((row) => String(row.id)).filter(Boolean);
+  if (ids.length === 0) return 0;
+
+  const { error: linkError } = await supabase.from("crm_deal_links").delete().in("post_mortem_id", ids);
+  if (linkError) {
+    throw new Error(`CRM link purge failed: ${linkError.message}`);
+  }
+
+  const { error: deleteError } = await supabase.from("call_post_mortems").delete().in("id", ids);
+  if (deleteError) {
+    throw new Error(`Report purge failed: ${deleteError.message}`);
+  }
+  return ids.length;
 }
 
 export interface SaveRescueOutcomeInput {
