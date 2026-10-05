@@ -3,6 +3,8 @@ import { optionalAuthUserId } from "./authMiddleware.js";
 import { serviceRoleClient } from "./founderAuth.js";
 import { isFreemiumExempt } from "./guestRateLimit.js";
 import { getFeatureAccess, LIFECYCLE_REQUIRED_MESSAGE } from "./billing.js";
+import { tenantIdForUser } from "./tenantMembership.js";
+import { dealListAllowed } from "./tenantScope.js";
 
 export type LifecyclePhase =
   | "active"
@@ -94,6 +96,19 @@ function requireLifecycleAccess(req: Request, res: Response, next: NextFunction)
 
 function authUserId(req: Request): string {
   return (req as Request & { authUserId?: string }).authUserId!;
+}
+
+async function requireDealTenant(req: Request, res: Response): Promise<string | null> {
+  if (!serviceRoleClient()) {
+    res.status(503).json({ error: "Database not configured" });
+    return null;
+  }
+  const tenantId = await tenantIdForUser(authUserId(req));
+  if (!dealListAllowed(tenantId)) {
+    res.status(403).json({ error: "Access Denied: Missing company workspace membership" });
+    return null;
+  }
+  return tenantId;
 }
 
 export function lifecyclePhaseFromStatus(status: string): LifecyclePhase {
@@ -242,6 +257,8 @@ export function registerMeDealRoutes(app: Express): void {
   app.get("/api/me/deals", requireAuthUser, requireLifecycleAccess, async (req, res) => {
     try {
       const userId = authUserId(req);
+      const tenantId = await requireDealTenant(req, res);
+      if (!tenantId) return;
       const supabase = serviceRoleClient();
       if (!supabase) {
         res.status(503).json({ error: "Database not configured" });
@@ -255,6 +272,7 @@ export function registerMeDealRoutes(app: Express): void {
             "id, client_name, deal_value, deal_status, stall_cause, created_at, ingest_metadata, deal_memory_summary"
           )
           .eq("user_id", userId)
+          .eq("tenant_id", tenantId)
           .order("created_at", { ascending: false })
           .limit(100),
         supabase
@@ -263,6 +281,7 @@ export function registerMeDealRoutes(app: Express): void {
             "id, provider, external_deal_id, post_mortem_id, account_id, last_inbound_at, last_outbound_at, updated_at"
           )
           .eq("user_id", userId)
+          .eq("tenant_id", tenantId)
           .limit(200),
       ]);
 
@@ -406,6 +425,8 @@ export function registerMeDealRoutes(app: Express): void {
   app.get("/api/me/deals/:id", requireAuthUser, requireLifecycleAccess, async (req, res) => {
     try {
       const userId = authUserId(req);
+      const tenantId = await requireDealTenant(req, res);
+      if (!tenantId) return;
       const dealId = String(req.params.id ?? "").trim();
       if (!dealId) {
         res.status(400).json({ error: "Missing deal id" });
@@ -424,6 +445,7 @@ export function registerMeDealRoutes(app: Express): void {
         )
         .eq("id", dealId)
         .eq("user_id", userId)
+        .eq("tenant_id", tenantId)
         .maybeSingle();
 
       if (error) {
@@ -439,6 +461,7 @@ export function registerMeDealRoutes(app: Express): void {
         .from("crm_deal_links")
         .select("provider, external_deal_id, account_id, last_inbound_at, last_outbound_at")
         .eq("user_id", userId)
+        .eq("tenant_id", tenantId)
         .eq("post_mortem_id", dealId)
         .maybeSingle();
 

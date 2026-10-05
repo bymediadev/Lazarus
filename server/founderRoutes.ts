@@ -10,6 +10,7 @@ import {
 import { runCriticalAlertPass, runDigestAlert, isDigestHour } from "./founderAlerts.js";
 import { buildSystemStatus, classifyIssue } from "./founderSystem.js";
 import { buildApisInventory } from "./founderApis.js";
+import { buildWorkspaceHealth } from "./workspaceHealth.js";
 import { getBillingSnapshot } from "./billing.js";
 import { resolveFrontendOrigin } from "./integrations/oauthShared.js";
 import { saveRuntimeConfig } from "./runtimeConfig.js";
@@ -185,6 +186,15 @@ export function registerFounderRoutes(app: Express): void {
       res.json(system);
     } catch (err) {
       res.status(500).json({ error: err instanceof Error ? err.message : "System status failed" });
+    }
+  });
+
+  app.get("/api/founder/workspaces", requireOps, async (_req, res) => {
+    try {
+      const workspaces = await buildWorkspaceHealth();
+      res.json({ workspaces });
+    } catch (err) {
+      res.status(500).json({ error: err instanceof Error ? err.message : "Workspace health failed" });
     }
   });
 

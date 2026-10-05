@@ -1,6 +1,8 @@
 import { serviceRoleClient } from "../../founderAuth.js";
 import { createUserTokenStore } from "../userTokenStore.js";
 import { decryptSecretJson, encryptSecretJson } from "../../cryptoSecrets.js";
+import { tenantIdForUser } from "../../tenantMembership.js";
+import { tenantStampForWrite } from "../../tenantScope.js";
 
 export interface GoogleTokenRecord {
   access_token: string;
@@ -46,6 +48,7 @@ function rowToRecord(row: {
 async function persistToSupabase(userId: string, record: GoogleTokenRecord): Promise<void> {
   const sb = serviceRoleClient();
   if (!sb) return;
+  const tenantId = tenantStampForWrite(await tenantIdForUser(userId));
   const { error } = await sb.from("google_oauth_tokens").upsert(
     {
       id: userId,
@@ -55,6 +58,7 @@ async function persistToSupabase(userId: string, record: GoogleTokenRecord): Pro
       account_email: record.account_email ?? null,
       connected_at: record.connected_at,
       updated_at: new Date().toISOString(),
+      tenant_id: tenantId,
     },
     { onConflict: "id" }
   );

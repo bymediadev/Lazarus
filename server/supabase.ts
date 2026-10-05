@@ -5,6 +5,8 @@ import {
   type ProprietaryIndices,
   type StakeholderIndexInput,
 } from "./scoring.js";
+import { tenantIdForUser } from "./tenantMembership.js";
+import { tenantStampForWrite } from "./tenantScope.js";
 
 export interface SavePostMortemInput {
   userId?: string;
@@ -49,6 +51,8 @@ export async function savePostMortem(input: SavePostMortemInput): Promise<string
   if (input.dealMemorySummary) {
     row.deal_memory_summary = input.dealMemorySummary;
   }
+  const membershipTenantId = await tenantIdForUser(input.userId);
+  row.tenant_id = tenantStampForWrite(membershipTenantId, input);
 
   const { data, error } = await supabase
     .from("call_post_mortems")
@@ -170,12 +174,14 @@ export async function saveRescueOutcome(input: SaveRescueOutcomeInput): Promise<
 
   const supabase = createClient(url, key);
   const pi = input.proprietaryIndices;
+  const membershipTenantId = await tenantIdForUser(input.userId);
 
   const { data, error } = await supabase
     .from("rescue_outcomes")
     .insert({
       post_mortem_id: input.postMortemId ?? null,
       user_id: input.userId ?? null,
+      tenant_id: tenantStampForWrite(membershipTenantId, input),
       deal_risk_index: pi.deal_risk_index,
       viability_score: input.viabilityScore,
       trajectory_type: input.trajectoryType,

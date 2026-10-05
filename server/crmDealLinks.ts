@@ -1,5 +1,7 @@
 import { createClient } from "@supabase/supabase-js";
 import type { HistoricalCrmContextEntry } from "../shared/deepContextTypes.js";
+import { tenantIdForUser } from "./tenantMembership.js";
+import { tenantStampForWrite } from "./tenantScope.js";
 
 export type CrmProvider = "hubspot" | "salesforce";
 
@@ -51,6 +53,9 @@ export async function upsertCrmDealLink(input: {
   }
   if (input.lastInboundAt) row.last_inbound_at = input.lastInboundAt;
   if (input.lastOutboundAt) row.last_outbound_at = input.lastOutboundAt;
+  if (input.userId) {
+    row.tenant_id = tenantStampForWrite(await tenantIdForUser(input.userId), input);
+  }
 
   const { data, error } = await supabase
     .from("crm_deal_links")
@@ -63,6 +68,21 @@ export async function upsertCrmDealLink(input: {
     return null;
   }
   return data.id as string;
+}
+
+/** Webhooks identify the connected user, then copy that membership onto the link. */
+export async function stampCrmLinkTenantFromUser(linkId: string, userId: string): Promise<void> {
+  const supabase = adminClient();
+  if (!supabase || !linkId || !userId) return;
+  const tenantId = tenantStampForWrite(await tenantIdForUser(userId));
+  if (!tenantId) return;
+  const { error } = await supabase
+    .from("crm_deal_links")
+    .update({ tenant_id: tenantId, updated_at: new Date().toISOString() })
+    .eq("id", linkId);
+  if (error) {
+    console.error("crm_deal_links tenant stamp failed:", error.message);
+  }
 }
 
 export async function getCrmDealLinkByExternalId(

@@ -36,6 +36,14 @@ import {
   publishToZoomRtms,
   subscribeLiveSession,
 } from "../server/integrations/zoom/transcriptBus.ts";
+import {
+  analyzeWorkspaceDecision,
+  dealListAllowed,
+  filterRowsForTenant,
+  scrubWorkspaceHealthRow,
+  tenantStampForWrite,
+  workspaceNameFromEmail,
+} from "../server/tenantScope.ts";
 
 let failed = 0;
 
@@ -308,6 +316,57 @@ if (prevFreePerIp === undefined) delete process.env.GUEST_FREE_PER_IP;
 else process.env.GUEST_FREE_PER_IP = prevFreePerIp;
 delete process.env.GUEST_LIMIT_MEMORY_ONLY;
 resetGuestRateLimitBuckets();
+
+const companyA = "tenant-a";
+const companyB = "tenant-b";
+const deals = [
+  { id: "deal-a", tenant_id: companyA, transcript_text: "secret-a" },
+  { id: "deal-b", tenant_id: companyB, transcript_text: "secret-b" },
+];
+const visibleToA = filterRowsForTenant(deals, companyA);
+check(
+  "company A cannot read company B deals",
+  visibleToA.length === 1 && visibleToA[0].id === "deal-a" && !visibleToA.some((row) => row.tenant_id === companyB)
+);
+check("deal list rejects a session with no membership", dealListAllowed(null) === false);
+check(
+  "body tenant_id does not change the write stamp",
+  tenantStampForWrite(companyA, { tenant_id: companyB }) === companyA
+);
+check(
+  "missing membership stamps null even if the body names a tenant",
+  tenantStampForWrite(null, { tenant_id: companyB }) === null
+);
+const guest = analyzeWorkspaceDecision(null, null, { tenant_id: companyB });
+check(
+  "guest analyze with no membership passes the workspace gate",
+  guest.proceed === true && guest.tenantId === null
+);
+const member = analyzeWorkspaceDecision("user-1", companyA, { tenant_id: companyB });
+check("signed-in member stamps their company and ignores body tenant_id", member.proceed === true && member.tenantId === companyA);
+check("workspace name uses the email local-part", workspaceNameFromEmail("ada@example.com") === "ada Workspace");
+check("workspace name falls back when email is missing", workspaceNameFromEmail(null) === "Workspace");
+const health = scrubWorkspaceHealthRow({
+  tenant_id: companyA,
+  company_name: "Ada Workspace",
+  integrations: {
+    google: "connected",
+    hubspot: "expired",
+    salesforce: "not_connected",
+    zoom: "not_connected",
+    teams: "connected",
+  },
+  transcript_text: "do not leak",
+  analysis_json: { secret: true },
+  access_token: "token",
+});
+check(
+  "founder workspace payload omits transcripts and tokens",
+  health.transcript_text === undefined &&
+    health.analysis_json === undefined &&
+    health.access_token === undefined &&
+    health.integrations.hubspot === "expired"
+);
 
 if (failed) {
   console.error(`${failed} security gate(s) failed`);

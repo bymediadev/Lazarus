@@ -50,6 +50,7 @@ import {
   upsertCrmDealLink,
   getCrmDealLinkByExternalId,
   updateCrmDealLinkContext,
+  stampCrmLinkTenantFromUser,
 } from "./crmDealLinks.js";
 import { registerAuthRoutes } from "./authRoutes.js";
 import { registerFeedbackRoutes } from "./feedback.js";
@@ -471,7 +472,8 @@ app.post(
     );
 
     const authUserId = authUserIdEarly;
-    // Guests can run analyses for demos; only persist when signed in.
+    // Guests run without a company. Signed-in saves stamp tenant_id from membership
+    // inside savePostMortem. A tenant_id on the body is ignored.
     const savedId = authUserId
       ? await savePostMortem({
           userId: authUserId,
@@ -596,6 +598,7 @@ app.post("/api/webhooks/hubspot", async (req, res) => {
           sales_cycle_days: mapped.sales_cycle_days,
           last_inbound_at: new Date().toISOString(),
         });
+        await stampCrmLinkTenantFromUser(existing.id, existing.user_id);
         linkId = existing.id;
       }
     }

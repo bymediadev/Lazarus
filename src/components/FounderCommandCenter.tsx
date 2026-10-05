@@ -7,6 +7,7 @@ import {
   fetchFounderIssues,
   fetchFounderOverview,
   fetchFounderSystem,
+  fetchFounderWorkspaces,
   founderDeleteDeal,
   founderLookup,
   founderPasswordReset,
@@ -18,6 +19,7 @@ import {
   fetchFounderContactInquiries,
   type ContactInquiry,
   type FounderApisInventory,
+  type FounderWorkspaceHealth,
   type VendorDashboard,
 } from "../lib/founderApi";
 import { isFounderUnlimitedEmail } from "../lib/guestUsage";
@@ -46,6 +48,7 @@ export default function FounderCommandCenter({ opsEmail, onOpenProduct }: Props)
     null
   );
   const [apis, setApis] = useState<FounderApisInventory | null>(null);
+  const [workspaces, setWorkspaces] = useState<FounderWorkspaceHealth["workspaces"]>([]);
   const [crashes, setCrashes] = useState<
     Awaited<ReturnType<typeof fetchFounderCrashes>>["crashes"]
   >([]);
@@ -60,13 +63,14 @@ export default function FounderCommandCenter({ opsEmail, onOpenProduct }: Props)
     setLoading(true);
     setError(null);
     try {
-      const [ov, iss, sys, inv, crash, inbox] = await Promise.all([
+      const [ov, iss, sys, inv, crash, inbox, workspaceHealth] = await Promise.all([
         fetchFounderOverview(),
         fetchFounderIssues(),
         fetchFounderSystem(),
         fetchFounderApis().catch(() => null),
         fetchFounderCrashes().catch(() => ({ crashes: [] })),
         fetchFounderContactInquiries().catch(() => ({ inquiries: [] as ContactInquiry[] })),
+        fetchFounderWorkspaces().catch(() => ({ workspaces: [] })),
       ]);
       setOverview(ov);
       setIssues(iss.issues);
@@ -74,6 +78,7 @@ export default function FounderCommandCenter({ opsEmail, onOpenProduct }: Props)
       setApis(inv);
       setCrashes(crash.crashes);
       setInquiries(inbox.inquiries);
+      setWorkspaces(workspaceHealth.workspaces);
       setCapDraft(sys.spend.global_daily_cap != null ? String(sys.spend.global_daily_cap) : "");
       setPauseDraft(sys.runtime.pause_message);
     } catch (err) {
@@ -920,6 +925,29 @@ export default function FounderCommandCenter({ opsEmail, onOpenProduct }: Props)
               </li>
             ))}
           </ul>
+
+          <h2>Company workspaces</h2>
+          <p className="ops-sub">
+            Connection status only. Gemini{" "}
+            {apis?.providers.find((p) => p.id === "gemini")?.status ?? "unknown"} · Cerebras{" "}
+            {apis?.providers.find((p) => p.id === "cerebras")?.status ?? "unknown"}.
+          </p>
+          {workspaces.length === 0 ? (
+            <p className="ops-sub">No company workspaces yet.</p>
+          ) : (
+            <ul className="ops-list">
+              {workspaces.map((workspace) => (
+                <li key={workspace.tenant_id}>
+                  <strong>{workspace.company_name}</strong>
+                  <p className="ops-sub">
+                    Google {workspace.integrations.google} · HubSpot {workspace.integrations.hubspot}{" "}
+                    · Salesforce {workspace.integrations.salesforce} · Zoom {workspace.integrations.zoom}{" "}
+                    · Teams {workspace.integrations.teams}
+                  </p>
+                </li>
+              ))}
+            </ul>
+          )}
 
           {system.last_purge && (
             <p className="ops-sub">

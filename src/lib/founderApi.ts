@@ -120,6 +120,26 @@ export async function fetchFounderSystem() {
   }>("/api/founder/system");
 }
 
+export type WorkspaceIntegrationStatus = "connected" | "expired" | "not_connected";
+
+export type FounderWorkspaceHealth = {
+  workspaces: Array<{
+    tenant_id: string;
+    company_name: string;
+    integrations: {
+      google: WorkspaceIntegrationStatus;
+      hubspot: WorkspaceIntegrationStatus;
+      salesforce: WorkspaceIntegrationStatus;
+      zoom: WorkspaceIntegrationStatus;
+      teams: WorkspaceIntegrationStatus;
+    };
+  }>;
+};
+
+export async function fetchFounderWorkspaces(): Promise<FounderWorkspaceHealth> {
+  return founderFetch<FounderWorkspaceHealth>("/api/founder/workspaces");
+}
+
 export async function fetchFounderIssues() {
   return founderFetch<{
     issues: Array<{

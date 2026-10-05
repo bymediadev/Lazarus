@@ -14,7 +14,7 @@ import {
   loadSalesforceTokens,
   saveSalesforceTokens,
 } from "./tokens.js";
-import { upsertCrmDealLink, getCrmDealLinkByExternalId, updateCrmDealLinkContext } from "../../crmDealLinks.js";
+import { upsertCrmDealLink, getCrmDealLinkByExternalId, updateCrmDealLinkContext, stampCrmLinkTenantFromUser } from "../../crmDealLinks.js";
 import { getAuthUserId, requireAuthUser } from "../../requireUser.js";
 import { secretsEqual } from "../../cryptoSecrets.js";
 
@@ -211,6 +211,7 @@ export function registerSalesforceRoutes(app: Express): void {
         sales_cycle_days: imported.mapped.sales_cycle_days,
         last_inbound_at: new Date().toISOString(),
       });
+      await stampCrmLinkTenantFromUser(existing.id, existing.user_id);
       res.json({ ok: true, mapped: imported.mapped, link_id: existing.id, synced: true });
     } catch (err) {
       console.error("[salesforce-webhook]", err);
