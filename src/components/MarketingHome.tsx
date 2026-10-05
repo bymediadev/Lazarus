@@ -6,6 +6,7 @@ import ContactSection from "./ContactSection";
 import HeroFold from "./HeroFold";
 import HeroSampleBrief from "./HeroSampleBrief";
 import PipelineCalculator from "./PipelineCalculator";
+import StallWalkthrough from "./StallWalkthrough";
 import StalledDealSeries from "./StalledDealSeries";
 import { CrmComparison, FrictionPoints, RevenueChain } from "./MarketingOutcomes";
 import StakeholderSelector from "./StakeholderSelector";
@@ -35,66 +36,7 @@ export default function MarketingHome({
     <>
       <HeroFold onScan={onPortal} />
 
-      <section className="marketing-steps marketing-reveal" id="how" aria-label="How a stalled deal becomes a decision">
-        <h2>How a stalled deal becomes a decision</h2>
-        <p>
-          The report is how you get there. The change is what happens to the pipeline.
-        </p>
-        <ol className="marketing-step-grid marketing-step-grid-chain">
-          <li>
-            <span>1</span>
-            <h3>Input</h3>
-            <p>The stalled deal you already have: the call, the email, or the notes.</p>
-          </li>
-          <li>
-            <span>2</span>
-            <h3>Analysis</h3>
-            <p>Who is for it, who can block it, and whether the deal is still moving.</p>
-          </li>
-          <li>
-            <span>3</span>
-            <h3>Insight</h3>
-            <p>This deal is not dead. Procurement is the bottleneck.</p>
-          </li>
-          <li>
-            <span>4</span>
-            <h3>Action</h3>
-            <p>The next move, and a longer path only when the evidence needs one.</p>
-          </li>
-          <li>
-            <span>5</span>
-            <h3>Outcome</h3>
-            <p>Revenue you can still recover, or a flat no you stop carrying.</p>
-          </li>
-        </ol>
-        <h2 className="mt-8">What you do</h2>
-        <ol className="marketing-step-grid">
-          <li>
-            <span>1</span>
-            <h3>Add the evidence</h3>
-            <p>
-              A recording, transcript, email thread, or CRM notes. One run, so the score sees the
-              whole deal.
-            </p>
-          </li>
-          <li>
-            <span>2</span>
-            <h3>Run the analysis</h3>
-            <p>
-              Lazarus names the blocker in plain language, and whether the deal is recoverable or a
-              flat no.
-            </p>
-          </li>
-          <li>
-            <span>3</span>
-            <h3>The deal updates</h3>
-            <p>
-              Connect HubSpot or Salesforce. Notes come in; the next action and the plan write back
-              to the record.
-            </p>
-          </li>
-        </ol>
-      </section>
+      <StallWalkthrough />
 
       <section className="marketing-simple marketing-reveal" id="brief" aria-label="What the report returns">
         <h2>What the report gives you</h2>

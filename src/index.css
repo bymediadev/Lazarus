@@ -5517,6 +5517,37 @@ a.run-button:hover {
   padding: 0.35rem 0.8rem;
 }
 
+.stall-steps {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 0.85rem;
+}
+
+.stall-steps li {
+  margin: 0;
+}
+
+.stall-steps span {
+  font-family: var(--mono);
+  font-size: 0.68rem;
+  letter-spacing: 0.08em;
+  color: var(--teal);
+}
+
+.stall-steps h3 {
+  margin: 0.2rem 0 0.25rem;
+  font-size: 1rem;
+}
+
+.stall-steps p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.92rem;
+  line-height: 1.45;
+}
+
 .series-facts h3 {
   margin: 0.35rem 0 0.6rem;
 }

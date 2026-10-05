@@ -29,8 +29,13 @@ export default function HeroFold({ onScan }: { onScan: () => void }) {
       aria-labelledby={headingId}
       className="px-5 py-8 sm:px-8 md:py-10 lg:px-10"
     >
-      <p className="mb-2 font-[var(--mono)] text-[0.68rem] font-semibold uppercase tracking-[0.18em] text-[#3dd6c6]">
-        For sales leaders who own the forecast
+      <p className="mb-2 font-[var(--mono)] text-[0.68rem] font-semibold uppercase tracking-[0.16em] text-[#3dd6c6]">
+        The problem
+      </p>
+      <p className="mb-4 max-w-2xl text-base leading-relaxed text-slate-300">
+        A deal that used to clear with a few people now waits on a crowd. The CRM still shows one
+        close date. It does not show who is missing, who can block it, or whether it is still worth
+        the next call.
       </p>
       <h1
         id={headingId}

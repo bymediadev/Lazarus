@@ -8,10 +8,10 @@ function verdictLabel(verdict: StalledDealEpisode["verdict"]): string {
 
 export default function StalledDealSeries({ onScan }: { onScan: () => void }) {
   const episodes = STALLED_DEAL_SERIES;
-  const latest = episodes[0];
-  const [activeId, setActiveId] = useState(latest?.id ?? "");
+  const opening = episodes.find((episode) => episode.id === "week-1") ?? episodes[0];
+  const [activeId, setActiveId] = useState(opening?.id ?? "");
   const [playing, setPlaying] = useState(false);
-  const active = episodes.find((episode) => episode.id === activeId) ?? latest;
+  const active = episodes.find((episode) => episode.id === activeId) ?? opening;
   const older = episodes.filter((episode) => episode.id !== active?.id);
 
   if (!active) return null;
