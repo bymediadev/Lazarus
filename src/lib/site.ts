@@ -59,7 +59,7 @@ export const COMPANY_LINKEDIN = "https://www.linkedin.com/company/lazarus-deal-r
 export const SITE_TITLE = "Deal Recovery Software for Stalled B2B Sales | Lazarus";
 
 export const SITE_DESCRIPTION =
-  "Lazarus analyzes stalled and closed-lost B2B deals, identifies why momentum died, and gives sales teams a recovery plan. Five free analyses a month.";
+  "Lazarus helps sales teams turn stalled pipeline into recovery work: whether a deal is recoverable, what is blocking it, and what to do next. Five free analyses a month.";
 
 export const SEO_PATHS = {
   dealRecovery: "/deal-recovery",

@@ -6056,6 +6056,10 @@ a.run-button:hover {
   margin-top: 0.85rem;
 }
 
+.marketing-step-grid.marketing-step-grid-chain {
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+}
+
 .marketing-step-grid li {
   background: var(--panel);
   border: 1px solid var(--panel-border);
@@ -6310,6 +6314,7 @@ a.marketing-text-link {
 
 @media (max-width: 800px) {
   .marketing-step-grid,
+  .marketing-step-grid.marketing-step-grid-chain,
   .marketing-split,
   .site-footer-inner {
     grid-template-columns: 1fr;

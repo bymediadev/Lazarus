@@ -3,7 +3,7 @@ import { HERO_PRIMARY_CTA, HERO_PRIMARY_CTA_NOTE } from "../lib/cta";
 import { useReveal } from "../lib/useReveal";
 import { PricingPlanCards } from "./PricingGate";
 import ContactSection from "./ContactSection";
-import HeroFold, { BenefitsList } from "./HeroFold";
+import HeroFold from "./HeroFold";
 import HeroSampleBrief from "./HeroSampleBrief";
 import PipelineCalculator from "./PipelineCalculator";
 import StalledDealSeries from "./StalledDealSeries";
@@ -35,10 +35,39 @@ export default function MarketingHome({
     <>
       <HeroFold onScan={onPortal} />
 
-      <BenefitsList />
-
-      <section className="marketing-steps marketing-reveal" id="how" aria-label="How it works">
-        <h2>How it works</h2>
+      <section className="marketing-steps marketing-reveal" id="how" aria-label="How a stalled deal becomes a decision">
+        <h2>How a stalled deal becomes a decision</h2>
+        <p>
+          The report is how you get there. The change is what happens to the pipeline.
+        </p>
+        <ol className="marketing-step-grid marketing-step-grid-chain">
+          <li>
+            <span>1</span>
+            <h3>Input</h3>
+            <p>The stalled deal you already have: the call, the email, or the notes.</p>
+          </li>
+          <li>
+            <span>2</span>
+            <h3>Analysis</h3>
+            <p>Who is for it, who can block it, and whether the deal is still moving.</p>
+          </li>
+          <li>
+            <span>3</span>
+            <h3>Insight</h3>
+            <p>This deal is not dead. Procurement is the bottleneck.</p>
+          </li>
+          <li>
+            <span>4</span>
+            <h3>Action</h3>
+            <p>The next move, and a longer path only when the evidence needs one.</p>
+          </li>
+          <li>
+            <span>5</span>
+            <h3>Outcome</h3>
+            <p>Revenue you can still recover, or a flat no you stop carrying.</p>
+          </li>
+        </ol>
+        <h2 className="mt-8">What you do</h2>
         <ol className="marketing-step-grid">
           <li>
             <span>1</span>
