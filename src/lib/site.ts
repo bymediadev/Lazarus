@@ -23,6 +23,16 @@ export type StalledDealEpisode = {
 
 export const STALLED_DEAL_SERIES: StalledDealEpisode[] = [
   {
+    id: "week-2",
+    week: "Week 2",
+    title: "Recovering a Stalled Deal With Missing Key Personnel",
+    situation: "A stalled deal where a key person is missing from the buying group.",
+    verdict: "recoverable",
+    blocker: "The deal story is incomplete because that person is not in the room.",
+    nextAction: "Name who is missing before this deal stays on the forecast.",
+    loomId: "aedc90f0b86d466599f69856f3974228",
+  },
+  {
     id: "week-1",
     week: "Week 1",
     title: "Deterministic Engine to Recover Stalled Deals",

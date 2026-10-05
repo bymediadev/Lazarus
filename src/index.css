@@ -4531,6 +4531,53 @@ a.run-button:hover {
   font-size: 0.9rem;
 }
 
+.api-key-reveal {
+  display: grid;
+  gap: 0.65rem;
+}
+
+.api-key-warn {
+  margin: 0;
+  padding: 0.65rem 0.75rem;
+  border: 1px solid rgba(243, 215, 161, 0.45);
+  border-radius: 6px;
+  background: rgba(243, 215, 161, 0.08);
+  color: #f3d7a1;
+  font-size: 0.78rem;
+  line-height: 1.45;
+}
+
+.api-key-value {
+  display: flex;
+  gap: 0.5rem;
+  align-items: flex-start;
+  padding: 0.65rem 0.75rem;
+  border: 1px solid rgba(61, 214, 198, 0.35);
+  border-radius: 6px;
+  background: rgba(0, 0, 0, 0.28);
+}
+
+.api-key-value code {
+  flex: 1;
+  font-family: var(--mono);
+  font-size: 0.75rem;
+  line-height: 1.4;
+  word-break: break-all;
+  color: #b6f5c8;
+}
+
+.api-key-done {
+  justify-self: start;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--muted);
+  font: inherit;
+  font-size: 0.78rem;
+  text-decoration: underline;
+  cursor: pointer;
+}
+
 .account-email {
   margin: 0;
   font-size: 0.95rem;

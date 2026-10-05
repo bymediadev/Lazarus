@@ -69,7 +69,10 @@ export default function StalledDealSeries({ onScan }: { onScan: () => void }) {
               role="listitem"
               className="series-older-card"
               aria-pressed={episode.id === active.id}
-              onClick={() => setActiveId(episode.id)}
+              onClick={() => {
+                setActiveId(episode.id);
+                setPlaying(false);
+              }}
             >
               <span>{episode.week}</span>
               <strong>{episode.title}</strong>

@@ -80,6 +80,7 @@ import { registerBillingRoutes, registerBillingWebhook } from "./billingRoutes.j
 import { registerFeedbackRoutes } from "./feedback.js";
 import { apiEventsMiddleware, setApiErrorLocal } from "./apiEvents.js";
 import { registerFounderRoutes } from "./founderRoutes.js";
+import { registerTenantKeyRoutes } from "./tenantKeyRoutes.js";
 import { registerMeDealRoutes } from "./meDeals.js";
 import { registerTelemetryRoutes } from "./telemetry.js";
 import { getRuntimeConfig, rejectIfAnalysesBlocked } from "./runtimeConfig.js";
@@ -787,6 +788,7 @@ registerFeedbackRoutes(app);
 registerBillingRoutes(app);
 registerContactRoutes(app);
 registerFounderRoutes(app);
+registerTenantKeyRoutes(app);
 registerMeDealRoutes(app);
 registerTelemetryRoutes(app);
 registerTrustPackRoutes(app, publicPath);

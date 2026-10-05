@@ -55,7 +55,13 @@ import {
   storedReportColumns,
   tenantForReportWrite,
 } from "../server/reportSanitize.ts";
-import { decideApiKey } from "../server/tenantApiKey.ts";
+import {
+  createTenantApiKey,
+  decideApiKey,
+  hashTenantApiKey,
+  issuedKeyRecord,
+  tenantForKeyIssue,
+} from "../server/tenantApiKey.ts";
 
 let failed = 0;
 
@@ -431,6 +437,29 @@ check(
 check(
   "missing key still reaches analyze when no site key is configured",
   decideApiKey({ header: "", siteKey: "", tenantIdForHeader: null }).ok === true
+);
+check(
+  "company key issue uses the signed-in company and drops a body tenant id",
+  tenantForKeyIssue(companyA, { tenant_id: companyB, api_key_hash: "injected-hash" }) === companyA
+);
+check(
+  "company key issue without a membership stays empty when the body names a tenant",
+  tenantForKeyIssue(null, { tenant_id: companyB, api_key_hash: "injected-hash" }) === null
+);
+const minted = createTenantApiKey();
+check(
+  "minted company key starts with lz and is not the stored hash",
+  minted.raw.startsWith("lz_") &&
+    minted.prefix.startsWith("lz_") &&
+    minted.raw.startsWith(minted.prefix) &&
+    minted.hash.length === 64 &&
+    minted.hash !== minted.raw &&
+    hashTenantApiKey(minted.raw) === minted.hash
+);
+const storedKey = issuedKeyRecord(minted, { api_key_hash: "injected-hash", tenant_id: companyB });
+check(
+  "saved key row keeps the minted hash and drops an injected hash",
+  storedKey.api_key_hash === minted.hash && storedKey.api_key_prefix === minted.prefix
 );
 
 const purgeNow = new Date("2026-06-01T15:00:00.000Z");

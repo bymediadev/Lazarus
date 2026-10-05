@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import ApiKeyGenerator from "./ApiKeyGenerator";
 import { useAuth } from "./AuthProvider";
 import { PricingPlanCards } from "./PricingGate";
 import {
@@ -220,6 +221,8 @@ export default function AccountPortal({ open, onClose }: Props) {
           )}
           {billingError && <div className="error-banner">{billingError}</div>}
         </section>
+
+        <ApiKeyGenerator />
 
         <section className="account-portal-section">
           <h3>Change password</h3>
