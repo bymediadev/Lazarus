@@ -263,6 +263,41 @@ export default function MarketingHome({
             </div>
           </details>
           <details className="marketing-qa-item">
+            <summary>What model reads the deal?</summary>
+            <div className="marketing-qa-panel">
+              <p>
+                Google Gemini reads the transcript and maps it to the Force Interaction Framework.
+                It does not write the score.
+              </p>
+              <p>
+                The five free runs use Gemini 2.5 Flash. If Gemini is unavailable, that run can go
+                to OpenRouter on a free model, with training turned off.
+              </p>
+              <p>Entry uses Gemini 2.5 Pro. Team uses Gemini 3.1 Pro.</p>
+              <p>
+                Recoverable or a flat no, the risk score, and the next steps come from fixed rules
+                on our server.
+              </p>
+            </div>
+          </details>
+          <details className="marketing-qa-item">
+            <summary>What sales framework breaks the deal down?</summary>
+            <div className="marketing-qa-panel">
+              <p>
+                The Force Interaction Framework. Gemini only maps words that were actually spoken.
+              </p>
+              <p>
+                Each quote is one force: an enabler that moves the deal, a constraint that stalls
+                it, intent, timing, or behavior. The people map names the champion, a hidden
+                detractor, and a decision maker who was not on the call.
+              </p>
+              <p>
+                The server scores those forces. That score is recoverable or a flat no, the risk
+                score, and the next steps.
+              </p>
+            </div>
+          </details>
+          <details className="marketing-qa-item">
             <summary>Why not paste the transcript into ChatGPT?</summary>
             <div className="marketing-qa-panel">
               <p>
@@ -355,7 +390,8 @@ export default function MarketingHome({
             <div className="marketing-qa-panel">
               <p>
                 North America, by default. If you are signed in, the report is stored with Supabase.
-                The transcript is sent to Google Gemini to extract the brief, then we do not save it.
+                The transcript is sent to Google Gemini to extract the brief. A free run can use
+                OpenRouter if Gemini is unavailable. We do not save the transcript.
                 If you upload audio, AssemblyAI transcribes it, and we do not save the audio. Stripe
                 sees billing only if you pay. Gmail, Outlook, Zoom, Teams, HubSpot, and Salesforce
                 run only when you connect them. The full list is in the{" "}

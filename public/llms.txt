@@ -14,6 +14,10 @@ Official site: https://www.getldr.ca/
 - CRM: Connect HubSpot or Salesforce and the deal updates — notes in, brief back
 - Meetings: Zoom, Google Meet, Microsoft Teams stay yours. Lazarus does not join or record the live call as a bot
 
+## Model
+
+Google Gemini reads the transcript and maps it to the Force Interaction Framework. It does not write the score. Each quote is one force: an enabler that moves the deal, a constraint that stalls it, intent, timing, or behavior. The people map names the champion, a hidden detractor, and a decision maker who was not on the call. The server scores those forces. Five free runs use Gemini 2.5 Flash, and can use OpenRouter on a free model if Gemini is unavailable, with training turned off. Entry uses Gemini 2.5 Pro. Team uses Gemini 3.1 Pro. Recoverable versus a flat no, the risk score, and the next steps are fixed rules on the Lazarus server.
+
 ## Why not ChatGPT
 
 ChatGPT writes. Paste the same call twice and the answer can change. Lazarus reads the text, checks quotes against the transcript, then scores with fixed rules a manager can defend in the room. If a quote or person is not in the upload, the server strips it before the score runs.
