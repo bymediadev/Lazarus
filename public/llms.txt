@@ -16,7 +16,7 @@ Official site: https://www.getldr.ca/
 
 ## Model
 
-Google Gemini reads the transcript and maps it to the Force Interaction Framework. It does not write the score. Each quote is one force: an enabler that moves the deal, a constraint that stalls it, intent, timing, or behavior. The people map names the champion, a hidden detractor, and a decision maker who was not on the call. The server scores those forces. Five free runs use Gemini 2.5 Flash, and can use OpenRouter on a free model if Gemini is unavailable, with training turned off. Entry uses Gemini 2.5 Pro. Team uses Gemini 3.1 Pro. Recoverable versus a flat no, the risk score, and the next steps are fixed rules on the Lazarus server.
+Google Gemini reads the transcript and maps it to the Force Interaction Framework. It does not write the score. Each quote is one force: an enabler that moves the deal, a constraint that stalls it, intent, timing, or behavior. The people map names the champion, a hidden detractor, and a decision maker who was not on the call. The server scores those forces. Five free runs use Google Gemini 2.5 Flash. If Gemini is unavailable, that run goes through OpenRouter to NVIDIA Nemotron 3.5 Lightning, with training turned off. If that model is down, the same request can use Poolside Laguna or Google Gemma. Entry uses Gemini 2.5 Pro. Team uses Gemini 3.1 Pro. Recoverable versus a flat no, the risk score, and the next steps are fixed rules on the Lazarus server.
 
 ## Why not ChatGPT
 

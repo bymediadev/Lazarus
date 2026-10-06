@@ -270,8 +270,9 @@ export default function MarketingHome({
                 It does not write the score.
               </p>
               <p>
-                The five free runs use Gemini 2.5 Flash. If Gemini is unavailable, that run can go
-                to OpenRouter on a free model, with training turned off.
+                The five free runs use Google Gemini 2.5 Flash. If Gemini is unavailable, that run
+                goes through OpenRouter to NVIDIA Nemotron 3.5 Lightning, with training turned off.
+                If that model is down, the same request can use Poolside Laguna or Google Gemma.
               </p>
               <p>Entry uses Gemini 2.5 Pro. Team uses Gemini 3.1 Pro.</p>
               <p>
@@ -391,7 +392,8 @@ export default function MarketingHome({
               <p>
                 North America, by default. If you are signed in, the report is stored with Supabase.
                 The transcript is sent to Google Gemini to extract the brief. A free run can use
-                OpenRouter if Gemini is unavailable. We do not save the transcript.
+                NVIDIA Nemotron through OpenRouter if Gemini is unavailable. We do not save the
+                transcript.
                 If you upload audio, AssemblyAI transcribes it, and we do not save the audio. Stripe
                 sees billing only if you pay. Gmail, Outlook, Zoom, Teams, HubSpot, and Salesforce
                 run only when you connect them. The full list is in the{" "}

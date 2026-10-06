@@ -180,7 +180,7 @@
                 "name": "What model reads the deal?",
                 "acceptedAnswer": {
                   "@type": "Answer",
-                  "text": "Google Gemini reads the transcript and maps it to the Force Interaction Framework. It does not write the score. The five free runs use Gemini 2.5 Flash. If Gemini is unavailable, that run can go to OpenRouter on a free model, with training turned off. Entry uses Gemini 2.5 Pro. Team uses Gemini 3.1 Pro. Recoverable or a flat no, the risk score, and the next steps come from fixed rules on our server."
+                  "text": "Google Gemini reads the transcript and maps it to the Force Interaction Framework. It does not write the score. The five free runs use Google Gemini 2.5 Flash. If Gemini is unavailable, that run goes through OpenRouter to NVIDIA Nemotron 3.5 Lightning, with training turned off. If that model is down, the same request can use Poolside Laguna or Google Gemma. Entry uses Gemini 2.5 Pro. Team uses Gemini 3.1 Pro. Recoverable or a flat no, the risk score, and the next steps come from fixed rules on our server."
                 }
               },
               {
@@ -268,7 +268,7 @@
                 "name": "Where does the data go?",
                 "acceptedAnswer": {
                   "@type": "Answer",
-                  "text": "North America, by default. If you are signed in, the report is stored with Supabase. The transcript is sent to Google Gemini to extract the brief. A free run can use OpenRouter if Gemini is unavailable. We do not save the transcript. If you upload audio, AssemblyAI transcribes it, and we do not save the audio. Stripe sees billing only if you pay. Gmail, Outlook, Zoom, Teams, HubSpot, and Salesforce run only when you connect them. The full list is in the Data Processing Addendum."
+                  "text": "North America, by default. If you are signed in, the report is stored with Supabase. The transcript is sent to Google Gemini to extract the brief. A free run can use NVIDIA Nemotron through OpenRouter if Gemini is unavailable. We do not save the transcript. If you upload audio, AssemblyAI transcribes it, and we do not save the audio. Stripe sees billing only if you pay. Gmail, Outlook, Zoom, Teams, HubSpot, and Salesforce run only when you connect them. The full list is in the Data Processing Addendum."
                 }
               },
               {
@@ -492,8 +492,9 @@
           not write the score.
         </p>
         <p>
-          The five free runs use Gemini 2.5 Flash. If Gemini is unavailable, that run can go to
-          OpenRouter on a free model, with training turned off.
+          The five free runs use Google Gemini 2.5 Flash. If Gemini is unavailable, that run goes
+          through OpenRouter to NVIDIA Nemotron 3.5 Lightning, with training turned off. If that
+          model is down, the same request can use Poolside Laguna or Google Gemma.
         </p>
         <p>Entry uses Gemini 2.5 Pro. Team uses Gemini 3.1 Pro.</p>
         <p>
@@ -561,8 +562,8 @@
         <h3>Where does the data go?</h3>
         <p>
           North America, by default. If you are signed in, the report is stored with Supabase. The
-          transcript is sent to Google Gemini to extract the brief. A free run can use OpenRouter if
-          Gemini is unavailable. We do not save the transcript. If you
+          transcript is sent to Google Gemini to extract the brief. A free run can use NVIDIA
+          Nemotron through OpenRouter if Gemini is unavailable. We do not save the transcript. If you
           upload audio, AssemblyAI transcribes it, and we do not save the audio. Stripe sees billing
           only if you pay. Gmail, Outlook, Zoom, Teams, HubSpot, and Salesforce run only when you
           connect them. The full list is in the
