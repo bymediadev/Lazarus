@@ -8,6 +8,19 @@ import { loadHubSpotTokens } from "./tokens.js";
 
 const CRM_BASE = "https://api.hubapi.com/crm/v3";
 
+const HUBSPOT_DEAL_PROPERTIES = [
+  "dealname",
+  "dealstage",
+  "hs_is_closed",
+  "amount",
+  "closedate",
+  "createdate",
+  "hs_next_step",
+  "notes_last_contacted",
+  "engagements_last_meeting_booked",
+  "hs_latest_meeting_activity",
+];
+
 export interface HubSpotDealSearchHit {
   id: string;
   dealname: string;
@@ -107,7 +120,7 @@ export async function searchHubSpotDeals(
           ],
         },
       ],
-      properties: ["dealname", "dealstage", "hs_is_closed", "amount", "closedate", "createdate"],
+      properties: HUBSPOT_DEAL_PROPERTIES,
       limit: capped,
       sorts: [{ propertyName: "hs_lastmodifieddate", direction: "DESCENDING" }],
     }),
@@ -122,7 +135,7 @@ export async function searchHubSpotDeals(
 
 async function fetchDealById(userId: string, dealId: string): Promise<HubSpotApiDeal> {
   const params = new URLSearchParams({
-    properties: ["dealname", "dealstage", "hs_is_closed", "amount", "closedate", "createdate"].join(","),
+    properties: HUBSPOT_DEAL_PROPERTIES.join(","),
   });
   const res = await hubspotFetch(userId,`/objects/deals/${encodeURIComponent(dealId)}?${params}`);
   const data = (await res.json()) as HubSpotApiDeal & { message?: string };
@@ -130,6 +143,99 @@ async function fetchDealById(userId: string, dealId: string): Promise<HubSpotApi
     throw new Error(data.message ?? `HubSpot deal fetch failed (${res.status})`);
   }
   return data;
+}
+
+/** Where the deal sits, from properties deals.read already grants. */
+export function hubspotPositionBody(
+  properties: Record<string, string | null | undefined> | undefined
+): string {
+  const read = (key: string) => String(properties?.[key] ?? "").trim();
+  const bits = [
+    read("dealstage") && `Stage: ${read("dealstage")}`,
+    read("amount") && `Amount: ${read("amount")}`,
+    read("closedate") && `Close date: ${read("closedate")}`,
+    read("hs_next_step") && `Next step on record: ${read("hs_next_step")}`,
+    read("notes_last_contacted") && `Last contacted: ${read("notes_last_contacted")}`,
+    read("engagements_last_meeting_booked") &&
+      `Last meeting booked: ${read("engagements_last_meeting_booked")}`,
+    read("hs_latest_meeting_activity") &&
+      `Latest meeting activity: ${read("hs_latest_meeting_activity")}`,
+  ].filter(Boolean);
+  return bits.join(". ");
+}
+
+async function fetchOptionalAssociationIds(
+  userId: string,
+  dealId: string,
+  objectType: "meetings" | "tasks"
+): Promise<string[]> {
+  const res = await hubspotFetch(
+    userId,
+    `/objects/deals/${encodeURIComponent(dealId)}/associations/${objectType}`
+  );
+  if (!res.ok) return [];
+  const data = (await res.json()) as HubSpotAssociationsResponse;
+  return (data.results ?? [])
+    .map((row) => String(row.id ?? row.toObjectId ?? "").trim())
+    .filter(Boolean);
+}
+
+async function fetchHubSpotActivities(userId: string, dealId: string): Promise<HubSpotNoteRecord[]> {
+  const [meetingIds, taskIds] = await Promise.all([
+    fetchOptionalAssociationIds(userId, dealId, "meetings"),
+    fetchOptionalAssociationIds(userId, dealId, "tasks"),
+  ]);
+  const records: HubSpotNoteRecord[] = [];
+  if (meetingIds.length) {
+    const res = await hubspotFetch(userId, "/objects/meetings/batch/read", {
+      method: "POST",
+      body: JSON.stringify({
+        properties: ["hs_meeting_title", "hs_meeting_body", "hs_meeting_start_time"],
+        inputs: meetingIds.slice(0, 50).map((id) => ({ id })),
+      }),
+    });
+    if (res.ok) {
+      const data = (await res.json()) as HubSpotBatchReadResponse;
+      for (const row of data.results ?? []) {
+        const title = String(row.properties?.hs_meeting_title ?? "").trim();
+        const body = String(row.properties?.hs_meeting_body ?? "").trim();
+        const text = [title && `Meeting: ${title}`, body].filter(Boolean).join(". ");
+        if (!text) continue;
+        records.push({
+          id: String(row.id),
+          body: text,
+          timestamp: String(row.properties?.hs_meeting_start_time ?? ""),
+        });
+      }
+    }
+  }
+  if (taskIds.length) {
+    const res = await hubspotFetch(userId, "/objects/tasks/batch/read", {
+      method: "POST",
+      body: JSON.stringify({
+        properties: ["hs_task_subject", "hs_task_body", "hs_task_status", "hs_timestamp"],
+        inputs: taskIds.slice(0, 50).map((id) => ({ id })),
+      }),
+    });
+    if (res.ok) {
+      const data = (await res.json()) as HubSpotBatchReadResponse;
+      for (const row of data.results ?? []) {
+        const subject = String(row.properties?.hs_task_subject ?? "").trim();
+        const body = String(row.properties?.hs_task_body ?? "").trim();
+        const status = String(row.properties?.hs_task_status ?? "").trim();
+        const text = [subject && `Task: ${subject}`, status && `(${status})`, body]
+          .filter(Boolean)
+          .join(" ");
+        if (!text) continue;
+        records.push({
+          id: String(row.id),
+          body: text,
+          timestamp: String(row.properties?.hs_timestamp ?? ""),
+        });
+      }
+    }
+  }
+  return records;
 }
 
 /** Associated note IDs for a deal (v3 associations). */
@@ -224,6 +330,15 @@ export async function importHubSpotDealNotes(
   const deal = await fetchDealById(userId, id);
   const noteIds = await fetchDealNoteIds(userId, id);
   const notes = await fetchNotesByIds(userId, noteIds);
+  const position = hubspotPositionBody(deal.properties);
+  if (position) {
+    notes.unshift({
+      id: "position",
+      body: position,
+      timestamp: new Date().toISOString(),
+    });
+  }
+  notes.push(...(await fetchHubSpotActivities(userId, id)));
   const snapshot = buildDealSnapshotFromApi(deal, notes);
   const mapped = mapHubSpotDealToDeepContext({ deal: snapshot });
   if (!mapped) {
@@ -244,6 +359,7 @@ export const hubspotDealTestUtils = {
   noteDateIso,
   buildDealSnapshotFromApi,
   mapDealHit,
+  hubspotPositionBody,
 };
 
 /** Create a note on a HubSpot deal and associate it (Lazarus → CRM). */
@@ -288,6 +404,25 @@ export async function pushNoteToHubSpotDeal(
   }
 
   return { noteId: created.id };
+}
+
+/** Writes the score onto the deal's next step. Does not move the pipeline stage. */
+export async function writeHubSpotNextStep(
+  userId: string,
+  dealId: string,
+  nextStep: string
+): Promise<void> {
+  const id = dealId.trim();
+  const value = nextStep.trim().slice(0, 255);
+  if (!id || !value) throw new Error("dealId and next step are required");
+  const res = await hubspotFetch(userId, `/objects/deals/${encodeURIComponent(id)}`, {
+    method: "PATCH",
+    body: JSON.stringify({ properties: { hs_next_step: value } }),
+  });
+  if (!res.ok) {
+    const err = (await res.json().catch(() => ({}))) as { message?: string };
+    throw new Error(err.message ?? `HubSpot next step update failed (${res.status})`);
+  }
 }
 
 /** True only when this user's HubSpot token can read the deal. */

@@ -417,6 +417,28 @@ export function buildDealMemorySummary(
   return summary;
 }
 
+/** Notes, stages, and meetings brought in from HubSpot, Salesforce, or a live session. */
+export function formatSupplementalEvidence(ctx?: DeepContextInput | null): string {
+  if (!ctx) return "";
+  const lines: string[] = [];
+  for (const entry of ctx.historicalCrmContext ?? []) {
+    if (entry.stage?.trim()) lines.push(entry.stage.trim());
+    for (const holder of entry.past_identified_veto_holders ?? []) {
+      if (holder.display_name?.trim()) lines.push(holder.display_name.trim());
+    }
+    for (const note of entry.past_logged_objections ?? []) {
+      if (note.trim()) lines.push(note.trim());
+    }
+  }
+  for (const turn of ctx.liveTranscriptPayload ?? []) {
+    if (turn.dialogue?.trim()) lines.push(turn.dialogue.trim());
+  }
+  for (const objection of ctx.liveSessionObjections ?? []) {
+    if (objection.text?.trim()) lines.push(objection.text.trim());
+  }
+  return lines.join("\n");
+}
+
 export function buildDeepContextMessageBlock(ctx: DeepContextInput): string {
   const parts: string[] = [];
 

@@ -5,6 +5,7 @@ import {
   type DeepContextInput,
   type DeepContextOutput,
   buildDeepContextMessageBlock,
+  formatSupplementalEvidence,
   mergeImmediateRemediation,
   normalizeDeepContextOutput,
 } from "./deepContext.js";
@@ -278,7 +279,11 @@ function trajectoryDirection(t: CanonicalTrajectory): string {
 }
 
 /** Layer 3 — project frozen derivation read-only; scoring runs once after grounding */
-function applyCanonicalScoring(result: EnterpriseAnalysis, transcript: string): EnterpriseAnalysis {
+function applyCanonicalScoring(
+  result: EnterpriseAnalysis,
+  transcript: string,
+  supplemental = ""
+): EnterpriseAnalysis {
   const rawForces: ScoringForce[] = result.causal_forces.map((f) => ({
     factor: f.factor,
     type: f.type,
@@ -287,7 +292,7 @@ function applyCanonicalScoring(result: EnterpriseAnalysis, transcript: string): 
     derived_from: f.derived_from,
     evidence: f.evidence,
   }));
-  const scoringForces = lockForcesToTranscript(transcript, rawForces);
+  const scoringForces = lockForcesToTranscript(transcript, rawForces, supplemental);
   const scoringLocked = scoringForces !== rawForces;
 
   const { causal, frozen } = deriveCanonicalState(
@@ -826,7 +831,9 @@ async function extractWithModels(
 
 function applyGroundingFilter(
   analysis: EnterpriseAnalysis,
-  transcript: string
+  transcript: string,
+  evidenceCorpus: string,
+  supplemental = ""
 ): EnterpriseAnalysis {
   const extraOutput = [
     analysis.executive_summary,
@@ -834,13 +841,14 @@ function applyGroundingFilter(
     analysis.force_initialization.classification_rationale,
   ].join(" ");
 
+  const corpus = evidenceCorpus.trim() || transcript;
   const groundedForces = filterInventedForces(
     analysis.causal_forces,
-    transcript,
+    corpus,
     extraOutput
   );
   const groundedStakeholders = analysis.stakeholders.filter((s) =>
-    evidenceMatchesTranscript(s.evidence, transcript)
+    evidenceMatchesTranscript(s.evidence, corpus)
   );
 
   if (groundedForces.length === 0) {
@@ -851,18 +859,18 @@ function applyGroundingFilter(
 
   return applyCanonicalScoring({
     ...analysis,
-    executive_summary: scrubInventedSummary(analysis.executive_summary, transcript),
+    executive_summary: scrubInventedSummary(analysis.executive_summary, corpus),
     force_initialization: {
       ...analysis.force_initialization,
-      summary: scrubInventedSummary(analysis.force_initialization.summary, transcript),
+      summary: scrubInventedSummary(analysis.force_initialization.summary, corpus),
       classification_rationale: scrubInventedSummary(
         analysis.force_initialization.classification_rationale,
-        transcript
+        corpus
       ),
     },
     causal_forces: groundedForces,
     stakeholders: groundedStakeholders,
-  }, transcript);
+  }, transcript, supplemental);
 }
 
 export async function analyzeTranscript(
@@ -885,11 +893,16 @@ export async function analyzeTranscript(
   }
 
   const systemPrompt = loadSystemPrompt();
+  const crmEvidence = formatSupplementalEvidence(deepContext);
+  const sectionMarks = [...transcript.matchAll(/^=== .+ ===$/gm)];
+  const stitchedAdded = sectionMarks.length > 1 ? transcript.slice(sectionMarks[1].index ?? 0) : "";
+  const supplemental = [stitchedAdded, crmEvidence].filter((part) => part.trim()).join("\n");
+  const evidenceCorpus = [transcript, crmEvidence].filter((part) => part.trim()).join("\n\n");
   let userMessage = buildExtractionMessage(transcript, dealValue, deepContext);
 
   let analysis = await extractWithModels(systemPrompt, userMessage, tier, preferOpenWeights);
   let audit = auditTranscriptGrounding({
-    transcript,
+    transcript: evidenceCorpus,
     dealValue,
     causal_forces: analysis.causal_forces,
     executive_summary: analysis.executive_summary,
@@ -902,7 +915,7 @@ export async function analyzeTranscript(
     userMessage = buildGroundingRetryMessage(transcript, dealValue, audit, deepContext);
     analysis = await extractWithModels(systemPrompt, userMessage, tier, preferOpenWeights);
     audit = auditTranscriptGrounding({
-      transcript,
+      transcript: evidenceCorpus,
       dealValue,
       causal_forces: analysis.causal_forces,
       executive_summary: analysis.executive_summary,
@@ -913,10 +926,10 @@ export async function analyzeTranscript(
 
   if (!audit.pass) {
     console.warn("Grounding still failed after retry — filtering invented content", audit);
-    analysis = applyGroundingFilter(analysis, transcript);
+    analysis = applyGroundingFilter(analysis, transcript, evidenceCorpus, supplemental);
     audit.warnings.push("Invented or ungrounded content was removed — scores derived from transcript-only forces.");
   } else {
-    analysis = applyGroundingFilter(analysis, transcript);
+    analysis = applyGroundingFilter(analysis, transcript, evidenceCorpus, supplemental);
   }
 
   return {

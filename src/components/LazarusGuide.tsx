@@ -149,7 +149,7 @@ export default function LazarusGuide({ open, onClose, onHighlightTarget, onSelec
           <div className="guide-chat-log">
             {chat.length === 0 && (
               <p className="guide-chat-empty">
-                Examples: “How do I run my first analysis?” · “How do I push notes to HubSpot?”
+                Examples: “How do I revive a deal?” · “How do I push notes to HubSpot?”
               </p>
             )}
             {chat.map((turn, i) => (

@@ -46,7 +46,7 @@ export async function answerGuideQuestion(
   const q = question.trim();
   if (q.length < 2) {
     return {
-      answer: "Ask how to run an analysis, connect HubSpot, use Live triage, or copy CRM notes.",
+      answer: "Ask how to revive a deal, run an analysis, connect HubSpot or Salesforce, or copy CRM notes.",
       steps: [],
       offline: true,
     };
@@ -61,7 +61,7 @@ export async function answerGuideQuestion(
   if (!hasAnyLlmProvider()) {
     return {
       answer:
-        "Guide AI is offline (no GEMINI_API_KEY or OPENROUTER_API_KEY). Use the step-by-step workflows above, or ask about HubSpot push, Live triage, or first analysis.",
+        "Guide AI is offline (no GEMINI_API_KEY or OPENROUTER_API_KEY). Use the step-by-step workflows above, or ask about Revive, HubSpot push, Live triage, or first analysis.",
       steps: [],
       offline: true,
     };
@@ -74,7 +74,7 @@ export async function answerGuideQuestion(
     .join("\n");
 
   const prompt = `You are the Lazarus Deal Recovery product guide — NOT a sales agent and NOT a deal analyst.
-Answer ONLY using the GROUNDING below. If the question is about analyzing a specific deal, scoring, or writing CRM content for a live opportunity, refuse and tell them to use Run Analysis / Fast Facts instead.
+Answer ONLY using the GROUNDING below. If the question is about analyzing a specific deal, scoring, or writing CRM content for a live opportunity, refuse and tell them to use Raise this deal from the dead, Revive, or Fast Facts instead.
 For how-to questions, return numbered procedural steps.
 Respond with JSON only: {"answer":"string","steps":["step1","step2",...]}
 Keep answer under 120 words. Max 6 steps. No markdown fences outside JSON.
@@ -93,7 +93,7 @@ USER QUESTION: ${q}`;
     const demand = /503|high demand|unavailable|quota/i.test(msg);
     return {
       answer: demand
-        ? "Guide AI is temporarily busy. Use the workflows above (Copy CRM-ready notes / Add HubSpot deal history), or retry in a minute."
+        ? "Guide AI is temporarily busy. Use the workflows above (Revive a linked deal / Copy CRM-ready notes), or retry in a minute."
         : "Guide AI could not answer that right now. Try the step-by-step workflows above, or ask again shortly.",
       steps: [
         "Open a workflow on the left (e.g. Copy CRM-ready notes).",

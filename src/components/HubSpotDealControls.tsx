@@ -171,8 +171,7 @@ export default function HubSpotDealControls({ onImport, onError }: Props) {
       {status?.connected && (
         <>
           <p className="hubspot-deal-hint">
-            Search deals and import associated notes into account ID, sales cycle, and historical CRM
-            JSON (read-only).
+            Search deals and import the record. Revive writes the score and next step back.
           </p>
           <div className="mailbox-query-row hubspot-deal-search">
             <input

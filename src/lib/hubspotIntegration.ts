@@ -37,6 +37,7 @@ export interface HubSpotDealImportResult {
   sales_cycle_days: number;
   historical_crm_context: HistoricalCrmContextEntry[];
   source: string;
+  wiped?: boolean;
 }
 
 export async function fetchHubSpotStatus(): Promise<HubSpotProviderStatus> {
@@ -82,6 +83,35 @@ export async function importHubSpotDealNotes(dealId: string): Promise<HubSpotDea
   const data = (await res.json()) as HubSpotDealImportResult & { error?: string };
   if (!res.ok) throw new Error(data.error ?? `HubSpot import failed (${res.status})`);
   return data;
+}
+
+export async function reviveHubSpotDeal(input: {
+  dealId: string;
+  viability: number;
+  status: string;
+  nextAction: string;
+  noteBody: string;
+  postMortemId?: string | null;
+}): Promise<{ nextStep: string | null; nextStepError?: string }> {
+  const res = await fetch(`${API_BASE}/api/integrations/hubspot/revive`, {
+    method: "POST",
+    headers: apiAuthHeaders(true),
+    body: JSON.stringify({
+      dealId: input.dealId,
+      viability: input.viability,
+      status: input.status,
+      nextAction: input.nextAction,
+      noteBody: input.noteBody,
+      ...(input.postMortemId ? { postMortemId: input.postMortemId } : {}),
+    }),
+  });
+  const data = (await res.json()) as {
+    error?: string;
+    next_step?: string | null;
+    next_step_error?: string;
+  };
+  if (!res.ok) throw new Error(data.error ?? `HubSpot revive failed (${res.status})`);
+  return { nextStep: data.next_step ?? null, nextStepError: data.next_step_error };
 }
 
 export async function pushHubSpotNote(

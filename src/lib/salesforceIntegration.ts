@@ -66,6 +66,7 @@ export async function importSalesforceOpportunity(opportunityId: string): Promis
   deal_id: string;
   note_count: number;
   opportunity: SalesforceOppHit;
+  wiped?: boolean;
 }> {
   const res = await fetch(`${API_BASE}/api/integrations/salesforce/import-opportunity`, {
     method: "POST",
@@ -79,6 +80,7 @@ export async function importSalesforceOpportunity(opportunityId: string): Promis
     deal_id?: string;
     note_count?: number;
     opportunity?: SalesforceOppHit;
+    wiped?: boolean;
     error?: string;
   };
   if (!res.ok) throw new Error(data.error ?? `Salesforce import failed (${res.status})`);
@@ -89,7 +91,37 @@ export async function importSalesforceOpportunity(opportunityId: string): Promis
     deal_id: data.deal_id ?? opportunityId,
     note_count: data.note_count ?? 0,
     opportunity: data.opportunity!,
+    wiped: data.wiped === true,
   };
+}
+
+export async function reviveSalesforceOpportunity(input: {
+  opportunityId: string;
+  viability: number;
+  status: string;
+  nextAction: string;
+  noteBody: string;
+  postMortemId?: string | null;
+}): Promise<{ nextStep: string | null; nextStepError?: string }> {
+  const res = await fetch(`${API_BASE}/api/integrations/salesforce/revive`, {
+    method: "POST",
+    headers: apiAuthHeaders(true),
+    body: JSON.stringify({
+      opportunityId: input.opportunityId,
+      viability: input.viability,
+      status: input.status,
+      nextAction: input.nextAction,
+      noteBody: input.noteBody,
+      ...(input.postMortemId ? { postMortemId: input.postMortemId } : {}),
+    }),
+  });
+  const data = (await res.json()) as {
+    error?: string;
+    next_step?: string | null;
+    next_step_error?: string;
+  };
+  if (!res.ok) throw new Error(data.error ?? `Salesforce revive failed (${res.status})`);
+  return { nextStep: data.next_step ?? null, nextStepError: data.next_step_error };
 }
 
 export async function pushSalesforceNote(

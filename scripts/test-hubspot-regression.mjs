@@ -6,6 +6,8 @@ import { createSignedOAuthState, verifySignedOAuthState } from "../server/integr
 import { HUBSPOT_OAUTH_SCOPES, isHubSpotConfigured } from "../server/integrations/hubspot/config.ts";
 import { buildHubSpotAuthorizeUrl } from "../server/integrations/hubspot/oauth.ts";
 import { hubspotDealTestUtils } from "../server/integrations/hubspot/deals.ts";
+import { salesforcePositionBody } from "../server/integrations/salesforce/deals.ts";
+import { reviveNextStep } from "../server/reviveCrm.ts";
 import { mapHubSpotDealToDeepContext } from "../server/integrations/hubspot.ts";
 import { MAX_SALES_CYCLE_DAYS } from "../server/deepContext.ts";
 
@@ -122,6 +124,27 @@ check(
   "deal without notes still maps stage/name",
   (emptyNotesMapped?.historical_crm_context?.length ?? 0) >= 1
 );
+
+const position = hubspotDealTestUtils.hubspotPositionBody({
+  dealstage: "qualifiedtobuy",
+  amount: "84000",
+  hs_next_step: "Send the business case",
+});
+check("position includes stage and next step", position.includes("Stage: qualifiedtobuy") && position.includes("Send the business case"));
+
+const sfPosition = salesforcePositionBody({
+  StageName: "Negotiation",
+  Amount: 84000,
+  NextStep: "Legal review",
+});
+check("salesforce position includes stage and next step", sfPosition.includes("Stage: Negotiation") && sfPosition.includes("Legal review"));
+
+const nextStep = reviveNextStep({
+  viability: 61,
+  status: "ACTIVE, STALLED—RECOVERABLE",
+  nextAction: "Send the COO the one-page business case",
+});
+check("revive next step stays within 255 and names the score", nextStep.length <= 255 && nextStep.includes("61") && nextStep.includes("STALLED"));
 
 if (failed > 0) {
   console.error(`\nHubSpot regression FAILED (${failed})`);

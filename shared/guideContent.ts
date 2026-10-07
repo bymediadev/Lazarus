@@ -26,9 +26,9 @@ export const GUIDE_WORKFLOWS: GuideWorkflow[] = [
   },
   {
     id: "hubspot-history",
-    title: "Add HubSpot deal history",
-    summary: "Connect HubSpot and import notes into Deal Profile.",
-    firstStepId: "hs-1",
+    title: "Revive a linked deal",
+    summary: "Revive reads the linked deal, scores it, and writes that score back.",
+    firstStepId: "hs-0",
   },
   {
     id: "live-triage",
@@ -39,7 +39,7 @@ export const GUIDE_WORKFLOWS: GuideWorkflow[] = [
   {
     id: "crm-notes",
     title: "Copy CRM-ready notes",
-    summary: "Paste the compressed brief into HubSpot or Salesforce.",
+    summary: "Copy a note, push a note, or let Revive write the score.",
     firstStepId: "crm-1",
   },
 ];
@@ -55,7 +55,7 @@ export const GUIDE_STEPS: Record<string, GuideStep> = {
   "fa-2": {
     id: "fa-2",
     title: "Attach at least one source",
-    body: "Upload a call recording or PDF/DOCX, paste a transcript, import mailbox threads, or end a live session. Optional: set deal value and HubSpot history under Deal Profile.",
+    body: "Upload a call recording or PDF/DOCX, paste a transcript, import mailbox threads, or end a live session. Optional: set deal value, or import a HubSpot or Salesforce deal under CRM import.",
     target: "guide-upload-tab",
     prev: "fa-1",
     next: "fa-3",
@@ -75,25 +75,33 @@ export const GUIDE_STEPS: Record<string, GuideStep> = {
     target: "guide-results",
     prev: "fa-3",
   },
+  "hs-0": {
+    id: "hs-0",
+    title: "What Revive does",
+    body: "Revive reads a linked HubSpot or Salesforce deal and writes the meaning back onto it. It pulls the stage, amount, close date, notes, and any meetings or tasks that CRM will share, then scores that record. It writes the viability, whether the deal is stalled or recoverable, and the next action onto the deal’s next-step field, plus one note. The pipeline stage stays where the rep left it. Raise this deal from the dead scores what you pasted and shows the brief on the right. Revive does that for the CRM record and updates the deal. The button appears after you import a deal, beside the green run button. One CRM is enough. If both are linked, both receive the same score and note. A change in the CRM is included the next time you click Revive.",
+    target: "guide-run-analysis",
+    next: "hs-1",
+  },
   "hs-1": {
     id: "hs-1",
-    title: "Connect HubSpot",
-    body: "Open Deal Profile → HubSpot import. Click Connect HubSpot and approve read/write scopes in the popup.",
+    title: "Connect HubSpot or Salesforce",
+    body: "Sign in. Open Add more evidence, then CRM import. Connect HubSpot or Salesforce. One CRM is enough.",
     target: "guide-deal-profile",
+    prev: "hs-0",
     next: "hs-2",
   },
   "hs-2": {
     id: "hs-2",
-    title: "Search and import a deal",
-    body: "Search by deal name, then Import notes. Account ID, cycle days, and historical CRM context fill automatically.",
+    title: "Import the deal",
+    body: "Search by name and import it. Lazarus pulls the stage, amount, close date, notes, and meetings or tasks when that CRM allows them.",
     target: "guide-deal-profile",
     prev: "hs-1",
     next: "hs-3",
   },
   "hs-3": {
     id: "hs-3",
-    title: "Analyze with CRM context",
-    body: "Add call/email evidence, then Run Analysis. Historical veto holders and objections inform the brief. Use Push to HubSpot when you want the CRM updated.",
+    title: "Click Revive",
+    body: "Revive sits beside Raise this deal from the dead. It scores that record and writes the viability, status, and next step back onto the deal, plus one note. It does not change the pipeline stage. If both CRMs are linked, both get the same write. A later change in the CRM shows up the next time you Revive.",
     target: "guide-run-analysis",
     prev: "hs-2",
   },
@@ -114,14 +122,14 @@ export const GUIDE_STEPS: Record<string, GuideStep> = {
   "crm-1": {
     id: "crm-1",
     title: "Finish an analysis first",
-    body: "You need a recovery brief before CRM notes exist. Run Analysis on any evidence package.",
+    body: "Copy and Push use a brief you already have. Revive is the other path: it reads the linked deal, scores it, and writes the score back in the same click.",
     target: "guide-run-analysis",
     next: "crm-2",
   },
   "crm-2": {
     id: "crm-2",
     title: "Copy or push",
-    body: "In Fast Facts or Concise Diagnostic, use Copy for CRM. If HubSpot is linked, use Push to HubSpot to write a note on the deal (human-confirmed).",
+    body: "Copy for CRM puts the note on your clipboard. Push to HubSpot or Push to Salesforce writes that note only when you click it. Revive is what writes the score and next step. None of these moves the stage.",
     target: "guide-results",
     prev: "crm-1",
   },
@@ -138,15 +146,23 @@ export const GUIDE_FAQ: { q: string; a: string }[] = [
   },
   {
     q: "Does Lazarus write to my CRM automatically?",
-    a: "No silent mass writes. You can copy CRM-ready notes, or confirm Push to HubSpot/Salesforce after analysis. CRM changes can sync back into Lazarus when webhooks are configured.",
+    a: "When you click Revive, it reads the linked HubSpot or Salesforce deal and writes the score and next step back. It does not change the pipeline stage, and it does not write when the CRM changes on its own. Push writes a note only when you click it. Copy leaves the paste to you.",
+  },
+  {
+    q: "What does Revive do?",
+    a: "Revive reads a linked HubSpot or Salesforce deal and writes the meaning back onto it. It pulls the stage, amount, close date, notes, and any meetings or tasks that CRM will share, then scores that record. It writes the viability, whether the deal is stalled or recoverable, and the next action onto the deal’s next-step field, plus one note. The pipeline stage stays where the rep left it. The button appears after you import a deal. One CRM is enough. If both are linked, both receive the same score and note. A change in the CRM is included the next time you click Revive.",
+  },
+  {
+    q: "How do I revive a deal?",
+    a: "Sign in, import a HubSpot or Salesforce deal, then click Revive. Lazarus scores that record and writes the viability, status, and next step back. It does not move the stage. One CRM is enough. If both are linked, both get the same write.",
   },
   {
     q: "How do I push notes to HubSpot?",
-    a: "Run Analysis first so you have a recovery brief. Link a HubSpot deal under Deal Profile if you haven’t. In Fast Facts or Concise Diagnostic, click Push to HubSpot and confirm — Lazarus writes a note on that deal. You can also use Copy for CRM and paste manually.",
+    a: "Raise this deal from the dead first so you have a brief. Import the HubSpot deal under CRM import if you haven’t. In Fast Facts, click Push to HubSpot. That writes a note only. Revive is the button that also writes the score and next step. You can also use Copy for CRM and paste it yourself.",
   },
   {
     q: "How do I push notes to Salesforce?",
-    a: "Run Analysis, link a Salesforce opportunity under Deal Profile, then use Push to Salesforce on the brief (human-confirmed). Or Copy for CRM and paste into the opportunity.",
+    a: "Raise this deal from the dead, import the Salesforce opportunity, then click Push to Salesforce on the brief. That writes a feed post only. Revive writes the score and next step. Or Copy for CRM and paste it yourself.",
   },
   {
     q: "What is Fast Facts?",
@@ -159,6 +175,20 @@ export function matchGuideOffline(question: string): { answer: string; steps: st
   const q = question.trim().toLowerCase();
   if (q.length < 3) return null;
 
+  const revive = /\brevive\b/i.test(q);
+  if (revive && /what (does|is)|explain/.test(q)) {
+    return {
+      answer: GUIDE_FAQ.find((f) => /What does Revive do/.test(f.q))!.a,
+      steps: [],
+    };
+  }
+  if (revive) {
+    return {
+      answer: GUIDE_FAQ.find((f) => /What does Revive do/.test(f.q))!.a,
+      steps: [GUIDE_STEPS["hs-1"].body, GUIDE_STEPS["hs-2"].body, GUIDE_STEPS["hs-3"].body],
+    };
+  }
+
   const pushHubspot =
     /(push|write|send).*(note|notes|brief).*(hubspot)|hubspot.*(push|note|notes)/i.test(q) ||
     /how (do i|to) push.*hubspot/i.test(q);
@@ -166,11 +196,12 @@ export function matchGuideOffline(question: string): { answer: string; steps: st
     return {
       answer: GUIDE_FAQ.find((f) => /push notes to HubSpot/i.test(f.q))!.a,
       steps: [
-        "Run Analysis so a recovery brief exists.",
-        "Under Deal Profile, Connect HubSpot and link/import the deal if needed.",
-        "Open Fast Facts or Concise Diagnostic.",
-        "Click Push to HubSpot and confirm the write (human-confirmed).",
-        "Or use Copy for CRM and paste the note into HubSpot yourself.",
+        "Raise this deal from the dead so a brief exists.",
+        "Under CRM import, connect HubSpot and import the deal if needed.",
+        "Open Fast Facts.",
+        "Click Push to HubSpot. That writes a note only.",
+        "Click Revive if you want the score and next step written back. It does not move the stage.",
+        "Or use Copy for CRM and paste the note yourself.",
       ],
     };
   }
@@ -181,10 +212,11 @@ export function matchGuideOffline(question: string): { answer: string; steps: st
     return {
       answer: GUIDE_FAQ.find((f) => /push notes to Salesforce/i.test(f.q))!.a,
       steps: [
-        "Run Analysis so a recovery brief exists.",
-        "Under Deal Profile, Connect Salesforce and link the opportunity.",
-        "On the brief, click Push to Salesforce and confirm.",
-        "Or Copy for CRM and paste manually.",
+        "Raise this deal from the dead so a brief exists.",
+        "Under CRM import, connect Salesforce and import the opportunity.",
+        "On the brief, click Push to Salesforce. That writes a feed post only.",
+        "Click Revive to write the score and next step. It does not move the stage.",
+        "Or Copy for CRM and paste the note yourself.",
       ],
     };
   }
@@ -194,7 +226,7 @@ export function matchGuideOffline(question: string): { answer: string; steps: st
   );
   if (firstAnalysis) {
     return {
-      answer: "Add evidence on the left, click Run Analysis, then read Fast Facts and the recovery brief on the right.",
+      answer: "Add evidence on the left, click Raise this deal from the dead, then read Fast Facts and the recovery brief on the right.",
       steps: [
         GUIDE_STEPS["fa-1"].body,
         GUIDE_STEPS["fa-2"].body,
@@ -207,7 +239,7 @@ export function matchGuideOffline(question: string): { answer: string; steps: st
   const hubspotImport = /(hubspot).*(import|history|connect|deal)/i.test(q);
   if (hubspotImport && !pushHubspot) {
     return {
-      answer: "Connect HubSpot under Deal Profile, search a deal, Import notes, then run analysis with that CRM context.",
+      answer: "Sign in, connect HubSpot or Salesforce under CRM import, import the deal, then click Revive. That writes the score and next step back and does not move the stage.",
       steps: [GUIDE_STEPS["hs-1"].body, GUIDE_STEPS["hs-2"].body, GUIDE_STEPS["hs-3"].body],
     };
   }

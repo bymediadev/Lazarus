@@ -5,8 +5,9 @@ import TrustPackModal from "./components/TrustPackModal";
 import { useAuth } from "./components/AuthProvider";
 import { isPasswordRecoveryPending } from "./lib/passwordRecovery";
 import { authenticatorStepUpRequired } from "./lib/mfa";
-import { pushHubSpotNote } from "./lib/hubspotIntegration";
-import { pushSalesforceNote } from "./lib/salesforceIntegration";
+import { importHubSpotDealNotes, pushHubSpotNote, reviveHubSpotDeal } from "./lib/hubspotIntegration";
+import { importSalesforceOpportunity, pushSalesforceNote, reviveSalesforceOpportunity } from "./lib/salesforceIntegration";
+import { formatCompressedCrmNotes } from "./lib/crmNotes";
 import { TRUST_PACK_NAV, TRUST_PACK_OPEN_EVENT, type TrustPackSlug } from "./lib/trustPack";
 import { API_BASE, apiTargetLabel, PostMortemApiError, runPostMortem } from "./lib/api";
 import {
@@ -130,6 +131,18 @@ async function readTextEvidence(file: File): Promise<string> {
   return text;
 }
 
+function crmEvidenceText(entries: HistoricalCrmContextEntry[]): string {
+  return entries
+    .map((entry) =>
+      [entry.date, entry.stage, ...(entry.past_logged_objections ?? [])]
+        .map((part) => String(part ?? "").trim())
+        .filter(Boolean)
+        .join("\n")
+    )
+    .filter(Boolean)
+    .join("\n\n");
+}
+
 export default function App() {
   const auth = useAuth();
   const [opsUser, setOpsUser] = useState(false);
@@ -187,6 +200,7 @@ export default function App() {
   const [emailImportNotice, setEmailImportNotice] = useState<string | null>(null);
   const [result, setResult] = useState<PostMortemResult | null>(null);
   const [loading, setLoading] = useState(false);
+  const [loadingAction, setLoadingAction] = useState<"run" | "revive" | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [relevanceBlocked, setRelevanceBlocked] = useState(false);
   const [dragOver, setDragOver] = useState(false);
@@ -279,6 +293,7 @@ export default function App() {
       setResult(normalizeResult({ ...data, sources: data.sources, processed_at: data.processed_at }));
       setWarnings(data.warnings ?? []);
       setRelevanceBlocked(false);
+      return data;
     },
     []
   );
@@ -922,6 +937,7 @@ export default function App() {
     }
 
     setLoading(true);
+    setLoadingAction("run");
     setError(null);
     setWarnings([]);
     if (!forceAnalysis) setRelevanceBlocked(false);
@@ -1010,6 +1026,140 @@ export default function App() {
     } finally {
       resetCaptchaWidget();
       setLoading(false);
+      setLoadingAction(null);
+    }
+  };
+
+  const handleRevive = async () => {
+    if (!linkedHubSpotDealId && !linkedSalesforceOppId) {
+      setError("Import a HubSpot or Salesforce deal, then Revive.");
+      return;
+    }
+    if (!auth.session) {
+      setError("Sign in to read the linked deal and write the score back.");
+      return;
+    }
+    if (
+      shouldEnforceGuestCap({
+        signedIn: true,
+        opsUser,
+        email: auth.user?.email ?? null,
+      }) &&
+      billing?.payment_required === true
+    ) {
+      setError(guestCapLockMessage(true));
+      return;
+    }
+    if (captchaRequired && !captchaTokenRef.current) {
+      setError(
+        captchaSiteKey
+          ? "Complete the security check before Revive."
+          : "Security check is not available. Refresh the page and try again."
+      );
+      return;
+    }
+
+    setLoading(true);
+    setLoadingAction("revive");
+    setError(null);
+    setRelevanceBlocked(false);
+    const captchaForRun = captchaTokenRef.current;
+    captchaTokenRef.current = "";
+    setCaptchaToken("");
+
+    try {
+      const context: HistoricalCrmContextEntry[] = [];
+      let nextAccountId = accountId.trim();
+      let nextCycleDays = salesCycleDays;
+      if (linkedHubSpotDealId) {
+        const imported = await importHubSpotDealNotes(linkedHubSpotDealId);
+        if (imported.wiped) {
+          throw new Error("HubSpot marked this deal complete. Lazarus will not revive it.");
+        }
+        context.push(...(imported.historical_crm_context ?? []));
+        if (imported.account_id) nextAccountId = imported.account_id;
+        if (imported.sales_cycle_days) nextCycleDays = String(imported.sales_cycle_days);
+      }
+      if (linkedSalesforceOppId) {
+        const imported = await importSalesforceOpportunity(linkedSalesforceOppId);
+        if (imported.wiped) {
+          throw new Error("Salesforce marked this opportunity complete. Lazarus will not revive it.");
+        }
+        context.push(...(imported.historical_crm_context ?? []));
+        if (!nextAccountId && imported.account_id) nextAccountId = imported.account_id;
+        if (imported.sales_cycle_days) nextCycleDays = String(imported.sales_cycle_days);
+      }
+      setAccountId(nextAccountId);
+      setSalesCycleDays(nextCycleDays);
+      setHistoricalCrmJson(JSON.stringify(context, null, 2));
+
+      const transcript = callTranscript.trim() || crmEvidenceText(context);
+      if (!transcript.trim()) {
+        throw new Error("This deal has no stage, notes, meetings, or tasks to score yet.");
+      }
+      const cycleDaysRaw = parseInt(nextCycleDays, 10);
+      const scored = await runAnalysis({
+        file,
+        document: documentFile,
+        transcript,
+        emailThread,
+        dealValue,
+        fieldCapture: recordingSource === "field",
+        accountId: nextAccountId || undefined,
+        salesCycleDays: Number.isFinite(cycleDaysRaw) && cycleDaysRaw > 0 ? cycleDaysRaw : undefined,
+        historicalCrmContext: context,
+        liveTranscriptPayload: liveTranscriptPayload.length ? liveTranscriptPayload : undefined,
+        liveSessionObjections: liveSessionObjections.length ? liveSessionObjections : undefined,
+        hubspotDealId: linkedHubSpotDealId ?? undefined,
+        salesforceOpportunityId: linkedSalesforceOppId ?? undefined,
+        captchaToken: captchaForRun || undefined,
+      });
+      const viability = Number(scored.recoverability_score ?? scored.viability_state?.viability_score ?? 0);
+      const status = String(scored.deal_status ?? scored.deal_classification?.status ?? "");
+      const nextAction = scored.immediate_remediation?.[0] || scored.action_plan?.[0] || "";
+      const noteBody = formatCompressedCrmNotes(scored);
+      const written: string[] = [];
+      const warnings: string[] = [];
+      if (linkedHubSpotDealId) {
+        const hubspot = await reviveHubSpotDeal({
+          dealId: linkedHubSpotDealId,
+          viability,
+          status,
+          nextAction,
+          noteBody,
+          postMortemId: scored.id,
+        });
+        written.push("HubSpot");
+        if (hubspot.nextStepError) warnings.push(`HubSpot next step: ${hubspot.nextStepError}`);
+      }
+      if (linkedSalesforceOppId) {
+        const salesforce = await reviveSalesforceOpportunity({
+          opportunityId: linkedSalesforceOppId,
+          viability,
+          status,
+          nextAction,
+          noteBody,
+          postMortemId: scored.id,
+        });
+        written.push("Salesforce");
+        if (salesforce.nextStepError) warnings.push(`Salesforce next step: ${salesforce.nextStepError}`);
+      }
+      setSyncNotice(
+        `Revived at ${viability}. Wrote the score and next step to ${written.join(" and ")}.`
+      );
+      if (warnings.length) setWarnings(warnings);
+      if (auth.session) await refreshBilling();
+    } catch (err) {
+      if (err instanceof PostMortemApiError && err.code === "NOT_SALES_EVIDENCE") {
+        setError(err.message);
+        setRelevanceBlocked(true);
+      } else {
+        setError(err instanceof Error ? err.message : "Revive failed.");
+      }
+    } finally {
+      resetCaptchaWidget();
+      setLoading(false);
+      setLoadingAction(null);
     }
   };
 
@@ -1389,13 +1539,23 @@ export default function App() {
                   Security check is unavailable. Refresh the page, or try again in a moment.
                 </p>
               )}
+              {(linkedHubSpotDealId || linkedSalesforceOppId) && (
+                <button
+                  type="button"
+                  className="run-button run-button-above-fold"
+                  onClick={() => void handleRevive()}
+                  disabled={loading || paywalled || (captchaRequired && !captchaToken)}
+                >
+                  {loading && loadingAction === "revive" ? "Reviving…" : "Revive"}
+                </button>
+              )}
               <button
                 className="run-button run-button-above-fold"
                 data-guide-target="guide-run-analysis"
                 onClick={() => void handleRun(false)}
                 disabled={loading || paywalled || (captchaRequired && !captchaToken)}
               >
-                {loading
+                {loading && loadingAction === "run"
                   ? "Analyzing…"
                   : paywalled
                     ? "Payment required"

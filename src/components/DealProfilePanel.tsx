@@ -105,8 +105,9 @@ export default function DealProfilePanel({
     <details className="deal-profile-panel" data-guide-target="guide-deal-profile">
       <summary>CRM import + deal history (optional)</summary>
       <p className="console-tab-hint">
-        Import HubSpot or Salesforce notes, or paste prior deal history. Use a company domain as
-        Account ID (e.g. acme.com) when you have one. Push updates after analysis are human-confirmed.
+        Import a HubSpot or Salesforce deal, or paste prior history. Revive reads that record
+        (stage, notes, meetings, and tasks) and writes the score and next step back. Push still
+        sends a note only when you click it.
       </p>
 
       <HubSpotDealControls

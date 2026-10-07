@@ -6,7 +6,9 @@ import {
   pushNoteToSalesforceOpportunity,
   searchSalesforceOpportunities,
   userOwnsSalesforceOpportunity,
+  writeSalesforceNextStep,
 } from "./deals.js";
+import { reviveNextStep } from "../../reviveCrm.js";
 import { buildSalesforceAuthorizeUrl, exchangeSalesforceCode } from "./oauth.js";
 import { beginSalesforcePkce, clearSalesforcePkce, takeSalesforcePkce } from "./pkce.js";
 import {
@@ -204,6 +206,69 @@ export function registerSalesforceRoutes(app: Express): void {
       console.error("[salesforce-push]", err);
       res.status(500).json({
         error: err instanceof Error ? err.message : "Salesforce push failed",
+      });
+    }
+  });
+
+  app.post("/api/integrations/salesforce/revive", requireAuthUser, async (req, res) => {
+    const userId = getAuthUserId(req)!;
+    if (!isSalesforceConnected(userId)) {
+      res.status(401).json({ error: "Salesforce is not connected." });
+      return;
+    }
+    const opportunityId = String(
+      req.body?.opportunityId ?? req.body?.dealId ?? req.body?.deal_id ?? ""
+    ).trim();
+    const noteBody = String(req.body?.noteBody ?? req.body?.note_body ?? "").trim();
+    const postMortemId = String(req.body?.postMortemId ?? req.body?.post_mortem_id ?? "").trim();
+    if (!opportunityId) {
+      res.status(400).json({ error: "opportunityId is required" });
+      return;
+    }
+    if (!noteBody) {
+      res.status(400).json({ error: "noteBody is required" });
+      return;
+    }
+    const nextStep = reviveNextStep({
+      viability: Number(req.body?.viability),
+      status: String(req.body?.status ?? ""),
+      nextAction: String(req.body?.nextAction ?? req.body?.next_action ?? ""),
+    });
+    try {
+      const owned = await userOwnsSalesforceOpportunity(userId, opportunityId);
+      if (!owned.ok) {
+        res.status(404).json({ error: "That opportunity is not in the connected Salesforce org." });
+        return;
+      }
+      let nextStepWritten = false;
+      let nextStepError = "";
+      try {
+        await writeSalesforceNextStep(userId, opportunityId, nextStep);
+        nextStepWritten = true;
+      } catch (err) {
+        nextStepError = err instanceof Error ? err.message : "Next step was not written";
+      }
+      const pushed = await pushNoteToSalesforceOpportunity(userId, opportunityId, noteBody);
+      await upsertCrmDealLink({
+        provider: "salesforce",
+        externalDealId: opportunityId,
+        portalId: owned.portalId,
+        postMortemId: postMortemId || null,
+        userId,
+        lastOutboundAt: new Date().toISOString(),
+      });
+      res.json({
+        ok: true,
+        provider: "salesforce",
+        opportunity_id: opportunityId,
+        feed_item_id: pushed.feedItemId,
+        next_step: nextStepWritten ? nextStep : null,
+        ...(nextStepError ? { next_step_error: nextStepError } : {}),
+      });
+    } catch (err) {
+      console.error("[salesforce-revive]", err);
+      res.status(500).json({
+        error: err instanceof Error ? err.message : "Salesforce revive write failed",
       });
     }
   });

@@ -237,6 +237,93 @@ if (lockForcesToTranscript(sarahMarkTranscript, sarahMarkForces) !== sarahMarkFo
   failed = true;
 }
 
+function replayViability(transcript, forces) {
+  return deriveCanonicalState(lockForcesToTranscript(transcript, forces), "MIXED").frozen.viability_score;
+}
+const approvedTranscript = `${alexTranscript}\nDavid: Finance approved the budget and legal signed off.`;
+const setbackTranscript = `${alexTranscript}\nDavid: David went dark and is evaluating a competitor.`;
+const stoppedTranscript = `${alexTranscript}\nDavid: Procurement is frozen until the audit closes.`;
+const approvedScore = replayViability(approvedTranscript, alexRunA);
+const setbackScore = replayViability(setbackTranscript, alexRunA);
+const stoppedScore = replayViability(stoppedTranscript, alexRunB);
+if (approvedScore <= alexA.viability_score) {
+  console.error("FAIL: budget approval should raise viability", alexA.viability_score, approvedScore);
+  failed = true;
+}
+if (setbackScore >= alexA.viability_score) {
+  console.error("FAIL: a stall should lower viability", alexA.viability_score, setbackScore);
+  failed = true;
+}
+if (stoppedScore >= setbackScore) {
+  console.error("FAIL: a freeze should score below a stall", setbackScore, stoppedScore);
+  failed = true;
+}
+if (replayViability(approvedTranscript, alexRunB) !== approvedScore) {
+  console.error("FAIL: the same added evidence produced two scores");
+  failed = true;
+}
+
+function replayWithCrm(note, forces) {
+  return deriveCanonicalState(lockForcesToTranscript(alexTranscript, forces, note), "MIXED").frozen
+    .viability_score;
+}
+const salesforceApproved = replayWithCrm(
+  "Salesforce: Finance approved the budget and legal signed off.",
+  alexRunA
+);
+const hubspotDark = replayWithCrm(
+  "HubSpot: The buyer went dark and is talking to a competitor.",
+  alexRunA
+);
+const salesforceFrozen = replayWithCrm(
+  "Salesforce: Procurement is frozen until the audit closes.",
+  alexRunB
+);
+const pilotNote = "Salesforce meeting: The COO asked us to start a paid pilot next month.";
+const pilotUp = replayWithCrm(pilotNote, [
+  {
+    factor: "Paid pilot",
+    type: "Intent",
+    weight: 42,
+    evidence: "The COO asked us to start a paid pilot next month.",
+  },
+]);
+const pilotDown = replayWithCrm(pilotNote, [
+  {
+    factor: "Paid pilot blocked",
+    type: "Constraint",
+    weight: 99,
+    evidence: "The COO asked us to start a paid pilot next month.",
+  },
+]);
+if (salesforceApproved <= alexA.viability_score) {
+  console.error("FAIL: a Salesforce approval note should raise viability", salesforceApproved);
+  failed = true;
+}
+if (hubspotDark >= alexA.viability_score) {
+  console.error("FAIL: a HubSpot stall note should lower viability", hubspotDark);
+  failed = true;
+}
+if (salesforceFrozen >= hubspotDark) {
+  console.error("FAIL: a Salesforce freeze should score below a stall", salesforceFrozen);
+  failed = true;
+}
+if (pilotUp <= alexA.viability_score || pilotDown >= alexA.viability_score) {
+  console.error("FAIL: the engine reading of a new meeting should move viability", pilotUp, pilotDown);
+  failed = true;
+}
+if (replayWithCrm(pilotNote, [
+  {
+    factor: "Paid pilot",
+    type: "Intent",
+    weight: 10,
+    evidence: "The COO asked us to start a paid pilot next month.",
+  },
+]) !== pilotUp) {
+  console.error("FAIL: the same meeting note and engine reading produced two scores");
+  failed = true;
+}
+
 if (failed) process.exit(1);
 console.log("\nSCORING + DRI REGRESSION OK");
 console.log("  replay viability:", alexA.viability_score, alexA.trajectory_type);

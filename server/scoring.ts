@@ -110,6 +110,8 @@ const HARD_LOCK = [
   "can t proceed",
   "signing authority",
   "pull the plug",
+  "closed lost",
+  "closedlost",
 ];
 
 function lineContaining(transcript: string, needle: string): string {
@@ -118,21 +120,98 @@ function lineContaining(transcript: string, needle: string): string {
   return (hit ?? needle).trim();
 }
 
+const ADDED_COMMITMENT = [
+  "budget approved",
+  "approved the budget",
+  "pre-approved",
+  "preapproved",
+  "legal signed",
+  "signed off",
+  "contract executed",
+  "purchase order",
+  "green light",
+  "closed won",
+  "closedwon",
+  "ready to move forward",
+];
+
+const ADDED_SETBACK = [
+  "went dark",
+  "gone dark",
+  "no response",
+  "another vendor",
+  "competitor",
+  "not convinced",
+  "pushed out",
+  "deal slipped",
+];
+
+function addedForce(
+  transcript: string,
+  text: string,
+  phrases: readonly string[],
+  factor: string,
+  type: string,
+  weight: number
+): ScoringForce | null {
+  const phrase = phrases.find((item) => text.includes(item));
+  if (!phrase) return null;
+  return {
+    factor,
+    type,
+    weight,
+    role: "independent",
+    derived_from: [],
+    evidence: lineContaining(transcript, phrase),
+  };
+}
+
+function evidenceInText(evidence: string, text: string): boolean {
+  const quote = normalizeText(evidence);
+  if (quote.length < 12) return false;
+  return text.includes(quote);
+}
+
+/** The engine's reading of new evidence, on a fixed weight so the same quote does not drift. */
+function quantizeAddedForce(force: ScoringForce): ScoringForce {
+  const text = normalizeText(`${force.factor} ${force.evidence}`);
+  if (HARD_LOCK.some((phrase) => text.includes(phrase))) {
+    return { ...force, type: "Constraint", weight: 95, role: "independent", derived_from: [] };
+  }
+  if (ADDED_COMMITMENT.some((phrase) => text.includes(phrase))) {
+    return { ...force, type: "Enabler", weight: 95, role: "independent", derived_from: [] };
+  }
+  if (ADDED_SETBACK.some((phrase) => text.includes(phrase))) {
+    return { ...force, type: "Structural", weight: 70, role: "independent", derived_from: [] };
+  }
+  const type = force.type.toLowerCase();
+  if (type === "enabler") {
+    return { ...force, type: "Enabler", weight: 85, role: "independent", derived_from: [] };
+  }
+  if (type === "intent") {
+    return { ...force, type: "Intent", weight: 80, role: "independent", derived_from: [] };
+  }
+  return { ...force, type: "Structural", weight: 70, role: "independent", derived_from: [] };
+}
+
 /**
- * Same transcript, no new evidence: the model may relabel a buying condition
- * as a hard constraint and drop viability to 0. Lock that pattern to fixed inputs.
- * A real lock (freeze, audit, no authority) still uses the model's forces.
+ * Same evidence keeps the same viability. The model may relabel a buying
+ * condition and drop the score to 0, so that pattern uses fixed inputs.
+ * A later call, meeting, or HubSpot/Salesforce note is `supplemental`:
+ * phrase hits and the engine's quotes from that text move the score.
+ * Calls without that pattern still use the model's forces.
  */
 export function lockForcesToTranscript(
   transcript: string,
-  forces: ScoringForce[]
+  forces: ScoringForce[],
+  supplemental = ""
 ): ScoringForce[] {
-  const text = normalizeText(transcript);
-  if (HARD_LOCK.some((phrase) => text.includes(phrase))) return forces;
+  const added = supplemental.trim();
+  const text = normalizeText(`${transcript}\n${added}`);
   const conditionalPhrase = CONDITIONAL_BUY.find((phrase) => text.includes(phrase));
-  const soft = SOFT_FRICTION.some((phrase) => text.includes(phrase));
   if (!conditionalPhrase) return forces;
-  const commitment = lineContaining(transcript, conditionalPhrase);
+  const commitment = lineContaining(`${transcript}\n${added}`, conditionalPhrase);
+  const soft = SOFT_FRICTION.some((phrase) => text.includes(phrase));
 
   const locked: ScoringForce[] = [];
   if (soft) {
@@ -161,6 +240,28 @@ export function lockForcesToTranscript(
     derived_from: [],
     evidence: commitment,
   });
+
+  const bundle = `${transcript}\n${added}`;
+  const extras = [
+    addedForce(bundle, text, ADDED_COMMITMENT, "Buyer committed budget or signature", "Enabler", 95),
+    addedForce(bundle, text, ADDED_SETBACK, "New evidence shows the deal losing ground", "Structural", 70),
+    addedForce(bundle, text, HARD_LOCK, "New evidence blocks the purchase", "Constraint", 95),
+  ];
+  for (const extra of extras) {
+    if (extra) locked.push(extra);
+  }
+
+  const addedText = normalizeText(added);
+  if (addedText) {
+    const seen = new Set<string>();
+    for (const force of forces) {
+      if (!evidenceInText(force.evidence, addedText)) continue;
+      const key = normalizeText(force.evidence);
+      if (seen.has(key)) continue;
+      seen.add(key);
+      locked.push(quantizeAddedForce(force));
+    }
+  }
   return locked;
 }
 

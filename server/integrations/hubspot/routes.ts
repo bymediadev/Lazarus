@@ -1,7 +1,8 @@
 import type { Express } from "express";
 import { registerOAuthConnectRoutes } from "../connectFlow.js";
 import { getHubSpotConfig, isHubSpotConfigured, HUBSPOT_OAUTH_SCOPES } from "./config.js";
-import { importHubSpotDealNotes, pushNoteToHubSpotDeal, searchHubSpotDeals, userOwnsHubSpotDeal } from "./deals.js";
+import { importHubSpotDealNotes, pushNoteToHubSpotDeal, searchHubSpotDeals, userOwnsHubSpotDeal, writeHubSpotNextStep } from "./deals.js";
+import { reviveNextStep } from "../../reviveCrm.js";
 import { buildHubSpotAuthorizeUrl, exchangeHubSpotCode } from "./oauth.js";
 import {
   clearHubSpotTokens,
@@ -173,6 +174,67 @@ export function registerHubSpotRoutes(app: Express): void {
       console.error("[hubspot-push] error:", err);
       res.status(500).json({
         error: err instanceof Error ? err.message : "HubSpot push failed",
+      });
+    }
+  });
+
+  app.post("/api/integrations/hubspot/revive", requireAuthUser, async (req, res) => {
+    const userId = getAuthUserId(req)!;
+    if (!isHubSpotConnected(userId)) {
+      res.status(401).json({ error: "HubSpot is not connected. Connect HubSpot first." });
+      return;
+    }
+    const dealId = String(req.body?.dealId ?? req.body?.deal_id ?? "").trim();
+    const noteBody = String(req.body?.noteBody ?? req.body?.note_body ?? "").trim();
+    const postMortemId = String(req.body?.postMortemId ?? req.body?.post_mortem_id ?? "").trim();
+    if (!dealId) {
+      res.status(400).json({ error: "dealId is required" });
+      return;
+    }
+    if (!noteBody) {
+      res.status(400).json({ error: "noteBody is required" });
+      return;
+    }
+    const nextStep = reviveNextStep({
+      viability: Number(req.body?.viability),
+      status: String(req.body?.status ?? ""),
+      nextAction: String(req.body?.nextAction ?? req.body?.next_action ?? ""),
+    });
+    try {
+      const owned = await userOwnsHubSpotDeal(userId, dealId);
+      if (!owned.ok) {
+        res.status(404).json({ error: "That deal is not in the connected HubSpot portal." });
+        return;
+      }
+      let nextStepWritten = false;
+      let nextStepError = "";
+      try {
+        await writeHubSpotNextStep(userId, dealId, nextStep);
+        nextStepWritten = true;
+      } catch (err) {
+        nextStepError = err instanceof Error ? err.message : "Next step was not written";
+      }
+      const pushed = await pushNoteToHubSpotDeal(userId, dealId, noteBody);
+      await upsertCrmDealLink({
+        provider: "hubspot",
+        externalDealId: dealId,
+        portalId: owned.portalId,
+        postMortemId: postMortemId || null,
+        userId,
+        lastOutboundAt: new Date().toISOString(),
+      });
+      res.json({
+        ok: true,
+        provider: "hubspot",
+        deal_id: dealId,
+        note_id: pushed.noteId,
+        next_step: nextStepWritten ? nextStep : null,
+        ...(nextStepError ? { next_step_error: nextStepError } : {}),
+      });
+    } catch (err) {
+      console.error("[hubspot-revive] error:", err);
+      res.status(500).json({
+        error: err instanceof Error ? err.message : "HubSpot revive write failed",
       });
     }
   });
