@@ -74,7 +74,7 @@
     </tr>
     <tr>
       <td>Account-scoped save of the report for signed-in users. Guests do not persist. A company key is shown once; we store a hash, not the key</td>
-      <td>Org-wide multi-seat admin with SSO (SAML). No HIPAA business associate agreement. No on-premises install. No uptime SLA</td>
+      <td>SSO, a HIPAA business associate agreement, an uptime SLA, and a signed installer. A standalone install is the same app on the customer’s server and their database. It is not this hosted service, and the company key does not create it</td>
     </tr>
     <tr>
       <td>Per-deal autopsy from audio, transcript, Word/PDF, and email threads</td>
@@ -93,7 +93,7 @@
       <td>White-label partner console / multi-client branding</td>
     </tr>
     <tr>
-      <td>Optional HubSpot read-only deal + notes import</td>
+      <td>Optional HubSpot or Salesforce import. Revive writes the score and next step when you click it. It does not change the pipeline stage</td>
       <td>Autonomous AI SDR or automated outreach</td>
     </tr>
     <tr>
@@ -126,7 +126,7 @@
     <tr><td>Google (Gmail / Meet)</td><td>Optional read-only mailbox + meeting connect</td><td>User-authorized OAuth; thread text only when searched/attached</td></tr>
     <tr><td>Microsoft Graph (Outlook / Teams)</td><td>Optional read-only mailbox + meeting connect</td><td>User-authorized OAuth; conversation text when searched/attached</td></tr>
     <tr><td>Zoom</td><td>Optional live RTMS transcript stream</td><td>Webhook-authenticated live turns during an explicit session</td></tr>
-    <tr><td>HubSpot</td><td>Optional read-only deals + notes import</td><td>User-authorized OAuth; no CRM write scopes in the standard path</td></tr>
+    <tr><td>HubSpot / Salesforce</td><td>Optional deal import. Revive writes the score and next step, plus one note, when you click it</td><td>User-authorized OAuth. The pipeline stage is not changed. A CRM change does not rescore the deal on its own</td></tr>
   </table>
 
   <h2>2a. Guest freemium vs signed-in persistence</h2>
@@ -134,7 +134,8 @@
     <tr><th>Mode</th><th>Auth</th><th>Persistence</th><th>Limits</th></tr>
     <tr><td>Guest</td><td>None required</td><td>Analysis not saved to an account</td><td>Client + server freemium / soft rate limits</td></tr>
     <tr><td>Signed-in (customer)</td><td>Supabase Auth</td><td>The report is saved to that company. The transcript, quotes, and CRM payload are not</td><td>Freemium soft limits unless on a paid plan (when offered)</td></tr>
-    <tr><td>Company API key</td><td><code>X-Api-Key</code> issued to that company</td><td>Same saved report. The full brief is returned to their server. Source evidence is not stored</td><td>Their integration calls the API</td></tr>
+    <tr><td>Company API key</td><td><code>X-Api-Key</code> issued to that company</td><td>Posts the deal into this hosted app. The call is sent here, then to Google Gemini. The report is saved here. The transcript is not. This is not a standalone install</td><td>Their integration calls the API</td></tr>
+    <tr><td>Standalone install</td><td>The same app on the customer’s server</td><td>Writes to a database they own. Scoring uses their Gemini key. The Lazarus database does not hold those rows. The company key does not create this install</td><td>Not this hosted service. No signed installer</td></tr>
     <tr><td>Founder / ops</td><td>Supabase Auth + allowlist / role</td><td>Same persistence model; Ops Command Center for support</td><td>Founder demo account may be uncapped for demos</td></tr>
   </table>
 
@@ -149,7 +150,7 @@
     <tr><td>Gmail / Outlook</td><td>Read-only OAuth (<code>gmail.readonly</code> / <code>Mail.Read</code>)</td><td>Matching thread text the user searches and attaches</td></tr>
     <tr><td>Zoom / Meet / Teams live</td><td>App / Graph scopes + session start</td><td>Live transcript turns for triage (not a Zoom recording archive)</td></tr>
     <tr><td>Field capture</td><td>Browser recording the user starts</td><td>Short audio buffer → transcript; audio not the system of record</td></tr>
-    <tr><td>HubSpot notes</td><td>Read-only deals + notes scopes</td><td>Selected deal note text for historical context</td></tr>
+    <tr><td>HubSpot / Salesforce</td><td>Deal read, and a write of the next step plus one note when Revive or Push is clicked</td><td>The linked deal record comes in. The score and next step go back. The stage stays</td></tr>
     <tr><td>Upload</td><td>Explicit file upload</td><td>Parsed document text or transcribed audio</td></tr>
   </table>
 
@@ -185,8 +186,9 @@
   <div class="critical">
     Lazarus Deal Recovery does not join meetings as a hidden recorder. Customers upload content, start field
     capture, connect a mailbox, or start a live session and warrant they have legal authority to do so
-    (PIPEDA, U.S. state laws, employment and customer agreements). Mailbox and CRM connectors are
-    <strong>read-only</strong> and user-initiated in the standard product path. This is the primary legal risk
+    (PIPEDA, U.S. state laws, employment and customer agreements). Mailbox connect stays
+    <strong>read-only</strong>. Revive writes the score and next step when someone clicks it. It does
+    not change the pipeline stage. This is the primary legal risk
     surface for the product — see <a href="/terms">Terms §2</a> and <a href="/dpa">DPA §2</a>.
   </div>
 
@@ -260,11 +262,11 @@
     <li>SOC 2 Type II — not yet obtained</li>
     <li>Single sign-on (SAML/OIDC) for customer orgs</li>
     <li>HIPAA business associate agreement</li>
-    <li>On-premises or customer-VPC hosting</li>
+    <li>A signed installer. A standalone install can run this same app on the customer’s server and their database. That is not this hosted service</li>
     <li>Uptime SLA</li>
     <li>Formal penetration test report pack for RFPs</li>
     <li>Dedicated KMS / hardware-backed OAuth token vault (application AES-GCM is in place today)</li>
-    <li>Salesforce bi-directional sync / HubSpot write-back</li>
+    <li>Full CRM sync. Revive already writes the score and next step. It does not move the stage</li>
     <li>White-label partner dashboard and custom domains</li>
     <li>Always-on stall detection webhooks (vs user-initiated evidence pull)</li>
   </ul>

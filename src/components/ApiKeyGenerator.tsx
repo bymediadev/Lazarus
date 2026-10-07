@@ -39,8 +39,8 @@ export default function ApiKeyGenerator() {
     <section className="account-portal-section">
       <h3>Company API key</h3>
       <p className="meta-line">
-        Your server sends a deal in with this key. The transcript stays on your side. Lazarus returns
-        the report. A new key replaces the previous one.
+        This key posts a deal into this hosted app. The call is sent here. We save the report and do
+        not save the transcript. It does not run Lazarus on your server. A new key replaces the previous one.
       </p>
 
       {!apiKey ? (

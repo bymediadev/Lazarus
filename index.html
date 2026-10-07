@@ -169,6 +169,14 @@
             "mainEntity": [
               {
                 "@type": "Question",
+                "name": "What do you do?",
+                "acceptedAnswer": {
+                  "@type": "Answer",
+                  "text": "We read the evidence you already have and return a brief you can defend in the forecast: recoverable or a flat no, the blocker, and the next action. We do not join the meeting, email the buyer, or close the deal."
+                }
+              },
+              {
+                "@type": "Question",
                 "name": "Do you join the call?",
                 "acceptedAnswer": {
                   "@type": "Answer",
@@ -212,7 +220,7 @@
                 "name": "Do you save the call?",
                 "acceptedAnswer": {
                   "@type": "Answer",
-                  "text": "No. The transcript and the quotes are used to write the report, then not saved. Audio is processed in memory and is not written to disk. A guest run is not saved to an account."
+                  "text": "No. The call is sent here so we can read it. The saved row is the report: the score, the status, and the next actions. The transcript and the audio are not saved. A guest run is not saved to an account."
                 }
               },
               {
@@ -236,7 +244,15 @@
                 "name": "What does a company key do?",
                 "acceptedAnswer": {
                   "@type": "Answer",
-                  "text": "A signed-in company can create a key for its own server. The key is shown once. We store a hash, not the key. Their server sends the deal in. The transcript stays on their side. Lazarus returns the report."
+                  "text": "A company key lets a server post the deal into this hosted app. The call is sent here, then to Google Gemini for scoring. We save the report in the Lazarus database and we do not save the transcript. The key is shown once. We store a hash, not the key. It does not put the portal on your server, and it does not write to a database you own."
+                }
+              },
+              {
+                "@type": "Question",
+                "name": "What is a standalone install?",
+                "acceptedAnswer": {
+                  "@type": "Answer",
+                  "text": "The same app on the company's server, writing to a database they own. The call is handled on that server. Scoring sends the transcript to Google Gemini with their key. The report is saved in their database, and the transcript is dropped before that write. The Lazarus database does not hold those rows. A company key does not create this install. There is no hardware box and no signed installer."
                 }
               },
               {
@@ -260,7 +276,7 @@
                 "name": "What do you do with the call?",
                 "acceptedAnswer": {
                   "@type": "Answer",
-                  "text": "We read it to say whether the deal is recoverable or a flat no, what is blocking it, and what to do next. Then the transcript and the quotes are not saved. We do not sell the content, use it for ads, or train public models on it."
+                  "text": "You send the call to this hosted app. We read it here to write the brief. Scoring sends the transcript to Google Gemini. We do not save the transcript or the audio. We do not sell the content, use it for ads, or train public models on it."
                 }
               },
               {
@@ -268,7 +284,7 @@
                 "name": "Where does the data go?",
                 "acceptedAnswer": {
                   "@type": "Answer",
-                  "text": "North America, by default. If you are signed in, the report is stored with Supabase. The transcript is sent to Google Gemini to extract the brief. A free run can use NVIDIA Nemotron through OpenRouter if Gemini is unavailable. We do not save the transcript. If you upload audio, AssemblyAI transcribes it, and we do not save the audio. Stripe sees billing only if you pay. Gmail, Outlook, Zoom, Teams, HubSpot, and Salesforce run only when you connect them. The full list is in the Data Processing Addendum."
+                  "text": "The call comes to this server. The transcript is sent to Google Gemini to write the brief. We do not save the transcript. A free run can use NVIDIA Nemotron through OpenRouter if Gemini is unavailable. Hosting is North America by default. If you are signed in, the report is stored with Supabase. If you upload audio, AssemblyAI transcribes it, and we do not save the audio. Stripe sees billing only if you pay. Gmail, Outlook, Zoom, Teams, HubSpot, and Salesforce run only when you connect them. The full list is in the Data Processing Addendum."
                 }
               },
               {
@@ -289,10 +305,10 @@
               },
               {
                 "@type": "Question",
-                "name": "Do you have SSO, a HIPAA agreement, or on-prem hosting?",
+                "name": "Do you have SSO or a HIPAA agreement?",
                 "acceptedAnswer": {
                   "@type": "Answer",
-                  "text": "No. Not today. Hosting is North America by default. A different region is only by written agreement. We do not have SSO, a HIPAA business associate agreement, or an on-prem install."
+                  "text": "No SSO and no HIPAA business associate agreement on this hosted app. Hosting here is North America by default. A different region is only by written agreement. A standalone install is separate: the company runs this same app on their server and their database. The company key does not create it."
                 }
               },
               {
@@ -364,7 +380,7 @@
                 "name": "Will this write over HubSpot or Salesforce?",
                 "acceptedAnswer": {
                   "@type": "Answer",
-                  "text": "No, not on its own. HubSpot and Salesforce stay read-only until someone pushes the plan."
+                  "text": "Revive writes the score and next step onto the linked deal when you click it. It does not change the pipeline stage. Push sends a note only when someone clicks it. A change in the CRM is included the next time you revive that deal. We do not rescore it on our own."
                 }
               },
               {
@@ -481,11 +497,59 @@
           stalled-deal recovery a repeatable process.
         </p>
         <h2>Straight answers</h2>
+        <p>
+          Lazarus reads the call, email, or CRM record you already have. It says whether the deal is
+          recoverable or a flat no, what is blocking it, and what to do next. A person still runs the
+          deal.
+        </p>
+        <h3>What we do</h3>
+        <h3>What do you do?</h3>
+        <p>
+          We read the evidence you already have and return a brief you can defend in the forecast:
+          recoverable or a flat no, the blocker, and the next action. We do not join the meeting, email
+          the buyer, or close the deal.
+        </p>
+        <h3>What do you do with the call?</h3>
+        <p>
+          You send the call to this hosted app. We read it here to write the brief. Scoring sends the
+          transcript to Google Gemini. We do not save the transcript or the audio. We do not sell the
+          content, use it for ads, or train public models on it.
+        </p>
+        <h3>Will this write over HubSpot or Salesforce?</h3>
+        <p>
+          Revive writes the score and next step onto the linked deal when you click it. It does not
+          change the pipeline stage. Push sends a note only when someone clicks it. A change in the
+          CRM is included the next time you revive that deal. We do not rescore it on our own.
+        </p>
+        <h3>What we do not do</h3>
         <h3>Do you join the call?</h3>
         <p>
           No. Lazarus never joins Meet, Teams, or Zoom. You drop the recording, transcript, or
           email after. Keep the tools you already use.
         </p>
+        <h3>Do you email buyers or close the deal for us?</h3>
+        <p>No. Lazarus does not write outreach, email buyers, or close the deal. A person still runs it.</p>
+        <h3>Do you replace our recorder or our CRM?</h3>
+        <p>
+          No. Keep the recorder and the CRM. Lazarus reads what you already have and says whether
+          the deal is recoverable, what is blocking it, and what to do next.
+        </p>
+        <h3>Do you promise the deal will close?</h3>
+        <p>
+          No. The brief is something you can defend in the forecast. You still decide. We do not
+          promise a deal will close.
+        </p>
+        <h3>Do you read our whole inbox?</h3>
+        <p>
+          No. Mailbox connect is read-only. You search a deal and attach that thread. No silent
+          scrape.
+        </p>
+        <h3>Will reps have to upload another tool?</h3>
+        <p>
+          No. A manager can drop the file for the team. A rep can also run the one deal they are
+          trying to save. Either way, it is not a new daily tool.
+        </p>
+        <h3>How the score is made</h3>
         <h3>What model reads the deal?</h3>
         <p>
           Google Gemini reads the transcript and maps it to the Force Interaction Framework. It does
@@ -523,10 +587,12 @@
           If a quote or person is not in your upload, the server strips it before the score runs
           and tells you it did. You score what is left.
         </p>
+        <h3>Your data</h3>
         <h3>Do you save the call?</h3>
         <p>
-          No. The transcript and the quotes are used to write the report, then not saved. Audio is
-          processed in memory and is not written to disk. A guest run is not saved to an account.
+          No. The call is sent here so we can read it. The saved row is the report: the score, the
+          status, and the next actions. The transcript and the audio are not saved. A guest run is
+          not saved to an account.
         </p>
         <h3>How long do you keep the report?</h3>
         <p>
@@ -539,9 +605,18 @@
         <p>Each company only sees its own reports. Another customer’s workspace cannot read them.</p>
         <h3>What does a company key do?</h3>
         <p>
-          A signed-in company can create a key for its own server. The key is shown once. We store a
-          hash, not the key. Their server sends the deal in. The transcript stays on their side.
-          Lazarus returns the report.
+          A company key lets a server post the deal into this hosted app. The call is sent here, then to
+          Google Gemini for scoring. We save the report in the Lazarus database and we do not save the
+          transcript. The key is shown once. We store a hash, not the key. It does not put the portal
+          on your server, and it does not write to a database you own.
+        </p>
+        <h3>What is a standalone install?</h3>
+        <p>
+          The same app on the company’s server, writing to a database they own. The call is handled on
+          that server. Scoring sends the transcript to Google Gemini with their key. The report is saved
+          in their database, and the transcript is dropped before that write. The Lazarus database does
+          not hold those rows. A company key does not create this install. There is no hardware box and
+          no signed installer.
         </p>
         <h3>Do you train models on our calls?</h3>
         <p>No. Your content is not used to train public models.</p>
@@ -553,17 +628,12 @@
           in the <a href="https://www.getldr.ca/terms">Terms of Service</a> and the
           <a href="https://www.getldr.ca/dpa">Data Processing Addendum</a>.
         </p>
-        <h3>What do you do with the call?</h3>
-        <p>
-          We read it to say whether the deal is recoverable or a flat no, what is blocking it, and
-          what to do next. Then the transcript and the quotes are not saved. We do not sell the
-          content, use it for ads, or train public models on it.
-        </p>
         <h3>Where does the data go?</h3>
         <p>
-          North America, by default. If you are signed in, the report is stored with Supabase. The
-          transcript is sent to Google Gemini to extract the brief. A free run can use NVIDIA
-          Nemotron through OpenRouter if Gemini is unavailable. We do not save the transcript. If you
+          The call comes to this server. The transcript is sent to Google Gemini to write the brief.
+          We do not save the transcript. A free run can use NVIDIA Nemotron through OpenRouter if
+          Gemini is unavailable. Hosting is North America by default. If you are signed in, the
+          report is stored with Supabase. If you
           upload audio, AssemblyAI transcribes it, and we do not save the audio. Stripe sees billing
           only if you pay. Gmail, Outlook, Zoom, Teams, HubSpot, and Salesforce run only when you
           connect them. The full list is in the
@@ -583,10 +653,18 @@
           data is deleted from production within 30 days. The transcript was not saved. The report
           also deletes on its own 30 days after a win or a flat no.
         </p>
-        <h3>Do you have SSO, a HIPAA agreement, or on-prem hosting?</h3>
+        <h3>Who is responsible for recording consent?</h3>
         <p>
-          No. Not today. Hosting is North America by default. A different region is only by written
-          agreement. We do not have SSO, a HIPAA business associate agreement, or an on-prem install.
+          You are. Upload only calls and emails you already have the right to use. We do not join
+          the meeting, and we do not check consent for you.
+        </p>
+        <h3>Not offered today</h3>
+        <h3>Do you have SSO or a HIPAA agreement?</h3>
+        <p>
+          No SSO and no HIPAA business associate agreement on this hosted app. Hosting here is North
+          America by default. A different region is only by written agreement. A standalone install is
+          separate: the company runs this same app on their server and their database. The company key
+          does not create it.
         </p>
         <h3>Do you offer an uptime guarantee?</h3>
         <p>
@@ -601,35 +679,7 @@
           <a href="https://www.getldr.ca/privacy">Privacy Policy</a>, and the
           <a href="https://www.getldr.ca/dpa">Data Processing Addendum</a>.
         </p>
-        <h3>Do you read our whole inbox?</h3>
-        <p>
-          No. Mailbox connect is read-only. You search a deal and attach that thread. No silent
-          scrape.
-        </p>
-        <h3>Will reps have to upload another tool?</h3>
-        <p>
-          No. A manager can drop the file for the team. A rep can also run the one deal they are
-          trying to save. Either way, it is not a new daily tool.
-        </p>
-        <h3>Do you replace our recorder or our CRM?</h3>
-        <p>
-          No. Keep the recorder and the CRM. Lazarus reads what you already have and says whether
-          the deal is recoverable, what is blocking it, and what to do next.
-        </p>
-        <h3>Do you email buyers or close the deal for us?</h3>
-        <p>No. Lazarus does not write outreach, email buyers, or close the deal. A person still runs it.</p>
-        <h3>Do you promise the deal will close?</h3>
-        <p>
-          No. The brief is something you can defend in the forecast. You still decide. We do not
-          promise a deal will close.
-        </p>
-        <h3>Who is responsible for recording consent?</h3>
-        <p>
-          You are. Upload only calls and emails you already have the right to use. We do not join
-          the meeting, and we do not check consent for you.
-        </p>
-        <h3>Will this write over HubSpot or Salesforce?</h3>
-        <p>No, not on its own. HubSpot and Salesforce stay read-only until someone pushes the plan.</p>
+        <h3>Price</h3>
         <h3>Do we pay per person?</h3>
         <p>
           No. You pay per deal analysis. Five a month are free, then $10 a report. Entry is $99 a
@@ -652,7 +702,7 @@
           A rep can run the deal they are personally trying to save. You already have a recorder
           and HubSpot. What you do not have is a clear call on which deals are still winnable. A
           person still runs the deal. Lazarus does not sell, write outreach, or replace your team.
-          Your data stays on your account and is not used to train public models.
+          The report stays on your account. The call is not used to train public models.
         </p>
         <p>Founded by Joshua Bennett.</p>
       </main>

@@ -19,10 +19,10 @@ const ROLES: Role[] = [
     label: "Security & IT Leaders",
     header: "Not SOC 2 today. The data path is still narrow.",
     bullets: [
-      "The call, the email, and the quotes are used to write the report, then not saved. Audio is processed in memory and is not written to disk. A guest run is not saved to an account.",
+      "The call is sent here to be read. Scoring sends the transcript to Google Gemini. We save the report and do not save the transcript or the audio. A guest run is not saved to an account.",
       "The report stays while the deal is still open. When HubSpot or Salesforce marks the deal complete, the report is deleted then. If the CRM is not connected, it is deleted 30 days after a win or a flat no.",
-      "Each company only sees its own reports. A company key is shown once. We store a hash, not the key. Their server sends the deal in. The transcript stays on their side.",
-      "Your content is not used to train public models. HubSpot and Salesforce stay read-only until someone pushes the plan.",
+      "This website is the hosted app. A company key posts the deal here. The call is sent here, then to Google Gemini. We save the report and do not save the transcript. A standalone install is the same app on the company’s server and their database. The company key does not create that install.",
+      "Your content is not used to train public models. Revive writes the score and next step onto the linked deal. It does not change the pipeline stage. Push sends a note only when someone clicks it.",
     ],
   },
   {

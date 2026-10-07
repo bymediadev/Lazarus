@@ -140,13 +140,18 @@
     <tr><td>Guest runs</td><td>No account-persisted analysis JSON to delete</td><td>N/A (ephemeral processing)</td></tr>
   </table>
   <p>
-    A signed-in company may create an API key for its own server. The key is shown once. Lazarus Deal Recovery
-    stores a hash of the key, not the key. The customer’s server sends the deal in. The transcript stays on
-    the customer’s side. Lazarus Deal Recovery returns the report.
+    This addendum covers the hosted app. A company key lets a server post a deal into that app. The call
+    is sent here, then to Google Gemini for scoring. Lazarus Deal Recovery saves the report in the Lazarus
+    database and does not save the transcript. The key is shown once. Lazarus Deal Recovery stores a hash
+    of the key, not the key. The key does not put the portal on the customer’s server.
+  </p>
+  <p>
+    A standalone install is the same app on the customer’s server, writing to a database they own. The
+    company key does not create that install. This addendum does not cover that install.
   </p>
   <p>Analysis metadata and anonymized rescue vectors may be retained where they no longer contain personal data.</p>
   <p>
-    This DPA does not include a HIPAA business associate agreement, SSO, or on-premises hosting. We do not
+    This DPA does not include a HIPAA business associate agreement or SSO. We do not
     claim a finished GDPR certification. Where GDPR applies, section 10 below is the transfer position.
   </p>
 

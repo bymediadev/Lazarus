@@ -240,7 +240,7 @@ export default function MarketingHome({
         </p>
         <p>
           A person still runs the deal. Lazarus does not sell, write outreach, or replace your team.
-          Your data stays on your account — not used to train public models.
+          The report stays on your account. The call is not used to train public models.
         </p>
         <p>Founded by {FOUNDER_NAME}.</p>
       </section>
@@ -251,9 +251,53 @@ export default function MarketingHome({
 
       <section className="marketing-simple marketing-reveal" id="answers" aria-label="Straight answers">
         <h2>Straight answers</h2>
-        <p>If we do not have it, we say so.</p>
+        <p>
+          Lazarus reads the call, email, or CRM record you already have. It says whether the deal is
+          recoverable or a flat no, what is blocking it, and what to do next. A person still runs the
+          deal.
+        </p>
         <div className="marketing-qa">
+          <div className="marketing-qa-group">
+            <h3>What we do</h3>
+            <p>We judge the deal. You still decide.</p>
+          </div>
           <details className="marketing-qa-item" open>
+            <summary>What do you do?</summary>
+            <div className="marketing-qa-panel">
+              <p>
+                We read the evidence you already have and return a brief you can defend in the
+                forecast: recoverable or a flat no, the blocker, and the next action. We do not join
+                the meeting, email the buyer, or close the deal.
+              </p>
+            </div>
+          </details>
+          <details className="marketing-qa-item">
+            <summary>What do you do with the call?</summary>
+            <div className="marketing-qa-panel">
+              <p>
+                You send the call to this hosted app. We read it here to write the brief. Scoring sends
+                the transcript to Google Gemini. We do not save the transcript or the audio. We do not
+                sell the content, use it for ads, or train public models on it.
+              </p>
+            </div>
+          </details>
+          <details className="marketing-qa-item">
+            <summary>Will this write over HubSpot or Salesforce?</summary>
+            <div className="marketing-qa-panel">
+              <p>
+                Revive writes the score and next step onto the linked deal when you click it. It does
+                not change the pipeline stage. Push sends a note only when someone clicks it. A
+                change in the CRM is included the next time you revive that deal. We do not rescore
+                it on our own.
+              </p>
+            </div>
+          </details>
+
+          <div className="marketing-qa-group">
+            <h3>What we do not do</h3>
+            <p>We do not sell, join the meeting, or move the stage.</p>
+          </div>
+          <details className="marketing-qa-item">
             <summary>Do you join the call?</summary>
             <div className="marketing-qa-panel">
               <p>
@@ -262,6 +306,56 @@ export default function MarketingHome({
               </p>
             </div>
           </details>
+          <details className="marketing-qa-item">
+            <summary>Do you email buyers or close the deal for us?</summary>
+            <div className="marketing-qa-panel">
+              <p>
+                No. Lazarus does not write outreach, email buyers, or close the deal. A person still
+                runs it.
+              </p>
+            </div>
+          </details>
+          <details className="marketing-qa-item">
+            <summary>Do you replace our recorder or our CRM?</summary>
+            <div className="marketing-qa-panel">
+              <p>
+                No. Keep the recorder and the CRM. Lazarus reads what you already have and says
+                whether the deal is recoverable, what is blocking it, and what to do next.
+              </p>
+            </div>
+          </details>
+          <details className="marketing-qa-item">
+            <summary>Do you promise the deal will close?</summary>
+            <div className="marketing-qa-panel">
+              <p>
+                No. The brief is something you can defend in the forecast. You still decide. We do
+                not promise a deal will close.
+              </p>
+            </div>
+          </details>
+          <details className="marketing-qa-item">
+            <summary>Do you read our whole inbox?</summary>
+            <div className="marketing-qa-panel">
+              <p>
+                No. Mailbox connect is read-only. You search a deal and attach that thread. No silent
+                scrape.
+              </p>
+            </div>
+          </details>
+          <details className="marketing-qa-item">
+            <summary>Will reps have to upload another tool?</summary>
+            <div className="marketing-qa-panel">
+              <p>
+                No. A manager can drop the file for the team. A rep can also run the one deal they are
+                trying to save. Either way, it is not a new daily tool.
+              </p>
+            </div>
+          </details>
+
+          <div className="marketing-qa-group">
+            <h3>How the score is made</h3>
+            <p>The model maps the words. Fixed rules write the score.</p>
+          </div>
           <details className="marketing-qa-item">
             <summary>What model reads the deal?</summary>
             <div className="marketing-qa-panel">
@@ -317,13 +411,29 @@ export default function MarketingHome({
               </p>
             </div>
           </details>
+          <div className="marketing-qa-group">
+            <h3>Your data</h3>
+            <p>This website is the hosted app. A standalone install is the same app on the company’s server.</p>
+          </div>
+          <details className="marketing-qa-item">
+            <summary>Who owns our data?</summary>
+            <div className="marketing-qa-panel">
+              <p>
+                You do. You keep ownership of the recording, the transcript, and the notes you upload.
+                Lazarus has a limited right to process that content only to write the report. You are
+                the controller. We are the processor. The report is yours to use inside the business.
+                That is in the <TrustPackLink slug="terms">Terms of Service</TrustPackLink> and the{" "}
+                <TrustPackLink slug="dpa">Data Processing Addendum</TrustPackLink>.
+              </p>
+            </div>
+          </details>
           <details className="marketing-qa-item">
             <summary>Do you save the call?</summary>
             <div className="marketing-qa-panel">
               <p>
-                No. The transcript and the quotes are used to write the report, then not saved.
-                Audio is processed in memory and is not written to disk. A guest run is not saved to
-                an account.
+                No. The call is sent here so we can read it. The saved row is the report: the score, the
+                status, and the next actions. The transcript and the audio are not saved. A guest run
+                is not saved to an account.
               </p>
             </div>
           </details>
@@ -352,9 +462,22 @@ export default function MarketingHome({
             <summary>What does a company key do?</summary>
             <div className="marketing-qa-panel">
               <p>
-                A signed-in company can create a key for its own server. The key is shown once. We
-                store a hash, not the key. Their server sends the deal in. The transcript stays on
-                their side. Lazarus returns the report.
+                A company key lets a server post the deal into this hosted app. The call is sent here, then
+                to Google Gemini for scoring. We save the report in the Lazarus database and we do not
+                save the transcript. The key is shown once. We store a hash, not the key. It does not
+                put the portal on your server, and it does not write to a database you own.
+              </p>
+            </div>
+          </details>
+          <details className="marketing-qa-item">
+            <summary>What is a standalone install?</summary>
+            <div className="marketing-qa-panel">
+              <p>
+                The same app on the company’s server, writing to a database they own. The call is
+                handled on that server. Scoring sends the transcript to Google Gemini with their key.
+                The report is saved in their database, and the transcript is dropped before that write.
+                The Lazarus database does not hold those rows. A company key does not create this
+                install. There is no hardware box and no signed installer.
               </p>
             </div>
           </details>
@@ -365,35 +488,13 @@ export default function MarketingHome({
             </div>
           </details>
           <details className="marketing-qa-item">
-            <summary>Who owns our data?</summary>
-            <div className="marketing-qa-panel">
-              <p>
-                You do. You keep ownership of the recording, the transcript, and the notes you upload.
-                Lazarus has a limited right to process that content only to write the report. You are
-                the controller. We are the processor. The report is yours to use inside the business.
-                That is in the <TrustPackLink slug="terms">Terms of Service</TrustPackLink> and the{" "}
-                <TrustPackLink slug="dpa">Data Processing Addendum</TrustPackLink>.
-              </p>
-            </div>
-          </details>
-          <details className="marketing-qa-item">
-            <summary>What do you do with the call?</summary>
-            <div className="marketing-qa-panel">
-              <p>
-                We read it to say whether the deal is recoverable or a flat no, what is blocking it,
-                and what to do next. Then the transcript and the quotes are not saved. We do not sell
-                the content, use it for ads, or train public models on it.
-              </p>
-            </div>
-          </details>
-          <details className="marketing-qa-item">
             <summary>Where does the data go?</summary>
             <div className="marketing-qa-panel">
               <p>
-                North America, by default. If you are signed in, the report is stored with Supabase.
-                The transcript is sent to Google Gemini to extract the brief. A free run can use
-                NVIDIA Nemotron through OpenRouter if Gemini is unavailable. We do not save the
-                transcript.
+                The call comes to this server. The transcript is sent to Google Gemini to write the brief.
+                We do not save the transcript. A free run can use NVIDIA Nemotron through OpenRouter if
+                Gemini is unavailable. Hosting is North America by default. If you are signed in, the
+                report is stored with Supabase.
                 If you upload audio, AssemblyAI transcribes it, and we do not save the audio. Stripe
                 sees billing only if you pay. Gmail, Outlook, Zoom, Teams, HubSpot, and Salesforce
                 run only when you connect them. The full list is in the{" "}
@@ -424,12 +525,27 @@ export default function MarketingHome({
             </div>
           </details>
           <details className="marketing-qa-item">
-            <summary>Do you have SSO, a HIPAA agreement, or on-prem hosting?</summary>
+            <summary>Who is responsible for recording consent?</summary>
             <div className="marketing-qa-panel">
               <p>
-                No. Not today. Hosting is North America by default. A different region is only by
-                written agreement. We do not have SSO, a HIPAA business associate agreement, or an
-                on-prem install.
+                You are. Upload only calls and emails you already have the right to use. We do not
+                join the meeting, and we do not check consent for you.
+              </p>
+            </div>
+          </details>
+
+          <div className="marketing-qa-group">
+            <h3>Not offered today</h3>
+            <p>If we do not have it, we say so.</p>
+          </div>
+          <details className="marketing-qa-item">
+            <summary>Do you have SSO or a HIPAA agreement?</summary>
+            <div className="marketing-qa-panel">
+              <p>
+                No SSO and no HIPAA business associate agreement on this hosted app. Hosting here is
+                North America by default. A different region is only by written agreement. A standalone
+                install is separate: the company runs this same app on their server and their database.
+                The company key does not create it.
               </p>
             </div>
           </details>
@@ -454,69 +570,10 @@ export default function MarketingHome({
               </p>
             </div>
           </details>
-          <details className="marketing-qa-item">
-            <summary>Do you read our whole inbox?</summary>
-            <div className="marketing-qa-panel">
-              <p>
-                No. Mailbox connect is read-only. You search a deal and attach that thread. No silent
-                scrape.
-              </p>
-            </div>
-          </details>
-          <details className="marketing-qa-item">
-            <summary>Will reps have to upload another tool?</summary>
-            <div className="marketing-qa-panel">
-              <p>
-                No. A manager can drop the file for the team. A rep can also run the one deal they are
-                trying to save. Either way, it is not a new daily tool.
-              </p>
-            </div>
-          </details>
-          <details className="marketing-qa-item">
-            <summary>Do you replace our recorder or our CRM?</summary>
-            <div className="marketing-qa-panel">
-              <p>
-                No. Keep the recorder and the CRM. Lazarus reads what you already have and says
-                whether the deal is recoverable, what is blocking it, and what to do next.
-              </p>
-            </div>
-          </details>
-          <details className="marketing-qa-item">
-            <summary>Do you email buyers or close the deal for us?</summary>
-            <div className="marketing-qa-panel">
-              <p>
-                No. Lazarus does not write outreach, email buyers, or close the deal. A person still
-                runs it.
-              </p>
-            </div>
-          </details>
-          <details className="marketing-qa-item">
-            <summary>Do you promise the deal will close?</summary>
-            <div className="marketing-qa-panel">
-              <p>
-                No. The brief is something you can defend in the forecast. You still decide. We do
-                not promise a deal will close.
-              </p>
-            </div>
-          </details>
-          <details className="marketing-qa-item">
-            <summary>Who is responsible for recording consent?</summary>
-            <div className="marketing-qa-panel">
-              <p>
-                You are. Upload only calls and emails you already have the right to use. We do not
-                join the meeting, and we do not check consent for you.
-              </p>
-            </div>
-          </details>
-          <details className="marketing-qa-item">
-            <summary>Will this write over HubSpot or Salesforce?</summary>
-            <div className="marketing-qa-panel">
-              <p>
-                No, not on its own. HubSpot and Salesforce stay read-only until someone pushes the
-                plan.
-              </p>
-            </div>
-          </details>
+          <div className="marketing-qa-group">
+            <h3>Price</h3>
+            <p>You pay per deal, not per person.</p>
+          </div>
           <details className="marketing-qa-item">
             <summary>Do we pay per person?</summary>
             <div className="marketing-qa-panel">

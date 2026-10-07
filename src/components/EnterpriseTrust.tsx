@@ -4,15 +4,15 @@ import { TRUST_PACK_NAV } from "../lib/trustPack";
 const TRUST_PILLARS = [
   {
     title: "Your data stays yours",
-    body: "The call, the email, and the CRM notes are read to write the report and are not saved. Your system can keep that evidence. The portal keeps the score and the rescue tasks.",
+    body: "The call is sent here to be read. We save the report. We do not save the transcript. Your system can keep the recording.",
   },
   {
     title: "Locked down by default",
-    body: "TLS in transit. AES-256 at rest when stored. Raw audio is processed in memory — not saved to disk.",
+    body: "TLS in transit. AES-256 at rest when stored. We do not save the audio.",
   },
   {
     title: "Each customer walled off",
-    body: "Each company only sees its own reports. A company key lets their server send a deal in. Admin keys never ship to the browser.",
+    body: "This website is the hosted app. Each company only sees its own reports. A company key posts the deal here. A standalone install is the same app on the company’s server and their database.",
   },
 ];
 
