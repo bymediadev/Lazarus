@@ -11,6 +11,21 @@ import {
 type Mode = "signin" | "signup" | "reset";
 type ProviderId = "google" | "hubspot" | "salesforce";
 
+function providerLoginError(provider: ProviderId, reason: string): string {
+  if (reason === "tls_certificate" || reason === "token_exchange") {
+    return provider === "google"
+      ? "Google sign-in failed on this machine (TLS). Use email + password, or fix Windows CA certs."
+      : `Sign-in failed (${reason}). Try again.`;
+  }
+  if (reason === "account_exists") {
+    return "An account with this email already exists. Sign in with email and password.";
+  }
+  if (reason === "ops_password_only") {
+    return "This email signs in with a password.";
+  }
+  return `Sign-in failed (${reason}). Try again.`;
+}
+
 export type LoginScreenProps = {
   /** When set, render as a dismissible overlay over the product. */
   onClose?: () => void;
@@ -118,10 +133,7 @@ export default function LoginScreen({
       if (outcome === "error") {
         pendingProviderRef.current = null;
         const reason = params.get("reason") ?? "oauth";
-        const friendly =
-          provider === "google" && (reason === "tls_certificate" || reason === "token_exchange")
-            ? "Google sign-in failed on this machine (TLS). Use email + password, or fix Windows CA certs."
-            : `Sign-in failed (${reason}). Try again.`;
+        const friendly = providerLoginError(provider, reason);
         setError(friendly);
         setNotice(null);
         setBusy(null);
@@ -157,10 +169,7 @@ export default function LoginScreen({
       if (detail.outcome === "error") {
         pendingProviderRef.current = null;
         const reason = detail.reason ?? "oauth";
-        const friendly =
-          reason === "tls_certificate" || reason === "token_exchange"
-            ? "Google sign-in failed on this machine (TLS). Use email + password, or fix Windows CA certs."
-            : `Sign-in failed (${reason}). Try again.`;
+        const friendly = providerLoginError(provider, reason);
         setError(friendly);
         setNotice(null);
         setBusy(null);

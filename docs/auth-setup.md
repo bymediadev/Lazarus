@@ -9,7 +9,7 @@ End users sign into **Lazarus Deal Recovery** — not the Supabase website. Supa
 | **Sign in / Create account** | Optional — header **Login** / **Sign up** open a portal. Guests get **5 free analyses** with no account. After the free five: buy a $10 report (checkout does not require signup) or wait until next month. Sign up only to **save** results. |
 | **Forgot password** | Server mints a recovery session (bypasses inbox rate limits) → **Save new password** screen. Best-effort email still attempted when the mailer allows it. |
 | **Account portal** | Signed-in users: view email, change password, sign out |
-| **Google / Salesforce** | OAuth popup → session only when the provider marks the email verified and the subject is already bound, or the email is unused |
+| **Google / Salesforce** | OAuth popup → session when the provider marks the email verified. A new subject is bound to the existing account with that email. Ops emails stay on password. |
 | **HubSpot** | Connect from the deal workspace. It does not sign you in |
 
 ### Guest freemium

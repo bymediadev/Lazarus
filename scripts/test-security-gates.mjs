@@ -725,14 +725,25 @@ const oauthBase = {
   identityUserId: null,
   identityIsOps: false,
   emailOwnerUserId: null,
+  emailOwnerIsOps: false,
 };
 check(
   "oauth refuses an unverified email",
   decideOAuthLogin({ ...oauthBase, emailVerified: false }).ok === false
 );
 check(
-  "oauth refuses an email that already belongs to an account",
-  decideOAuthLogin({ ...oauthBase, emailOwnerUserId: "other-user" }).reason === "account_exists"
+  "oauth links a verified provider to the existing account",
+  decideOAuthLogin({ ...oauthBase, emailOwnerUserId: "other-user" }).mode === "link"
+);
+check(
+  "oauth refuses to link an ops account",
+  decideOAuthLogin({ ...oauthBase, emailOwnerUserId: "ops-user", emailOwnerIsOps: true }).reason ===
+    "ops_password_only"
+);
+check(
+  "oauth refuses an unverified email even when the account exists",
+  decideOAuthLogin({ ...oauthBase, emailVerified: false, emailOwnerUserId: "other-user" }).reason ===
+    "email_unverified"
 );
 check(
   "oauth refuses an ops allowlist email",

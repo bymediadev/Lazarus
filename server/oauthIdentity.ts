@@ -3,6 +3,7 @@ export type OAuthLoginReason = "email_unverified" | "ops_password_only" | "accou
 export type OAuthLoginDecision =
   | { ok: false; reason: OAuthLoginReason }
   | { ok: true; mode: "existing"; userId: string }
+  | { ok: true; mode: "link"; userId: string }
   | { ok: true; mode: "create" };
 
 export class OAuthLoginError extends Error {
@@ -17,7 +18,8 @@ export class OAuthLoginError extends Error {
 
 /**
  * OAuth may mint a session only for a verified provider subject.
- * An email match without that subject is a refusal, not a login.
+ * That subject may claim an existing non-ops account with the same email.
+ * An unverified email is a refusal, not a login.
  */
 export function decideOAuthLogin(input: {
   emailVerified: boolean;
@@ -27,6 +29,7 @@ export function decideOAuthLogin(input: {
   identityUserId: string | null;
   identityIsOps: boolean;
   emailOwnerUserId: string | null;
+  emailOwnerIsOps: boolean;
 }): OAuthLoginDecision {
   const email = input.email.trim().toLowerCase();
   const sub = input.providerSub.trim();
@@ -39,7 +42,10 @@ export function decideOAuthLogin(input: {
     if (input.identityIsOps) return { ok: false, reason: "ops_password_only" };
     return { ok: true, mode: "existing", userId: input.identityUserId };
   }
-  if (input.emailOwnerUserId) return { ok: false, reason: "account_exists" };
+  if (input.emailOwnerUserId) {
+    if (input.emailOwnerIsOps) return { ok: false, reason: "ops_password_only" };
+    return { ok: true, mode: "link", userId: input.emailOwnerUserId };
+  }
   return { ok: true, mode: "create" };
 }
 

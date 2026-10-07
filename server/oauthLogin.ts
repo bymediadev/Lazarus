@@ -92,6 +92,11 @@ export async function createVerifiedSupabaseSession(input: {
     identityIsOps = isOpsUser(bound);
   }
   const emailOwnerUserId = boundUserId ? null : ((await findUserIdByEmail(admin, email)) ?? null);
+  let emailOwnerIsOps = false;
+  if (emailOwnerUserId) {
+    const owner = await userById(admin, emailOwnerUserId);
+    emailOwnerIsOps = isOpsUser(owner);
+  }
   const decision = decideOAuthLogin({
     emailVerified: input.emailVerified,
     providerSub,
@@ -100,11 +105,17 @@ export async function createVerifiedSupabaseSession(input: {
     identityUserId: boundUserId,
     identityIsOps,
     emailOwnerUserId,
+    emailOwnerIsOps,
   });
   if (!decision.ok) throw new OAuthLoginError(decision.reason);
 
-  let userId = decision.mode === "existing" ? decision.userId : "";
-  if (decision.mode === "create") {
+  let userId = "";
+  if (decision.mode === "link") {
+    userId = decision.userId;
+    await bindIdentity(input.provider, providerSub, userId);
+  } else if (decision.mode === "existing") {
+    userId = decision.userId;
+  } else {
     const created = await admin.auth.admin.createUser({
       email,
       email_confirm: true,
