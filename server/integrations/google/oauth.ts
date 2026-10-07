@@ -16,6 +16,78 @@ interface TokenResponse {
   refresh_token?: string;
   expires_in: number;
   token_type: string;
+  id_token?: string;
+}
+
+export interface GoogleIdentity {
+  email?: string;
+  email_verified: boolean;
+  provider_sub?: string;
+}
+
+function verifiedFlag(value: unknown): boolean | null {
+  if (value === true || value === "true") return true;
+  if (value === false || value === "false") return false;
+  return null;
+}
+
+function claimsIdentity(raw: unknown): GoogleIdentity {
+  const claims = raw && typeof raw === "object" ? (raw as Record<string, unknown>) : {};
+  const email = typeof claims.email === "string" ? claims.email.trim() : "";
+  const subRaw = claims.sub ?? claims.id;
+  const providerSub = subRaw == null ? "" : String(subRaw).trim();
+  const verified = verifiedFlag(claims.email_verified) ?? verifiedFlag(claims.verified_email);
+  return {
+    email: email || undefined,
+    email_verified: verified === true,
+    provider_sub: providerSub || undefined,
+  };
+}
+
+/** Payload only. The token came from Google's token endpoint, not the browser. */
+function identityFromIdToken(idToken: string | undefined, audience: string): GoogleIdentity {
+  const empty: GoogleIdentity = { email_verified: false };
+  if (!idToken || !audience) return empty;
+  const payload = idToken.split(".")[1];
+  if (!payload) return empty;
+  try {
+    const b64 = payload.replace(/-/g, "+").replace(/_/g, "/");
+    const padded = b64 + "=".repeat((4 - (b64.length % 4)) % 4);
+    const json = Buffer.from(padded, "base64").toString("utf8");
+    const claims = JSON.parse(json) as Record<string, unknown>;
+    const iss = claims.iss;
+    if (iss !== "https://accounts.google.com" && iss !== "accounts.google.com") return empty;
+    const aud = claims.aud;
+    const audiences = Array.isArray(aud) ? aud.map(String) : [String(aud ?? "")];
+    if (!audiences.includes(audience)) return empty;
+    return claimsIdentity(claims);
+  } catch {
+    return empty;
+  }
+}
+
+/**
+ * Login scopes are OpenID, but the v2 userinfo endpoint uses `verified_email` and `id`.
+ * The OIDC userinfo endpoint and the ID token use `email_verified` and `sub`.
+ */
+export function readGoogleIdentity(input: {
+  userinfo?: unknown;
+  idToken?: string;
+  audience: string;
+}): GoogleIdentity {
+  const fromUserinfo = claimsIdentity(input.userinfo);
+  const fromToken = identityFromIdToken(input.idToken, input.audience);
+  const userinfoVerified = verifiedFlag(
+    input.userinfo && typeof input.userinfo === "object"
+      ? (input.userinfo as Record<string, unknown>).email_verified ??
+          (input.userinfo as Record<string, unknown>).verified_email
+      : undefined
+  );
+  return {
+    email: fromUserinfo.email ?? fromToken.email,
+    email_verified: (userinfoVerified ?? fromToken.email_verified) === true,
+    provider_sub: fromUserinfo.provider_sub ?? fromToken.provider_sub,
+  };
 }
 
 export function buildGoogleAuthorizeUrl(
@@ -79,35 +151,30 @@ export async function exchangeGoogleCode(
     );
   }
 
-  let account_email: string | undefined;
-  let email_verified = false;
-  let provider_sub: string | undefined;
+  let userinfo: unknown = null;
   try {
     const userRes = await secureFetch(USERINFO_URL, {
       headers: { Authorization: `Bearer ${data.access_token}` },
     });
-    if (userRes.ok) {
-      const user = (await userRes.json()) as {
-        email?: string;
-        email_verified?: boolean;
-        sub?: string;
-      };
-      account_email = user.email;
-      email_verified = user.email_verified === true;
-      provider_sub = typeof user.sub === "string" ? user.sub : undefined;
-    }
-  } catch {
-    /* optional */
+    if (userRes.ok) userinfo = await userRes.json();
+    else console.warn("[google-oauth] userinfo failed:", userRes.status);
+  } catch (err) {
+    console.warn("[google-oauth] userinfo failed:", err instanceof Error ? err.message : err);
   }
+  const identity = readGoogleIdentity({
+    userinfo,
+    idToken: data.id_token,
+    audience: cfg.clientId,
+  });
 
   const existing = userId ? loadGoogleTokens(userId) : null;
   const record: GoogleTokenRecord = {
     access_token: data.access_token,
     refresh_token: data.refresh_token ?? existing?.refresh_token ?? "",
     expires_at: new Date(Date.now() + data.expires_in * 1000).toISOString(),
-    account_email,
-    email_verified,
-    provider_sub,
+    account_email: identity.email,
+    email_verified: identity.email_verified,
+    provider_sub: identity.provider_sub,
     connected_at: new Date().toISOString(),
   };
   if (userId) saveGoogleTokens(userId, record);

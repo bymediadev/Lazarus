@@ -17,6 +17,7 @@ import {
   sealSalesforcePkceCookie,
 } from "../server/integrations/salesforce/pkce.ts";
 import { buildSalesforceAuthorizeUrl } from "../server/integrations/salesforce/oauth.ts";
+import { readGoogleIdentity } from "../server/integrations/google/oauth.ts";
 import {
   isDemoUsageBypassAllowed,
   isAnonymousGuestRateLimited,
@@ -736,6 +737,56 @@ check(
 check(
   "oauth refuses an ops allowlist email",
   decideOAuthLogin({ ...oauthBase, email: "ops@example.com" }).reason === "ops_password_only"
+);
+
+const v2Profile = readGoogleIdentity({
+  userinfo: { id: "google-subject", email: "rep@gmail.com", verified_email: true },
+  audience: "client-id",
+});
+check(
+  "google v2 userinfo counts as a verified subject",
+  v2Profile.email_verified === true &&
+    v2Profile.provider_sub === "google-subject" &&
+    v2Profile.email === "rep@gmail.com"
+);
+check(
+  "google userinfo without a verified flag stays unverified",
+  readGoogleIdentity({
+    userinfo: { id: "google-subject", email: "rep@gmail.com" },
+    audience: "client-id",
+  }).email_verified === false
+);
+
+function googleIdToken(claims) {
+  const payload = Buffer.from(JSON.stringify(claims)).toString("base64url");
+  return `header.${payload}.sig`;
+}
+const fromIdToken = readGoogleIdentity({
+  idToken: googleIdToken({
+    iss: "https://accounts.google.com",
+    aud: "client-id",
+    sub: "token-subject",
+    email: "rep@gmail.com",
+    email_verified: true,
+  }),
+  audience: "client-id",
+});
+check(
+  "google id token fills identity when userinfo is missing",
+  fromIdToken.email_verified === true && fromIdToken.provider_sub === "token-subject"
+);
+check(
+  "google id token for another client is ignored",
+  readGoogleIdentity({
+    idToken: googleIdToken({
+      iss: "https://accounts.google.com",
+      aud: "other-client",
+      sub: "token-subject",
+      email: "rep@gmail.com",
+      email_verified: true,
+    }),
+    audience: "client-id",
+  }).email_verified === false
 );
 
 const prevBypass = process.env.GUEST_USAGE_DEMO_BYPASS;

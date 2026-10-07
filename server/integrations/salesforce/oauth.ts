@@ -46,13 +46,15 @@ async function fetchUserIdentity(
     if (!res.ok) return { email_verified: false };
     const data = (await res.json()) as {
       email?: string;
-      email_verified?: boolean;
+      email_verified?: boolean | string;
       user_id?: string;
+      sub?: string;
     };
+    const subject = (data.user_id ?? data.sub ?? "").trim();
     return {
       email: data.email?.trim() || undefined,
-      email_verified: data.email_verified === true,
-      provider_sub: data.user_id?.trim() || undefined,
+      email_verified: data.email_verified === true || data.email_verified === "true",
+      provider_sub: subject || undefined,
     };
   } catch {
     return { email_verified: false };
