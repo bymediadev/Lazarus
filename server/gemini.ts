@@ -23,6 +23,7 @@ import {
   buildDependencyGraph,
   dedupeCouplings,
   deriveCanonicalState,
+  lockForcesToTranscript,
   deriveProprietaryIndices,
   type CanonicalEquilibrium,
   type CanonicalTrajectory,
@@ -286,10 +287,12 @@ function applyCanonicalScoring(result: EnterpriseAnalysis, transcript: string): 
     derived_from: f.derived_from,
     evidence: f.evidence,
   }));
+  const scoringForces = lockForcesToTranscript(transcript, rawForces);
+  const scoringLocked = scoringForces !== rawForces;
 
   const { causal, frozen } = deriveCanonicalState(
-    rawForces,
-    result.force_initialization.blocker_classification
+    scoringForces,
+    scoringLocked ? "MIXED" : result.force_initialization.blocker_classification
   );
 
   const dominant = causal.forces

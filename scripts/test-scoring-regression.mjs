@@ -2,6 +2,7 @@ import {
   deriveCanonicalState,
   deriveProprietaryIndices,
   computeDialogueStallSignals,
+  lockForcesToTranscript,
 } from "../server/scoring.ts";
 import { readFileSync } from "fs";
 
@@ -201,5 +202,41 @@ if (stall.deferral_phrase_count < 2) {
   failed = true;
 }
 
+const alexTranscript = [
+  "David: It's higher than I thought.",
+  "David: Not necessarily impossible.",
+  "David: I just need to justify it.",
+  "David: If this can absorb some of that workload, that's a much stronger argument internally.",
+  "David: I buy it if it helps me run the operation with fewer resources.",
+].join("\n");
+const alexRunA = [
+  { factor: "Budget gap", type: "Constraint", weight: 70, evidence: "It's higher than I thought." },
+  { factor: "COO justification", type: "Behavioral", weight: 80, evidence: "I need to show reduced operating costs." },
+  { factor: "Headcount", type: "Intent", weight: 85, evidence: "not add another operations analyst" },
+  { factor: "ROI offer", type: "Enabler", weight: 60, evidence: "We can put together an ROI model." },
+];
+const alexRunB = [
+  { factor: "Budget Expectation Gap", type: "Constraint", weight: 75, evidence: "It's higher than I thought." },
+  { factor: "Need for ROI Justification", type: "Constraint", weight: 90, evidence: "I just need to justify it." },
+  { factor: "Headcount Avoidance Mandate", type: "Constraint", weight: 85, evidence: "not add another operations analyst" },
+  { factor: "Platform value", type: "Enabler", weight: 80, evidence: "The platform itself is impressive." },
+  { factor: "Efficiency", type: "Intent", weight: 90, evidence: "fewer resources" },
+];
+const alexA = deriveCanonicalState(lockForcesToTranscript(alexTranscript, alexRunA), "MIXED").frozen;
+const alexB = deriveCanonicalState(lockForcesToTranscript(alexTranscript, alexRunB), "MIXED").frozen;
+if (alexA.viability_score !== alexB.viability_score) {
+  console.error("FAIL: same transcript produced", alexA.viability_score, "and", alexB.viability_score);
+  failed = true;
+}
+if (alexA.viability_score < 50 || alexA.viability_score > 70) {
+  console.error("FAIL: conditional-buy viability should stay recoverable, got", alexA.viability_score);
+  failed = true;
+}
+if (lockForcesToTranscript(sarahMarkTranscript, sarahMarkForces) !== sarahMarkForces) {
+  console.error("FAIL: authority-gap transcript should keep its own forces");
+  failed = true;
+}
+
 if (failed) process.exit(1);
 console.log("\nSCORING + DRI REGRESSION OK");
+console.log("  replay viability:", alexA.viability_score, alexA.trajectory_type);

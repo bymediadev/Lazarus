@@ -83,6 +83,87 @@ function normalizeText(s: string): string {
   return s.toLowerCase().replace(/[^a-z0-9\s]/g, " ");
 }
 
+const CONDITIONAL_BUY = [
+  "need to justify",
+  "if this can",
+  "i buy it if",
+  "not necessarily impossible",
+  "fewer resources",
+  "not add another",
+  "stronger argument",
+  "take it to the",
+];
+
+const SOFT_FRICTION = ["higher than i thought", "higher than expected", "higher than we expected"];
+
+const HARD_LOCK = [
+  "freeze",
+  "frozen",
+  "audit",
+  "veto",
+  "no budget",
+  "won t proceed",
+  "will not proceed",
+  "not moving this forward",
+  "not moving forward",
+  "cannot proceed",
+  "can t proceed",
+  "signing authority",
+  "pull the plug",
+];
+
+function lineContaining(transcript: string, needle: string): string {
+  const lines = transcript.split(/\r?\n/);
+  const hit = lines.find((line) => normalizeText(line).includes(needle));
+  return (hit ?? needle).trim();
+}
+
+/**
+ * Same transcript, no new evidence: the model may relabel a buying condition
+ * as a hard constraint and drop viability to 0. Lock that pattern to fixed inputs.
+ * A real lock (freeze, audit, no authority) still uses the model's forces.
+ */
+export function lockForcesToTranscript(
+  transcript: string,
+  forces: ScoringForce[]
+): ScoringForce[] {
+  const text = normalizeText(transcript);
+  if (HARD_LOCK.some((phrase) => text.includes(phrase))) return forces;
+  const conditionalPhrase = CONDITIONAL_BUY.find((phrase) => text.includes(phrase));
+  const soft = SOFT_FRICTION.some((phrase) => text.includes(phrase));
+  if (!conditionalPhrase) return forces;
+  const commitment = lineContaining(transcript, conditionalPhrase);
+
+  const locked: ScoringForce[] = [];
+  if (soft) {
+    locked.push({
+      factor: "Price is above what the buyer expected",
+      type: "Constraint",
+      weight: 60,
+      role: "independent",
+      derived_from: [],
+      evidence: lineContaining(transcript, "higher than"),
+    });
+  }
+  locked.push({
+    factor: "Buyer will move forward with a business case",
+    type: "Intent",
+    weight: 75,
+    role: "independent",
+    derived_from: [],
+    evidence: commitment,
+  });
+  locked.push({
+    factor: "Internal path is open if the case is real",
+    type: "Enabler",
+    weight: 50,
+    role: "independent",
+    derived_from: [],
+    evidence: commitment,
+  });
+  return locked;
+}
+
 function maxWeight(forces: ScoringForce[], type: string): number {
   const weights = forces
     .filter((f) => f.type.toLowerCase() === type.toLowerCase())
