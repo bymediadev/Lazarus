@@ -3428,44 +3428,48 @@ a.run-button:hover {
   padding-left: 1.2rem;
 }
 
-.force-equilibrium-svg {
+.viability-line {
+  margin: 0;
+}
+
+.viability-line-caption {
+  margin: 0 0 0.25rem;
+  font-size: 0.95rem;
+  font-weight: 700;
+}
+
+.viability-line-svg {
   width: 100%;
   max-width: 440px;
   height: auto;
 }
 
-.force-equilibrium-link {
+.viability-line-grid {
   stroke: var(--panel-border);
   stroke-width: 1;
 }
 
-.force-equilibrium-node {
-  cursor: pointer;
-  outline: none;
+.viability-line-path {
+  fill: none;
+  stroke: var(--emerald);
+  stroke-width: 2.5;
+  stroke-linejoin: round;
+  stroke-linecap: round;
 }
 
-.force-equilibrium-node:focus {
-  stroke: var(--text);
-  stroke-width: 2;
+.viability-line-dot {
+  fill: var(--emerald);
 }
 
-.force-equilibrium-deal {
-  fill: var(--panel);
-  stroke: var(--text);
-  stroke-width: 1.5;
-}
-
-.force-equilibrium-deal-label,
-.force-equilibrium-deal-score {
+.viability-line-value,
+.viability-line-axis {
   fill: var(--text);
   font-size: 11px;
   font-family: var(--mono);
 }
 
-.force-equilibrium-caption {
-  margin: 0.35rem 0 0;
-  color: var(--muted);
-  font-size: 0.85rem;
+.viability-line-axis {
+  fill: var(--muted);
 }
 
 .force-emerald {

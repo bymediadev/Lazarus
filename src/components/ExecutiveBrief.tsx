@@ -1,4 +1,4 @@
-import ForceEquilibriumChart from "./ForceEquilibriumChart";
+import ViabilityLineChart from "./ViabilityLineChart";
 import { uniqueActionSteps } from "../lib/actionSteps";
 import { mergeOverlappingQuotes } from "../lib/evidenceQuotes";
 import { forecastGuidance } from "../lib/forecastCall";
@@ -84,9 +84,17 @@ export default function ExecutiveBrief({ result }: Props) {
 
   return (
     <section className="executive-brief" aria-label="Executive brief">
-      <ForceEquilibriumChart
-        forces={result.causal_forces ?? []}
-        effectiveIntent={result.buyer_state?.effective_intent ?? 0}
+      <ViabilityLineChart
+        points={
+          (result.resolution_cycles?.cycles ?? []).length > 0
+            ? (result.resolution_cycles?.cycles ?? []).map((cycle) => ({
+                label: String(cycle.cycle),
+                value: cycle.state_snapshot.viability_score,
+              }))
+            : viability !== undefined
+              ? [{ label: "Now", value: viability }]
+              : []
+        }
       />
 
       <div className="executive-brief-status">
