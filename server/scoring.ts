@@ -1079,20 +1079,63 @@ function recoverableTrack(frozen: FrozenDerivation): boolean {
   );
 }
 
-function riskTerms(frozen: FrozenDerivation, dispersion: number, stallScore: number) {
+export type DealRiskInputs = Pick<
+  FrozenDerivation,
+  | "viability_score"
+  | "constraint_pressure"
+  | "structural_lock_in"
+  | "enabler_strength"
+  | "timing_factor"
+  | "trajectory_type"
+>;
+
+/**
+ * One reporting equation for every transcript:
+ * 0.30×(100−viability) + 0.25×constraint + 0.15×structural + 0.20×dispersion
+ * + 0.10×stall + timing penalty − 0.15×enabler.
+ * The printed terms are the values that are summed.
+ */
+export function compileDealRiskReport(
+  frozen: DealRiskInputs,
+  dispersion: number,
+  stallScore: number
+): {
+  deal_risk_index: number;
+  formula: string;
+  timingPenalty: number;
+  stallContribution: number;
+} {
   const timingPenalty =
     frozen.timing_factor <= 5 && frozen.constraint_pressure > 40 ? 10 : 0;
   const stallContribution = recoverableTrack(frozen) ? Math.min(stallScore, 40) : stallScore;
+  const terms: { text: string; value: number }[] = [
+    {
+      text: `0.30×(100−${frozen.viability_score})`,
+      value: (100 - frozen.viability_score) * 0.3,
+    },
+    {
+      text: `0.25×${frozen.constraint_pressure}`,
+      value: frozen.constraint_pressure * 0.25,
+    },
+    {
+      text: `0.15×${frozen.structural_lock_in}`,
+      value: frozen.structural_lock_in * 0.15,
+    },
+    {
+      text: `0.20×${dispersion}`,
+      value: dispersion * 0.2,
+    },
+    {
+      text: `0.10×${stallContribution}`,
+      value: stallContribution * 0.1,
+    },
+  ];
+  if (timingPenalty > 0) terms.push({ text: "timing_penalty(10)", value: timingPenalty });
   const deal_risk_index = clamp(
-    (100 - frozen.viability_score) * 0.3 +
-      frozen.constraint_pressure * 0.25 +
-      frozen.structural_lock_in * 0.15 +
-      dispersion * 0.2 +
-      stallContribution * 0.1 +
-      timingPenalty -
-      frozen.enabler_strength * 0.15
+    terms.reduce((sum, term) => sum + term.value, 0) - frozen.enabler_strength * 0.15
   );
-  return { timingPenalty, stallContribution, deal_risk_index };
+  const formula = `DRI ${deal_risk_index} = ${terms.map((term) => term.text).join(" + ")} − 0.15×${frozen.enabler_strength}`;
+  return { timingPenalty, stallContribution, deal_risk_index, formula };
 }
 
 /** Deal Risk Index — higher = more stall/recovery risk. Proprietary composite, not LLM-derived. */
@@ -1101,7 +1144,7 @@ export function computeDealRiskIndex(
   dispersion: StakeholderDispersion,
   stall: DialogueStallSignals
 ): number {
-  return riskTerms(frozen, dispersion.index, stall.score).deal_risk_index;
+  return compileDealRiskReport(frozen, dispersion.index, stall.score).deal_risk_index;
 }
 
 export function deriveProprietaryIndices(
@@ -1111,23 +1154,14 @@ export function deriveProprietaryIndices(
 ): ProprietaryIndices {
   const stakeholder_dispersion = computeStakeholderDispersion(stakeholders);
   const dialogue_stall = computeDialogueStallSignals(transcript);
-  const { timingPenalty, stallContribution, deal_risk_index } = riskTerms(
+  const { deal_risk_index, formula: equation } = compileDealRiskReport(
     frozen,
     stakeholder_dispersion.index,
     dialogue_stall.score
   );
   const risk_tier = riskTier(deal_risk_index);
-  const arithmetic = [
-    `0.30×(100−${frozen.viability_score})`,
-    `0.25×${frozen.constraint_pressure}`,
-    `0.15×${frozen.structural_lock_in}`,
-    `0.20×${stakeholder_dispersion.index}`,
-    `0.10×${stallContribution}`,
-  ];
-  if (timingPenalty > 0) arithmetic.push("timing_penalty(10)");
-
   const formula = [
-    `DRI ${deal_risk_index} = ${arithmetic.join(" + ")} − 0.15×${frozen.enabler_strength}`,
+    equation,
     `Tier: ${risk_tier} | Authority gap: ${stakeholder_dispersion.authority_gap}`,
   ].join(" | ");
 

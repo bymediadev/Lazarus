@@ -1,9 +1,11 @@
 import {
   deriveCanonicalState,
   deriveProprietaryIndices,
+  compileDealRiskReport,
   computeDialogueStallSignals,
   lockForcesToTranscript,
 } from "../server/scoring.ts";
+import { statusFromTrajectory } from "../server/gemini.ts";
 import { commercialBaselineFromText } from "../src/lib/commercialBaseline.ts";
 import { forecastGuidance, NON_VIABLE_FORECAST_LINE } from "../src/lib/forecastCall.ts";
 import { mergeOverlappingQuotes } from "../src/lib/evidenceQuotes.ts";
@@ -327,6 +329,23 @@ if (replayWithCrm(pilotNote, [
   failed = true;
 }
 
+function cycleViabilities(frozen) {
+  return (frozen.resolution_cycles?.cycles ?? []).map((cycle) => cycle.state_snapshot?.viability_score);
+}
+
+function assertFlatRecoverablePath(label, scores) {
+  if (scores.length !== 3 || scores.some((score) => !Number.isFinite(score))) {
+    console.error(`FAIL: ${label} should plot three viability points, got`, scores);
+    return false;
+  }
+  const spread = Math.max(...scores) - Math.min(...scores);
+  if (scores.some((score) => score <= 0) || spread > 8 || scores[2] <= 0) {
+    console.error(`FAIL: ${label} path should stay flat and above zero, got`, scores.join(" → "));
+    return false;
+  }
+  return true;
+}
+
 function evalDriFormula(formula) {
   const rhs = formula.split("=")[1]?.split("|")[0] ?? "";
   const expr = rhs
@@ -463,6 +482,30 @@ try {
   console.error("FAIL: Northline DRI formula could not be evaluated", err);
   failed = true;
 }
+if (!northlinePi.formula.includes("timing_penalty(10)")) {
+  console.error("FAIL: Northline formula should print the timing penalty", northlinePi.formula);
+  failed = true;
+}
+const northlinePath = cycleViabilities(northline);
+if (northlinePath[2] !== northline.viability_score || !assertFlatRecoverablePath("Northline", northlinePath)) {
+  if (northlinePath[2] !== northline.viability_score) {
+    console.error("FAIL: Northline final cycle should equal viability", northlinePath, northline.viability_score);
+  }
+  failed = true;
+}
+if (statusFromTrajectory(northline.trajectory_type, "STALLED — HIGH RISK") !== "STALLED — RECOVERABLE") {
+  console.error("FAIL: Northline status should follow the recoverable trajectory");
+  failed = true;
+}
+const northlineForecast = forecastGuidance({
+  status: statusFromTrajectory(northline.trajectory_type, "STALLED — HIGH RISK"),
+  trajectory: northline.trajectory_type,
+  recoverability: northline.viability_score,
+});
+if (northlineForecast.removeFromForecast || !northlineForecast.line.includes("keep on forecast")) {
+  console.error("FAIL: Northline should stay on the forecast", northlineForecast);
+  failed = true;
+}
 
 const structuralDeathCase = {
   constraint: 0,
@@ -537,6 +580,118 @@ if (structuralDeath.causal.blocker_classification !== "STRUCTURAL LOCK-INS") {
 }
 if (!structuralDeathForecast.removeFromForecast || structuralDeathForecast.line !== NON_VIABLE_FORECAST_LINE) {
   console.error("FAIL: Structural death forecast line should remove the deal", structuralDeathForecast);
+  failed = true;
+}
+if (statusFromTrajectory(structuralDeathFrozen.trajectory_type, "STALLED — RECOVERABLE") !== "STALLED — HIGH RISK") {
+  console.error("FAIL: A locked trajectory should not keep a recoverable headline");
+  failed = true;
+}
+const structuralDeathPi = deriveProprietaryIndices(structuralDeathFrozen, [], "");
+if (structuralDeathPi.formula.includes("timing_penalty")) {
+  console.error("FAIL: Timing penalty should stay hidden when constraint is not above 40", structuralDeathPi.formula);
+  failed = true;
+}
+
+const suppressedNorthline = deriveCanonicalState(
+  [
+    {
+      factor: "Technical veto by VP of Infrastructure",
+      type: "Structural",
+      weight: 90,
+      evidence: "He signs off on the network. He missed the technical demo.",
+    },
+    {
+      factor: "VP sign-off still outstanding",
+      type: "Constraint",
+      weight: 80,
+      evidence: "Nothing moves until Dave reviews it.",
+    },
+    {
+      factor: "Budget modeled in range",
+      type: "Enabler",
+      weight: 85,
+      evidence: "The platform fee was modeled.",
+    },
+    {
+      factor: "Month-end unavailability",
+      type: "Timing",
+      weight: 70,
+      evidence: "He is underwater until month-end.",
+    },
+  ],
+  "STRUCTURAL LOCK-INS"
+);
+const suppressedFrozen = suppressedNorthline.frozen;
+const suppressedPath = cycleViabilities(suppressedFrozen);
+const suppressedPi = deriveProprietaryIndices(suppressedFrozen, [], "missed the technical demo");
+const suppressedForecast = forecastGuidance({
+  status: statusFromTrajectory(suppressedFrozen.trajectory_type, "STALLED — HIGH RISK"),
+  trajectory: suppressedFrozen.trajectory_type,
+  recoverability: suppressedFrozen.viability_score,
+});
+
+console.log("\n=== Northline suppressed: high constraint, temporary miss ===");
+console.log(
+  "  viability:",
+  suppressedFrozen.viability_score,
+  "path:",
+  suppressedPath.join(" → "),
+  "blocker:",
+  suppressedNorthline.causal.blocker_classification
+);
+
+if (suppressedNorthline.causal.blocker_classification !== "TEMPORARY BLOCKERS") {
+  console.error(
+    "FAIL: Suppressed Northline should be TEMPORARY BLOCKERS, got",
+    suppressedNorthline.causal.blocker_classification
+  );
+  failed = true;
+}
+if (suppressedFrozen.trajectory_type !== "DEFERRED (recoverable)") {
+  console.error(
+    "FAIL: Suppressed Northline should stay DEFERRED (recoverable), got",
+    suppressedFrozen.trajectory_type
+  );
+  failed = true;
+}
+if (suppressedFrozen.viability_score <= 0 || suppressedFrozen.viability_score > 40) {
+  console.error(
+    "FAIL: Suppressed Northline viability should stay above zero and below 40, got",
+    suppressedFrozen.viability_score
+  );
+  failed = true;
+}
+if (suppressedPath[2] !== suppressedFrozen.viability_score || !assertFlatRecoverablePath("Suppressed Northline", suppressedPath)) {
+  if (suppressedPath[2] !== suppressedFrozen.viability_score) {
+    console.error("FAIL: Suppressed Northline final cycle should equal viability", suppressedPath);
+  }
+  failed = true;
+}
+if (!suppressedPi.formula.includes("timing_penalty(10)")) {
+  console.error("FAIL: Suppressed Northline formula should print the timing penalty", suppressedPi.formula);
+  failed = true;
+}
+try {
+  const evaluated = evalDriFormula(suppressedPi.formula);
+  if (evaluated !== suppressedPi.deal_risk_index) {
+    console.error(
+      "FAIL: Suppressed Northline DRI formula evaluated to",
+      evaluated,
+      "but index is",
+      suppressedPi.deal_risk_index
+    );
+    failed = true;
+  }
+} catch (err) {
+  console.error("FAIL: Suppressed Northline DRI formula could not be evaluated", err);
+  failed = true;
+}
+if (statusFromTrajectory(suppressedFrozen.trajectory_type, "STALLED — HIGH RISK") !== "STALLED — RECOVERABLE") {
+  console.error("FAIL: Suppressed Northline status should follow the recoverable trajectory");
+  failed = true;
+}
+if (suppressedForecast.removeFromForecast) {
+  console.error("FAIL: Suppressed Northline should stay on the forecast", suppressedForecast);
   failed = true;
 }
 
@@ -632,6 +787,70 @@ if (northlineBaseline.owner !== "Sarah Chen") {
 if (northlineBaseline.target !== "Post Month-End Access") {
   console.error("FAIL: Northline target should be post month-end", northlineBaseline.target);
   failed = true;
+}
+
+const riskInputs = [];
+for (const viability_score of [0, 21, 52, 100]) {
+  for (const constraint_pressure of [0, 40, 41, 80, 90]) {
+    for (const structural_lock_in of [0, 79, 95]) {
+      for (const enabler_strength of [0, 39, 60, 85]) {
+        for (const timing_factor of [0, 5, 6, 20]) {
+          for (const trajectory_type of ["DEFERRED (recoverable)", "DEFERRED (locked)", "VALIDATED / VELOCITY"]) {
+            for (const dispersion of [0, 23, 34]) {
+              for (const stall of [0, 40, 89]) {
+                riskInputs.push({
+                  viability_score,
+                  constraint_pressure,
+                  structural_lock_in,
+                  enabler_strength,
+                  timing_factor,
+                  trajectory_type,
+                  dispersion,
+                  stall,
+                });
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}
+
+for (const input of riskInputs) {
+  const frozen = {
+    viability_score: input.viability_score,
+    constraint_pressure: input.constraint_pressure,
+    structural_lock_in: input.structural_lock_in,
+    enabler_strength: input.enabler_strength,
+    timing_factor: input.timing_factor,
+    trajectory_type: input.trajectory_type,
+  };
+  const report = compileDealRiskReport(frozen, input.dispersion, input.stall);
+  const repeat = compileDealRiskReport(frozen, input.dispersion, input.stall);
+  const penaltyApplies = input.timing_factor <= 5 && input.constraint_pressure > 40;
+  const shape = new RegExp(
+    `^DRI ${report.deal_risk_index} = 0\\.30×\\(100−${input.viability_score}\\) \\+ 0\\.25×${input.constraint_pressure} \\+ 0\\.15×${input.structural_lock_in} \\+ 0\\.20×${input.dispersion} \\+ 0\\.10×\\d+${penaltyApplies ? " \\+ timing_penalty\\(10\\)" : ""} − 0\\.15×${input.enabler_strength}$`
+  );
+  let evaluated;
+  try {
+    evaluated = evalDriFormula(report.formula);
+  } catch (err) {
+    console.error("FAIL: Reporting formula could not be evaluated", input, err);
+    failed = true;
+    break;
+  }
+  if (
+    evaluated !== report.deal_risk_index ||
+    report.formula !== repeat.formula ||
+    report.deal_risk_index !== repeat.deal_risk_index ||
+    !shape.test(report.formula) ||
+    penaltyApplies !== report.formula.includes("timing_penalty(10)")
+  ) {
+    console.error("FAIL: Reporting formula drifted from the index", input, report, evaluated);
+    failed = true;
+    break;
+  }
 }
 
 if (failed) process.exit(1);

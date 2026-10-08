@@ -280,7 +280,7 @@ function trajectoryDirection(t: CanonicalTrajectory): string {
   return "negative";
 }
 
-function statusFromTrajectory(
+export function statusFromTrajectory(
   trajectory: CanonicalTrajectory,
   modelStatus: EnterpriseDealStatus
 ): EnterpriseDealStatus {
