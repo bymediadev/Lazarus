@@ -462,8 +462,9 @@ function isAuthorityGapRecoverable(
   ) {
     return false;
   }
-  if (!(enabler >= 40 && structural < 80 && constraint >= 50)) return false;
+  if (enabler < 40) return false;
   if (b.includes("TEMPORARY")) return true;
+  if (!(structural < 80 && constraint >= 50)) return false;
   return constraint < 88;
 }
 
@@ -595,12 +596,32 @@ function snapshot(
   };
 }
 
+const CALENDAR_MISS = ["missed the", "couldn t join", "could not join", "underwater until", "reschedule"];
+const SYSTEM_LOCK = ["audit", "freeze", "frozen", "compliance", "permanent"];
+
+/** A missed meeting is a temporary blocker. An audit, freeze, or permanent lock stays structural. */
+export function resolveBlockerClassification(
+  blocker: string,
+  forces: ScoringForce[],
+  transcript = ""
+): string {
+  const blob = normalizeText(
+    [transcript, ...forces.map((force) => `${force.factor} ${force.evidence}`)].join(" ")
+  );
+  const systemLock = SYSTEM_LOCK.some((phrase) => blob.includes(phrase));
+  const calendarMiss = CALENDAR_MISS.some((phrase) => blob.includes(normalizeText(phrase)));
+  if (calendarMiss && !systemLock) return "TEMPORARY BLOCKERS";
+  return blocker;
+}
+
 export function deriveCanonicalState(
   rawForces: ScoringForce[],
-  blockerClassification = "MIXED"
+  blockerClassification = "MIXED",
+  transcript = ""
 ): { causal: CausalState; frozen: FrozenDerivation } {
+  const blocker = resolveBlockerClassification(blockerClassification, rawForces, transcript);
   const forces = mergeForces(rawForces);
-  const causal: CausalState = { forces, blocker_classification: blockerClassification };
+  const causal: CausalState = { forces, blocker_classification: blocker };
 
   const intent_strength = maxWeight(forces, "Intent");
   const constraint_pressure = maxWeight(forces, "Constraint");
@@ -620,7 +641,7 @@ export function deriveCanonicalState(
     structural_lock_in,
     constraint_pressure,
     enabler_strength,
-    blockerClassification
+    blocker
   );
   const equilibrium_state = equilibrium(structural_lock_in, constraint_pressure);
   const trajectory_type = trajectory(
@@ -628,7 +649,7 @@ export function deriveCanonicalState(
     constraint_pressure,
     structural_lock_in,
     enabler_strength,
-    blockerClassification
+    blocker
   );
   const viability_state = viabilityLabel(
     viability_score,
@@ -636,7 +657,7 @@ export function deriveCanonicalState(
     constraint_pressure,
     enabler_strength,
     trajectory_type,
-    blockerClassification
+    blocker
   );
   const buyer_intent_level = buyerIntentLevel(effective_intent);
   const decision_freedom = decisionFreedom(constraint_pressure);
@@ -647,7 +668,7 @@ export function deriveCanonicalState(
     clamp(structural_lock_in * 0.9),
     clamp(enabler_strength * 0.9),
     timing_factor,
-    blockerClassification
+    blocker
   );
   const c2 = snapshot(
     intent_strength,
@@ -655,7 +676,7 @@ export function deriveCanonicalState(
     structural_lock_in,
     enabler_strength,
     timing_factor,
-    blockerClassification
+    blocker
   );
   const c3: CycleSnapshot = {
     constraint_pressure,

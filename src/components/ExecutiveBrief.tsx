@@ -1,5 +1,7 @@
 import ForceEquilibriumChart from "./ForceEquilibriumChart";
 import { uniqueActionSteps } from "../lib/actionSteps";
+import { mergeOverlappingQuotes } from "../lib/evidenceQuotes";
+import { forecastGuidance } from "../lib/forecastCall";
 import type { PostMortemResult } from "../types";
 
 interface Props {
@@ -13,24 +15,32 @@ function sentencesFrom(text: string): string[] {
     .filter(Boolean);
 }
 
+function labelKey(text: string): string {
+  return text
+    .toLowerCase()
+    .replace(/[^a-z0-9\s]/g, "")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
 function stallProse(result: PostMortemResult): string[] {
+  const forceNames = new Set(
+    (result.causal_forces ?? []).map((force) => labelKey(force.factor)).filter(Boolean)
+  );
+  const isForceName = (line: string) => forceNames.has(labelKey(line));
   const lines: string[] = [];
   const summary = result.executive_summary?.trim();
-  if (summary) lines.push(...sentencesFrom(summary).slice(0, 2));
-
-  const breaker = result.equilibrium_analysis?.equilibrium_breaker?.trim();
-  if (breaker && !lines.some((line) => line.toLowerCase().includes(breaker.toLowerCase()))) {
-    lines.push(/[.!?]$/.test(breaker) ? breaker : `${breaker}.`);
+  if (summary) {
+    lines.push(...sentencesFrom(summary).filter((line) => !isForceName(line)).slice(0, 2));
   }
 
-  const constraint = (result.causal_forces ?? []).find((force) => force.type === "Constraint");
+  const breaker = result.equilibrium_analysis?.equilibrium_breaker?.trim();
   if (
-    constraint?.factor &&
-    lines.length < 4 &&
-    !lines.some((line) => line.toLowerCase().includes(constraint.factor.toLowerCase()))
+    breaker &&
+    !isForceName(breaker) &&
+    !lines.some((line) => line.toLowerCase().includes(breaker.toLowerCase()))
   ) {
-    const factor = constraint.factor.replace(/\.$/, "");
-    lines.push(`The binding constraint is ${factor}.`);
+    lines.push(/[.!?]$/.test(breaker) ? breaker : `${breaker}.`);
   }
 
   return lines.slice(0, 4);
@@ -51,7 +61,7 @@ function evidenceQuotes(result: PostMortemResult): string[] {
     seen.add(key);
     quotes.push(quote);
   }
-  return quotes.slice(0, 6);
+  return mergeOverlappingQuotes(quotes).slice(0, 6);
 }
 
 export default function ExecutiveBrief({ result }: Props) {
@@ -60,10 +70,17 @@ export default function ExecutiveBrief({ result }: Props) {
   const risk = result.proprietary_indices?.deal_risk_index;
   const prose = stallProse(result);
   const quotes = evidenceQuotes(result);
-  const steps = uniqueActionSteps([
-    ...(result.immediate_remediation ?? []),
-    ...(result.rescue_triage_plan?.immediate_0_30_days ?? []),
-  ]);
+  const guidance = forecastGuidance({
+    status: typeof status === "string" ? status : undefined,
+    trajectory: result.deal_trajectory?.trajectory_type,
+    recoverability: viability,
+  });
+  const steps = guidance.removeFromForecast
+    ? []
+    : uniqueActionSteps([
+        ...(result.immediate_remediation ?? []),
+        ...(result.rescue_triage_plan?.immediate_0_30_days ?? []),
+      ]);
 
   return (
     <section className="executive-brief" aria-label="Executive brief">
@@ -100,7 +117,9 @@ export default function ExecutiveBrief({ result }: Props) {
 
       <div className="executive-brief-actions">
         <h2>How to fix it</h2>
-        {steps.length === 0 ? (
+        {guidance.removeFromForecast ? (
+          <p>{guidance.line}</p>
+        ) : steps.length === 0 ? (
           <p>No immediate action was extracted from this brief.</p>
         ) : (
           <ol>

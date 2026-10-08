@@ -56,13 +56,11 @@ export default function ForceEquilibriumChart({ forces, effectiveIntent }: Props
           );
         })}
         <circle cx={cx} cy={cy} r={32} className="force-equilibrium-deal" />
-        <text x={cx} y={cy - 4} textAnchor="middle" className="force-equilibrium-deal-label">
-          Deal
-        </text>
-        <text x={cx} y={cy + 14} textAnchor="middle" className="force-equilibrium-deal-score">
+        <text x={cx} y={cy + 4} textAnchor="middle" className="force-equilibrium-deal-score">
           {effectiveIntent}
         </text>
       </svg>
+      <p className="force-equilibrium-caption">Deal Context: Effective Buyer Intent</p>
       {selected && (
         <blockquote className="force-equilibrium-evidence">
           {quote || selected.factor}

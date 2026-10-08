@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { uniqueActionSteps } from "../lib/actionSteps";
+import { forecastGuidance } from "../lib/forecastCall";
 import { formatCompressedCrmNotes } from "../lib/crmNotes";
 import { PostMortemResult, StakeholderSignal } from "../types";
 
@@ -29,19 +30,6 @@ function coreBlocker(result: PostMortemResult): string {
   );
 }
 
-function recoverableLine(trajectory: string): string {
-  if (/locked|NON-VIABLE|DEAD/i.test(trajectory)) {
-    return "Likely flat no for forecast — do not keep sandbagging without a force change.";
-  }
-  if (/recoverable/i.test(trajectory)) {
-    return "Recoverable with focused manager action — keep on forecast only if the plan is owned.";
-  }
-  if (/VELOCITY|ACTIVE/i.test(trajectory)) {
-    return "Moving / healthier path — protect momentum and clear open blockers.";
-  }
-  return "Judge recoverable vs flat no from the blocker and ownership before the next forecast call.";
-}
-
 function detractors(result: PostMortemResult): StakeholderSignal[] {
   return (result.stakeholders ?? []).filter((s) =>
     /hidden detractor|absent decision maker|technical_veto/i.test(
@@ -64,6 +52,11 @@ export default function FastFactsPanel({
 
   const status = result.deal_classification?.status ?? "UNKNOWN";
   const trajectory = result.deal_trajectory?.trajectory_type ?? "";
+  const guidance = forecastGuidance({
+    status,
+    trajectory,
+    recoverability: result.recoverability_score ?? result.viability_state?.viability_score,
+  });
   const blocker = coreBlocker(result);
   const vetoPeople = detractors(result);
   const plan = result.rescue_triage_plan;
@@ -111,7 +104,7 @@ export default function FastFactsPanel({
         <h2 className="card-title">What this deal is</h2>
         <div className="card-body">
           <p className="fast-facts-status">{status}</p>
-          <p>{recoverableLine(trajectory)}</p>
+          <p>{guidance.line}</p>
           <p>
             <strong>Core blocker:</strong> {blocker}
           </p>
@@ -153,7 +146,9 @@ export default function FastFactsPanel({
       <article className="card card-emerald concise-card fast-facts-card">
         <h2 className="card-title">How to save it</h2>
         <div className="card-body">
-          {saveSteps.length === 0 ? (
+          {guidance.removeFromForecast ? (
+            <p>{guidance.line}</p>
+          ) : saveSteps.length === 0 ? (
             <p>No immediate actions extracted — open Concise for the full 0–90 day plan.</p>
           ) : (
             <ol className="fast-facts-steps">

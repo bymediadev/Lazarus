@@ -314,7 +314,8 @@ function applyCanonicalScoring(
 
   const { causal, frozen } = deriveCanonicalState(
     scoringForces,
-    scoringLocked ? "MIXED" : result.force_initialization.blocker_classification
+    scoringLocked ? "MIXED" : result.force_initialization.blocker_classification,
+    transcript
   );
 
   const dominant = causal.forces

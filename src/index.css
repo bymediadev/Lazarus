@@ -3462,6 +3462,12 @@ a.run-button:hover {
   font-family: var(--mono);
 }
 
+.force-equilibrium-caption {
+  margin: 0.35rem 0 0;
+  color: var(--muted);
+  font-size: 0.85rem;
+}
+
 .force-emerald {
   border-left: 3px solid var(--emerald);
 }

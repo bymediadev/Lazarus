@@ -4,6 +4,8 @@ import {
   computeDialogueStallSignals,
   lockForcesToTranscript,
 } from "../server/scoring.ts";
+import { forecastGuidance, NON_VIABLE_FORECAST_LINE } from "../src/lib/forecastCall.ts";
+import { mergeOverlappingQuotes } from "../src/lib/evidenceQuotes.ts";
 import { readFileSync } from "fs";
 
 // Transcript 1 — velocity / closed-won (pre-approved budget must NOT crush viability)
@@ -458,6 +460,162 @@ try {
   }
 } catch (err) {
   console.error("FAIL: Northline DRI formula could not be evaluated", err);
+  failed = true;
+}
+
+const structuralDeathCase = {
+  constraint: 0,
+  structural: 95,
+  enabler: 90,
+  intent: 75,
+  blockerClassification: "STRUCTURAL LOCK-INS",
+};
+const structuralDeath = deriveCanonicalState(
+  [
+    {
+      factor: "Technical veto by an absent stakeholder",
+      type: "Structural",
+      weight: structuralDeathCase.structural,
+      evidence: "He signs off on the network. Nothing is approved without him.",
+    },
+    {
+      factor: "Budget alignment",
+      type: "Enabler",
+      weight: structuralDeathCase.enabler,
+      evidence: "The platform fee was modeled.",
+    },
+    {
+      factor: "Champion support",
+      type: "Intent",
+      weight: structuralDeathCase.intent,
+      evidence: "I like what I saw in the overview.",
+    },
+    {
+      factor: "Later window",
+      type: "Timing",
+      weight: 5,
+      evidence: "After fiscal close.",
+    },
+  ],
+  structuralDeathCase.blockerClassification
+);
+const structuralDeathFrozen = structuralDeath.frozen;
+const structuralDeathForecast = forecastGuidance({
+  status: "STALLED — HIGH RISK",
+  trajectory: structuralDeathFrozen.trajectory_type,
+  recoverability: structuralDeathFrozen.viability_score,
+});
+
+console.log("\n=== Structural death ===");
+console.log(
+  "  viability:",
+  structuralDeathFrozen.viability_score,
+  "trajectory:",
+  structuralDeathFrozen.trajectory_type,
+  "blocker:",
+  structuralDeath.causal.blocker_classification
+);
+
+if (structuralDeathFrozen.viability_score !== 10) {
+  console.error("FAIL: Structural death viability should be 10, got", structuralDeathFrozen.viability_score);
+  failed = true;
+}
+if (structuralDeathFrozen.trajectory_type !== "DEFERRED (locked)") {
+  console.error(
+    "FAIL: Structural death trajectory should be DEFERRED (locked), got",
+    structuralDeathFrozen.trajectory_type
+  );
+  failed = true;
+}
+if (structuralDeath.causal.blocker_classification !== "STRUCTURAL LOCK-INS") {
+  console.error(
+    "FAIL: Structural death should stay STRUCTURAL LOCK-INS, got",
+    structuralDeath.causal.blocker_classification
+  );
+  failed = true;
+}
+if (!structuralDeathForecast.removeFromForecast || structuralDeathForecast.line !== NON_VIABLE_FORECAST_LINE) {
+  console.error("FAIL: Structural death forecast line should remove the deal", structuralDeathForecast);
+  failed = true;
+}
+
+const calendarMiss = deriveCanonicalState(
+  [
+    {
+      factor: "Technical veto by VP of Infrastructure",
+      type: "Structural",
+      weight: 95,
+      evidence: "He's the one who signs off. Without him, the deal waits.",
+    },
+    {
+      factor: "Budget alignment",
+      type: "Enabler",
+      weight: 90,
+      evidence: "The platform fee was modeled.",
+    },
+    {
+      factor: "Champion support",
+      type: "Intent",
+      weight: 75,
+      evidence: "I like what I saw in the overview.",
+    },
+    {
+      factor: "VP unavailability",
+      type: "Timing",
+      weight: 70,
+      evidence: "He missed the technical demo and is underwater until month-end.",
+    },
+  ],
+  "STRUCTURAL LOCK-INS"
+);
+const calendarForecast = forecastGuidance({
+  status: "STALLED — RECOVERABLE",
+  trajectory: calendarMiss.frozen.trajectory_type,
+  recoverability: calendarMiss.frozen.viability_score,
+});
+
+console.log("\n=== Calendar miss filed as structural ===");
+console.log(
+  "  viability:",
+  calendarMiss.frozen.viability_score,
+  "trajectory:",
+  calendarMiss.frozen.trajectory_type,
+  "blocker:",
+  calendarMiss.causal.blocker_classification
+);
+
+if (calendarMiss.causal.blocker_classification !== "TEMPORARY BLOCKERS") {
+  console.error(
+    "FAIL: A missed demo should be TEMPORARY BLOCKERS, got",
+    calendarMiss.causal.blocker_classification
+  );
+  failed = true;
+}
+if (calendarMiss.frozen.viability_score < 30 || calendarMiss.frozen.viability_score > 65) {
+  console.error(
+    "FAIL: Calendar-miss viability should be 30-65, got",
+    calendarMiss.frozen.viability_score
+  );
+  failed = true;
+}
+if (calendarMiss.frozen.trajectory_type !== "DEFERRED (recoverable)") {
+  console.error(
+    "FAIL: Calendar-miss trajectory should be DEFERRED (recoverable), got",
+    calendarMiss.frozen.trajectory_type
+  );
+  failed = true;
+}
+if (calendarForecast.removeFromForecast) {
+  console.error("FAIL: A recoverable calendar miss should stay on the forecast");
+  failed = true;
+}
+
+const mergedQuotes = mergeOverlappingQuotes([
+  "Sarah, I like what I saw in the overview.",
+  "Sarah, I like what I saw in the overview. But I need to be straight with you — Dave missed the technical demo yesterday.",
+]);
+if (mergedQuotes.length !== 1 || !mergedQuotes[0].includes("Dave missed")) {
+  console.error("FAIL: Overlapping evidence quotes should merge", mergedQuotes);
   failed = true;
 }
 
