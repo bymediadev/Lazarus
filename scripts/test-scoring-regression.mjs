@@ -4,6 +4,7 @@ import {
   computeDialogueStallSignals,
   lockForcesToTranscript,
 } from "../server/scoring.ts";
+import { commercialBaselineFromText } from "../src/lib/commercialBaseline.ts";
 import { forecastGuidance, NON_VIABLE_FORECAST_LINE } from "../src/lib/forecastCall.ts";
 import { mergeOverlappingQuotes } from "../src/lib/evidenceQuotes.ts";
 import { readFileSync } from "fs";
@@ -616,6 +617,20 @@ const mergedQuotes = mergeOverlappingQuotes([
 ]);
 if (mergedQuotes.length !== 1 || !mergedQuotes[0].includes("Dave missed")) {
   console.error("FAIL: Overlapping evidence quotes should merge", mergedQuotes);
+  failed = true;
+}
+
+const northlineBaseline = commercialBaselineFromText(sarahMarkTranscript);
+if (northlineBaseline.fee !== "$280,000 Annual Platform Fee") {
+  console.error("FAIL: Northline fee line should name the annual platform fee", northlineBaseline.fee);
+  failed = true;
+}
+if (northlineBaseline.owner !== "Sarah Chen") {
+  console.error("FAIL: Northline owner should be Sarah Chen", northlineBaseline.owner);
+  failed = true;
+}
+if (northlineBaseline.target !== "Post Month-End Access") {
+  console.error("FAIL: Northline target should be post month-end", northlineBaseline.target);
   failed = true;
 }
 

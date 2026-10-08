@@ -1,6 +1,7 @@
 import ViabilityLineChart from "./ViabilityLineChart";
 import { uniqueActionSteps } from "../lib/actionSteps";
 import { mergeOverlappingQuotes } from "../lib/evidenceQuotes";
+import { commercialBaselineFromText } from "../lib/commercialBaseline";
 import { forecastGuidance } from "../lib/forecastCall";
 import type { PostMortemResult } from "../types";
 
@@ -68,6 +69,23 @@ export default function ExecutiveBrief({ result }: Props) {
   const status = result.deal_classification?.status ?? result.deal_status ?? "UNKNOWN";
   const viability = result.viability_state?.viability_score ?? result.recoverability_score;
   const risk = result.proprietary_indices?.deal_risk_index;
+  const riskTier = result.proprietary_indices?.risk_tier;
+  const baseline =
+    result.commercial_baseline ??
+    commercialBaselineFromText(
+      [
+        result.executive_summary ?? "",
+        ...(result.causal_forces ?? []).map((force) => `${force.factor} ${force.evidence}`),
+        ...(result.stakeholders ?? []).map((person) => `${person.name} ${person.role ?? ""}`),
+        ...(result.immediate_remediation ?? []),
+      ].join("\n")
+    );
+  const baselineParts = [
+    baseline.fee,
+    baseline.owner ? `Account Owner: ${baseline.owner}` : null,
+    baseline.target ? `Baseline Target: ${baseline.target}` : null,
+  ].filter((part): part is string => Boolean(part));
+  const riskLabel = riskTier ? riskTier.charAt(0) + riskTier.slice(1).toLowerCase() : null;
   const prose = stallProse(result);
   const quotes = evidenceQuotes(result);
   const guidance = forecastGuidance({
@@ -98,10 +116,18 @@ export default function ExecutiveBrief({ result }: Props) {
       />
 
       <div className="executive-brief-status">
-        <p className="executive-brief-status-label">{status}</p>
+        <p className="executive-brief-status-label">Current Status: {status}</p>
+        {baselineParts.length > 0 && (
+          <p className="executive-brief-commercial">Commercial Baseline: {baselineParts.join(" | ")}</p>
+        )}
         <p className="executive-brief-status-metrics">
-          {viability !== undefined && <span>Viability {viability}</span>}
-          {risk !== undefined && <span>Deal risk {risk}</span>}
+          {viability !== undefined && <span>Viability: {viability}</span>}
+          {risk !== undefined && (
+            <span>
+              Deal Risk Index: {risk}
+              {riskLabel ? ` (${riskLabel})` : ""}
+            </span>
+          )}
         </p>
       </div>
 

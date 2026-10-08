@@ -3409,6 +3409,11 @@ a.run-button:hover {
   color: var(--muted);
 }
 
+.executive-brief-commercial {
+  margin: 0.45rem 0 0;
+  font-weight: 600;
+}
+
 .executive-brief-prose p,
 .executive-brief-actions p {
   margin: 0 0 0.45rem;

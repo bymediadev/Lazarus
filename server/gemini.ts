@@ -19,6 +19,7 @@ import {
   type GroundingAudit,
   type StakeholderSignal,
 } from "./grounding.js";
+import { commercialBaselineFromText, type CommercialBaseline } from "../src/lib/commercialBaseline.js";
 import {
   assertFrozenConsistency,
   buildDependencyGraph,
@@ -223,6 +224,7 @@ export interface EnterpriseAnalysis {
   historical_context_match?: DeepContextOutput["historical_context_match"];
   friction_deltas?: DeepContextOutput["friction_deltas"];
   immediate_remediation?: string[];
+  commercial_baseline?: CommercialBaseline;
 }
 
 const VALID_STATUSES: EnterpriseDealStatus[] = [
@@ -331,6 +333,18 @@ function applyCanonicalScoring(
       ...result.deal_classification,
       status: statusFromTrajectory(frozen.trajectory_type, result.deal_classification.status),
     },
+    force_initialization: {
+      ...result.force_initialization,
+      blocker_classification: causal.blocker_classification,
+    },
+    commercial_baseline: commercialBaselineFromText(
+      [
+        transcript,
+        result.executive_summary,
+        ...result.causal_forces.map((force) => `${force.factor} ${force.evidence}`),
+        ...result.stakeholders.map((person) => `${person.name} ${person.role ?? ""}`),
+      ].join("\n")
+    ),
     causal_forces: causal.forces.map((f) => ({
       factor: f.factor,
       type: f.type as CausalForceType,

@@ -372,6 +372,11 @@ export interface PostMortemResult {
   historical_context_match?: HistoricalContextMatch[];
   friction_deltas?: FrictionDeltas;
   immediate_remediation?: string[];
+  commercial_baseline?: {
+    fee: string | null;
+    owner: string | null;
+    target: string | null;
+  };
   sources?: TranscriptSources;
   processed_at?: string;
   id?: string | null;
