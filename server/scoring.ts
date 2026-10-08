@@ -462,7 +462,9 @@ function isAuthorityGapRecoverable(
   ) {
     return false;
   }
-  return enabler >= 40 && constraint >= 50 && constraint < 88 && structural < 80;
+  if (!(enabler >= 40 && structural < 80 && constraint >= 50)) return false;
+  if (b.includes("TEMPORARY")) return true;
+  return constraint < 88;
 }
 
 function viabilityScore(
@@ -505,7 +507,7 @@ function trajectory(
     return "VALIDATED / VELOCITY";
   }
   if (isAuthorityGapRecoverable(constraint, structural, enabler, blocker)) {
-    if (viability <= 50) return "DEFERRED (recoverable)";
+    if (b.includes("TEMPORARY") || viability <= 50) return "DEFERRED (recoverable)";
     return "ACTIVE";
   }
   if (constraint > 85 || (constraint > 70 && enabler < 40)) return "DEFERRED (locked)";
@@ -1047,35 +1049,38 @@ function riskTier(dri: number): DealRiskTier {
   return "LOW";
 }
 
+function recoverableTrack(frozen: FrozenDerivation): boolean {
+  return (
+    frozen.enabler_strength >= 40 &&
+    frozen.structural_lock_in < 80 &&
+    frozen.constraint_pressure >= 50 &&
+    (frozen.constraint_pressure < 88 || frozen.trajectory_type === "DEFERRED (recoverable)")
+  );
+}
+
+function riskTerms(frozen: FrozenDerivation, dispersion: number, stallScore: number) {
+  const timingPenalty =
+    frozen.timing_factor <= 5 && frozen.constraint_pressure > 40 ? 10 : 0;
+  const stallContribution = recoverableTrack(frozen) ? Math.min(stallScore, 40) : stallScore;
+  const deal_risk_index = clamp(
+    (100 - frozen.viability_score) * 0.3 +
+      frozen.constraint_pressure * 0.25 +
+      frozen.structural_lock_in * 0.15 +
+      dispersion * 0.2 +
+      stallContribution * 0.1 +
+      timingPenalty -
+      frozen.enabler_strength * 0.15
+  );
+  return { timingPenalty, stallContribution, deal_risk_index };
+}
+
 /** Deal Risk Index — higher = more stall/recovery risk. Proprietary composite, not LLM-derived. */
 export function computeDealRiskIndex(
   frozen: FrozenDerivation,
   dispersion: StakeholderDispersion,
   stall: DialogueStallSignals
 ): number {
-  const viabilityInverse = 100 - frozen.viability_score;
-  const timingPenalty =
-    frozen.timing_factor <= 5 && frozen.constraint_pressure > 40 ? 10 : 0;
-
-  const authorityGapRecoverable =
-    frozen.enabler_strength >= 40 &&
-    frozen.constraint_pressure >= 50 &&
-    frozen.constraint_pressure < 88 &&
-    frozen.structural_lock_in < 80;
-
-  const stallContribution = authorityGapRecoverable
-    ? Math.min(stall.score, 40)
-    : stall.score;
-
-  return clamp(
-    viabilityInverse * 0.3 +
-      frozen.constraint_pressure * 0.25 +
-      frozen.structural_lock_in * 0.15 +
-      dispersion.index * 0.2 +
-      stallContribution * 0.1 +
-      timingPenalty -
-      frozen.enabler_strength * 0.15
-  );
+  return riskTerms(frozen, dispersion.index, stall.score).deal_risk_index;
 }
 
 export function deriveProprietaryIndices(
@@ -1085,16 +1090,23 @@ export function deriveProprietaryIndices(
 ): ProprietaryIndices {
   const stakeholder_dispersion = computeStakeholderDispersion(stakeholders);
   const dialogue_stall = computeDialogueStallSignals(transcript);
-  const deal_risk_index = computeDealRiskIndex(
+  const { timingPenalty, stallContribution, deal_risk_index } = riskTerms(
     frozen,
-    stakeholder_dispersion,
-    dialogue_stall
+    stakeholder_dispersion.index,
+    dialogue_stall.score
   );
   const risk_tier = riskTier(deal_risk_index);
+  const arithmetic = [
+    `0.30×(100−${frozen.viability_score})`,
+    `0.25×${frozen.constraint_pressure}`,
+    `0.15×${frozen.structural_lock_in}`,
+    `0.20×${stakeholder_dispersion.index}`,
+    `0.10×${stallContribution}`,
+  ];
+  if (timingPenalty > 0) arithmetic.push("timing_penalty(10)");
 
   const formula = [
-    `DRI ${deal_risk_index} = 0.30×(100−${frozen.viability_score}) + 0.25×${frozen.constraint_pressure} + 0.15×${frozen.structural_lock_in}`,
-    `+ 0.20×dispersion(${stakeholder_dispersion.index}) + 0.10×stall(${dialogue_stall.score}) − 0.15×enabler(${frozen.enabler_strength})`,
+    `DRI ${deal_risk_index} = ${arithmetic.join(" + ")} − 0.15×${frozen.enabler_strength}`,
     `Tier: ${risk_tier} | Authority gap: ${stakeholder_dispersion.authority_gap}`,
   ].join(" | ");
 

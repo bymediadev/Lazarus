@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { saveRescueOutcome } from "../lib/api";
 import ConciseDiagnostic from "./ConciseDiagnostic";
+import ExecutiveBrief from "./ExecutiveBrief";
 import FastFactsPanel from "./FastFactsPanel";
 import DealHeaderMetrics from "./DealHeaderMetrics";
 import {
@@ -151,6 +152,7 @@ export default function AnalysisReport({
 
   return (
     <div className="cards">
+      <ExecutiveBrief result={r} />
       <details className="full-analysis-toggle expanded-analysis">
         <summary>Expanded Analysis</summary>
         <div className="full-analysis-body">

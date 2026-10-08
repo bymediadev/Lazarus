@@ -3380,6 +3380,88 @@ a.run-button:hover {
   background: rgba(255, 255, 255, 0.02);
 }
 
+.executive-brief {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+  margin-bottom: 1.5rem;
+  padding: 1.25rem 1.35rem;
+  border: 1px solid var(--panel-border);
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.executive-brief h2 {
+  margin: 0 0 0.55rem;
+  font-size: 0.95rem;
+}
+
+.executive-brief-status-label {
+  margin: 0;
+  font-size: 1.15rem;
+  font-weight: 700;
+}
+
+.executive-brief-status-metrics {
+  display: flex;
+  gap: 1.25rem;
+  margin: 0.35rem 0 0;
+  color: var(--muted);
+}
+
+.executive-brief-prose p,
+.executive-brief-actions p {
+  margin: 0 0 0.45rem;
+}
+
+.executive-brief-evidence blockquote,
+.force-equilibrium-evidence {
+  margin: 0 0 0.65rem;
+  padding: 0.65rem 0.9rem;
+  border-left: 3px solid var(--crimson);
+  background: rgba(255, 255, 255, 0.03);
+  color: var(--text);
+}
+
+.executive-brief-actions ol {
+  margin: 0;
+  padding-left: 1.2rem;
+}
+
+.force-equilibrium-svg {
+  width: 100%;
+  max-width: 440px;
+  height: auto;
+}
+
+.force-equilibrium-link {
+  stroke: var(--panel-border);
+  stroke-width: 1;
+}
+
+.force-equilibrium-node {
+  cursor: pointer;
+  outline: none;
+}
+
+.force-equilibrium-node:focus {
+  stroke: var(--text);
+  stroke-width: 2;
+}
+
+.force-equilibrium-deal {
+  fill: var(--panel);
+  stroke: var(--text);
+  stroke-width: 1.5;
+}
+
+.force-equilibrium-deal-label,
+.force-equilibrium-deal-score {
+  fill: var(--text);
+  font-size: 11px;
+  font-family: var(--mono);
+}
+
 .force-emerald {
   border-left: 3px solid var(--emerald);
 }

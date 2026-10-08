@@ -324,6 +324,143 @@ if (replayWithCrm(pilotNote, [
   failed = true;
 }
 
+function evalDriFormula(formula) {
+  const rhs = formula.split("=")[1]?.split("|")[0] ?? "";
+  const expr = rhs
+    .replace(/timing_penalty\(10\)/g, "10")
+    .replace(/×/g, "*")
+    .replace(/−/g, "-")
+    .trim();
+  if (!/^[\d.+\-*\s()]+$/.test(expr)) {
+    throw new Error(`Unparseable DRI formula: ${expr}`);
+  }
+  const value = Function(`"use strict"; return (${expr});`)();
+  return Math.min(100, Math.max(0, Math.round(value)));
+}
+
+const northlineFixture = {
+  constraint: 90,
+  structural: 0,
+  enabler: 60,
+  intent: 50,
+  dispersion: 23,
+  stall: 89,
+  timing_factor: 4,
+  blockerClassification: "TEMPORARY BLOCKERS",
+};
+
+const northlineForces = [
+  {
+    factor: "VP of Infrastructure sign-off",
+    type: "Constraint",
+    weight: northlineFixture.constraint,
+    evidence: "Dave is the one who signs off on the OT network.",
+  },
+  {
+    factor: "Budget modeled in range",
+    type: "Enabler",
+    weight: northlineFixture.enabler,
+    evidence: "The platform fee was in range.",
+  },
+  {
+    factor: "Timeline if the veto holder buys in",
+    type: "Intent",
+    weight: northlineFixture.intent,
+    evidence: "If the veto holder buys in, the timeline can move.",
+  },
+];
+
+const northlineStakeholders = [
+  {
+    name: "Dave",
+    persona_type: "Hidden Detractor",
+    role: "VP of Infrastructure",
+    evidence: "missed the technical demo",
+  },
+  {
+    name: "Mark",
+    persona_type: "Aligned Champion",
+    role: "Finance partner",
+    evidence: "budget modeled",
+  },
+];
+
+const northlineTranscript = [
+  "missed the",
+  "reschedule",
+  "couldn't join",
+  "loop in",
+  "hasn't validated",
+  "stays parked",
+  "if not",
+  "let me get back",
+  "procurement finance operations compliance legal",
+].join("\n");
+
+const northline = deriveCanonicalState(
+  northlineForces,
+  northlineFixture.blockerClassification
+).frozen;
+const northlinePi = deriveProprietaryIndices(
+  northline,
+  northlineStakeholders,
+  northlineTranscript
+);
+
+console.log("\n=== Northline: temporary authority gap ===");
+console.log(
+  "  viability:",
+  northline.viability_score,
+  "trajectory:",
+  northline.trajectory_type,
+  "DRI:",
+  northlinePi.deal_risk_index
+);
+console.log("  formula:", northlinePi.formula);
+
+if (northline.viability_score < 30 || northline.viability_score > 65) {
+  console.error("FAIL: Northline viability should be 30-65, got", northline.viability_score);
+  failed = true;
+}
+if (northline.trajectory_type !== "DEFERRED (recoverable)") {
+  console.error("FAIL: Northline trajectory should be DEFERRED (recoverable), got", northline.trajectory_type);
+  failed = true;
+}
+if (northline.structural_lock_in !== northlineFixture.structural) {
+  console.error("FAIL: Northline structural should be 0, got", northline.structural_lock_in);
+  failed = true;
+}
+if (northline.timing_factor > 5) {
+  console.error("FAIL: Northline timing should stay in the penalty band, got", northline.timing_factor);
+  failed = true;
+}
+if (northlinePi.stakeholder_dispersion_index !== northlineFixture.dispersion) {
+  console.error(
+    "FAIL: Northline dispersion should be 23, got",
+    northlinePi.stakeholder_dispersion_index
+  );
+  failed = true;
+}
+if (northlinePi.dialogue_stall_score !== northlineFixture.stall) {
+  console.error("FAIL: Northline stall should be 89, got", northlinePi.dialogue_stall_score);
+  failed = true;
+}
+try {
+  const evaluated = evalDriFormula(northlinePi.formula);
+  if (evaluated !== northlinePi.deal_risk_index) {
+    console.error(
+      "FAIL: Northline DRI formula evaluated to",
+      evaluated,
+      "but index is",
+      northlinePi.deal_risk_index
+    );
+    failed = true;
+  }
+} catch (err) {
+  console.error("FAIL: Northline DRI formula could not be evaluated", err);
+  failed = true;
+}
+
 if (failed) process.exit(1);
 console.log("\nSCORING + DRI REGRESSION OK");
 console.log("  replay viability:", alexA.viability_score, alexA.trajectory_type);

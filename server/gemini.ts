@@ -278,6 +278,23 @@ function trajectoryDirection(t: CanonicalTrajectory): string {
   return "negative";
 }
 
+function statusFromTrajectory(
+  trajectory: CanonicalTrajectory,
+  modelStatus: EnterpriseDealStatus
+): EnterpriseDealStatus {
+  if (trajectory === "VALIDATED / VELOCITY" || modelStatus === "CLOSED WON") {
+    return modelStatus;
+  }
+  const closedLost = modelStatus.startsWith("CLOSED LOST");
+  if (trajectory === "DEFERRED (recoverable)") {
+    return closedLost ? "CLOSED LOST — RECOVERABLE" : "STALLED — RECOVERABLE";
+  }
+  if (trajectory === "DEFERRED (locked)" || trajectory === "NON-VIABLE / DEAD") {
+    return closedLost ? "CLOSED LOST — UNLIKELY" : "STALLED — HIGH RISK";
+  }
+  return modelStatus;
+}
+
 /** Layer 3 — project frozen derivation read-only; scoring runs once after grounding */
 function applyCanonicalScoring(
   result: EnterpriseAnalysis,
@@ -309,6 +326,10 @@ function applyCanonicalScoring(
 
   const projected: EnterpriseAnalysis = {
     ...result,
+    deal_classification: {
+      ...result.deal_classification,
+      status: statusFromTrajectory(frozen.trajectory_type, result.deal_classification.status),
+    },
     causal_forces: causal.forces.map((f) => ({
       factor: f.factor,
       type: f.type as CausalForceType,
