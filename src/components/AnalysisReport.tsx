@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { saveRescueOutcome } from "../lib/api";
+import { alignBlockerNarrative } from "../lib/blockerNarrative";
 import ConciseDiagnostic from "./ConciseDiagnostic";
 import ExecutiveBrief from "./ExecutiveBrief";
 import FastFactsPanel from "./FastFactsPanel";
@@ -14,6 +15,8 @@ import {
   trajectoryTagClass,
   viabilityTagClass,
   equilibriumTagClass,
+  equilibriumLabel,
+  readableEquilibriumText,
   blockerTagClass,
   forceTypeClass,
 } from "../types";
@@ -167,7 +170,7 @@ export default function AnalysisReport({
             Trajectory: {dt.trajectory_type}
           </span>
           <span className={`confidence-score ${equilibriumClass}`}>
-            Equilibrium: {eq.state}
+            Equilibrium: {equilibriumLabel(eq.state)}
           </span>
           {cycles && cycles.total_cycles > 0 && (
             <span className="confidence-score">
@@ -247,10 +250,13 @@ export default function AnalysisReport({
           <h2 className="card-title">Force Initialization</h2>
           <div className="card-body">
             <span className={`pipeline-badge ${blockerClass}`}>{init.blocker_classification}</span>
-            <p style={{ marginTop: "0.75rem" }}>{init.summary}</p>
+            <p style={{ marginTop: "0.75rem" }}>
+              {alignBlockerNarrative(init.summary, init.blocker_classification)}
+            </p>
             {init.classification_rationale && (
               <p className="meta-line">
-                <strong>Type distinction:</strong> {init.classification_rationale}
+                <strong>Type distinction:</strong>{" "}
+                {alignBlockerNarrative(init.classification_rationale, init.blocker_classification)}
               </p>
             )}
           </div>
@@ -262,7 +268,7 @@ export default function AnalysisReport({
           <h2 className="card-title">Iterative Resolution Cycles</h2>
           <div className="card-body">
             <p className="meta-line" style={{ marginBottom: "0.75rem" }}>
-              {cycles.convergence_summary}
+              {readableEquilibriumText(cycles.convergence_summary)}
             </p>
             <table className="trigger-table cycle-table">
               <thead>
@@ -284,7 +290,7 @@ export default function AnalysisReport({
                     <td>{c.state_snapshot.constraint_pressure}</td>
                     <td>{c.state_snapshot.effective_intent}</td>
                     <td>{c.state_snapshot.viability_score}</td>
-                    <td>{c.state_snapshot.equilibrium_state}</td>
+                    <td>{equilibriumLabel(c.state_snapshot.equilibrium_state)}</td>
                     <td>{c.state_change}</td>
                   </tr>
                 ))}
@@ -372,11 +378,11 @@ export default function AnalysisReport({
       <article className={`card card-${equilibriumClass === "status-success" ? "emerald" : equilibriumClass === "status-failed" ? "red" : "amber"}`}>
         <h2 className="card-title">Equilibrium Analysis</h2>
         <div className="card-body">
-          <span className={`viability-badge ${equilibriumClass}`}>{eq.state}</span>
+          <span className={`viability-badge ${equilibriumClass}`}>{equilibriumLabel(eq.state)}</span>
           {eq.derived_from_cycles && (
             <span className="force-role" style={{ marginLeft: "0.5rem" }}>derived from resolution</span>
           )}
-          <p style={{ marginTop: "0.75rem" }}>{eq.net_force_balance || eq.explanation}</p>
+          <p style={{ marginTop: "0.75rem" }}>{readableEquilibriumText(eq.net_force_balance || eq.explanation || "")}</p>
           {eq.dominating_forces.length > 0 && (
             <>
               <h4 style={{ marginTop: "0.75rem" }}>Dominating Forces</h4>
@@ -400,7 +406,7 @@ export default function AnalysisReport({
             <span className={`viability-badge ${viabilityClass}`}>{vs.state}</span>
             <span className="viability-score">{vs.viability_score}/100</span>
           </div>
-          <p className="equilibrium-derivation">{vs.equilibrium_derivation}</p>
+          <p className="equilibrium-derivation">{readableEquilibriumText(vs.equilibrium_derivation)}</p>
           <p className="meta-line" style={{ marginTop: "0.5rem" }}>
             Frozen derivation — read-only across all sections
           </p>
@@ -419,7 +425,7 @@ export default function AnalysisReport({
         <h2 className="card-title">Derived Trajectory</h2>
         <div className="card-body">
           <span className={`trajectory-badge ${trajectoryClass}`}>{dt.trajectory_type}</span>
-          <p style={{ marginTop: "0.75rem" }}>{dt.derivation}</p>
+          <p style={{ marginTop: "0.75rem" }}>{readableEquilibriumText(dt.derivation)}</p>
           {dt.driving_interactions.length > 0 && (
             <>
               <h4 style={{ marginTop: "0.75rem" }}>Driving Interactions</h4>
@@ -574,7 +580,7 @@ export default function AnalysisReport({
             <CrmField label="Deal State" value={r.crm_intelligence.deal_state} />
             <CrmField label="Viability Score (Derived)" value={r.crm_intelligence.viability_score} />
             <CrmField label="Trajectory (Derived)" value={r.crm_intelligence.trajectory_type} />
-            <CrmField label="Equilibrium State" value={r.crm_intelligence.equilibrium_state} />
+            <CrmField label="Equilibrium State" value={equilibriumLabel(r.crm_intelligence.equilibrium_state)} />
             <CrmField label="Intent Strength" value={r.crm_intelligence.buyer_intent_strength} />
             <CrmField label="Effective Intent" value={r.crm_intelligence.effective_intent} />
             <CrmField label="Constraint Pressure" value={r.crm_intelligence.constraint_pressure} />

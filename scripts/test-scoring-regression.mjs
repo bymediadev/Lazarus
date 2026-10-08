@@ -6,6 +6,7 @@ import {
   lockForcesToTranscript,
 } from "../server/scoring.ts";
 import { statusFromTrajectory } from "../server/gemini.ts";
+import { alignBlockerNarrative } from "../src/lib/blockerNarrative.ts";
 import { commercialBaselineFromText } from "../src/lib/commercialBaseline.ts";
 import { forecastGuidance, NON_VIABLE_FORECAST_LINE } from "../src/lib/forecastCall.ts";
 import { mergeOverlappingQuotes } from "../src/lib/evidenceQuotes.ts";
@@ -692,6 +693,33 @@ if (statusFromTrajectory(suppressedFrozen.trajectory_type, "STALLED — HIGH RIS
 }
 if (suppressedForecast.removeFromForecast) {
   console.error("FAIL: Suppressed Northline should stay on the forecast", suppressedForecast);
+  failed = true;
+}
+if (suppressedFrozen.equilibrium_state !== "PINNED") {
+  console.error("FAIL: A 170 force sum should read PINNED, got", suppressedFrozen.equilibrium_state);
+  failed = true;
+}
+if (northline.equilibrium_state !== "OPEN") {
+  console.error("FAIL: A light force sum should read OPEN, got", northline.equilibrium_state);
+  failed = true;
+}
+const alignedNarrative = alignBlockerNarrative(
+  "Dave holds veto power. The primary blocker is structural due to unaddressed technical validation requirements.",
+  "TEMPORARY BLOCKERS"
+);
+if (
+  /\bstructural\b/i.test(alignedNarrative) ||
+  !alignedNarrative.toLowerCase().includes("primary blocker is temporary")
+) {
+  console.error("FAIL: Temporary blocker narrative should not stay structural", alignedNarrative);
+  failed = true;
+}
+const structuralNarrative = alignBlockerNarrative(
+  "The primary blocker is structural.",
+  "STRUCTURAL LOCK-INS"
+);
+if (structuralNarrative !== "The primary blocker is structural.") {
+  console.error("FAIL: A real structural lock should keep its narrative", structuralNarrative);
   failed = true;
 }
 

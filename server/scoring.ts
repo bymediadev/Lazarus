@@ -5,7 +5,7 @@
  *   Layer 3 — Output projection (read-only, no math)
  */
 
-export type CanonicalEquilibrium = "STABLE" | "MIXED" | "UNSTABLE";
+export type CanonicalEquilibrium = "PINNED" | "MIXED" | "OPEN";
 
 export type CanonicalTrajectory =
   | "VALIDATED / VELOCITY"
@@ -488,9 +488,9 @@ function viabilityScore(
 
 function equilibrium(structural: number, constraint: number): CanonicalEquilibrium {
   const sum = structural + constraint;
-  if (sum >= 160) return "STABLE";
+  if (sum >= 160) return "PINNED";
   if (sum >= 120) return "MIXED";
-  return "UNSTABLE";
+  return "OPEN";
 }
 
 function trajectory(

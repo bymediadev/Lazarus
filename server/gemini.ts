@@ -19,6 +19,7 @@ import {
   type GroundingAudit,
   type StakeholderSignal,
 } from "./grounding.js";
+import { alignBlockerNarrative } from "../src/lib/blockerNarrative.js";
 import { commercialBaselineFromText, type CommercialBaseline } from "../src/lib/commercialBaseline.js";
 import {
   assertFrozenConsistency,
@@ -336,6 +337,11 @@ function applyCanonicalScoring(
     force_initialization: {
       ...result.force_initialization,
       blocker_classification: causal.blocker_classification,
+      summary: alignBlockerNarrative(result.force_initialization.summary, causal.blocker_classification),
+      classification_rationale: alignBlockerNarrative(
+        result.force_initialization.classification_rationale,
+        causal.blocker_classification
+      ),
     },
     commercial_baseline: commercialBaselineFromText(
       [
@@ -648,7 +654,7 @@ function normalizeOutput(raw: Record<string, unknown>): EnterpriseAnalysis {
   ).trim();
 
   const equilibrium_analysis: EquilibriumAnalysis = {
-    state: "UNSTABLE",
+    state: "OPEN",
     derived_from_cycles: false,
     net_force_balance: "",
     dominating_forces: asStringArray(eqRaw?.dominating_forces ?? []),
@@ -770,7 +776,7 @@ function normalizeOutput(raw: Record<string, unknown>): EnterpriseAnalysis {
       deal_state: "",
       viability_score: "0",
       trajectory_type: "DEFERRED (recoverable)",
-      equilibrium_state: "UNSTABLE",
+      equilibrium_state: "OPEN",
       convergence_status: "converged",
       buyer_intent_strength: "0",
       effective_intent: "0",

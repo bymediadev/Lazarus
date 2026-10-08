@@ -87,7 +87,7 @@ export type TrajectoryType =
   | "ACTIVE"
   | "NON-VIABLE / DEAD";
 
-export type EquilibriumState = "STABLE" | "MIXED" | "UNSTABLE";
+export type EquilibriumState = "PINNED" | "MIXED" | "OPEN";
 
 export type PipelineEntryClassification =
   | "CORRECTLY QUALIFIED"
@@ -427,11 +427,23 @@ export function trajectoryTagClass(trajectory: string): string {
   return "status-stalled";
 }
 
+export function equilibriumLabel(state: string): string {
+  const s = state.toUpperCase();
+  if (s === "STABLE" || s === "LOCKED" || s === "PINNED") return "PINNED";
+  if (s === "UNSTABLE" || s === "OPEN") return "OPEN";
+  if (s === "MIXED") return "MIXED";
+  return state;
+}
+
+export function readableEquilibriumText(text: string): string {
+  return text.replace(/\bUNSTABLE\b/g, "OPEN").replace(/\bSTABLE\b/g, "PINNED");
+}
+
 export function equilibriumTagClass(state: string): string {
   const s = state.toUpperCase();
-  if (s === "STABLE") return "status-success";
+  if (s === "STABLE" || s === "LOCKED" || s === "PINNED") return "status-failed";
   if (s === "MIXED") return "status-stalled";
-  return "status-failed";
+  return "status-active";
 }
 
 export function blockerTagClass(blocker: string): string {
@@ -490,7 +502,7 @@ function normalizeResolutionCycles(raw: PostMortemResult): ResolutionCycles {
           structural_lock_in: clampScore(c.state_snapshot?.structural_lock_in, 50),
           timing_accessibility: clampScore(c.state_snapshot?.timing_accessibility, 50),
           viability_score: clampScore(c.state_snapshot?.viability_score),
-          equilibrium_state: String(c.state_snapshot?.equilibrium_state ?? "UNSTABLE"),
+          equilibrium_state: String(c.state_snapshot?.equilibrium_state ?? "OPEN"),
         },
         state_change: c.state_change,
       })),
@@ -582,7 +594,7 @@ export function normalizeResult(raw: PostMortemResult): PostMortemResult {
       cycle_evolution: raw.force_dependency_graph?.cycle_evolution ?? [],
     },
     equilibrium_analysis: raw.equilibrium_analysis ?? {
-      state: "UNSTABLE",
+      state: "OPEN",
       dominating_forces: [],
       equilibrium_breaker: "",
       explanation: "",
