@@ -16,13 +16,13 @@ const PERSONA_BADGES = [
   {
     match: /hidden detractor/i,
     label: "HIDDEN DETRACTOR",
-    hint: "InfoSec or Legal blocking silently",
+    hint: "Opposition is recorded only when the evidence says so",
     className: "persona-badge-detractor",
   },
   {
     match: /absent decision maker/i,
     label: "ABSENT DECISION MAKER",
-    hint: "Economic buyer missing from interactions",
+    hint: "Named, but not in this evidence. Absence is not a no",
     className: "persona-badge-absent",
   },
   {
@@ -73,7 +73,7 @@ function deriveStallPoint(result: PostMortemResult): {
     init?.classification_rationale?.trim() ||
     init?.summary?.trim() ||
     result.executive_summary?.trim() ||
-    "Multi-department friction detected — review constraint forces below.";
+    "The evidence does not name one blocker yet.";
 
   return { headline, collisions, invisibleVeto };
 }

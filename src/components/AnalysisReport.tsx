@@ -10,6 +10,7 @@ import {
   ForceCoupling,
   normalizeResult,
   PostMortemResult,
+  ScoreExplanation,
   TranscriptSources,
   statusTagClass,
   trajectoryTagClass,
@@ -61,6 +62,23 @@ function ForceCard({ force }: { force: CausalForce }) {
       {force.evidence && (
         <p className="force-evidence">"{force.evidence.replace(/^"|"$/g, "")}"</p>
       )}
+    </div>
+  );
+}
+
+function ScoreFactors({ explanation }: { explanation: ScoreExplanation }) {
+  return (
+    <div className="score-explanation">
+      <h4 style={{ marginTop: "0.75rem" }}>{explanation.metric}</h4>
+      <p className="meta-line">{explanation.summary}</p>
+      <ul className="restart-list">
+        {explanation.factors.map((factor) => (
+          <li key={factor.text}>
+            <strong>{factor.basis === "observed" ? "Observed" : "Inferred"}:</strong> {factor.text}
+          </li>
+        ))}
+      </ul>
+      <p className="meta-line">{explanation.caveat}</p>
     </div>
   );
 }
@@ -596,6 +614,15 @@ export default function AnalysisReport({
           <h2 className="card-title">Proprietary Risk Compiler</h2>
           <div className="card-body">
             <p className="meta-line">{pi.formula}</p>
+            {pi.explanations && (
+              <>
+                <ScoreFactors explanation={pi.explanations.viability} />
+                <ScoreFactors explanation={pi.explanations.deal_risk} />
+                <ScoreFactors explanation={pi.explanations.department_friction} />
+                <ScoreFactors explanation={pi.explanations.dispersion} />
+                <ScoreFactors explanation={pi.explanations.stall} />
+              </>
+            )}
             {pi.stakeholder_dispersion.flags.length > 0 && (
               <>
                 <h4 style={{ marginTop: "0.75rem" }}>Stakeholder friction flags</h4>

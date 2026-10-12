@@ -431,9 +431,10 @@ export default function MarketingHome({
             <summary>Do you save the call?</summary>
             <div className="marketing-qa-panel">
               <p>
-                No. The call is sent here so we can read it. The saved row is the report: the score, the
-                status, and the next actions. The transcript and the audio are not saved. A guest run
-                is not saved to an account.
+                No. The call is sent here so we can read it. The raw transcript and the audio are not
+                saved. Evidence-quote fields are removed from a stored report. The summary, the score,
+                the status, and the next actions are kept when you are signed in. A guest run is not
+                saved to an account.
               </p>
             </div>
           </details>

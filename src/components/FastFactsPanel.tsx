@@ -30,11 +30,15 @@ function coreBlocker(result: PostMortemResult): string {
   );
 }
 
-function detractors(result: PostMortemResult): StakeholderSignal[] {
+function opposing(result: PostMortemResult): StakeholderSignal[] {
   return (result.stakeholders ?? []).filter((s) =>
-    /hidden detractor|absent decision maker|technical_veto/i.test(
-      `${s.persona_type ?? ""} ${s.stance ?? ""} ${s.authority_level ?? ""}`
-    )
+    /hidden detractor/i.test(`${s.persona_type ?? ""} ${s.stance ?? ""}`)
+  );
+}
+
+function absentPeople(result: PostMortemResult): StakeholderSignal[] {
+  return (result.stakeholders ?? []).filter((s) =>
+    /absent decision maker/i.test(`${s.persona_type ?? ""} ${s.stance ?? ""}`)
   );
 }
 
@@ -58,12 +62,13 @@ export default function FastFactsPanel({
     recoverability: result.recoverability_score ?? result.viability_state?.viability_score,
   });
   const blocker = coreBlocker(result);
-  const vetoPeople = detractors(result);
+  const vetoPeople = opposing(result);
+  const missingPeople = absentPeople(result);
   const plan = result.rescue_triage_plan;
   const saveSteps = uniqueActionSteps([
-    ...(result.immediate_remediation ?? []).slice(0, 2),
-    ...(plan?.immediate_0_30_days ?? []).slice(0, 3),
-  ]).slice(0, 4);
+    ...(result.immediate_remediation ?? []).slice(0, 1),
+    ...(plan?.immediate_0_30_days ?? []).slice(0, 1),
+  ]).slice(0, 1);
 
   const noteBody = formatCompressedCrmNotes(result);
 
@@ -115,27 +120,29 @@ export default function FastFactsPanel({
       </article>
 
       <article className="card card-neutral concise-card fast-facts-card">
-        <h2 className="card-title">Main detractors / veto risk</h2>
+        <h2 className="card-title">People and constraints</h2>
         <div className="card-body">
-          {vetoPeople.length === 0 ? (
-            <p>No hidden detractor or absent decision maker mapped — review People Map in Concise.</p>
+          {vetoPeople.length === 0 && missingPeople.length === 0 ? (
+            <p>No opposing or absent stakeholder is mapped. The people table is in Expanded Analysis.</p>
           ) : (
             <ul className="stall-collision-list">
               {vetoPeople.map((p, i) => (
-                <li key={i}>
+                <li key={`oppose-${i}`}>
                   <strong>
                     {p.name}
                     {p.role ? ` (${p.role})` : ""}
                   </strong>
                   {p.persona_type || p.stance ? ` — ${p.persona_type || p.stance}` : ""}
-                  {p.evidence && (
-                    <>
-                      <br />
-                      <span className="stall-evidence">
-                        "{p.evidence.replace(/^"|"$/g, "").slice(0, 220)}"
-                      </span>
-                    </>
-                  )}
+                  . Opposition is recorded only when the persona says so. The quotation is in Expanded Analysis.
+                </li>
+              ))}
+              {missingPeople.map((p, i) => (
+                <li key={`absent-${i}`}>
+                  <strong>
+                    {p.name}
+                    {p.role ? ` (${p.role})` : ""}
+                  </strong>
+                  {" — absent from this evidence. Absence is not a rejection."}
                 </li>
               ))}
             </ul>
@@ -144,18 +151,21 @@ export default function FastFactsPanel({
       </article>
 
       <article className="card card-emerald concise-card fast-facts-card">
-        <h2 className="card-title">How to save it</h2>
+        <h2 className="card-title">CRM-ready next step</h2>
         <div className="card-body">
           {guidance.removeFromForecast ? (
             <p>{guidance.line}</p>
           ) : saveSteps.length === 0 ? (
-            <p>No immediate actions extracted — open Concise for the full 0–90 day plan.</p>
+            <p>No immediate action was extracted. The recovery plan above stays empty until the evidence supports one.</p>
           ) : (
-            <ol className="fast-facts-steps">
-              {saveSteps.map((s, i) => (
-                <li key={i}>{s}</li>
-              ))}
-            </ol>
+            <>
+              <ol className="fast-facts-steps">
+                {saveSteps.map((s, i) => (
+                  <li key={i}>{s}</li>
+                ))}
+              </ol>
+              <p className="meta-line">The full recovery plan is in the brief above. This block is the note to copy.</p>
+            </>
           )}
         </div>
       </article>

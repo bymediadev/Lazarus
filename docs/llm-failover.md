@@ -58,3 +58,5 @@ cp .env.example .env
 # add GEMINI_API_KEY and OPENROUTER_API_KEY
 npm run dev
 ```
+
+On Windows, `npm run dev:server` and `npm start` go through `scripts/with-system-ca.mjs`. That sets `NODE_OPTIONS=--use-system-ca` before `tsx` starts. The flag has to be on the process that calls Gemini, OpenRouter, and Supabase. Putting `--use-system-ca` only on a `tsx watch` parent is not enough: the watcher spawns a child, the child has no system trust store, and provider calls fail with `unable to verify the first certificate`. `server/preload-ca.cjs` still points Node at `windows-extra-cas.pem` when that file exists. Render on Linux uses the normal CA store and does not need this wrapper.

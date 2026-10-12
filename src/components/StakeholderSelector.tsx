@@ -32,7 +32,7 @@ const ROLES: Role[] = [
     header: "What we keep, and when it goes.",
     bullets: [
       "You own the recording, the transcript, and the notes you upload. We process them only to write the report. We do not sell that content or train public models on it.",
-      "The transcript and the quotes are not saved. We keep the score, the status, and the next actions.",
+      "The raw transcript is not saved. Evidence-quote fields are removed from the stored report. We keep the summary, the score, the status, and the next actions.",
       "That report stays while the deal is open. When HubSpot or Salesforce marks the deal complete, it is deleted then. If the CRM is not connected, it is deleted 30 days after a win or a flat no.",
       "A signed-in user can delete the account from Account. Or email support@getldr.ca. We do not sell personal information.",
       "We are not SOC 2 certified, and we do not claim a finished GDPR or CCPA program. Read the Privacy Policy, the DPA, and the Security Overview before a larger contract.",

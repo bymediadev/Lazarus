@@ -301,6 +301,28 @@ export interface DialogueStallSignals {
   rep_monologue_ratio: number | null;
   avg_turn_gap_seconds: number | null;
   flagged_patterns: string[];
+  observed_patterns?: string[];
+  inferred_patterns?: string[];
+}
+
+export interface ScoreFactor {
+  basis: "observed" | "inferred";
+  text: string;
+}
+
+export interface ScoreExplanation {
+  metric: string;
+  summary: string;
+  factors: ScoreFactor[];
+  caveat: string;
+}
+
+export interface ScoreExplanations {
+  viability: ScoreExplanation;
+  deal_risk: ScoreExplanation;
+  department_friction: ScoreExplanation;
+  dispersion: ScoreExplanation;
+  stall: ScoreExplanation;
 }
 
 export interface StakeholderDispersionDetail {
@@ -308,6 +330,8 @@ export interface StakeholderDispersionDetail {
   authority_gap: boolean;
   multi_department_friction: number;
   persona_breakdown: Record<string, number>;
+  department_mentions?: string[];
+  absence_term_applied?: boolean;
   flags: string[];
 }
 
@@ -321,6 +345,7 @@ export interface ProprietaryIndices {
   formula: string;
   dialogue_stall: DialogueStallSignals;
   stakeholder_dispersion: StakeholderDispersionDetail;
+  explanations?: ScoreExplanations;
 }
 
 export interface StakeholderSignal {

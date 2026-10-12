@@ -1,8 +1,10 @@
 import ViabilityLineChart from "./ViabilityLineChart";
 import { uniqueActionSteps } from "../lib/actionSteps";
+import { readConstraint } from "../lib/constraintReading";
 import { mergeOverlappingQuotes } from "../lib/evidenceQuotes";
 import { commercialBaselineFromText } from "../lib/commercialBaseline";
 import { forecastGuidance } from "../lib/forecastCall";
+import { formatRecoveryAction } from "../lib/recoveryPlan";
 import type { PostMortemResult } from "../types";
 
 interface Props {
@@ -62,7 +64,7 @@ function evidenceQuotes(result: PostMortemResult): string[] {
     seen.add(key);
     quotes.push(quote);
   }
-  return mergeOverlappingQuotes(quotes).slice(0, 6);
+  return mergeOverlappingQuotes(quotes);
 }
 
 export default function ExecutiveBrief({ result }: Props) {
@@ -87,7 +89,15 @@ export default function ExecutiveBrief({ result }: Props) {
   ].filter((part): part is string => Boolean(part));
   const riskLabel = riskTier ? riskTier.charAt(0) + riskTier.slice(1).toLowerCase() : null;
   const prose = stallProse(result);
-  const quotes = evidenceQuotes(result);
+  const allQuotes = evidenceQuotes(result);
+  const quotes = allQuotes.slice(0, 2);
+  const hiddenQuotes = allQuotes.length - quotes.length;
+  const constraintText = [
+    result.executive_summary ?? "",
+    ...(result.causal_forces ?? []).map((force) => `${force.factor} ${force.evidence}`),
+    ...(result.stakeholders ?? []).map((person) => `${person.name} ${person.role ?? ""} ${person.evidence}`),
+  ].join("\n");
+  const constraint = readConstraint(constraintText);
   const guidance = forecastGuidance({
     status: typeof status === "string" ? status : undefined,
     trajectory: result.deal_trajectory?.trajectory_type,
@@ -131,36 +141,100 @@ export default function ExecutiveBrief({ result }: Props) {
         </p>
       </div>
 
+      {constraint.kind !== "unspecified" && (
+        <div className="executive-brief-prose">
+          <h2>Primary constraint</h2>
+          <p>{constraint.label}</p>
+          {constraint.observed.map((line) => (
+            <p key={line}>
+              <strong>Observed:</strong> {line}
+            </p>
+          ))}
+          <p>
+            <strong>Interpretation:</strong> {constraint.interpretation}
+          </p>
+          {constraint.missing.map((line) => (
+            <p key={line}>
+              <strong>Not in the evidence:</strong> {line}
+            </p>
+          ))}
+        </div>
+      )}
+
       {prose.length > 0 && (
         <div className="executive-brief-prose">
           <h2>Why it is stalling</h2>
           {prose.map((line) => (
-            <p key={line}>{line}</p>
+            <p key={line}>
+              <strong>Interpretation:</strong> {line}
+            </p>
           ))}
         </div>
       )}
 
       {quotes.length > 0 && (
         <div className="executive-brief-evidence">
-          <h2>Evidence</h2>
+          <h2>Observed evidence</h2>
           {quotes.map((quote) => (
             <blockquote key={quote}>{quote}</blockquote>
           ))}
+          {hiddenQuotes > 0 && (
+            <p className="meta-line">
+              {hiddenQuotes} more quotation{hiddenQuotes === 1 ? "" : "s"} {hiddenQuotes === 1 ? "is" : "are"} in
+              Expanded Analysis.
+            </p>
+          )}
         </div>
       )}
 
       <div className="executive-brief-actions">
-        <h2>How to fix it</h2>
+        <h2>Recovery plan</h2>
         {guidance.removeFromForecast ? (
           <p>{guidance.line}</p>
         ) : steps.length === 0 ? (
           <p>No immediate action was extracted from this brief.</p>
         ) : (
-          <ol>
-            {steps.map((step) => (
-              <li key={step}>{step}</li>
-            ))}
-          </ol>
+          <>
+            <ol>
+              {steps.map((step) => {
+                const action = formatRecoveryAction(step);
+                const kindLabel =
+                  action.kind === "activity"
+                    ? "Activity, not an outcome."
+                    : action.kind === "outcome"
+                      ? "Outcome."
+                      : action.kind === "mixed"
+                        ? "Includes an activity and an outcome."
+                        : null;
+                return (
+                  <li key={step}>
+                    {step}
+                    {kindLabel && (
+                      <>
+                        {" "}
+                        <span className="meta-line">{kindLabel}</span>
+                      </>
+                    )}
+                    {action.owner && (
+                      <span className="meta-line"> Owner: {action.owner}.</span>
+                    )}
+                    {action.stakeholder && (
+                      <span className="meta-line"> Stakeholder: {action.stakeholder}.</span>
+                    )}
+                    {action.progressEvidence && (
+                      <span className="meta-line"> Progress evidence: {action.progressEvidence}.</span>
+                    )}
+                    {action.checkpoint && (
+                      <span className="meta-line"> Checkpoint: {action.checkpoint}.</span>
+                    )}
+                  </li>
+                );
+              })}
+            </ol>
+            <p className="meta-line">
+              Owner, stakeholder, progress evidence, and checkpoint appear only when the action states them.
+            </p>
+          </>
         )}
       </div>
     </section>

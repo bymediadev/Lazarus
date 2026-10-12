@@ -829,6 +829,10 @@ export interface DialogueStallSignals {
   rep_monologue_ratio: number | null;
   avg_turn_gap_seconds: number | null;
   flagged_patterns: string[];
+  /** Phrases and department words found in the supplied text. */
+  observed_patterns: string[];
+  /** Dialogue-shape penalties. They are measurements, not buyer quotes. */
+  inferred_patterns: string[];
 }
 
 export interface StakeholderDispersion {
@@ -836,7 +840,31 @@ export interface StakeholderDispersion {
   authority_gap: boolean;
   multi_department_friction: number;
   persona_breakdown: Record<string, number>;
+  /** Department words found in role, evidence, or name text. */
+  department_mentions: string[];
+  /** True when the absent-decision-maker term was added. Absence is not resistance. */
+  absence_term_applied: boolean;
   flags: string[];
+}
+
+export interface ScoreFactor {
+  basis: "observed" | "inferred";
+  text: string;
+}
+
+export interface ScoreExplanation {
+  metric: string;
+  summary: string;
+  factors: ScoreFactor[];
+  caveat: string;
+}
+
+export interface ScoreExplanations {
+  viability: ScoreExplanation;
+  deal_risk: ScoreExplanation;
+  department_friction: ScoreExplanation;
+  dispersion: ScoreExplanation;
+  stall: ScoreExplanation;
 }
 
 export type DealRiskTier = "LOW" | "MODERATE" | "HIGH" | "CRITICAL";
@@ -851,6 +879,7 @@ export interface ProprietaryIndices {
   formula: string;
   dialogue_stall: DialogueStallSignals;
   stakeholder_dispersion: StakeholderDispersion;
+  explanations: ScoreExplanations;
 }
 
 const PERSONA_WEIGHTS: Record<string, number> = {
@@ -957,7 +986,8 @@ export function computeStakeholderDispersion(
       if (blob.includes(dept)) deptMentions.add(dept);
     }
   }
-  const multi_department_friction = clamp(deptMentions.size * 14 + (absent > 0 ? 12 : 0));
+  const absence_term_applied = absent > 0;
+  const multi_department_friction = clamp(deptMentions.size * 14 + (absence_term_applied ? 12 : 0));
 
   const index = clamp(raw + multi_department_friction * 0.25);
 
@@ -966,6 +996,8 @@ export function computeStakeholderDispersion(
     authority_gap,
     multi_department_friction,
     persona_breakdown,
+    department_mentions: [...deptMentions].sort(),
+    absence_term_applied,
     flags,
   };
 }
@@ -988,18 +1020,23 @@ export function computeDialogueStallSignals(transcript: string): DialogueStallSi
   const lower = transcript.toLowerCase();
   const flagged_patterns: string[] = [];
 
+  const observed_patterns: string[] = [];
+  const inferred_patterns: string[] = [];
   let deferral_phrase_count = 0;
   for (const phrase of DEFERRAL_PHRASES) {
     if (lower.includes(phrase)) {
       deferral_phrase_count++;
       flagged_patterns.push(phrase);
+      observed_patterns.push(phrase);
     }
   }
 
   let handoff_mention_count = 0;
   for (const dept of HANDOFF_DEPARTMENTS) {
-    if (lower.includes(dept.trim())) {
+    const label = dept.trim();
+    if (lower.includes(label)) {
       handoff_mention_count++;
+      observed_patterns.push(`handoff: ${label}`);
     }
   }
 
@@ -1030,6 +1067,7 @@ export function computeDialogueStallSignals(transcript: string): DialogueStallSi
     rep_monologue_ratio = Math.round((repWords / totalWords) * 100) / 100;
     if (rep_monologue_ratio > 0.65) {
       flagged_patterns.push("rep-dominated dialogue");
+      inferred_patterns.push("rep-dominated dialogue");
     }
   }
 
@@ -1042,7 +1080,10 @@ export function computeDialogueStallSignals(transcript: string): DialogueStallSi
     }
     if (gaps.length) {
       avg_turn_gap_seconds = Math.round(gaps.reduce((a, b) => a + b, 0) / gaps.length);
-      if (avg_turn_gap_seconds > 45) flagged_patterns.push("long turn gaps");
+      if (avg_turn_gap_seconds > 45) {
+        flagged_patterns.push("long turn gaps");
+        inferred_patterns.push("long turn gaps");
+      }
     }
   }
 
@@ -1060,6 +1101,8 @@ export function computeDialogueStallSignals(transcript: string): DialogueStallSi
     rep_monologue_ratio,
     avg_turn_gap_seconds,
     flagged_patterns,
+    observed_patterns,
+    inferred_patterns,
   };
 }
 
@@ -1147,10 +1190,150 @@ export function computeDealRiskIndex(
   return compileDealRiskReport(frozen, dispersion.index, stall.score).deal_risk_index;
 }
 
+function viabilityPathSentence(frozen: FrozenDerivation, blocker: string): string {
+  if (
+    frozen.constraint_pressure <= 0 &&
+    frozen.enabler_strength > 0 &&
+    frozen.structural_lock_in <= 15
+  ) {
+    return "Open path: constraint is zero and structural lock-in is low, so viability follows intent plus timing.";
+  }
+  if (
+    isAuthorityGapRecoverable(
+      frozen.constraint_pressure,
+      frozen.structural_lock_in,
+      frozen.enabler_strength,
+      blocker
+    )
+  ) {
+    return "Recoverable blocker: viability follows intent, enabler strength, and timing, reduced by structural lock-in. A next step is still treated as available.";
+  }
+  return "Default path: viability is effective intent plus timing, minus the larger of structural lock-in and constraint pressure.";
+}
+
+/** Plain-language account of the scores already computed. Does not change the numbers. */
+export function explainScores(
+  frozen: FrozenDerivation,
+  dispersion: StakeholderDispersion,
+  stall: DialogueStallSignals,
+  blocker = ""
+): ScoreExplanations {
+  const departments = dispersion.department_mentions;
+  const departmentList = departments.length ? departments.join(", ") : "none";
+  const observedStall = stall.observed_patterns.filter((item) => !item.startsWith("handoff:"));
+  const handoffs = stall.observed_patterns
+    .filter((item) => item.startsWith("handoff:"))
+    .map((item) => item.slice("handoff:".length).trim());
+
+  return {
+    viability: {
+      metric: "Viability",
+      summary:
+        "Whether a credible path to advance the deal still exists. Stakeholder access is not its own term, and this is not a close probability.",
+      factors: [
+        {
+          basis: "observed",
+          text: `Intent ${frozen.intent_strength}, constraint ${frozen.constraint_pressure}, structural lock-in ${frozen.structural_lock_in}, enabler ${frozen.enabler_strength}, timing ${frozen.timing_factor}. Those weights come from the extracted forces.`,
+        },
+        {
+          basis: "inferred",
+          text: `${viabilityPathSentence(frozen, blocker)} Effective intent is ${frozen.effective_intent}. Trajectory: ${frozen.trajectory_type}. State: ${frozen.viability_state}.`,
+        },
+      ],
+      caveat:
+        "Stakeholder access changes this score only when it is already inside the constraint, structural, or enabler weights. A missing fact is not given a weight.",
+    },
+    deal_risk: {
+      metric: "Deal Risk Index",
+      summary:
+        "Evidence the deal may stall further or be lost, from the published risk equation. Not a close probability.",
+      factors: [
+        {
+          basis: "inferred",
+          text: `0.30×(100−viability ${frozen.viability_score}), 0.25×constraint ${frozen.constraint_pressure}, 0.15×structural ${frozen.structural_lock_in}, 0.20×dispersion ${dispersion.index}, 0.10×stall contribution, minus 0.15×enabler ${frozen.enabler_strength}.`,
+        },
+        {
+          basis: "inferred",
+          text:
+            frozen.timing_factor <= 5 && frozen.constraint_pressure > 40
+              ? "A timing penalty of 10 is included because timing is in the low band and constraint is above 40."
+              : "No timing penalty is included.",
+        },
+      ],
+      caveat:
+        "Recoverable deals cap the stall term at 40 inside this equation. The index explains those inputs. It does not predict a loss date.",
+    },
+    department_friction: {
+      metric: "Department Friction Index",
+      summary:
+        "A count of department words in the stakeholder text, plus 12 when an absent decision maker is mapped. A word match is not resistance.",
+      factors: [
+        {
+          basis: "observed",
+          text: `Department words in role, evidence, or name: ${departmentList}. Each distinct word adds 14.`,
+        },
+        {
+          basis: "inferred",
+          text: dispersion.absence_term_applied
+            ? "An absent decision maker adds 12. That term is not evidence that Legal, Security, or a peer is opposing the deal."
+            : "The absent-decision-maker term was not applied.",
+        },
+      ],
+      caveat:
+        "Legal, Security, or peer resistance is not implied unless those words are in the list above. Absence of a technical approver is not department resistance.",
+    },
+    dispersion: {
+      metric: "Dispersion",
+      summary:
+        "How split the mapped stakeholders are. The index only goes as far as the supplied stakeholder list.",
+      factors: [
+        {
+          basis: "observed",
+          text: `Persona counts from the stakeholder map: ${
+            Object.entries(dispersion.persona_breakdown)
+              .map(([name, count]) => `${name} ${count}`)
+              .join(", ") || "none"
+          }.`,
+        },
+        {
+          basis: "inferred",
+          text: `Persona weights are fixed: absent decision maker +28, hidden detractor +24, suppressed champion +12, aligned champion −8. Dispersion then adds a quarter of department friction (${dispersion.multi_department_friction}). Authority gap: ${dispersion.authority_gap}.`,
+        },
+      ],
+      caveat:
+        "Unmentioned stakeholders are not assumed. Low dispersion means the supplied map is concentrated, not that the whole buying group is aligned.",
+    },
+    stall: {
+      metric: "Stall signals",
+      summary:
+        "Deferral phrases and department handoffs found in the text, plus dialogue-shape penalties when they apply. A delayed meeting is not a rejection.",
+      factors: [
+        {
+          basis: "observed",
+          text: `Deferral phrases found: ${observedStall.length ? observedStall.join(", ") : "none"}. Department handoffs found: ${handoffs.length ? handoffs.join(", ") : "none"}.${
+            handoffs.some((item) => item === "it" || item === "vp" || item === "cfo")
+              ? " Short tokens (it, vp, cfo) are substring matches in the counter, not proof of an IT, VP, or CFO blocker."
+              : ""
+          }`,
+        },
+        {
+          basis: "inferred",
+          text: stall.inferred_patterns.length
+            ? `Dialogue-shape penalties: ${stall.inferred_patterns.join(", ")}.`
+            : "No rep-monologue or long-gap penalty was applied.",
+        },
+      ],
+      caveat:
+        "Phrase matches, including a missed meeting or “if not,” raise the score. They do not by themselves mean the buyer is resisting or has rejected the deal.",
+    },
+  };
+}
+
 export function deriveProprietaryIndices(
   frozen: FrozenDerivation,
   stakeholders: StakeholderIndexInput[],
-  transcript = ""
+  transcript = "",
+  blocker = ""
 ): ProprietaryIndices {
   const stakeholder_dispersion = computeStakeholderDispersion(stakeholders);
   const dialogue_stall = computeDialogueStallSignals(transcript);
@@ -1175,6 +1358,7 @@ export function deriveProprietaryIndices(
     formula,
     dialogue_stall,
     stakeholder_dispersion,
+    explanations: explainScores(frozen, stakeholder_dispersion, dialogue_stall, blocker),
   };
 }
 

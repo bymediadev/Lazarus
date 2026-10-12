@@ -47,32 +47,43 @@ export default function DealHeaderMetrics({ indices: pi, viabilityScore }: Props
         <MetricCard
           label="Deal Risk Score"
           value={formatScoreOutOf100(pi.deal_risk_index)}
-          detail="Likelihood this deal stalls or drops."
+          detail={
+            pi.explanations?.deal_risk.summary ??
+            "Evidence the deal may stall further or be lost. Not a close probability."
+          }
           accentClass={driClass}
         />
         <MetricCard
           label="Dept friction (DFI)"
           value={formatScoreOutOf100(pi.multi_department_friction)}
-          detail="Pushback from Legal, Security, IT, and peers."
+          detail={
+            pi.explanations?.department_friction.summary ??
+            "Department words in the stakeholder text. A word match is not resistance."
+          }
         />
         <MetricCard
           label="Dispersion"
           value={formatScoreOutOf100(pi.stakeholder_dispersion_index)}
-          detail="How fragmented buyer communication is."
+          detail={
+            pi.explanations?.dispersion.summary ??
+            "How split the mapped stakeholders are. Only the supplied people count."
+          }
         />
         <MetricCard
           label="Stall signals"
           value={formatScoreOutOf100(pi.dialogue_stall_score)}
           detail={
-            pi.authority_gap_flag
-              ? "Stall pressure — authority gap flagged."
-              : "Stall pressure from missed cadence and open objections."
+            pi.explanations?.stall.summary ??
+            "Deferral language in the text. A delayed meeting is not a rejection."
           }
         />
         <MetricCard
           label="Recoverability"
           value={formatScoreOutOf100(viabilityScore)}
-          detail="Higher = still worth manager effort; lower = flat no risk."
+          detail={
+            pi.explanations?.viability.summary ??
+            "Whether a credible path to advance the deal still exists."
+          }
         />
       </div>
     </section>

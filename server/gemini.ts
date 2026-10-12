@@ -326,7 +326,12 @@ function applyCanonicalScoring(
     .sort((a, b) => b.weight - a.weight)[0];
 
   const finalCycle = frozen.resolution_cycles.cycles[frozen.resolution_cycles.cycles.length - 1];
-  const proprietary_indices = deriveProprietaryIndices(frozen, result.stakeholders, transcript);
+  const proprietary_indices = deriveProprietaryIndices(
+    frozen,
+    result.stakeholders,
+    transcript,
+    causal.blocker_classification
+  );
 
   const projected: EnterpriseAnalysis = {
     ...result,
