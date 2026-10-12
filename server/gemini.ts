@@ -21,6 +21,9 @@ import {
 } from "./grounding.js";
 import { alignBlockerNarrative } from "../src/lib/blockerNarrative.js";
 import { commercialBaselineFromText, type CommercialBaseline } from "../src/lib/commercialBaseline.js";
+import { attributeQuote } from "../src/lib/evidenceAttribution.js";
+import { assessIntentExtraction, buildIntentRetryInstructions } from "../src/lib/intentExtraction.js";
+import { preserveTriggerEstimate } from "../src/lib/triggerEstimate.js";
 import {
   assertFrozenConsistency,
   buildDependencyGraph,
@@ -164,7 +167,8 @@ export interface BuyerState {
 
 export interface ReactivationTrigger {
   trigger_event: string;
-  probability: number;
+  /** Model estimate. A word stays a word; a number is kept but is not a calibrated probability. */
+  probability: number | string;
   equilibrium_shift: string;
   forces_modified: string[];
   timeframe: string;
@@ -259,6 +263,11 @@ function clampScore(n: unknown, fallback = 50): number {
   const v = Number(n);
   if (!Number.isFinite(v)) return fallback;
   return Math.min(100, Math.max(0, Math.round(v)));
+}
+
+/** Keep a model likelihood. Do not turn low/medium/high into a percentage. */
+function normalizeTriggerEstimate(probRaw: unknown): number | string {
+  return preserveTriggerEstimate(probRaw);
 }
 
 function normalizeEnterpriseStatus(value: unknown): EnterpriseDealStatus {
@@ -670,15 +679,7 @@ function normalizeOutput(raw: Record<string, unknown>): EnterpriseAnalysis {
   const reactivation_modeling: ReactivationTrigger[] = Array.isArray(raw.reactivation_modeling)
     ? raw.reactivation_modeling.map((item) => {
         const t = item as Record<string, unknown>;
-        const probRaw = t.probability;
-        const probability =
-          typeof probRaw === "string" && /^(low|medium|high)$/i.test(probRaw)
-            ? probRaw.toLowerCase() === "high"
-              ? 75
-              : probRaw.toLowerCase() === "low"
-                ? 25
-                : 50
-            : clampScore(probRaw, 50);
+        const probability = normalizeTriggerEstimate(t.probability);
         return {
           trigger_event: String(t.trigger_event ?? ""),
           probability,
@@ -916,7 +917,14 @@ function applyGroundingFilter(
       ),
     },
     causal_forces: groundedForces,
-    stakeholders: groundedStakeholders,
+    stakeholders: groundedStakeholders.map((person) => {
+      const attribution = attributeQuote(transcript, person.name, person.evidence);
+      return {
+        ...person,
+        evidence_speaker: attribution.speaker ?? "",
+        evidence_basis: attribution.basis,
+      };
+    }),
   }, transcript, supplemental);
 }
 
@@ -960,6 +968,26 @@ export async function analyzeTranscript(
   if (!audit.pass) {
     console.warn("Grounding audit failed — retrying with correction prompt", audit);
     userMessage = buildGroundingRetryMessage(transcript, dealValue, audit, deepContext);
+    analysis = await extractWithModels(systemPrompt, userMessage, tier, preferOpenWeights);
+    audit = auditTranscriptGrounding({
+      transcript: evidenceCorpus,
+      dealValue,
+      causal_forces: analysis.causal_forces,
+      executive_summary: analysis.executive_summary,
+      force_initialization: analysis.force_initialization,
+      stakeholders: analysis.stakeholders,
+    });
+  }
+
+  const intentAssessment = assessIntentExtraction(transcript, analysis.causal_forces);
+  if (intentAssessment.status === "missing_despite_signals") {
+    console.warn("Intent extraction omitted stated buyer willingness — retrying once");
+    userMessage = `${buildTranscriptConstraints(transcript, dealValue)}${buildDeepContextMessageBlock(deepContext ?? {})}
+
+${buildIntentRetryInstructions(intentAssessment.missing)}
+
+TRANSCRIPT:
+${transcript}`;
     analysis = await extractWithModels(systemPrompt, userMessage, tier, preferOpenWeights);
     audit = auditTranscriptGrounding({
       transcript: evidenceCorpus,

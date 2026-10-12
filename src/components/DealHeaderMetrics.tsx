@@ -5,6 +5,7 @@ import { driTagClass, type ProprietaryIndices, type PostMortemResult } from "../
 interface Props {
   indices: ProprietaryIndices;
   viabilityScore?: number;
+  intermediateViability?: number;
 }
 
 function MetricCard({
@@ -27,7 +28,7 @@ function MetricCard({
   );
 }
 
-export default function DealHeaderMetrics({ indices: pi, viabilityScore }: Props) {
+export default function DealHeaderMetrics({ indices: pi, viabilityScore, intermediateViability }: Props) {
   const driClass = driTagClass(pi.risk_tier);
   const legendScores = {
     deal_risk_index: pi.deal_risk_index,
@@ -81,8 +82,17 @@ export default function DealHeaderMetrics({ indices: pi, viabilityScore }: Props
           label="Recoverability"
           value={formatScoreOutOf100(viabilityScore)}
           detail={
-            pi.explanations?.viability.summary ??
-            "Whether a credible path to advance the deal still exists."
+            [
+              pi.explanations?.viability.summary ??
+                "Whether a credible path to advance the deal still exists.",
+              intermediateViability !== undefined &&
+              viabilityScore !== undefined &&
+              intermediateViability !== viabilityScore
+                ? `The score shown is the final derived viability (${viabilityScore}). Cycle 1 at ${intermediateViability} is an intermediate calculation step.`
+                : null,
+            ]
+              .filter((line): line is string => Boolean(line))
+              .join(" ")
           }
         />
       </div>

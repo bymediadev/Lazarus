@@ -4,7 +4,8 @@ import { readConstraint } from "../lib/constraintReading";
 import { mergeOverlappingQuotes } from "../lib/evidenceQuotes";
 import { commercialBaselineFromText } from "../lib/commercialBaseline";
 import { forecastGuidance } from "../lib/forecastCall";
-import { formatRecoveryAction } from "../lib/recoveryPlan";
+import { convergenceExplanation, viabilityCycleDisplay } from "../lib/convergenceNote";
+import { recoveryActionLines, uniqueRecoveryNotes } from "../lib/recoveryPlan";
 import type { PostMortemResult } from "../types";
 
 interface Props {
@@ -105,22 +106,33 @@ export default function ExecutiveBrief({ result }: Props) {
   });
   const steps = guidance.removeFromForecast
     ? []
-    : uniqueActionSteps([
-        ...(result.immediate_remediation ?? []),
-        ...(result.rescue_triage_plan?.immediate_0_30_days ?? []),
-      ]);
+    : uniqueRecoveryNotes(
+        uniqueActionSteps([
+          ...(result.immediate_remediation ?? []),
+          ...(result.rescue_triage_plan?.immediate_0_30_days ?? []),
+        ])
+      );
+  const cycleRows = result.resolution_cycles?.cycles ?? [];
+  const viabilityDisplay = viabilityCycleDisplay(cycleRows, viability);
+  const convergence = convergenceExplanation({
+    convergenceStatus: result.resolution_cycles?.convergence_status,
+    totalCycles: result.resolution_cycles?.total_cycles ?? cycleRows.length,
+    equilibrium: result.equilibrium_analysis?.state,
+    trajectory: result.deal_trajectory?.trajectory_type,
+  });
 
   return (
     <section className="executive-brief" aria-label="Executive brief">
       <ViabilityLineChart
+        caption={cycleRows.length > 1 ? "Viability by calculation cycle" : "Viability"}
         points={
-          (result.resolution_cycles?.cycles ?? []).length > 0
-            ? (result.resolution_cycles?.cycles ?? []).map((cycle) => ({
-                label: String(cycle.cycle),
+          cycleRows.length > 0
+            ? cycleRows.map((cycle, index) => ({
+                label: index === cycleRows.length - 1 ? "Final" : `Cycle ${cycle.cycle}`,
                 value: cycle.state_snapshot.viability_score,
               }))
             : viability !== undefined
-              ? [{ label: "Now", value: viability }]
+              ? [{ label: "Final", value: viability }]
               : []
         }
       />
@@ -131,7 +143,10 @@ export default function ExecutiveBrief({ result }: Props) {
           <p className="executive-brief-commercial">Commercial Baseline: {baselineParts.join(" | ")}</p>
         )}
         <p className="executive-brief-status-metrics">
-          {viability !== undefined && <span>Viability: {viability}</span>}
+          {viabilityDisplay.intermediate !== null && (
+            <span>Cycle 1 intermediate: {viabilityDisplay.intermediate}</span>
+          )}
+          {viability !== undefined && <span>Final derived viability: {viability}</span>}
           {risk !== undefined && (
             <span>
               Deal Risk Index: {risk}
@@ -139,6 +154,8 @@ export default function ExecutiveBrief({ result }: Props) {
             </span>
           )}
         </p>
+        {viabilityDisplay.note && <p className="meta-line">{viabilityDisplay.note}</p>}
+        {convergence && <p className="meta-line">{convergence}</p>}
       </div>
 
       {constraint.kind !== "unspecified" && (
@@ -161,7 +178,7 @@ export default function ExecutiveBrief({ result }: Props) {
         </div>
       )}
 
-      {prose.length > 0 && (
+      {constraint.kind === "unspecified" && prose.length > 0 && (
         <div className="executive-brief-prose">
           <h2>Why it is stalling</h2>
           {prose.map((line) => (
@@ -197,35 +214,17 @@ export default function ExecutiveBrief({ result }: Props) {
           <>
             <ol>
               {steps.map((step) => {
-                const action = formatRecoveryAction(step);
-                const kindLabel =
-                  action.kind === "activity"
-                    ? "Activity, not an outcome."
-                    : action.kind === "outcome"
-                      ? "Outcome."
-                      : action.kind === "mixed"
-                        ? "Includes an activity and an outcome."
-                        : null;
+                const lines = recoveryActionLines(step);
                 return (
                   <li key={step}>
-                    {step}
-                    {kindLabel && (
-                      <>
-                        {" "}
-                        <span className="meta-line">{kindLabel}</span>
-                      </>
-                    )}
-                    {action.owner && (
-                      <span className="meta-line"> Owner: {action.owner}.</span>
-                    )}
-                    {action.stakeholder && (
-                      <span className="meta-line"> Stakeholder: {action.stakeholder}.</span>
-                    )}
-                    {action.progressEvidence && (
-                      <span className="meta-line"> Progress evidence: {action.progressEvidence}.</span>
-                    )}
-                    {action.checkpoint && (
-                      <span className="meta-line"> Checkpoint: {action.checkpoint}.</span>
+                    {lines.map((line, index) =>
+                      index === 0 ? (
+                        <div key={line}>{line}</div>
+                      ) : (
+                        <div key={line} className="meta-line">
+                          {line}
+                        </div>
+                      )
                     )}
                   </li>
                 );

@@ -5,6 +5,7 @@ interface Point {
 
 interface Props {
   points: Point[];
+  caption?: string;
 }
 
 const WIDTH = 440;
@@ -16,7 +17,7 @@ function clampScore(value: number): number {
   return Math.max(0, Math.min(100, value));
 }
 
-export default function ViabilityLineChart({ points }: Props) {
+export default function ViabilityLineChart({ points, caption = "Viability" }: Props) {
   if (points.length === 0) return null;
   const series = points;
   const innerW = WIDTH - PAD.left - PAD.right;
@@ -29,7 +30,7 @@ export default function ViabilityLineChart({ points }: Props) {
 
   return (
     <figure className="viability-line">
-      <figcaption className="viability-line-caption">Viability</figcaption>
+      <figcaption className="viability-line-caption">{caption}</figcaption>
       <svg className="viability-line-svg" viewBox={`0 0 ${WIDTH} ${HEIGHT}`} role="img" aria-label={`Viability: ${summary}`}>
         {[0, 50, 100].map((tick) => (
           <g key={tick}>

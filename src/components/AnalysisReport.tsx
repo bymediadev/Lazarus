@@ -1,6 +1,13 @@
 import { useState } from "react";
 import { saveRescueOutcome } from "../lib/api";
 import { alignBlockerNarrative } from "../lib/blockerNarrative";
+import { convergenceExplanation, viabilityCycleDisplay } from "../lib/convergenceNote";
+import { peopleMapRows } from "../lib/evidenceAttribution";
+import { dependencyRelationships, MISSING_DEPENDENCY_NOTE } from "../lib/forceGraph";
+import { pipelineReading } from "../lib/pipelineReading";
+import { recoveryActionLines, uniqueRecoveryNotes } from "../lib/recoveryPlan";
+import { intentInputTrace, pinnedEquilibriumNote } from "../lib/scoreInputTrace";
+import { TRIGGER_ESTIMATE_NOTE, triggerLikelihood } from "../lib/triggerEstimate";
 import ConciseDiagnostic from "./ConciseDiagnostic";
 import ExecutiveBrief from "./ExecutiveBrief";
 import FastFactsPanel from "./FastFactsPanel";
@@ -140,7 +147,10 @@ export default function AnalysisReport({
     ];
     const text = sections
       .filter(([, items]) => items.length)
-      .map(([label, items]) => `${label}\n${items.map((a, i) => `${i + 1}. ${a}`).join("\n")}`)
+      .map(([label, items]) => {
+        const notes = uniqueRecoveryNotes(items);
+        return `${label}\n${notes.map((action, i) => `${i + 1}. ${action.replace(/\n/g, "\n   ")}`).join("\n")}`;
+      })
       .join("\n\n");
     await navigator.clipboard.writeText(text);
     setCopied(true);
@@ -244,17 +254,26 @@ export default function AnalysisReport({
                   <th>Role</th>
                   <th>Authority</th>
                   <th>Persona</th>
-                  <th>Verbatim Evidence</th>
+                  <th>Evidence</th>
                 </tr>
               </thead>
               <tbody>
-                {r.stakeholders.map((s, i) => (
-                  <tr key={i}>
-                    <td>{s.name}</td>
-                    <td>{s.role || "—"}</td>
-                    <td>{s.authority_level || "—"}</td>
-                    <td>{s.persona_type || s.stance}</td>
-                    <td className="force-evidence">"{s.evidence.replace(/^"|"$/g, "")}"</td>
+                {peopleMapRows(r.stakeholders).map((person) => (
+                  <tr key={person.name}>
+                    <td>{person.name}</td>
+                    <td>{person.role || "—"}</td>
+                    <td>{person.authority || "—"}</td>
+                    <td>{person.persona || "—"}</td>
+                    <td className="force-evidence">
+                      {person.quotes.map((quote) => (
+                        <div key={quote.text}>
+                          <div>"{quote.text}"</div>
+                          {quote.note && <p className="meta-line">{quote.note}</p>}
+                        </div>
+                      ))}
+                      {person.secondhandNote && <p className="meta-line">{person.secondhandNote}</p>}
+                      {person.quotes.length === 0 && !person.secondhandNote && "—"}
+                    </td>
                   </tr>
                 ))}
               </tbody>
@@ -286,8 +305,21 @@ export default function AnalysisReport({
           <h2 className="card-title">Iterative Resolution Cycles</h2>
           <div className="card-body">
             <p className="meta-line" style={{ marginBottom: "0.75rem" }}>
+              {convergenceExplanation({
+                convergenceStatus: cycles.convergence_status,
+                totalCycles: cycles.total_cycles,
+                equilibrium: eq.state,
+                trajectory: dt.trajectory_type,
+              })}
+            </p>
+            <p className="meta-line" style={{ marginBottom: "0.75rem" }}>
               {readableEquilibriumText(cycles.convergence_summary)}
             </p>
+            {viabilityCycleDisplay(cycles.cycles, vs.viability_score).note && (
+              <p className="meta-line" style={{ marginBottom: "0.75rem" }}>
+                {viabilityCycleDisplay(cycles.cycles, vs.viability_score).note}
+              </p>
+            )}
             <table className="trigger-table cycle-table">
               <thead>
                 <tr>
@@ -363,35 +395,50 @@ export default function AnalysisReport({
         </article>
       )}
 
-      {(fdg.parent_forces.length > 0 || fdg.feedback_loops.length > 0) && (
-        <article className="card card-neutral">
-          <h2 className="card-title">Force Dependency Graph</h2>
-          <div className="card-body">
-            {fdg.parent_forces.length > 0 && (
-              <div className="coupling-group">
-                <h4>Parent → Child</h4>
-                <ul className="restart-list">
-                  {fdg.parent_forces.map((p, i) => (
-                    <li key={i}>
-                      <strong>{p.force}</strong> generates: {p.generates.join(", ")}
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            )}
-            {(fdg.cycle_evolution ?? []).length > 0 && (
-              <div className="coupling-group">
-                <h4>Cycle Evolution</h4>
-                <ul className="restart-list">
-                  {fdg.cycle_evolution!.map((e, i) => (
-                    <li key={i}>{e}</li>
-                  ))}
-                </ul>
-              </div>
-            )}
-          </div>
-        </article>
-      )}
+      {(() => {
+        const relationships = dependencyRelationships(fdg);
+        const namedParents = fdg.parent_forces.some((parent) => parent.force?.trim());
+        if (relationships.status === "unavailable" && !namedParents) return null;
+        return (
+          <article className="card card-neutral">
+            <h2 className="card-title">Force Dependency Graph</h2>
+            <div className="card-body">
+              {relationships.status === "unavailable" ? (
+                <p>{MISSING_DEPENDENCY_NOTE}</p>
+              ) : (
+                <>
+                  {relationships.edges.length > 0 && (
+                    <div className="coupling-group">
+                      <h4>Parent → Child</h4>
+                      <ul className="restart-list">
+                        {relationships.edges.map((parent) => (
+                          <li key={parent.force}>
+                            <strong>{parent.force}</strong> generates: {parent.generates.join(", ")}
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+                  {relationships.loops.length > 0 && (
+                    <div className="coupling-group">
+                      <h4>Feedback loops</h4>
+                      <ul className="restart-list">
+                        {relationships.loops.map((loop) => (
+                          <li key={loop.loop}>
+                            <strong>{loop.loop}</strong>
+                            {loop.forces.length > 0 ? `: ${loop.forces.join(", ")}` : ""}
+                            {loop.effect ? ` — ${loop.effect}` : ""}
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+                </>
+              )}
+            </div>
+          </article>
+        );
+      })()}
 
       <article className={`card card-${equilibriumClass === "status-success" ? "emerald" : equilibriumClass === "status-failed" ? "red" : "amber"}`}>
         <h2 className="card-title">Equilibrium Analysis</h2>
@@ -401,6 +448,19 @@ export default function AnalysisReport({
             <span className="force-role" style={{ marginLeft: "0.5rem" }}>derived from resolution</span>
           )}
           <p style={{ marginTop: "0.75rem" }}>{readableEquilibriumText(eq.net_force_balance || eq.explanation || "")}</p>
+          {pinnedEquilibriumNote(
+            eq.state,
+            dc_comp?.structural_lock_in_impact ?? 0,
+            dc_comp?.constraint_pressure ?? 0
+          ) && (
+            <p className="meta-line">
+              {pinnedEquilibriumNote(
+                eq.state,
+                dc_comp?.structural_lock_in_impact ?? 0,
+                dc_comp?.constraint_pressure ?? 0
+              )}
+            </p>
+          )}
           {eq.dominating_forces.length > 0 && (
             <>
               <h4 style={{ marginTop: "0.75rem" }}>Dominating Forces</h4>
@@ -425,12 +485,21 @@ export default function AnalysisReport({
             <span className="viability-score">{vs.viability_score}/100</span>
           </div>
           <p className="equilibrium-derivation">{readableEquilibriumText(vs.equilibrium_derivation)}</p>
+          {dc_comp && (
+            <p className="meta-line" style={{ marginTop: "0.5rem" }}>
+              {intentInputTrace(
+                dc_comp.intent_strength,
+                dc_comp.constraint_pressure,
+                Number(r.buyer_state?.effective_intent ?? 0)
+              )}
+            </p>
+          )}
           <p className="meta-line" style={{ marginTop: "0.5rem" }}>
             Frozen derivation — read-only across all sections
           </p>
           {dc_comp && (
             <div className="derivation-grid">
-              <div className="derivation-metric"><span>Intent</span><strong>{dc_comp.intent_strength}</strong></div>
+              <div className="derivation-metric"><span>Raw intent</span><strong>{dc_comp.intent_strength}</strong></div>
               <div className="derivation-metric"><span>− Constraint</span><strong>{dc_comp.constraint_pressure}</strong></div>
               <div className="derivation-metric"><span>− Structural</span><strong>{dc_comp.structural_lock_in_impact}</strong></div>
               <div className="derivation-metric"><span>+ Timing</span><strong>{dc_comp.timing_accessibility}</strong></div>
@@ -500,7 +569,7 @@ export default function AnalysisReport({
               <thead>
                 <tr>
                   <th>Trigger</th>
-                  <th>Probability</th>
+                  <th>Heuristic likelihood</th>
                   <th>Equilibrium Shift</th>
                   <th>Forces Modified</th>
                   <th>Timeframe</th>
@@ -510,7 +579,7 @@ export default function AnalysisReport({
                 {r.reactivation_modeling!.map((t, i) => (
                   <tr key={i}>
                     <td>{t.trigger_event}</td>
-                    <td>{t.probability}%</td>
+                    <td>{triggerLikelihood(t.probability).label}</td>
                     <td>{t.equilibrium_shift}</td>
                     <td>{(t.forces_modified ?? []).join("; ") || "—"}</td>
                     <td>{t.timeframe}</td>
@@ -518,6 +587,9 @@ export default function AnalysisReport({
                 ))}
               </tbody>
             </table>
+            <p className="meta-line" style={{ marginTop: "0.75rem" }}>
+              {TRIGGER_ESTIMATE_NOTE}
+            </p>
           </div>
         </article>
       )}
@@ -529,7 +601,19 @@ export default function AnalysisReport({
             <div className="triage-bucket">
               <h4>Immediate — 0–30 Days</h4>
               <ul className="restart-list">
-                {plan.immediate_0_30_days.map((item, i) => <li key={i}>{item}</li>)}
+                {uniqueRecoveryNotes(plan.immediate_0_30_days).map((item) => (
+                  <li key={item}>
+                    {recoveryActionLines(item).map((line, lineIndex) =>
+                      lineIndex === 0 ? (
+                        <div key={line}>{line}</div>
+                      ) : (
+                        <div key={line} className="meta-line">
+                          {line}
+                        </div>
+                      )
+                    )}
+                  </li>
+                ))}
               </ul>
             </div>
           )}
@@ -537,7 +621,13 @@ export default function AnalysisReport({
             <div className="triage-bucket">
               <h4>Near-Term — 30–90 Days</h4>
               <ul className="restart-list">
-                {plan.near_term_30_90_days.map((item, i) => <li key={i}>{item}</li>)}
+                {uniqueRecoveryNotes(plan.near_term_30_90_days).map((item) => (
+                  <li key={item}>
+                    {recoveryActionLines(item).map((line, lineIndex) =>
+                      lineIndex === 0 ? <div key={line}>{line}</div> : <div key={line} className="meta-line">{line}</div>
+                    )}
+                  </li>
+                ))}
               </ul>
             </div>
           )}
@@ -545,7 +635,13 @@ export default function AnalysisReport({
             <div className="triage-bucket">
               <h4>Long-Term — 90+ Days</h4>
               <ul className="restart-list">
-                {plan.long_term_90_plus_days.map((item, i) => <li key={i}>{item}</li>)}
+                {uniqueRecoveryNotes(plan.long_term_90_plus_days).map((item) => (
+                  <li key={item}>
+                    {recoveryActionLines(item).map((line, lineIndex) =>
+                      lineIndex === 0 ? <div key={line}>{line}</div> : <div key={line} className="meta-line">{line}</div>
+                    )}
+                  </li>
+                ))}
               </ul>
             </div>
           )}
@@ -557,9 +653,31 @@ export default function AnalysisReport({
 
       {r.pipeline_entry_validity && (
         <article className="card card-amber">
-          <h2 className="card-title">Pipeline Entry Validity (System-Based)</h2>
+          <h2 className="card-title">Pipeline recommendation</h2>
           <div className="card-body">
-            <span className="pipeline-badge">{r.pipeline_entry_validity.classification}</span>
+            {(() => {
+              const reading = pipelineReading({
+                currentStatus: String(dc.status),
+                qualification: r.pipeline_entry_validity.classification,
+                stageChange: r.pipeline_entry_validity.stage_should_have_changed,
+                optimalDecision: r.pipeline_entry_validity.optimal_decision,
+              });
+              return (
+                <>
+                  <p className="meta-line">{reading.note}</p>
+                  <p><strong>Current deal status:</strong> {reading.currentStatus}</p>
+                  {reading.qualification && (
+                    <p><strong>Qualification reading:</strong> {reading.qualification}</p>
+                  )}
+                  {reading.recommendedStage && (
+                    <p><strong>Recommended CRM stage:</strong> {reading.recommendedStage}</p>
+                  )}
+                  {reading.recommendedAction && (
+                    <p><strong>Recommended pipeline action:</strong> {reading.recommendedAction}</p>
+                  )}
+                </>
+              );
+            })()}
             {r.pipeline_entry_validity.system_basis && (
               <p className="meta-line" style={{ marginTop: "0.75rem" }}>
                 <strong>System basis:</strong> {r.pipeline_entry_validity.system_basis}
@@ -572,16 +690,6 @@ export default function AnalysisReport({
                   {r.pipeline_entry_validity.signals_missed.map((q, i) => <li key={i}>{q}</li>)}
                 </ul>
               </>
-            )}
-            {r.pipeline_entry_validity.stage_should_have_changed && (
-              <p className="meta-line">
-                <strong>Stage should have changed:</strong> {r.pipeline_entry_validity.stage_should_have_changed}
-              </p>
-            )}
-            {r.pipeline_entry_validity.optimal_decision && (
-              <p className="meta-line">
-                <strong>Optimal decision:</strong> {r.pipeline_entry_validity.optimal_decision}
-              </p>
             )}
           </div>
         </article>
@@ -697,7 +805,13 @@ export default function AnalysisReport({
         </div>
       </details>
 
-      {pi && <DealHeaderMetrics indices={pi} viabilityScore={vs.viability_score} />}
+      {pi && (
+        <DealHeaderMetrics
+          indices={pi}
+          viabilityScore={vs.viability_score}
+          intermediateViability={cycles?.cycles?.[0]?.state_snapshot.viability_score}
+        />
+      )}
 
       <div className="report-view-tabs" data-guide-target="guide-results" role="tablist">
         <button

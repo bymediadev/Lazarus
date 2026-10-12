@@ -1,10 +1,6 @@
 import { PostMortemResult, StakeholderSignal } from "../types";
 import { formatMetricLegendMarkdown } from "./metricLegend";
-
-function lineList(items: string[], empty = "—"): string {
-  if (!items.length) return empty;
-  return items.map((item, i) => `${i + 1}. ${item}`).join("\n");
-}
+import { recoveryActionNote, uniqueRecoveryNotes } from "./recoveryPlan";
 
 function bulletList(items: string[], empty = "—"): string {
   if (!items.length) return empty;
@@ -141,7 +137,7 @@ function whoDoesWhat(result: PostMortemResult): string {
     );
   }
   if (crmNext) {
-    lines.push(`- **Recommended next move:** ${crmNext}`);
+    lines.push(`- **Recommended next move:** ${recoveryActionNote(crmNext).replace(/\n/g, "; ")}`);
   }
 
   return lines.join("\n");
@@ -166,21 +162,35 @@ function whatToDo(result: PostMortemResult): string {
     ...plan.long_term_90_plus_days,
   ];
 
+  const seen = new Set<string>();
   const sections: string[] = [];
-  sections.push("**This week (0–7 days):**");
-  sections.push(lineList(day0.length ? day0 : day30.slice(0, 2), "Set a dated next step with the champion."));
+  const section = (title: string, items: string[], empty?: string) => {
+    const notes = uniqueRecoveryNotes(items).filter((note) => {
+      const key = note.toLowerCase();
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    });
+    if (!notes.length) {
+      if (!empty) return;
+      sections.push(`**${title}:**`);
+      sections.push(empty);
+      return;
+    }
+    sections.push(`**${title}:**`);
+    sections.push(notes.map((note, i) => `${i + 1}. ${note.replace(/\n/g, "\n   ")}`).join("\n"));
+  };
+
+  section("This week (0–7 days)", day0.length ? day0 : day30.slice(0, 2), "Set a dated next step with the champion.");
   sections.push("");
-  sections.push("**30 days:**");
-  sections.push(lineList(day30, "Hold the weekly recovery motion from this week’s actions."));
+  section("30 days", day30, day30.length ? undefined : "Hold the weekly recovery motion from this week’s actions.");
   if (day60.length) {
     sections.push("");
-    sections.push("**60 days:**");
-    sections.push(lineList(day60));
+    section("60 days", day60);
   }
   if (day90.length) {
     sections.push("");
-    sections.push("**90 days:**");
-    sections.push(lineList(day90));
+    section("90 days", day90);
   }
   return sections.join("\n");
 }

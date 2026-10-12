@@ -5,6 +5,8 @@
  *   Layer 3 — Output projection (read-only, no math)
  */
 
+import { intentInputTrace } from "../src/lib/scoreInputTrace.js";
+
 export type CanonicalEquilibrium = "PINNED" | "MIXED" | "OPEN";
 
 export type CanonicalTrajectory =
@@ -1234,6 +1236,14 @@ export function explainScores(
         {
           basis: "observed",
           text: `Intent ${frozen.intent_strength}, constraint ${frozen.constraint_pressure}, structural lock-in ${frozen.structural_lock_in}, enabler ${frozen.enabler_strength}, timing ${frozen.timing_factor}. Those weights come from the extracted forces.`,
+        },
+        {
+          basis: "inferred",
+          text: intentInputTrace(
+            frozen.intent_strength,
+            frozen.constraint_pressure,
+            frozen.effective_intent
+          ),
         },
         {
           basis: "inferred",

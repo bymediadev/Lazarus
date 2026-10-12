@@ -16,6 +16,8 @@ export interface StakeholderSignal {
   authority_level: string;
   persona_type: string;
   evidence: string;
+  evidence_speaker?: string;
+  evidence_basis?: "firsthand" | "secondhand" | "unattributed";
 }
 
 export interface GroundingAudit {

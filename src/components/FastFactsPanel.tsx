@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { uniqueActionSteps } from "../lib/actionSteps";
+import { recoveryActionLines, uniqueRecoveryNotes } from "../lib/recoveryPlan";
 import { forecastGuidance } from "../lib/forecastCall";
 import { formatCompressedCrmNotes } from "../lib/crmNotes";
 import { PostMortemResult, StakeholderSignal } from "../types";
@@ -65,9 +65,9 @@ export default function FastFactsPanel({
   const vetoPeople = opposing(result);
   const missingPeople = absentPeople(result);
   const plan = result.rescue_triage_plan;
-  const saveSteps = uniqueActionSteps([
-    ...(result.immediate_remediation ?? []).slice(0, 1),
-    ...(plan?.immediate_0_30_days ?? []).slice(0, 1),
+  const saveSteps = uniqueRecoveryNotes([
+    ...(result.immediate_remediation ?? []),
+    ...(plan?.immediate_0_30_days ?? []),
   ]).slice(0, 1);
 
   const noteBody = formatCompressedCrmNotes(result);
@@ -161,7 +161,17 @@ export default function FastFactsPanel({
             <>
               <ol className="fast-facts-steps">
                 {saveSteps.map((s, i) => (
-                  <li key={i}>{s}</li>
+                  <li key={i}>
+                    {recoveryActionLines(s).map((line, lineIndex) =>
+                      lineIndex === 0 ? (
+                        <div key={line}>{line}</div>
+                      ) : (
+                        <div key={line} className="meta-line">
+                          {line}
+                        </div>
+                      )
+                    )}
+                  </li>
                 ))}
               </ol>
               <p className="meta-line">The full recovery plan is in the brief above. This block is the note to copy.</p>

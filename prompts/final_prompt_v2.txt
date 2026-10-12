@@ -73,6 +73,8 @@ Your force types drive server math:
 
 Classify enablers and constraints correctly — the server cannot fix inverted polarity.
 
+Intent is the buyer's stated willingness. Quote it when the buyer says they like the offer, or that they will move or accelerate if a named approval happens. A missing approver, an unmet technical requirement, or "I'm not moving this forward" without that approver is Constraint or Structural, not Intent. Do not emit Intent with weight 0. If the buyer neither states willingness nor refuses, omit the Intent force. Omitting it means the evidence did not state intent. It does not mean the buyer has no interest. A modeled or in-range budget is an Enabler. Do not label that budget approved unless the buyer said approved.
+
 ## OUTPUT — valid JSON only
 
 {
@@ -90,7 +92,7 @@ Classify enablers and constraints correctly — the server cannot fix inverted p
       "role": "",
       "authority_level": "economic_buyer | technical_veto | influencer | user | unknown",
       "persona_type": "Aligned Champion | Suppressed Champion | Hidden Detractor | Absent Decision Maker | Neutral | Unknown",
-      "evidence": "verbatim quote"
+      "evidence": "verbatim quote from the person who said it. If someone else describes this person, do not put that quote on this person."
     }
   ],
   "causal_forces": [
@@ -112,7 +114,7 @@ Classify enablers and constraints correctly — the server cannot fix inverted p
     "dominating_forces": [""]
   },
   "reactivation_modeling": [
-    { "trigger_event": "", "probability": 0-100, "forces_modified": [], "timeframe": "" }
+    { "trigger_event": "", "probability": "low | medium | high", "forces_modified": [], "timeframe": "" }
   ],
   "pipeline_entry_validity": {
     "classification": "CORRECTLY QUALIFIED | SHOULD HAVE BEEN DEFERRED | SHOULD HAVE BEEN DISQUALIFIED",
@@ -129,7 +131,7 @@ Classify enablers and constraints correctly — the server cannot fix inverted p
   "crm_intelligence": {
     "dominant_equilibrium_force": "",
     "structural_constraint_type": "",
-    "reactivation_probability": "0-100",
+    "reactivation_probability": "low | medium | high",
     "recommended_next_action": ""
   },
   "live_deal_triage": {
@@ -156,3 +158,7 @@ Classify enablers and constraints correctly — the server cannot fix inverted p
 FORBIDDEN OUTPUT: viability_state, deal_trajectory, buyer_state, resolution_cycles, force_dependency_graph
 
 Max 6 forces. Max 3 reactivation triggers. Omit forces rather than invent them.
+Reactivation probability is an uncalibrated heuristic label: low, medium, or high. Do not emit a percentage. It is not a measured chance the deal moves.
+A stakeholder evidence quote must be words that person said. If Mark describes Dave, the quote belongs to Mark and Dave is the subject. Do not present secondhand description as Dave's own statement.
+Progress evidence is what would show the action worked later. Do not write it as a fact that has already happened. Do not turn a past month in the source notes into a future checkpoint.
+pipeline_entry_validity is a staging recommendation. It is not the current deal status.
