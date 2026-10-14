@@ -84,6 +84,8 @@ const RESOURCE_CONDITION =
 const FINANCIAL_CONDITION =
   /\b(financial case|actual savings|defensible|too optimistic|additional approval|signs off on the spend|discretionary spending|spending freeze|freezing discretionary)\b/i;
 const FINANCIAL_PARENT = /\b(freez|frozen|discretionary|spending freeze|budget|additional approval)\b/i;
+/** A discretionary spending freeze is one structural force, whichever type the model assigns. */
+const SPENDING_FREEZE = /\b(discretionary spending|spending freeze|freezing discretionary)\b/i;
 const COMPETITIVE_CONDITION = /\b(flowtrack|another platform|competing pilot|pilot)\b/i;
 const SPONSORSHIP_CONDITION =
   /\b(not pushing|disengag|hasn'?t said otherwise|haven'?t had a proper|inactive sponsor)\b/i;
@@ -135,6 +137,19 @@ function maxOf(forces: MatrixForce[], type: string): number {
   return weights.length ? Math.max(...weights) : 0;
 }
 
+function isSpendingFreeze(force: MatrixForce): boolean {
+  return SPENDING_FREEZE.test(blob(force));
+}
+
+/** A competing pilot that has not been selected stays out of both pressure scores. */
+function isOpenPilot(force: MatrixForce): boolean {
+  const text = blob(force);
+  return (
+    /\b(flowtrack|another platform|competing pilot|piloting another)\b/i.test(text) &&
+    !closedPathReason(text)
+  );
+}
+
 /**
  * Map each force onto one scoring input. Overlapping evidence is kept once.
  * A force that does not move a score still carries the reason it was left out.
@@ -145,19 +160,26 @@ export function mapForcesToScores(forces: MatrixForce[]): {
   structural_lock_in: number;
   trace: string[];
 } {
-  const structural_lock_in = maxOf(forces, "structural");
+  const structuralWeights = forces
+    .filter((force) => !isOpenPilot(force) && (force.type.toLowerCase() === "structural" || isSpendingFreeze(force)))
+    .map((force) => force.weight);
+  const structural_lock_in = structuralWeights.length ? Math.max(...structuralWeights) : 0;
   const constraintWeights = forces
-    .filter((force) => force.type.toLowerCase() === "constraint" && !COMPETITIVE_CONDITION.test(blob(force)))
+    .filter(
+      (force) =>
+        force.type.toLowerCase() === "constraint" && !isOpenPilot(force) && !isSpendingFreeze(force)
+    )
     .map((force) => force.weight);
   let constraint_pressure = constraintWeights.length ? Math.max(...constraintWeights) : 0;
   const financialParent = forces.some(
     (force) =>
-      (force.type.toLowerCase() === "structural" || force.type.toLowerCase() === "constraint") &&
-      FINANCIAL_PARENT.test(blob(force))
+      isSpendingFreeze(force) ||
+      ((force.type.toLowerCase() === "structural" || force.type.toLowerCase() === "constraint") &&
+        FINANCIAL_PARENT.test(blob(force)))
   );
 
   for (const force of forces) {
-    if (force.type.toLowerCase() !== "behavioral") continue;
+    if (force.type.toLowerCase() !== "behavioral" || isSpendingFreeze(force)) continue;
     const text = blob(force);
     if (RESOURCE_CONDITION.test(text)) {
       constraint_pressure = Math.max(constraint_pressure, force.weight);
@@ -175,7 +197,25 @@ export function mapForcesToScores(forces: MatrixForce[]): {
     const type = force.type.toLowerCase();
     let score_effect: ForceScoreEffect;
 
-    if (type === "intent") {
+    if (isSpendingFreeze(force)) {
+      const included = structural_lock_in > 0 && force.weight === structural_lock_in;
+      score_effect = {
+        dimension: "structural_lock_in",
+        included,
+        duration,
+        reason: included
+          ? "A discretionary spending freeze sets structural pressure. It is not also added as constraint pressure."
+          : `Structural pressure stays at ${structural_lock_in}. This spending freeze is not added again, and it is not counted as constraint pressure.`,
+      };
+    } else if (isOpenPilot(force) && (type === "structural" || type === "constraint" || type === "behavioral")) {
+      score_effect = {
+        dimension: "none",
+        included: false,
+        duration,
+        reason:
+          "A pilot or competitive preference is recorded. It does not set structural or constraint pressure, and a pilot is not a confirmed purchase.",
+      };
+    } else if (type === "intent") {
       const intentMax = maxOf(forces, "intent");
       const included = force.weight === intentMax && intentMax > 0;
       score_effect = {

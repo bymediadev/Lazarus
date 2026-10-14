@@ -1284,9 +1284,22 @@ if (droppedCapacity.frozen.constraint_pressure !== 75 || restoredCapacity?.score
   });
   failed = true;
 }
-if (countedSum !== 150 || droppedCapacity.frozen.constraint_pressure === countedSum) {
-  console.error("FAIL: Concurrent blockers should keep the stronger constraint, not the sum", {
+const freezeForce = droppedCapacity.causal.forces.find((force) => /freezing discretionary/i.test(force.evidence));
+if (
+  droppedCapacity.frozen.structural_lock_in !== 75 ||
+  freezeForce?.score_effect?.dimension !== "structural_lock_in" ||
+  freezeForce?.score_effect?.included !== true
+) {
+  console.error("FAIL: A discretionary spending freeze stays structural even when the model calls it a constraint", {
+    structural: droppedCapacity.frozen.structural_lock_in,
+    freezeForce,
+  });
+  failed = true;
+}
+if (countedSum !== 75 || droppedCapacity.frozen.constraint_pressure === countedSum + droppedCapacity.frozen.structural_lock_in) {
+  console.error("FAIL: The spending freeze and the resource limit should not be added together", {
     constraint: droppedCapacity.frozen.constraint_pressure,
+    structural: droppedCapacity.frozen.structural_lock_in,
     countedSum,
   });
   failed = true;
@@ -1360,8 +1373,77 @@ const pilotOnly = deriveCanonicalState(
   ],
   "MIXED"
 );
-if (pilotOnly.frozen.constraint_pressure !== 0) {
-  console.error("FAIL: A competitive pilot should not set constraint pressure", pilotOnly.frozen.constraint_pressure);
+if (pilotOnly.frozen.constraint_pressure !== 0 || pilotOnly.frozen.structural_lock_in !== 0) {
+  console.error("FAIL: A competitive pilot should not set constraint or structural pressure", pilotOnly.frozen);
+  failed = true;
+}
+function labeledFreeze(type) {
+  return deriveCanonicalState(
+    [
+      {
+        factor: "Discretionary spending freeze",
+        type,
+        weight: 90,
+        evidence: "The company is freezing discretionary spending until the end of the quarter.",
+      },
+      {
+        factor: "Technical capacity",
+        type: "Behavioral",
+        weight: 75,
+        evidence: "She can't commit her team to another integration project this quarter.",
+      },
+      {
+        factor: "CFO financial case",
+        type: "Behavioral",
+        weight: 80,
+        evidence: "He wants a proper financial case and actual savings.",
+      },
+    ],
+    "MIXED"
+  );
+}
+const freezeAsConstraint = labeledFreeze("Constraint");
+const freezeAsStructural = labeledFreeze("Structural");
+const samePressure =
+  freezeAsConstraint.frozen.constraint_pressure === freezeAsStructural.frozen.constraint_pressure &&
+  freezeAsConstraint.frozen.structural_lock_in === freezeAsStructural.frozen.structural_lock_in &&
+  freezeAsConstraint.frozen.constraint_pressure === 75 &&
+  freezeAsConstraint.frozen.structural_lock_in === 90;
+const freezeScoredTwice = freezeAsConstraint.causal.forces.some(
+  (force) => /discretionary spending/i.test(force.evidence) && force.score_effect?.dimension === "constraint_pressure"
+);
+if (!samePressure || freezeScoredTwice) {
+  console.error("FAIL: The same spending-freeze evidence should score once, whichever type label it carries", {
+    asConstraint: {
+      constraint: freezeAsConstraint.frozen.constraint_pressure,
+      structural: freezeAsConstraint.frozen.structural_lock_in,
+    },
+    asStructural: {
+      constraint: freezeAsStructural.frozen.constraint_pressure,
+      structural: freezeAsStructural.frozen.structural_lock_in,
+    },
+  });
+  failed = true;
+}
+const doubledFreeze = deriveCanonicalState(
+  [
+    {
+      factor: "Discretionary spending freeze",
+      type: "Structural",
+      weight: 90,
+      evidence: "The company is freezing discretionary spending until the end of the quarter.",
+    },
+    {
+      factor: "Same freeze, second label",
+      type: "Constraint",
+      weight: 70,
+      evidence: "The company is freezing discretionary spending until the end of the quarter.",
+    },
+  ],
+  "MIXED"
+);
+if (doubledFreeze.frozen.structural_lock_in !== 90 || doubledFreeze.frozen.constraint_pressure !== 0) {
+  console.error("FAIL: One spending freeze should not count under two labels", doubledFreeze.frozen);
   failed = true;
 }
 const matrixPi = deriveProprietaryIndices(matrixDeal.frozen, [], "");
