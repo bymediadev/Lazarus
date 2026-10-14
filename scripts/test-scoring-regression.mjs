@@ -4,11 +4,12 @@ import {
   compileDealRiskReport,
   computeDialogueStallSignals,
   lockForcesToTranscript,
+  reconcilePersona,
 } from "../server/scoring.ts";
 import { statusFromTrajectory } from "../server/gemini.ts";
 import { alignBlockerNarrative } from "../src/lib/blockerNarrative.ts";
 import { commercialBaselineFromText } from "../src/lib/commercialBaseline.ts";
-import { forecastGuidance, NON_VIABLE_FORECAST_LINE } from "../src/lib/forecastCall.ts";
+import { DEFER_FORECAST_LINE, forecastGuidance, NON_VIABLE_FORECAST_LINE } from "../src/lib/forecastCall.ts";
 import { mergeOverlappingQuotes } from "../src/lib/evidenceQuotes.ts";
 import { readFileSync } from "fs";
 
@@ -366,7 +367,7 @@ const northlineFixture = {
   structural: 0,
   enabler: 60,
   intent: 50,
-  dispersion: 23,
+  dispersion: 0,
   stall: 89,
   timing_factor: 4,
   blockerClassification: "TEMPORARY BLOCKERS",
@@ -579,8 +580,19 @@ if (structuralDeath.causal.blocker_classification !== "STRUCTURAL LOCK-INS") {
   );
   failed = true;
 }
-if (!structuralDeathForecast.removeFromForecast || structuralDeathForecast.line !== NON_VIABLE_FORECAST_LINE) {
-  console.error("FAIL: Structural death forecast line should remove the deal", structuralDeathForecast);
+if (structuralDeathFrozen.viability_state !== "DEFERRED VIABILITY") {
+  console.error(
+    "FAIL: A low score with a structural-lock label should stay deferred, got",
+    structuralDeathFrozen.viability_state
+  );
+  failed = true;
+}
+if (!structuralDeathForecast.removeFromForecast || structuralDeathForecast.line !== DEFER_FORECAST_LINE) {
+  console.error("FAIL: Structural pressure should defer the quarter without declaring the deal impossible", structuralDeathForecast);
+  failed = true;
+}
+if (structuralDeathForecast.line === NON_VIABLE_FORECAST_LINE) {
+  console.error("FAIL: Viability 10 must not use the non-viable forecast line");
   failed = true;
 }
 if (statusFromTrajectory(structuralDeathFrozen.trajectory_type, "STALLED — RECOVERABLE") !== "STALLED — HIGH RISK") {
@@ -879,6 +891,147 @@ for (const input of riskInputs) {
     failed = true;
     break;
   }
+}
+
+const northstarLive = deriveCanonicalState(
+  [
+    {
+      factor: "Company-wide discretionary spending freeze",
+      type: "Structural",
+      weight: 90,
+      evidence:
+        "The company is freezing discretionary spending until the end of the quarter. Additional approval, technically.",
+    },
+    {
+      factor: "Sarah still wants the operational problem solved",
+      type: "Intent",
+      weight: 85,
+      evidence: "I don't think we should close the door. I also don't think we're ready to buy right now.",
+    },
+  ],
+  "STRUCTURAL LOCK-INS",
+  "The company is freezing discretionary spending. Additional approval, technically. But anything that isn't essential is being pushed out."
+);
+const northstarForecast = forecastGuidance({
+  status: statusFromTrajectory(northstarLive.frozen.trajectory_type, "STALLED — HIGH RISK"),
+  trajectory: northstarLive.frozen.trajectory_type,
+  recoverability: northstarLive.frozen.viability_score,
+  viabilityState: northstarLive.frozen.viability_state,
+});
+console.log("\n=== Northstar live weights ===");
+console.log(
+  "  viability:",
+  northstarLive.frozen.viability_score,
+  "state:",
+  northstarLive.frozen.viability_state,
+  "trajectory:",
+  northstarLive.frozen.trajectory_type
+);
+if (northstarLive.frozen.viability_score !== 0) {
+  console.error("FAIL: Northstar viability should stay 0 for these weights, got", northstarLive.frozen.viability_score);
+  failed = true;
+}
+if (northstarLive.frozen.viability_state !== "DEFERRED VIABILITY") {
+  console.error("FAIL: Northstar should be deferred, got", northstarLive.frozen.viability_state);
+  failed = true;
+}
+if (!northstarForecast.removeFromForecast || northstarForecast.line !== DEFER_FORECAST_LINE || !northstarForecast.showRecoveryPlan) {
+  console.error("FAIL: Northstar should leave this quarter's forecast and keep a recovery plan", northstarForecast);
+  failed = true;
+}
+
+const northstarRecovered = deriveCanonicalState(
+  [
+    {
+      factor: "CFO will approve if validated savings meet the threshold",
+      type: "Enabler",
+      weight: 80,
+      evidence: "David confirms that he will approve the purchase if independently validated savings meet an agreed threshold.",
+    },
+    {
+      factor: "Implementation can begin next quarter",
+      type: "Constraint",
+      weight: 40,
+      evidence: "Priya confirms that implementation can begin next quarter.",
+    },
+    {
+      factor: "Sarah will bring it back to the group",
+      type: "Intent",
+      weight: 70,
+      evidence: "I'd be comfortable bringing it back to the group.",
+    },
+  ],
+  "MIXED"
+);
+if (northstarRecovered.frozen.viability_score <= northstarLive.frozen.viability_score) {
+  console.error(
+    "FAIL: Confirmed CFO approval and a next-quarter start should raise viability",
+    northstarRecovered.frozen.viability_score
+  );
+  failed = true;
+}
+if (northstarRecovered.frozen.viability_state === "NON-VIABLE (STRUCTURALLY LOCKED)") {
+  console.error("FAIL: Recovered Northstar should not be structurally locked");
+  failed = true;
+}
+
+const david = reconcilePersona({
+  name: "David",
+  persona_type: "Hidden Detractor",
+  evidence: "He wants a proper financial case. He's not against the project.",
+});
+const priya = reconcilePersona({
+  name: "Priya",
+  persona_type: "Hidden Detractor",
+  evidence: "She can't commit her team to another integration project.",
+});
+const hamilton = reconcilePersona({
+  name: "Hamilton facility manager",
+  persona_type: "Hidden Detractor",
+  evidence: "The Hamilton manager likes FlowTrack. He says the interface is easier to use.",
+});
+const evan = reconcilePersona({
+  name: "Evan",
+  persona_type: "Aligned Champion",
+  evidence: "I wouldn't tell you that he's pushing it forward right now.",
+});
+if (david.label !== "Unmet condition" || david.key === "hidden detractor") {
+  console.error("FAIL: A financial-case condition is not opposition", david);
+  failed = true;
+}
+if (priya.label !== "Resource constraint") {
+  console.error("FAIL: Unavailable capacity is not opposition", priya);
+  failed = true;
+}
+if (hamilton.label !== "Competitive preference") {
+  console.error("FAIL: A local pilot preference is not opposition", hamilton);
+  failed = true;
+}
+if (evan.label !== "Inactive sponsor") {
+  console.error("FAIL: An inactive sponsor is not an aligned champion", evan);
+  failed = true;
+}
+
+const permanentBan = deriveCanonicalState(
+  [
+    {
+      factor: "Purchase prohibited",
+      type: "Constraint",
+      weight: 100,
+      evidence: "New software purchases are prohibited. This is a permanent structural lock.",
+    },
+  ],
+  "PERMANENT STRUCTURAL LOCK"
+);
+const permanentForecast = forecastGuidance({
+  status: "STALLED — HIGH RISK",
+  trajectory: permanentBan.frozen.trajectory_type,
+  recoverability: permanentBan.frozen.viability_score,
+  viabilityState: permanentBan.frozen.viability_state,
+});
+if (permanentBan.frozen.viability_state !== "NON-VIABLE (STRUCTURALLY LOCKED)" || permanentForecast.line !== NON_VIABLE_FORECAST_LINE) {
+  console.error("FAIL: A permanent prohibition should stay non-viable", permanentBan.frozen, permanentForecast);
+  failed = true;
 }
 
 if (failed) process.exit(1);

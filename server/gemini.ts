@@ -31,6 +31,7 @@ import {
   deriveCanonicalState,
   lockForcesToTranscript,
   deriveProprietaryIndices,
+  reconcilePersona,
   type CanonicalEquilibrium,
   type CanonicalTrajectory,
   type ProprietaryIndices,
@@ -542,17 +543,13 @@ function flattenPlan(plan?: Partial<RescueTriagePlan>): string[] {
 }
 
 function normalizePersonaType(s: Record<string, unknown>): string {
-  const raw = String(s.persona_type ?? s.stance ?? "Unknown").trim();
-  const lower = raw.toLowerCase();
-  if (lower.includes("champion") || lower.includes("aligned")) return "Aligned Champion";
-  if (lower.includes("absent") || lower.includes("no_show") || lower.includes("no-show")) {
-    return "Absent Decision Maker";
-  }
-  if (lower.includes("detractor") || lower.includes("blocker") || lower.includes("skeptic")) {
-    return "Hidden Detractor";
-  }
-  if (lower === "neutral") return "Neutral";
-  return raw || "Unknown";
+  return reconcilePersona({
+    name: String(s.name ?? ""),
+    role: String(s.role ?? ""),
+    stance: String(s.stance ?? ""),
+    persona_type: String(s.persona_type ?? s.stance ?? ""),
+    evidence: String(s.evidence ?? ""),
+  }).label;
 }
 
 function normalizeStakeholders(raw: Record<string, unknown>): StakeholderSignal[] {

@@ -1,4 +1,5 @@
 import { PostMortemResult, StakeholderSignal } from "../types";
+import { forecastGuidance } from "./forecastCall";
 import { formatMetricLegendMarkdown } from "./metricLegend";
 import { recoveryActionNote, uniqueRecoveryNotes } from "./recoveryPlan";
 
@@ -51,17 +52,13 @@ function nextActionDate(result: PostMortemResult): string {
   return dateMatch ? dateMatch[1] : "Within 7–30 days";
 }
 
-function recoverableFraming(status: string): string {
-  if (/STRUCTURAL|FLAT|DEAD|LOST/i.test(status)) {
-    return "Likely flat no for forecast — do not keep sandbagging this as closable without a new force change.";
-  }
-  if (/RECOVERABLE|STALLED|DEFERRED/i.test(status)) {
-    return "Recoverable with focused manager action — keep on forecast only if the plan below is owned.";
-  }
-  if (/CLOSED|WON|VELOCITY|MOVING/i.test(status)) {
-    return "Moving / healthier path — protect momentum; still clear open blockers.";
-  }
-  return "Judge recoverable vs flat no from the blocker and ownership below before the next forecast call.";
+function forecastJudgment(result: PostMortemResult, status: string): string {
+  return forecastGuidance({
+    status,
+    trajectory: result.deal_trajectory?.trajectory_type,
+    recoverability: result.viability_state?.viability_score ?? result.recoverability_score,
+    viabilityState: result.viability_state?.state,
+  }).line;
 }
 
 function peopleByRole(result: PostMortemResult): string {
@@ -74,6 +71,10 @@ function peopleByRole(result: PostMortemResult): string {
     { label: "Aligned champion (push internally)", match: /aligned champion/i },
     { label: "Suppressed champion (intent, no authority)", match: /suppressed champion/i },
     { label: "Hidden detractor / veto risk", match: /hidden detractor/i },
+    { label: "Unmet condition", match: /unmet condition/i },
+    { label: "Resource constraint", match: /resource constraint/i },
+    { label: "Inactive sponsor", match: /inactive sponsor/i },
+    { label: "Competitive preference", match: /competitive preference/i },
     { label: "Absent decision maker", match: /absent decision maker/i },
   ];
 
@@ -279,7 +280,7 @@ export function formatCompressedCrmNotes(result: PostMortemResult): string {
     "",
     "### Exactly what's going on",
     `**Deal status:** ${status}`,
-    `**Forecast judgment:** ${recoverableFraming(status)}`,
+    `**Forecast judgment:** ${forecastJudgment(result, status)}`,
     `**Root issue:** ${rootIssue}`,
     `**Core blocker:** ${blocker}`,
     `**Invisible veto / missing authority:** ${veto}`,

@@ -103,6 +103,7 @@ export default function ExecutiveBrief({ result }: Props) {
     status: typeof status === "string" ? status : undefined,
     trajectory: result.deal_trajectory?.trajectory_type,
     recoverability: viability,
+    viabilityState: result.viability_state?.state,
   });
   const steps = guidance.removeFromForecast
     ? []
@@ -206,9 +207,8 @@ export default function ExecutiveBrief({ result }: Props) {
 
       <div className="executive-brief-actions">
         <h2>Recovery plan</h2>
-        {guidance.removeFromForecast ? (
-          <p>{guidance.line}</p>
-        ) : steps.length === 0 ? (
+        <p>{guidance.line}</p>
+        {!guidance.showRecoveryPlan ? null : steps.length === 0 ? (
           <p>No immediate action was extracted from this brief.</p>
         ) : (
           <>

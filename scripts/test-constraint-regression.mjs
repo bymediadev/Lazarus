@@ -93,6 +93,24 @@ check(
   ).kind !== "procurement_or_legal"
 );
 
+const northstar = [
+  "The company is freezing discretionary spending until the end of the quarter.",
+  "Additional approval, technically. But anything that isn't essential is being pushed out.",
+  "David wants a proper financial case. He thinks our assumptions are too optimistic. He's not against the project.",
+  "Priya thinks it could take twelve to sixteen weeks because of integration and security reviews.",
+  "She can't commit her team to another integration project this quarter.",
+  "We never did a full architecture review.",
+  "David signs off on the spend.",
+].join(" ");
+const northstarReading = readConstraint(northstar);
+check("Northstar spending freeze is financial approval", northstarReading.kind === "financial_approval", northstarReading);
+check(
+  "Northstar security review is not an open legal or security block",
+  northstarReading.kind !== "procurement_or_legal" &&
+    !/legal, procurement, security, or compliance requirement is the primary/i.test(northstarReading.label),
+  northstarReading
+);
+
 const forces = [
   {
     factor: "VP of Infrastructure sign-off",

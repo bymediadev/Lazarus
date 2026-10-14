@@ -534,11 +534,11 @@ function decisionFreedom(constraint: number): string {
 
 function viabilityLabel(
   viability: number,
-  structural: number,
+  _structural: number,
   constraint: number,
   enabler: number,
   trajectory_type: CanonicalTrajectory,
-  blocker: string
+  _blocker: string
 ): ViabilityStateLabel {
   if (trajectory_type === "VALIDATED / VELOCITY" && constraint <= 0 && enabler >= 50) {
     return "VALIDATED / CLOSED";
@@ -546,14 +546,8 @@ function viabilityLabel(
   if (trajectory_type === "NON-VIABLE / DEAD") {
     return "NON-VIABLE (STRUCTURALLY LOCKED)";
   }
-  const b = blocker.toUpperCase();
-  if (b.includes("STRUCTURAL LOCK") && structural >= 80 && viability <= 20) {
-    return "NON-VIABLE (STRUCTURALLY LOCKED)";
-  }
   if (viability > 70) return "HIGHLY VIABLE";
   if (viability > 50) return "CONDITIONALLY VIABLE";
-  if (viability > 20) return "DEFERRED VIABILITY";
-  if (b.includes("STRUCTURAL LOCK")) return "NON-VIABLE (STRUCTURALLY LOCKED)";
   return "DEFERRED VIABILITY";
 }
 
@@ -942,13 +936,62 @@ const DEPARTMENT_FRICTION = [
   "engineering",
 ];
 
-function normalizePersona(s: StakeholderIndexInput): string {
+const OPPOSITION_EVIDENCE =
+  /\b(opposed|opposes|opposition|will block|blocks the|refuses to approve|against the (deal|purchase|project)|kill the deal|will not approve|won't approve)\b/i;
+const NOT_OPPOSED_EVIDENCE = /\b(not against|isn't against|is not against)\b/i;
+const UNMET_CONDITION_EVIDENCE =
+  /\b(financial case|actual savings|too optimistic|assumptions|defensible savings|can't promise|cannot promise)\b/i;
+const CAPACITY_EVIDENCE =
+  /\b(can'?t commit|cannot commit|no capacity|another integration)\b/i;
+const INACTIVE_EVIDENCE =
+  /\b(not pushing|isn't pushing|is not pushing|hasn'?t said otherwise|haven'?t had a proper|have not had a proper|wouldn'?t tell you that he'?s pushing|would not tell you that he is pushing)\b/i;
+const COMPETITIVE_EVIDENCE = /\b(another platform|flowtrack|easier to use)\b/i;
+
+export interface ReconciledPersona {
+  key: string;
+  label: string;
+}
+
+/** A persona label counts as opposition only when that person's evidence says so. */
+export function reconcilePersona(s: StakeholderIndexInput): ReconciledPersona {
   const raw = (s.persona_type ?? s.stance ?? "").toLowerCase().trim();
-  if (raw.includes("absent")) return "absent decision maker";
-  if (raw.includes("hidden") && raw.includes("detractor")) return "hidden detractor";
-  if (raw.includes("suppressed")) return "suppressed champion";
-  if (raw.includes("aligned")) return "aligned champion";
-  return raw || "unknown";
+  const evidence = s.evidence ?? "";
+  const opposed = OPPOSITION_EVIDENCE.test(evidence) && !NOT_OPPOSED_EVIDENCE.test(evidence);
+  const labeledDetractor =
+    (raw.includes("hidden") && raw.includes("detractor")) ||
+    raw.includes("skeptic") ||
+    raw.includes("detractor") ||
+    raw.includes("blocker");
+
+  if (labeledDetractor) {
+    if (opposed) return { key: "hidden detractor", label: "Hidden Detractor" };
+    if (UNMET_CONDITION_EVIDENCE.test(evidence) || NOT_OPPOSED_EVIDENCE.test(evidence)) {
+      return { key: "unmet condition", label: "Unmet condition" };
+    }
+    if (CAPACITY_EVIDENCE.test(evidence)) return { key: "resource constraint", label: "Resource constraint" };
+    if (COMPETITIVE_EVIDENCE.test(evidence)) return { key: "competitive preference", label: "Competitive preference" };
+    if (INACTIVE_EVIDENCE.test(evidence)) return { key: "inactive sponsor", label: "Inactive sponsor" };
+    return { key: "unknown", label: "Unknown" };
+  }
+
+  if (
+    (raw.includes("aligned") || raw.includes("champion")) &&
+    !raw.includes("suppressed") &&
+    INACTIVE_EVIDENCE.test(evidence)
+  ) {
+    return { key: "inactive sponsor", label: "Inactive sponsor" };
+  }
+  if (raw.includes("absent")) return { key: "absent decision maker", label: "Absent Decision Maker" };
+  if (raw.includes("suppressed")) return { key: "suppressed champion", label: "Suppressed Champion" };
+  if (raw.includes("aligned") || raw.includes("champion")) {
+    return { key: "aligned champion", label: "Aligned Champion" };
+  }
+  if (raw === "neutral") return { key: "neutral", label: "Neutral" };
+  return { key: raw || "unknown", label: s.persona_type?.trim() || s.stance?.trim() || "Unknown" };
+}
+
+function normalizePersona(s: StakeholderIndexInput): string {
+  return reconcilePersona(s).key;
 }
 
 export function computeStakeholderDispersion(
@@ -969,6 +1012,10 @@ export function computeStakeholderDispersion(
     if (persona === "hidden detractor") {
       flags.push(`Hidden detractor: ${s.name}`);
     }
+    if (persona === "unmet condition") flags.push(`Unmet condition: ${s.name}`);
+    if (persona === "resource constraint") flags.push(`Resource constraint: ${s.name}`);
+    if (persona === "inactive sponsor") flags.push(`Inactive sponsor: ${s.name}`);
+    if (persona === "competitive preference") flags.push(`Competitive preference: ${s.name}`);
   }
 
   const aligned = persona_breakdown["aligned champion"] ?? 0;
@@ -991,7 +1038,7 @@ export function computeStakeholderDispersion(
   const absence_term_applied = absent > 0;
   const multi_department_friction = clamp(deptMentions.size * 14 + (absence_term_applied ? 12 : 0));
 
-  const index = clamp(raw + multi_department_friction * 0.25);
+  const index = clamp(raw);
 
   return {
     index,
@@ -1307,7 +1354,7 @@ export function explainScores(
         },
         {
           basis: "inferred",
-          text: `Persona weights are fixed: absent decision maker +28, hidden detractor +24, suppressed champion +12, aligned champion −8. Dispersion then adds a quarter of department friction (${dispersion.multi_department_friction}). Authority gap: ${dispersion.authority_gap}.`,
+          text: `Persona weights are fixed: absent decision maker +28, hidden detractor +24, suppressed champion +12, aligned champion −8. Unmet conditions, resource limits, inactivity, and competitive preference add 0. Department friction (${dispersion.multi_department_friction}) is reported separately and is not added to this index. Authority gap: ${dispersion.authority_gap}.`,
         },
       ],
       caveat:

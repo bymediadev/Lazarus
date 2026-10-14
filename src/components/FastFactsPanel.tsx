@@ -42,6 +42,14 @@ function absentPeople(result: PostMortemResult): StakeholderSignal[] {
   );
 }
 
+function conditionPeople(result: PostMortemResult): StakeholderSignal[] {
+  return (result.stakeholders ?? []).filter((s) =>
+    /unmet condition|resource constraint|inactive sponsor|competitive preference/i.test(
+      `${s.persona_type ?? ""} ${s.stance ?? ""}`
+    )
+  );
+}
+
 export default function FastFactsPanel({
   result,
   linkedHubSpotDealId,
@@ -60,10 +68,12 @@ export default function FastFactsPanel({
     status,
     trajectory,
     recoverability: result.recoverability_score ?? result.viability_state?.viability_score,
+    viabilityState: result.viability_state?.state,
   });
   const blocker = coreBlocker(result);
   const vetoPeople = opposing(result);
   const missingPeople = absentPeople(result);
+  const conditionStakeholders = conditionPeople(result);
   const plan = result.rescue_triage_plan;
   const saveSteps = uniqueRecoveryNotes([
     ...(result.immediate_remediation ?? []),
@@ -122,7 +132,7 @@ export default function FastFactsPanel({
       <article className="card card-neutral concise-card fast-facts-card">
         <h2 className="card-title">People and constraints</h2>
         <div className="card-body">
-          {vetoPeople.length === 0 && missingPeople.length === 0 ? (
+          {vetoPeople.length === 0 && missingPeople.length === 0 && conditionStakeholders.length === 0 ? (
             <p>No opposing or absent stakeholder is mapped. The people table is in Expanded Analysis.</p>
           ) : (
             <ul className="stall-collision-list">
@@ -134,6 +144,16 @@ export default function FastFactsPanel({
                   </strong>
                   {p.persona_type || p.stance ? ` — ${p.persona_type || p.stance}` : ""}
                   . Opposition is recorded only when the persona says so. The quotation is in Expanded Analysis.
+                </li>
+              ))}
+              {conditionStakeholders.map((p, i) => (
+                <li key={`condition-${i}`}>
+                  <strong>
+                    {p.name}
+                    {p.role ? ` (${p.role})` : ""}
+                  </strong>
+                  {p.persona_type || p.stance ? ` — ${p.persona_type || p.stance}` : ""}
+                  . This is a condition or a limit, not recorded opposition.
                 </li>
               ))}
               {missingPeople.map((p, i) => (
@@ -153,9 +173,8 @@ export default function FastFactsPanel({
       <article className="card card-emerald concise-card fast-facts-card">
         <h2 className="card-title">CRM-ready next step</h2>
         <div className="card-body">
-          {guidance.removeFromForecast ? (
-            <p>{guidance.line}</p>
-          ) : saveSteps.length === 0 ? (
+          <p>{guidance.line}</p>
+          {!guidance.showRecoveryPlan ? null : saveSteps.length === 0 ? (
             <p>No immediate action was extracted. The recovery plan above stays empty until the evidence supports one.</p>
           ) : (
             <>
