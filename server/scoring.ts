@@ -5,6 +5,7 @@
  *   Layer 3 — Output projection (read-only, no math)
  */
 
+import { assessIntentExtraction } from "../src/lib/intentExtraction.js";
 import { intentInputTrace } from "../src/lib/scoreInputTrace.js";
 
 export type CanonicalEquilibrium = "PINNED" | "MIXED" | "OPEN";
@@ -610,13 +611,33 @@ export function resolveBlockerClassification(
   return blocker;
 }
 
+/** Stated willingness stays Intent even when the model files that sentence as an enabler. */
+function ensureStatedIntent(forces: ScoringForce[], transcript: string): ScoringForce[] {
+  if (forces.some((force) => force.type.toLowerCase() === "intent" && force.weight > 0)) return forces;
+  const corpus = [transcript, ...forces.map((force) => force.evidence)].filter(Boolean).join("\n");
+  const quote = assessIntentExtraction(corpus, forces).missing[0]?.quote;
+  if (!quote) return forces;
+  return [
+    ...forces,
+    {
+      factor: "Buyer says the problem is still worth pursuing",
+      type: "Intent",
+      weight: 70,
+      role: "independent",
+      derived_from: [],
+      evidence: quote,
+    },
+  ];
+}
+
 export function deriveCanonicalState(
   rawForces: ScoringForce[],
   blockerClassification = "MIXED",
   transcript = ""
 ): { causal: CausalState; frozen: FrozenDerivation } {
-  const blocker = resolveBlockerClassification(blockerClassification, rawForces, transcript);
-  const forces = mergeForces(rawForces);
+  const withIntent = ensureStatedIntent(rawForces, transcript);
+  const blocker = resolveBlockerClassification(blockerClassification, withIntent, transcript);
+  const forces = mergeForces(withIntent);
   const causal: CausalState = { forces, blocker_classification: blocker };
 
   const intent_strength = maxWeight(forces, "Intent");

@@ -177,7 +177,7 @@ export default function App() {
   const [documentFile, setDocumentFile] = useState<File | null>(null);
   const [recordingSource, setRecordingSource] = useState<"upload" | "field" | null>(null);
   const [fieldSessionId, setFieldSessionId] = useState<string | null>(null);
-  const [dealValue, setDealValue] = useState("52000");
+  const [dealValue, setDealValue] = useState("");
   const [accountId, setAccountId] = useState("");
   const [salesCycleDays, setSalesCycleDays] = useState("");
   const [historicalCrmJson, setHistoricalCrmJson] = useState("");

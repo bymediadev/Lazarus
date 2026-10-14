@@ -22,7 +22,7 @@ interface ForceEvidence {
 }
 
 const INTEREST =
-  /\bi like what i (saw|heard)\b|\b(we are|we're) interested\b|\bi want to move forward\b/i;
+  /\bi like what i (saw|heard)\b|\b(we are|we're) interested\b|\bi want to move forward\b|\bhasn'?t disappeared\b|\bstill looking\b|\b(don'?t|do not) think we should close the door\b|\bcomfortable bringing it back\b/i;
 const CONDITIONAL =
   /\bwe can accelerate\b|\bif [^.\n]{0,48}\b(buys in|approves|signs off)\b/i;
 const REFUSAL =
@@ -61,7 +61,11 @@ function quotesSignal(evidence: string, signal: IntentSignal): boolean {
       evidenceText.includes("i like what i saw") ||
       evidenceText.includes("we are interested") ||
       evidenceText.includes("we re interested") ||
-      evidenceText.includes("i want to move forward")
+      evidenceText.includes("i want to move forward") ||
+      evidenceText.includes("hasn t disappeared") ||
+      evidenceText.includes("close the door") ||
+      evidenceText.includes("still looking") ||
+      evidenceText.includes("bringing it back")
     );
   }
   return evidenceText.includes("we can accelerate") || evidenceText.includes("buys in") || evidenceText.includes("signs off");

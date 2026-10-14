@@ -893,6 +893,39 @@ for (const input of riskInputs) {
   }
 }
 
+const northstarWithoutIntent = deriveCanonicalState(
+  [
+    {
+      factor: "Company-wide discretionary spending freeze",
+      type: "Structural",
+      weight: 90,
+      evidence: "The company is freezing discretionary spending until the end of the quarter.",
+    },
+    {
+      factor: "Need to improve workflows",
+      type: "Enabler",
+      weight: 60,
+      evidence: "We're still looking at ways to improve the workflows across our facilities.",
+    },
+  ],
+  "STRUCTURAL LOCK-INS",
+  "**Sarah:** I don't think we should close the door.\n**Sarah:** The project hasn't disappeared."
+);
+if (northstarWithoutIntent.frozen.intent_strength !== 70) {
+  console.error(
+    "FAIL: Stated willingness should stay intent when the model omits it, got",
+    northstarWithoutIntent.frozen.intent_strength
+  );
+  failed = true;
+}
+if (northstarWithoutIntent.frozen.viability_state !== "DEFERRED VIABILITY") {
+  console.error(
+    "FAIL: Restored willingness should stay deferred, got",
+    northstarWithoutIntent.frozen.viability_state
+  );
+  failed = true;
+}
+
 const northstarLive = deriveCanonicalState(
   [
     {

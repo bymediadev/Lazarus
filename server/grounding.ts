@@ -214,7 +214,9 @@ export function detectMissingCriticalStakeholders(
 export function buildTranscriptConstraints(transcript: string, dealValue: number): string {
   const forbidden = TEMPLATE_BLEED_TERMS.filter((term) => !termInText(term, transcript));
   const lines = [
-    `USER DEAL VALUE: $${dealValue.toLocaleString()} — do not cite other contract sizes unless spoken.`,
+    dealValue > 0
+      ? `USER DEAL VALUE: $${dealValue.toLocaleString()} — do not cite other contract sizes unless spoken.`
+      : "No deal value was entered. Do not invent a price. Cite only amounts spoken in the transcript.",
     "Extract ONLY from the transcript below. No AS/400, capex freeze, acquisition, or M&A unless literally said.",
     "Every force evidence = verbatim quote from this transcript.",
     "People Map (stakeholders[]): every persona with persona_type (Aligned Champion | Absent Decision Maker | Hidden Detractor).",

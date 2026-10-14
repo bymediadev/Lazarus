@@ -51,6 +51,20 @@ const refusal = assessIntentExtraction(
 );
 check("an explicit refusal is not treated as unknown", refusal.status === "explicit_refusal");
 
+const northstarWillingness = assessIntentExtraction(
+  [
+    "**Sarah:** I don't think we should close the door.",
+    "**Sarah:** The project hasn't disappeared.",
+    "**Sarah:** We're still looking at ways to improve the workflows.",
+  ].join("\n"),
+  [{ type: "Enabler", weight: 60, evidence: "We're still looking at ways to improve the workflows." }]
+);
+check(
+  "continued pursuit is willingness even when it is not filed as Intent",
+  northstarWillingness.status === "missing_despite_signals" &&
+    northstarWillingness.missing.some((signal) => /close the door/i.test(signal.quote))
+);
+
 const instructions = buildIntentRetryInstructions(omitted.missing);
 check("retry names the source sentences", /i like what i saw/i.test(instructions) && /we can accelerate/i.test(instructions));
 check("retry does not prescribe an intent weight", !/\b(weight|intent)\s*(to|=|:)\s*\d+/i.test(instructions) && !/\b(50|75|80|90)\b/.test(instructions));
