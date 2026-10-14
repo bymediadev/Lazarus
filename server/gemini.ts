@@ -336,9 +336,23 @@ function applyCanonicalScoring(
     .sort((a, b) => b.weight - a.weight)[0];
 
   const finalCycle = frozen.resolution_cycles.cycles[frozen.resolution_cycles.cycles.length - 1];
+  const stakeholders = result.stakeholders.map((person) => {
+    const persona_type = reconcilePersona(
+      {
+        name: person.name,
+        role: person.role,
+        stance: person.stance,
+        persona_type: person.persona_type,
+        evidence: person.evidence,
+      },
+      transcript
+    ).label;
+    return { ...person, stance: persona_type, persona_type };
+  });
+
   const proprietary_indices = deriveProprietaryIndices(
     frozen,
-    result.stakeholders,
+    stakeholders,
     transcript,
     causal.blocker_classification
   );
@@ -441,6 +455,7 @@ function applyCanonicalScoring(
       risk_tier: proprietary_indices.risk_tier,
     },
     proprietary_indices,
+    stakeholders,
   };
 
   assertFrozenConsistency({

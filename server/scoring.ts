@@ -967,6 +967,41 @@ const CAPACITY_EVIDENCE =
 const INACTIVE_EVIDENCE =
   /\b(not pushing|isn't pushing|is not pushing|hasn'?t said otherwise|haven'?t had a proper|have not had a proper|wouldn'?t tell you that he'?s pushing|would not tell you that he is pushing)\b/i;
 const COMPETITIVE_EVIDENCE = /\b(another platform|flowtrack|easier to use)\b/i;
+const NAME_TITLE_WORDS = new Set([
+  "facility",
+  "manager",
+  "director",
+  "operations",
+  "technical",
+  "lead",
+  "officer",
+  "chief",
+  "finance",
+  "financial",
+  "president",
+  "vice",
+  "head",
+  "senior",
+  "group",
+  "team",
+]);
+
+/** Sentences that name this person, with speaker labels removed. The next sentence is not included. */
+function sentencesAbout(name: string, transcript: string): string {
+  const tokens = name
+    .toLowerCase()
+    .replace(/[^a-z\s]/g, " ")
+    .split(/\s+/)
+    .filter((token) => token.length > 3 && !NAME_TITLE_WORDS.has(token));
+  if (!tokens.length || !transcript.trim()) return "";
+  const sentences = transcript.split(/(?<=[.!?])\s+/);
+  const hits: string[] = [];
+  for (const sentence of sentences) {
+    const stripped = sentence.replace(/\*\*[^*]+:\*\*/g, " ").replace(/(^|\n)\s*[A-Za-z][A-Za-z .'-]{0,40}:/g, " ");
+    if (tokens.some((token) => new RegExp(`\\b${token}\\b`, "i").test(stripped))) hits.push(stripped);
+  }
+  return hits.join(" ");
+}
 
 export interface ReconciledPersona {
   key: string;
@@ -974,9 +1009,11 @@ export interface ReconciledPersona {
 }
 
 /** A persona label counts as opposition only when that person's evidence says so. */
-export function reconcilePersona(s: StakeholderIndexInput): ReconciledPersona {
+export function reconcilePersona(s: StakeholderIndexInput, transcript = ""): ReconciledPersona {
   const raw = (s.persona_type ?? s.stance ?? "").toLowerCase().trim();
-  const evidence = s.evidence ?? "";
+  const quoted = s.evidence ?? "";
+  const about = sentencesAbout(s.name ?? "", transcript);
+  const evidence = [quoted, about].filter(Boolean).join("\n");
   const opposed = OPPOSITION_EVIDENCE.test(evidence) && !NOT_OPPOSED_EVIDENCE.test(evidence);
   const labeledDetractor =
     (raw.includes("hidden") && raw.includes("detractor")) ||
@@ -995,10 +1032,30 @@ export function reconcilePersona(s: StakeholderIndexInput): ReconciledPersona {
     return { key: "unknown", label: "Unknown" };
   }
 
+  const prefersCompetitor = COMPETITIVE_EVIDENCE.test(about) && !raw.includes("suppressed");
+  if (
+    prefersCompetitor &&
+    (labeledDetractor ||
+      raw.includes("aligned") ||
+      raw.includes("champion") ||
+      raw.includes("neutral") ||
+      raw === "" ||
+      raw === "unknown")
+  ) {
+    return { key: "competitive preference", label: "Competitive preference" };
+  }
+
   if (
     (raw.includes("aligned") || raw.includes("champion")) &&
     !raw.includes("suppressed") &&
     INACTIVE_EVIDENCE.test(evidence)
+  ) {
+    return { key: "inactive sponsor", label: "Inactive sponsor" };
+  }
+  if (
+    (raw.includes("absent") || raw.includes("aligned") || raw.includes("champion")) &&
+    !raw.includes("suppressed") &&
+    INACTIVE_EVIDENCE.test(about)
   ) {
     return { key: "inactive sponsor", label: "Inactive sponsor" };
   }

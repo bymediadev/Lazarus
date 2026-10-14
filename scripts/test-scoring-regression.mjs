@@ -1045,6 +1045,44 @@ if (evan.label !== "Inactive sponsor") {
   failed = true;
 }
 
+const northstarTranscript = [
+  "Sarah Chen — Director of Operations",
+  "Our Hamilton facility has started doing something different. They're piloting another platform.",
+  "The Hamilton manager likes it. He says the interface is easier to use than your platform.",
+  "We need to understand what Hamilton is actually getting from FlowTrack.",
+  "Evan and I haven't had a proper conversation about the project in about six weeks.",
+  "David wants a proper financial case. He's not against the project.",
+  "Priya told me she can't commit her team to another integration project this quarter.",
+].join(" ");
+const hamiltonFromCall = reconcilePersona(
+  { name: "Hamilton Facility Manager", persona_type: "Aligned Champion", evidence: "" },
+  northstarTranscript
+);
+const evanFromCall = reconcilePersona(
+  { name: "Evan", persona_type: "Absent Decision Maker", evidence: "" },
+  northstarTranscript
+);
+const sarahFromCall = reconcilePersona(
+  { name: "Sarah Chen", persona_type: "Suppressed Champion", evidence: "" },
+  northstarTranscript
+);
+const davidFromCall = reconcilePersona(
+  { name: "David", persona_type: "Unmet condition", evidence: "" },
+  northstarTranscript
+);
+if (hamiltonFromCall.label !== "Competitive preference") {
+  console.error("FAIL: A competing-pilot user is not an aligned champion", hamiltonFromCall);
+  failed = true;
+}
+if (evanFromCall.label !== "Inactive sponsor") {
+  console.error("FAIL: An inactive COO is not an absent decision maker", evanFromCall);
+  failed = true;
+}
+if (sarahFromCall.label !== "Suppressed Champion" || davidFromCall.label !== "Unmet condition") {
+  console.error("FAIL: Sarah and David should keep their labels", sarahFromCall, davidFromCall);
+  failed = true;
+}
+
 const permanentBan = deriveCanonicalState(
   [
     {
