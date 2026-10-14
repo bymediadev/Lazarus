@@ -23,24 +23,47 @@ jobs:
       - name: Send founder status digest
         env:
           SLOT: ${{ github.event.inputs.slot }}
+          API_BASE: ${{ secrets.LAZARUS_API_URL }}
+          CRON_SECRET: ${{ secrets.FOUNDER_ALERT_CRON_SECRET }}
         run: |
           set -euo pipefail
           BODY="{}"
           if [ -n "${SLOT:-}" ]; then
             BODY=$(printf '{"slot":"%s"}' "$SLOT")
           fi
-          url="${{ secrets.LAZARUS_API_URL }}/api/founder/alerts/digest"
+          # Free Render sleeps after 15 idle minutes. The first request often
+          # returns nothing until boot finishes, so wake /api/health before POST.
+          base="${API_BASE%/}"
+          health="${base}/api/health"
+          url="${base}/api/founder/alerts/digest"
           out="/tmp/founder-digest-body.txt"
+          host=$(printf '%s' "$base" | sed -E 's#^https?://([^/]+).*#\1#')
           for i in 1 2 3 4 5; do
-            code=$(curl -sS --max-time 45 -o "$out" -w "%{http_code}" -X POST "$url" \
-              -H "x-cron-secret: ${{ secrets.FOUNDER_ALERT_CRON_SECRET }}" \
+            echo "Attempt $i: contacting host $host"
+            health_meta=$(curl -sS --connect-timeout 15 --max-time 120 \
+              -o /tmp/founder-health.txt -w "%{http_code} %{time_total}" \
+              "$health" || true)
+            health_code=$(printf '%s' "$health_meta" | awk '{print $1}')
+            echo "Health: HTTP ${health_code:-000} (${health_meta})"
+            if [ "${health_code:-000}" != "200" ]; then
+              echo "Attempt $i: service not ready; skipping digest POST"
+              sleep $((i * 8))
+              continue
+            fi
+            code=$(curl -sS --connect-timeout 15 --max-time 120 \
+              --retry 2 --retry-delay 5 --retry-connrefused \
+              -o "$out" -w "%{http_code} %{time_total}" -X POST "$url" \
+              -H "x-cron-secret: ${CRON_SECRET}" \
               -H "Content-Type: application/json" \
               -d "$BODY" || true)
-            if [ "$code" = "200" ]; then
+            http_code=$(printf '%s' "$code" | awk '{print $1}')
+            meta=$(printf '%s' "$code" | cut -d' ' -f2-)
+            if [ "$http_code" = "200" ]; then
               cat "$out"
+              echo "OK $meta"
               exit 0
             fi
-            echo "Attempt $i: HTTP ${code:-000}"
+            echo "Attempt $i: HTTP ${http_code:-000} ($meta)"
             cat "$out" 2>/dev/null || true
             sleep $((i * 8))
           done
