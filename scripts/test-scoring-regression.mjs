@@ -6,7 +6,7 @@ import {
   lockForcesToTranscript,
   reconcilePersona,
 } from "../server/scoring.ts";
-import { statusFromTrajectory } from "../server/gemini.ts";
+import { statusFromTrajectory, assertAnalysisSchema } from "../server/gemini.ts";
 import { alignBlockerNarrative } from "../src/lib/blockerNarrative.ts";
 import { commercialBaselineFromText } from "../src/lib/commercialBaseline.ts";
 import { DEFER_FORECAST_LINE, forecastGuidance, NON_VIABLE_FORECAST_LINE } from "../src/lib/forecastCall.ts";
@@ -1474,6 +1474,132 @@ const actionList = canonicalImmediateActions({
 });
 if (actionList.length !== 1 || !actionList[0].toLowerCase().includes("financial model")) {
   console.error("FAIL: The action summary should use the rescue plan", actionList);
+  failed = true;
+}
+
+const northstarDialogue = [
+  "**Marcus:** Is Priya willing to do that review?",
+  "**Sarah:** She's willing, but she can't commit her team to another integration project this quarter. The company is freezing discretionary spending until the end of the quarter.",
+  "**Sarah:** David wants a proper financial case before he will defend the spend. He's not against the project.",
+].join("\n");
+
+const marcusMisread = reconcilePersona(
+  {
+    name: "Marcus Reed",
+    persona_type: "Resource constraint",
+    evidence: "Is Priya willing to do that review?",
+  },
+  northstarDialogue
+);
+const priyaAttributed = reconcilePersona(
+  {
+    name: "Priya Shah",
+    persona_type: "Absent Decision Maker",
+    evidence: "She can't commit her team to another integration project this quarter.",
+  },
+  northstarDialogue
+);
+if (priyaAttributed.label !== "Resource constraint" || marcusMisread.label === "Resource constraint") {
+  console.error("FAIL: Priya's capacity statement must stay with Priya", priyaAttributed, marcusMisread);
+  failed = true;
+}
+
+const davidEvidence = {
+  factor: "CFO financial case",
+  type: "Constraint",
+  weight: 85,
+  evidence: "David wants a proper financial case before he will defend the spend.",
+};
+const freezeEvidence = {
+  factor: "Discretionary spending freeze",
+  type: "Constraint",
+  weight: 90,
+  evidence: "The company is freezing discretionary spending until the end of the quarter.",
+};
+const davidRunA = deriveCanonicalState([freezeEvidence, davidEvidence], "MIXED", northstarDialogue);
+const davidRunB = deriveCanonicalState([freezeEvidence, davidEvidence], "MIXED", northstarDialogue);
+const davidEffect = (run) =>
+  run.causal.forces.find((force) => force.factor === "CFO financial case")?.score_effect;
+if (
+  JSON.stringify(davidEffect(davidRunA)) !== JSON.stringify(davidEffect(davidRunB)) ||
+  davidEffect(davidRunA)?.included !== false
+) {
+  console.error("FAIL: David's financial case must classify the same way on identical evidence", davidEffect(davidRunA), davidEffect(davidRunB));
+  failed = true;
+}
+const freezeEffect = davidRunA.causal.forces.find((force) => force.factor === "Discretionary spending freeze")?.score_effect;
+if (freezeEffect?.dimension !== "structural_lock_in" || freezeEffect?.included !== true) {
+  console.error("FAIL: The spending freeze must stay structural", freezeEffect);
+  failed = true;
+}
+
+const independentFinancial = deriveCanonicalState(
+  [
+    freezeEvidence,
+    davidEvidence,
+    {
+      factor: "Capital already committed",
+      type: "Constraint",
+      weight: 88,
+      evidence: "The capital budget was already allocated elsewhere.",
+    },
+  ],
+  "MIXED",
+  northstarDialogue
+);
+const independent = independentFinancial.causal.forces.find((force) => force.factor === "Capital already committed");
+if (independent?.score_effect?.included !== true || independentFinancial.frozen.constraint_pressure !== 88) {
+  console.error("FAIL: An independent financial blocker must still score when a freeze exists", independent, independentFinancial.frozen.constraint_pressure);
+  failed = true;
+}
+
+const dispersion = deriveProprietaryIndices(
+  davidRunA.frozen,
+  [
+    { name: "Sarah Chen", persona_type: "Suppressed Champion", evidence: "I don't think we should close the door." },
+    { name: "Marcus Reed", persona_type: "Resource constraint", evidence: "Is Priya willing to do that review?" },
+    { name: "Priya Shah", persona_type: "Absent Decision Maker", evidence: "She can't commit her team to another integration project this quarter." },
+  ],
+  northstarDialogue
+);
+if (dispersion.stakeholder_dispersion.index !== 12) {
+  console.error("FAIL: Dispersion must ignore a misattributed capacity statement", dispersion.stakeholder_dispersion);
+  failed = true;
+}
+const attributedCapacity = davidRunA.causal.forces.find((force) => /can't commit/i.test(force.evidence));
+if (
+  attributedCapacity?.attribution?.speaker_id !== "Sarah" ||
+  attributedCapacity?.attribution?.subject_id !== "Priya" ||
+  attributedCapacity?.attribution?.attribution_confidence !== "high"
+) {
+  console.error("FAIL: Capacity evidence must record Sarah as speaker and Priya as subject", attributedCapacity?.attribution);
+  failed = true;
+}
+
+let invalidRejected = false;
+try {
+  assertAnalysisSchema({});
+} catch (err) {
+  invalidRejected = err instanceof Error && /invalid analysis structure/.test(err.message);
+}
+if (!invalidRejected) {
+  console.error("FAIL: Invalid model output must be rejected before a report is saved");
+  failed = true;
+}
+try {
+  assertAnalysisSchema({
+    executive_summary: "The deal is deferred until the spending freeze lifts.",
+    causal_forces: [
+      {
+        factor: "Discretionary spending freeze",
+        type: "Structural",
+        weight: 90,
+        evidence: "The company is freezing discretionary spending until the end of the quarter.",
+      },
+    ],
+  });
+} catch (err) {
+  console.error("FAIL: A string summary with forces is a valid model response", err);
   failed = true;
 }
 

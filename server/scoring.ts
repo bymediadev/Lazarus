@@ -6,6 +6,7 @@
  */
 
 import { assessIntentExtraction } from "../src/lib/intentExtraction.js";
+import { capacitySubject, samePerson, attributeStatement } from "../src/lib/evidenceAttribution.js";
 import {
   classifyRecoverability,
   classifyRisk,
@@ -42,6 +43,15 @@ export interface ScoringForce {
     included: boolean;
     reason: string;
     duration: "TEMPORARY" | "CONDITIONAL" | "ONGOING" | "PERMANENT" | "UNKNOWN";
+  };
+  attribution?: {
+    evidence_id: string;
+    source_span: string;
+    speaker_id: string | null;
+    subject_id: string | null;
+    force_id: string;
+    force_type: string;
+    attribution_confidence: "high" | "unknown";
   };
 }
 
@@ -645,12 +655,16 @@ function ensureStatedIntent(forces: ScoringForce[], transcript: string): Scoring
 }
 
 const STATED_RESOURCE =
-  /[^.!?\n]*\b(can'?t commit|cannot commit|no capacity|another integration|capacity constraint|can'?t start|cannot start)\b[^.!?\n]*/i;
+  /[^.!?\n]*\b(can'?t commit|cannot commit|no capacity|lacks capacity|another integration|capacity constraint|can'?t start|cannot start)\b[^.!?\n]*/i;
 
 /** A stated capacity limit still sets constraint pressure when extraction omits that sentence. */
 function ensureStatedResource(forces: ScoringForce[], transcript: string): ScoringForce[] {
   if (forces.some((force) => STATED_RESOURCE.test(`${force.factor} ${force.evidence}`))) return forces;
-  const quote = transcript.match(STATED_RESOURCE)?.[0]?.replace(/\s+/g, " ").trim();
+  const quote = transcript
+    .match(STATED_RESOURCE)?.[0]
+    ?.replace(/\*\*[^*]+:\*\*/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
   if (!quote) return forces;
   return [
     ...forces,
@@ -674,7 +688,10 @@ export function deriveCanonicalState(
   const blocker = resolveBlockerClassification(blockerClassification, withIntent, transcript);
   const merged = mergeForces(withIntent);
   const mapped = mapForcesToScores(merged);
-  const forces = mapped.forces;
+  const forces = mapped.forces.map((force, index) => ({
+    ...force,
+    attribution: attributeStatement(transcript, force.factor, force.evidence, force.type, index),
+  }));
   const causal: CausalState = { forces, blocker_classification: blocker };
 
   const intent_strength = maxWeight(forces, "Intent");
@@ -1011,7 +1028,7 @@ const NOT_OPPOSED_EVIDENCE = /\b(not against|isn't against|is not against)\b/i;
 const UNMET_CONDITION_EVIDENCE =
   /\b(financial case|actual savings|too optimistic|assumptions|defensible savings|can't promise|cannot promise)\b/i;
 const CAPACITY_EVIDENCE =
-  /\b(can'?t commit|cannot commit|no capacity|another integration)\b/i;
+  /\b(can'?t commit|cannot commit|no capacity|lacks capacity|another integration)\b/i;
 const INACTIVE_EVIDENCE =
   /\b(not pushing|isn't pushing|is not pushing|hasn'?t said otherwise|haven'?t had a proper|have not had a proper|wouldn'?t tell you that he'?s pushing|would not tell you that he is pushing)\b/i;
 const COMPETITIVE_EVIDENCE = /\b(another platform|flowtrack|easier to use)\b/i;
@@ -1047,27 +1064,20 @@ function sentencesAbout(name: string, transcript: string): string {
   return hits.join(" ");
 }
 
+function supportsCapacityRole(name: string, evidence: string, transcript: string): boolean {
+  if (transcript.trim()) {
+    const subject = capacitySubject(transcript);
+    return !!subject && samePerson(subject, name);
+  }
+  return CAPACITY_EVIDENCE.test(evidence) && samePerson(name, evidence);
+}
+
 function nameTokens(name: string): string[] {
   return name
     .toLowerCase()
     .replace(/[^a-z\s]/g, " ")
     .split(/\s+/)
     .filter((token) => token.length > 3 && !NAME_TITLE_WORDS.has(token));
-}
-
-/** Capacity is often stated in the next sentence, after the person's name. */
-function capacityNear(name: string, transcript: string): boolean {
-  const tokens = nameTokens(name);
-  if (!tokens.length || !transcript.trim()) return false;
-  const lower = transcript.toLowerCase();
-  return tokens.some((token) => {
-    let from = 0;
-    while ((from = lower.indexOf(token, from)) !== -1) {
-      if (CAPACITY_EVIDENCE.test(transcript.slice(from, from + 280))) return true;
-      from += token.length;
-    }
-    return false;
-  });
 }
 
 export interface ReconciledPersona {
@@ -1126,31 +1136,43 @@ export function reconcilePersona(s: StakeholderIndexInput, transcript = ""): Rec
   ) {
     return { key: "inactive sponsor", label: "Inactive sponsor" };
   }
+  const capacitySupported = supportsCapacityRole(s.name ?? "", quoted, transcript);
+  const labeledResource = raw.includes("resource") || raw.includes("capacity");
+  if (labeledResource && !capacitySupported) {
+    return { key: "unknown", label: "Unknown" };
+  }
+  if (
+    capacitySupported &&
+    !raw.includes("suppressed") &&
+    !raw.includes("aligned") &&
+    !raw.includes("champion") &&
+    !opposed
+  ) {
+    return { key: "resource constraint", label: "Resource constraint" };
+  }
   if (raw.includes("absent")) return { key: "absent decision maker", label: "Absent Decision Maker" };
   if (raw.includes("suppressed")) return { key: "suppressed champion", label: "Suppressed Champion" };
   if (raw.includes("aligned") || raw.includes("champion")) {
     return { key: "aligned champion", label: "Aligned Champion" };
   }
-  if ((raw === "" || raw === "unknown" || raw === "neutral") && capacityNear(s.name ?? "", transcript)) {
-    return { key: "resource constraint", label: "Resource constraint" };
-  }
   if (raw === "neutral") return { key: "neutral", label: "Neutral" };
   return { key: raw || "unknown", label: s.persona_type?.trim() || s.stance?.trim() || "Unknown" };
 }
 
-function normalizePersona(s: StakeholderIndexInput): string {
-  return reconcilePersona(s).key;
+function normalizePersona(s: StakeholderIndexInput, transcript = ""): string {
+  return reconcilePersona(s, transcript).key;
 }
 
 export function computeStakeholderDispersion(
-  stakeholders: StakeholderIndexInput[]
+  stakeholders: StakeholderIndexInput[],
+  transcript = ""
 ): StakeholderDispersion {
   const persona_breakdown: Record<string, number> = {};
   const flags: string[] = [];
   let raw = 0;
 
   for (const s of stakeholders) {
-    const persona = normalizePersona(s);
+    const persona = normalizePersona(s, transcript);
     persona_breakdown[persona] = (persona_breakdown[persona] ?? 0) + 1;
     const weight = PERSONA_WEIGHTS[persona] ?? 0;
     raw += weight;
@@ -1549,7 +1571,7 @@ export function deriveProprietaryIndices(
   transcript = "",
   blocker = ""
 ): ProprietaryIndices {
-  const stakeholder_dispersion = computeStakeholderDispersion(stakeholders);
+  const stakeholder_dispersion = computeStakeholderDispersion(stakeholders, transcript);
   const dialogue_stall = computeDialogueStallSignals(transcript);
   const { deal_risk_index, formula: equation } = compileDealRiskReport(
     frozen,

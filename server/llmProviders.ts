@@ -398,8 +398,10 @@ async function runCandidates(
     } catch (err) {
       lastError = err;
       if (isRetryableLlmError(err)) {
+        const detail = err instanceof Error ? err.message : String(err);
         console.warn(
-          `LLM: ${candidate.provider}/${candidate.model} unavailable, trying next`
+          `LLM: ${candidate.provider}/${candidate.model} unavailable, trying next`,
+          detail.replace(/\s+/g, " ").slice(0, 180)
         );
         continue;
       }

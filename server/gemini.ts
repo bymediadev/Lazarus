@@ -395,6 +395,7 @@ function applyCanonicalScoring(
     forces: causal.forces,
     immediateActionCount,
     stakeholders,
+    transcript,
   });
 
   const projected: EnterpriseAnalysis = {
@@ -698,7 +699,29 @@ function normalizeDependencyGraph(raw: Record<string, unknown>): ForceDependency
   };
 }
 
+export function assertAnalysisSchema(raw: Record<string, unknown>): void {
+  const errors: string[] = [];
+  const summaryValue = raw?.executive_summary ?? raw?.headline ?? raw?.stall_cause;
+  const summary = String(summaryValue ?? "").trim();
+  if (!summary || summary === "[object Object]") {
+    errors.push(
+      `executive_summary must be a non-empty string (got ${summaryValue === undefined ? "missing" : typeof summaryValue})`
+    );
+  }
+  if (!Array.isArray(raw?.causal_forces)) {
+    errors.push(
+      `causal_forces must be an array (got ${raw?.causal_forces === undefined ? "missing" : typeof raw.causal_forces})`
+    );
+  } else if (raw.causal_forces.length === 0) {
+    errors.push("causal_forces must contain at least one force");
+  }
+  if (errors.length) {
+    throw new Error(`Gemini returned an invalid analysis structure. ${errors.join("; ")}`);
+  }
+}
+
 function normalizeOutput(raw: Record<string, unknown>): EnterpriseAnalysis {
+  assertAnalysisSchema(raw);
   raw = stripLlmScores(raw);
   const classificationRaw = raw.deal_classification as Record<string, unknown> | undefined;
   const eqRaw = raw.equilibrium_analysis as Record<string, unknown> | undefined;
@@ -925,12 +948,31 @@ async function extractWithModels(
   tier: ModelTier,
   preferOpenWeights?: boolean
 ): Promise<EnterpriseAnalysis> {
-  const parsed = await generateJson(systemPrompt, userMessage, {
+  const load = async () => normalizeOutput(await generateJson(systemPrompt, userMessage, {
     job: "autopsy",
     tier,
     preferOpenWeights,
-  });
-  return normalizeOutput(parsed);
+  }));
+  try {
+    return await load();
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err);
+    if (!/invalid analysis structure|JSON/i.test(message)) throw err;
+    console.warn("[analysis] schema validation failed; retrying once", {
+      stage: "normalizeOutput",
+      message,
+    });
+    try {
+      return await load();
+    } catch (retryErr) {
+      const retryMessage = retryErr instanceof Error ? retryErr.message : String(retryErr);
+      console.error("[analysis] schema validation failed after one retry; last valid report was not replaced", {
+        stage: "normalizeOutput",
+        message: retryMessage,
+      });
+      throw new Error(`Gemini returned an invalid analysis structure. Schema validation failed at normalizeOutput after one retry. ${retryMessage}`);
+    }
+  }
 }
 
 function applyGroundingFilter(

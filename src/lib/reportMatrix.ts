@@ -1,4 +1,5 @@
 import { uniqueActionSteps } from "./actionSteps";
+import { capacitySubject, samePerson } from "./evidenceAttribution";
 import { uniqueRecoveryNotes } from "./recoveryPlan";
 
 /** One threshold table for every transcript. Headline, scorecard, and notes read this tier. */
@@ -80,10 +81,13 @@ export function formatRecoverability(status: RecoverabilityStatus): string {
 }
 
 const RESOURCE_CONDITION =
-  /\b(can'?t commit|cannot commit|no capacity|another integration|capacity constraint|can'?t start|cannot start)\b/i;
+  /\b(can'?t commit|cannot commit|no capacity|lacks capacity|another integration|capacity constraint|can'?t start|cannot start)\b/i;
+const APPROVAL_CONDITION =
+  /\b(financial case|actual\s+(?:financial\s+)?savings|financial savings|defensible|too optimistic|demonstrate(?:d)? savings|proven financial)\b/i;
+const INDEPENDENT_FINANCIAL =
+  /\b(allocated elsewhere|budget (?:has been|was) allocated|no budget (?:left|remaining)|capital budget (?:is|was) (?:already )?(?:committed|allocated)|separate (?:budget|funding)|cannot fund this)\b/i;
 const FINANCIAL_CONDITION =
   /\b(financial case|actual savings|defensible|too optimistic|additional approval|signs off on the spend|discretionary spending|spending freeze|freezing discretionary)\b/i;
-const FINANCIAL_PARENT = /\b(freez|frozen|discretionary|spending freeze|budget|additional approval)\b/i;
 /** A discretionary spending freeze is one structural force, whichever type the model assigns. */
 const SPENDING_FREEZE = /\b(discretionary spending|spending freeze|freezing discretionary)\b/i;
 const COMPETITIVE_CONDITION = /\b(flowtrack|another platform|competing pilot|pilot)\b/i;
@@ -150,6 +154,18 @@ function isOpenPilot(force: MatrixForce): boolean {
   );
 }
 
+function isApprovalCondition(force: MatrixForce): boolean {
+  return APPROVAL_CONDITION.test(blob(force)) && !isSpendingFreeze(force);
+}
+
+function isIndependentFinancial(force: MatrixForce): boolean {
+  return INDEPENDENT_FINANCIAL.test(blob(force)) && !isSpendingFreeze(force) && !isApprovalCondition(force);
+}
+
+function isResourceLimit(force: MatrixForce): boolean {
+  return RESOURCE_CONDITION.test(blob(force)) && !isSpendingFreeze(force);
+}
+
 /**
  * Map each force onto one scoring input. Overlapping evidence is kept once.
  * A force that does not move a score still carries the reason it was left out.
@@ -160,6 +176,7 @@ export function mapForcesToScores(forces: MatrixForce[]): {
   structural_lock_in: number;
   trace: string[];
 } {
+  const freezePresent = forces.some((force) => isSpendingFreeze(force));
   const structuralWeights = forces
     .filter((force) => !isOpenPilot(force) && (force.type.toLowerCase() === "structural" || isSpendingFreeze(force)))
     .map((force) => force.weight);
@@ -167,25 +184,21 @@ export function mapForcesToScores(forces: MatrixForce[]): {
   const constraintWeights = forces
     .filter(
       (force) =>
-        force.type.toLowerCase() === "constraint" && !isOpenPilot(force) && !isSpendingFreeze(force)
+        force.type.toLowerCase() === "constraint" &&
+        !isOpenPilot(force) &&
+        !isSpendingFreeze(force) &&
+        !(freezePresent && isApprovalCondition(force))
     )
     .map((force) => force.weight);
   let constraint_pressure = constraintWeights.length ? Math.max(...constraintWeights) : 0;
-  const financialParent = forces.some(
-    (force) =>
-      isSpendingFreeze(force) ||
-      ((force.type.toLowerCase() === "structural" || force.type.toLowerCase() === "constraint") &&
-        FINANCIAL_PARENT.test(blob(force)))
-  );
 
   for (const force of forces) {
-    if (force.type.toLowerCase() !== "behavioral" || isSpendingFreeze(force)) continue;
-    const text = blob(force);
-    if (RESOURCE_CONDITION.test(text)) {
+    if (isSpendingFreeze(force) || isOpenPilot(force)) continue;
+    if (isResourceLimit(force) || isIndependentFinancial(force)) {
       constraint_pressure = Math.max(constraint_pressure, force.weight);
       continue;
     }
-    if (FINANCIAL_CONDITION.test(text) && !financialParent) {
+    if (isApprovalCondition(force) && !freezePresent) {
       constraint_pressure = Math.max(constraint_pressure, force.weight);
     }
   }
@@ -214,6 +227,34 @@ export function mapForcesToScores(forces: MatrixForce[]): {
         duration,
         reason:
           "A pilot or competitive preference is recorded. It does not set structural or constraint pressure, and a pilot is not a confirmed purchase.",
+      };
+    } else if (isApprovalCondition(force) && freezePresent) {
+      score_effect = {
+        dimension: "constraint_pressure",
+        included: false,
+        duration,
+        reason:
+          "This is the approval condition on the spending freeze. It is recorded and is not added as a second constraint.",
+      };
+    } else if (isResourceLimit(force)) {
+      const included = force.weight === constraint_pressure && constraint_pressure > 0;
+      score_effect = {
+        dimension: "constraint_pressure",
+        included,
+        duration,
+        reason: included
+          ? "A resource limit sets constraint pressure. It is not treated as opposition."
+          : `A resource limit is recorded. Constraint pressure stays at the stronger constraint (${constraint_pressure}) and this weight is not added on top.`,
+      };
+    } else if (isIndependentFinancial(force)) {
+      const included = force.weight === constraint_pressure && constraint_pressure > 0;
+      score_effect = {
+        dimension: "constraint_pressure",
+        included,
+        duration,
+        reason: included
+          ? "This financial constraint is separate from the spending freeze, so it sets constraint pressure."
+          : `This separate financial constraint is recorded. Constraint pressure stays at ${constraint_pressure}, and this weight is not added on top.`,
       };
     } else if (type === "intent") {
       const intentMax = maxOf(forces, "intent");
@@ -272,19 +313,22 @@ export function mapForcesToScores(forces: MatrixForce[]): {
           : `A resource limit is recorded. Constraint pressure stays at the stronger constraint (${constraint_pressure}) and this weight is not added on top.`,
       };
     } else if (type === "behavioral" && FINANCIAL_CONDITION.test(text)) {
-      score_effect = financialParent
+      const included = !freezePresent && force.weight === constraint_pressure && constraint_pressure > 0;
+      score_effect = freezePresent
         ? {
             dimension: "constraint_pressure",
             included: false,
             duration,
             reason:
-              "This financial condition overlaps a spending or budget force already in the structural or constraint score. It is not counted a second time.",
+              "This financial condition is the same spend as the freeze. It is recorded and is not added as a second constraint.",
           }
         : {
             dimension: "constraint_pressure",
-            included: force.weight === constraint_pressure,
+            included,
             duration,
-            reason: "No separate spending freeze is scored, so this financial condition sets constraint pressure.",
+            reason: included
+              ? "No spending freeze is scored, so this financial condition sets constraint pressure."
+              : `Constraint pressure stays at ${constraint_pressure}. This financial condition is recorded and is not added again.`,
           };
     } else if (type === "behavioral" && COMPETITIVE_CONDITION.test(text)) {
       score_effect = {
@@ -434,7 +478,8 @@ export function validateReportMatrix(input: {
   recoverabilityStatus?: string;
   forces: MatrixForce[];
   immediateActionCount: number;
-  stakeholders?: { persona_type?: string; stance?: string; evidence?: string }[];
+  stakeholders?: { name?: string; persona_type?: string; stance?: string; evidence?: string }[];
+  transcript?: string;
 }): ReportValidation {
   const checks: ReportCheck[] = [];
   const tier = (input.riskTier ?? "").toUpperCase();
@@ -488,6 +533,41 @@ export function validateReportMatrix(input: {
     detail: unlabeledOpposition.length
       ? "A detractor label is missing evidence of opposition."
       : "Detractor labels, when present, have evidence of opposition.",
+  });
+  const subject = input.transcript ? capacitySubject(input.transcript) : null;
+  const misattributed = (input.stakeholders ?? []).filter((person) => {
+    const label = `${person.persona_type ?? ""} ${person.stance ?? ""}`;
+    if (!/resource constraint/i.test(label)) return false;
+    if (!input.transcript) return false;
+    return !subject || !person.name || !samePerson(person.name, subject);
+  });
+  checks.push({
+    id: "speaker_attribution",
+    passed: misattributed.length === 0,
+    detail: misattributed.length
+      ? `Resource constraint is not supported for: ${misattributed.map((person) => person.name).join(", ")}.`
+      : subject
+        ? `Capacity evidence is attributed to ${subject}.`
+        : "No capacity statement needed a stakeholder attribution.",
+  });
+  const freezeScored = input.forces.some(
+    (force) => isSpendingFreeze(force) && force.score_effect?.included && force.score_effect.dimension === "structural_lock_in"
+  );
+  const approvalAlsoScored = input.forces.some(
+    (force) => isApprovalCondition(force) && force.score_effect?.included
+  );
+  const freezeAlsoConstraint = input.forces.some(
+    (force) => isSpendingFreeze(force) && force.score_effect?.included && force.score_effect.dimension === "constraint_pressure"
+  );
+  checks.push({
+    id: "overlap_consistency",
+    passed: !(freezeScored && approvalAlsoScored) && !freezeAlsoConstraint,
+    detail:
+      freezeScored && approvalAlsoScored
+        ? "An approval condition was added on top of a scored spending freeze."
+        : freezeAlsoConstraint
+          ? "A spending freeze was counted as constraint pressure as well as structural pressure."
+          : "Overlapping financial evidence is not added twice.",
   });
   return { passed: checks.every((check) => check.passed), checks };
 }
