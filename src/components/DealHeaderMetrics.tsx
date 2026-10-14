@@ -1,11 +1,13 @@
 import MetricGlossary from "./MetricGlossary";
 import { formatScoreOutOf100 } from "../lib/metricLegend";
+import { formatRecoverability } from "../lib/reportMatrix";
 import { driTagClass, type ProprietaryIndices, type PostMortemResult } from "../types";
 
 interface Props {
   indices: ProprietaryIndices;
   viabilityScore?: number;
   intermediateViability?: number;
+  recoverability?: PostMortemResult["recoverability"];
 }
 
 function MetricCard({
@@ -28,7 +30,12 @@ function MetricCard({
   );
 }
 
-export default function DealHeaderMetrics({ indices: pi, viabilityScore, intermediateViability }: Props) {
+export default function DealHeaderMetrics({
+  indices: pi,
+  viabilityScore,
+  intermediateViability,
+  recoverability,
+}: Props) {
   const driClass = driTagClass(pi.risk_tier);
   const legendScores = {
     deal_risk_index: pi.deal_risk_index,
@@ -79,12 +86,11 @@ export default function DealHeaderMetrics({ indices: pi, viabilityScore, interme
           }
         />
         <MetricCard
-          label="Recoverability"
+          label="Viability"
           value={formatScoreOutOf100(viabilityScore)}
           detail={
             [
-              pi.explanations?.viability.summary ??
-                "Whether a credible path to advance the deal still exists.",
+              "The viability formula. A zero is the floor of that formula, not a recoverability judgment.",
               intermediateViability !== undefined &&
               viabilityScore !== undefined &&
               intermediateViability !== viabilityScore
@@ -93,6 +99,14 @@ export default function DealHeaderMetrics({ indices: pi, viabilityScore, interme
             ]
               .filter((line): line is string => Boolean(line))
               .join(" ")
+          }
+        />
+        <MetricCard
+          label="Recoverability"
+          value={recoverability ? formatRecoverability(recoverability.status) : "—"}
+          detail={
+            recoverability?.explanation ??
+            "Recoverability is judged from whether a path still exists. It is not the viability score."
           }
         />
       </div>

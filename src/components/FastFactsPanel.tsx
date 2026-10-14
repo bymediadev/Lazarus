@@ -1,5 +1,6 @@
 import { useState } from "react";
-import { recoveryActionLines, uniqueRecoveryNotes } from "../lib/recoveryPlan";
+import { recoveryActionLines } from "../lib/recoveryPlan";
+import { canonicalImmediateActions } from "../lib/reportMatrix";
 import { forecastGuidance } from "../lib/forecastCall";
 import { formatCompressedCrmNotes } from "../lib/crmNotes";
 import { PostMortemResult, StakeholderSignal } from "../types";
@@ -74,11 +75,7 @@ export default function FastFactsPanel({
   const vetoPeople = opposing(result);
   const missingPeople = absentPeople(result);
   const conditionStakeholders = conditionPeople(result);
-  const plan = result.rescue_triage_plan;
-  const saveSteps = uniqueRecoveryNotes([
-    ...(result.immediate_remediation ?? []),
-    ...(plan?.immediate_0_30_days ?? []),
-  ]).slice(0, 1);
+  const saveSteps = canonicalImmediateActions(result).slice(0, 1);
 
   const noteBody = formatCompressedCrmNotes(result);
 
@@ -174,8 +171,10 @@ export default function FastFactsPanel({
         <h2 className="card-title">CRM-ready next step</h2>
         <div className="card-body">
           <p>{guidance.line}</p>
-          {!guidance.showRecoveryPlan ? null : saveSteps.length === 0 ? (
-            <p>No immediate action was extracted. The recovery plan above stays empty until the evidence supports one.</p>
+          {!guidance.showRecoveryPlan ? (
+            <p>No action is proposed until the blocking condition itself changes.</p>
+          ) : saveSteps.length === 0 ? (
+            <p>No immediate action was identified from the evidence.</p>
           ) : (
             <>
               <ol className="fast-facts-steps">

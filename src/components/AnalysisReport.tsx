@@ -810,6 +810,7 @@ export default function AnalysisReport({
           indices={pi}
           viabilityScore={vs.viability_score}
           intermediateViability={cycles?.cycles?.[0]?.state_snapshot.viability_score}
+          recoverability={r.recoverability}
         />
       )}
 

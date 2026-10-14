@@ -6,6 +6,12 @@
  */
 
 import { assessIntentExtraction } from "../src/lib/intentExtraction.js";
+import {
+  classifyRecoverability,
+  classifyRisk,
+  mapForcesToScores,
+  type RecoverabilityAssessment,
+} from "../src/lib/reportMatrix.js";
 import { intentInputTrace } from "../src/lib/scoreInputTrace.js";
 
 export type CanonicalEquilibrium = "PINNED" | "MIXED" | "OPEN";
@@ -31,6 +37,12 @@ export interface ScoringForce {
   role?: string;
   derived_from?: string[];
   evidence: string;
+  score_effect?: {
+    dimension: "structural_lock_in" | "constraint_pressure" | "intent_strength" | "enabler_strength" | "none";
+    included: boolean;
+    reason: string;
+    duration: "TEMPORARY" | "CONDITIONAL" | "ONGOING" | "PERMANENT" | "UNKNOWN";
+  };
 }
 
 export interface CausalState {
@@ -75,6 +87,8 @@ export interface FrozenDerivation {
   decision_freedom: string;
   derivation_formula: string;
   resolution_cycles: ResolutionCyclesFrozen;
+  recoverability: RecoverabilityAssessment;
+  force_trace: string[];
 }
 
 function clamp(n: number, min = 0, max = 100): number {
@@ -630,19 +644,42 @@ function ensureStatedIntent(forces: ScoringForce[], transcript: string): Scoring
   ];
 }
 
+const STATED_RESOURCE =
+  /[^.!?\n]*\b(can'?t commit|cannot commit|no capacity|another integration|capacity constraint|can'?t start|cannot start)\b[^.!?\n]*/i;
+
+/** A stated capacity limit still sets constraint pressure when extraction omits that sentence. */
+function ensureStatedResource(forces: ScoringForce[], transcript: string): ScoringForce[] {
+  if (forces.some((force) => STATED_RESOURCE.test(`${force.factor} ${force.evidence}`))) return forces;
+  const quote = transcript.match(STATED_RESOURCE)?.[0]?.replace(/\s+/g, " ").trim();
+  if (!quote) return forces;
+  return [
+    ...forces,
+    {
+      factor: "Technical team cannot commit capacity",
+      type: "Behavioral",
+      weight: 75,
+      role: "independent",
+      derived_from: [],
+      evidence: quote,
+    },
+  ];
+}
+
 export function deriveCanonicalState(
   rawForces: ScoringForce[],
   blockerClassification = "MIXED",
   transcript = ""
 ): { causal: CausalState; frozen: FrozenDerivation } {
-  const withIntent = ensureStatedIntent(rawForces, transcript);
+  const withIntent = ensureStatedResource(ensureStatedIntent(rawForces, transcript), transcript);
   const blocker = resolveBlockerClassification(blockerClassification, withIntent, transcript);
-  const forces = mergeForces(withIntent);
+  const merged = mergeForces(withIntent);
+  const mapped = mapForcesToScores(merged);
+  const forces = mapped.forces;
   const causal: CausalState = { forces, blocker_classification: blocker };
 
   const intent_strength = maxWeight(forces, "Intent");
-  const constraint_pressure = maxWeight(forces, "Constraint");
-  const structural_lock_in = maxWeight(forces, "Structural");
+  const constraint_pressure = mapped.constraint_pressure;
+  const structural_lock_in = mapped.structural_lock_in;
   const enabler_strength = maxWeight(forces, "Enabler");
   const timing_factor = inferTimingFactor(forces);
 
@@ -717,11 +754,22 @@ export function deriveCanonicalState(
     trajectory_type,
   };
 
+  const recoverability = classifyRecoverability({
+    viability: viability_score,
+    trajectory: trajectory_type,
+    blocker,
+    intent: intent_strength,
+    forces,
+    evidence: transcript,
+  });
+
   const frozen: FrozenDerivation = {
     ...frozenBase,
     viability_state,
     buyer_intent_level,
     decision_freedom,
+    recoverability,
+    force_trace: mapped.trace,
     derivation_formula: formatFormula({ ...frozenBase, trajectory_type }),
     resolution_cycles: {
       convergence_status: "converged",
@@ -988,11 +1036,7 @@ const NAME_TITLE_WORDS = new Set([
 
 /** Sentences that name this person, with speaker labels removed. The next sentence is not included. */
 function sentencesAbout(name: string, transcript: string): string {
-  const tokens = name
-    .toLowerCase()
-    .replace(/[^a-z\s]/g, " ")
-    .split(/\s+/)
-    .filter((token) => token.length > 3 && !NAME_TITLE_WORDS.has(token));
+  const tokens = nameTokens(name);
   if (!tokens.length || !transcript.trim()) return "";
   const sentences = transcript.split(/(?<=[.!?])\s+/);
   const hits: string[] = [];
@@ -1001,6 +1045,29 @@ function sentencesAbout(name: string, transcript: string): string {
     if (tokens.some((token) => new RegExp(`\\b${token}\\b`, "i").test(stripped))) hits.push(stripped);
   }
   return hits.join(" ");
+}
+
+function nameTokens(name: string): string[] {
+  return name
+    .toLowerCase()
+    .replace(/[^a-z\s]/g, " ")
+    .split(/\s+/)
+    .filter((token) => token.length > 3 && !NAME_TITLE_WORDS.has(token));
+}
+
+/** Capacity is often stated in the next sentence, after the person's name. */
+function capacityNear(name: string, transcript: string): boolean {
+  const tokens = nameTokens(name);
+  if (!tokens.length || !transcript.trim()) return false;
+  const lower = transcript.toLowerCase();
+  return tokens.some((token) => {
+    let from = 0;
+    while ((from = lower.indexOf(token, from)) !== -1) {
+      if (CAPACITY_EVIDENCE.test(transcript.slice(from, from + 280))) return true;
+      from += token.length;
+    }
+    return false;
+  });
 }
 
 export interface ReconciledPersona {
@@ -1063,6 +1130,9 @@ export function reconcilePersona(s: StakeholderIndexInput, transcript = ""): Rec
   if (raw.includes("suppressed")) return { key: "suppressed champion", label: "Suppressed Champion" };
   if (raw.includes("aligned") || raw.includes("champion")) {
     return { key: "aligned champion", label: "Aligned Champion" };
+  }
+  if ((raw === "" || raw === "unknown" || raw === "neutral") && capacityNear(s.name ?? "", transcript)) {
+    return { key: "resource constraint", label: "Resource constraint" };
   }
   if (raw === "neutral") return { key: "neutral", label: "Neutral" };
   return { key: raw || "unknown", label: s.persona_type?.trim() || s.stance?.trim() || "Unknown" };
@@ -1234,10 +1304,7 @@ export function computeDialogueStallSignals(transcript: string): DialogueStallSi
 }
 
 function riskTier(dri: number): DealRiskTier {
-  if (dri >= 75) return "CRITICAL";
-  if (dri >= 55) return "HIGH";
-  if (dri >= 35) return "MODERATE";
-  return "LOW";
+  return classifyRisk(dri);
 }
 
 function recoverableTrack(frozen: FrozenDerivation): boolean {
@@ -1373,6 +1440,18 @@ export function explainScores(
         {
           basis: "inferred",
           text: `${viabilityPathSentence(frozen, blocker)} Effective intent is ${frozen.effective_intent}. Trajectory: ${frozen.trajectory_type}. State: ${frozen.viability_state}.`,
+        },
+        ...(frozen.force_trace.length
+          ? [
+              {
+                basis: "observed" as const,
+                text: `Force mapping: ${frozen.force_trace.join(" ")}`,
+              },
+            ]
+          : []),
+        {
+          basis: "inferred" as const,
+          text: frozen.recoverability.explanation,
         },
       ],
       caveat:

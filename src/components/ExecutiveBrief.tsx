@@ -1,11 +1,11 @@
 import ViabilityLineChart from "./ViabilityLineChart";
-import { uniqueActionSteps } from "../lib/actionSteps";
 import { readConstraint } from "../lib/constraintReading";
 import { mergeOverlappingQuotes } from "../lib/evidenceQuotes";
 import { commercialBaselineFromText } from "../lib/commercialBaseline";
 import { forecastGuidance } from "../lib/forecastCall";
+import { canonicalImmediateActions, formatRecoverability } from "../lib/reportMatrix";
 import { convergenceExplanation, viabilityCycleDisplay } from "../lib/convergenceNote";
-import { recoveryActionLines, uniqueRecoveryNotes } from "../lib/recoveryPlan";
+import { recoveryActionLines } from "../lib/recoveryPlan";
 import type { PostMortemResult } from "../types";
 
 interface Props {
@@ -105,14 +105,7 @@ export default function ExecutiveBrief({ result }: Props) {
     recoverability: viability,
     viabilityState: result.viability_state?.state,
   });
-  const steps = guidance.removeFromForecast
-    ? []
-    : uniqueRecoveryNotes(
-        uniqueActionSteps([
-          ...(result.immediate_remediation ?? []),
-          ...(result.rescue_triage_plan?.immediate_0_30_days ?? []),
-        ])
-      );
+  const steps = guidance.showRecoveryPlan ? canonicalImmediateActions(result) : [];
   const cycleRows = result.resolution_cycles?.cycles ?? [];
   const viabilityDisplay = viabilityCycleDisplay(cycleRows, viability);
   const convergence = convergenceExplanation({
@@ -154,9 +147,24 @@ export default function ExecutiveBrief({ result }: Props) {
               {riskLabel ? ` (${riskLabel})` : ""}
             </span>
           )}
+          {result.recoverability && (
+            <span>Recoverability: {formatRecoverability(result.recoverability.status)}</span>
+          )}
         </p>
+        {result.recoverability?.explanation && (
+          <p className="meta-line">{result.recoverability.explanation}</p>
+        )}
         {viabilityDisplay.note && <p className="meta-line">{viabilityDisplay.note}</p>}
         {convergence && <p className="meta-line">{convergence}</p>}
+        {result.report_validation && !result.report_validation.passed && (
+          <p className="meta-line">
+            Report check failed:{" "}
+            {result.report_validation.checks
+              .filter((check) => !check.passed)
+              .map((check) => check.detail)
+              .join(" ")}
+          </p>
+        )}
       </div>
 
       {constraint.kind !== "unspecified" && (
@@ -208,8 +216,10 @@ export default function ExecutiveBrief({ result }: Props) {
       <div className="executive-brief-actions">
         <h2>Recovery plan</h2>
         <p>{guidance.line}</p>
-        {!guidance.showRecoveryPlan ? null : steps.length === 0 ? (
-          <p>No immediate action was extracted from this brief.</p>
+        {!guidance.showRecoveryPlan ? (
+          <p>No action is proposed until the blocking condition itself changes.</p>
+        ) : steps.length === 0 ? (
+          <p>No immediate action was identified from the evidence.</p>
         ) : (
           <>
             <ol>

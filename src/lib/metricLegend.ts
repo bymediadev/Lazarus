@@ -55,11 +55,10 @@ export const METRIC_LEGEND: readonly MetricLegendEntry[] = [
   },
   {
     id: "recoverable-vs-flat-no",
-    term: "Recoverability",
+    term: "Viability",
     definition:
-      "Whether a credible path to advance the deal still exists, from intent, constraint, structural lock-in, enabler strength, and timing. Not a close probability.",
-    reportMapsTo:
-      "Read from viability score (0–100) plus Deal Status and the 0–90 day Resuscitation Plan.",
+      "The result of the viability formula. A score of zero means the formula floored. It is not a judgment that recovery is impossible.",
+    reportMapsTo: "Shows as Viability on the Forecast snapshot. Recoverability is a separate status.",
     scoreKey: "viability_score",
   },
 ] as const;

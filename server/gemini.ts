@@ -20,6 +20,7 @@ import {
   type StakeholderSignal,
 } from "./grounding.js";
 import { alignBlockerNarrative } from "../src/lib/blockerNarrative.js";
+import { stalledHeadline, validateReportMatrix, type ReportValidation, type RecoverabilityAssessment } from "../src/lib/reportMatrix.js";
 import { commercialBaselineFromText, type CommercialBaseline } from "../src/lib/commercialBaseline.js";
 import { attributeQuote } from "../src/lib/evidenceAttribution.js";
 import { assessIntentExtraction, buildIntentRetryInstructions } from "../src/lib/intentExtraction.js";
@@ -46,7 +47,10 @@ export type EnterpriseDealStatus =
   | "ACTIVE"
   | "STALLED — RECOVERABLE"
   | "STALLED — UNCERTAIN"
+  | "STALLED — LOW RISK"
+  | "STALLED — MODERATE RISK"
   | "STALLED — HIGH RISK"
+  | "STALLED — CRITICAL RISK"
   | "CLOSED LOST — RECOVERABLE"
   | "CLOSED LOST — UNLIKELY"
   | "CLOSED WON";
@@ -79,6 +83,12 @@ export interface CausalForce {
   role: ForceRole;
   derived_from: string[];
   evidence: string;
+  score_effect?: {
+    dimension: string;
+    included: boolean;
+    reason: string;
+    duration: string;
+  };
 }
 
 export interface ForceCoupling {
@@ -231,13 +241,18 @@ export interface EnterpriseAnalysis {
   friction_deltas?: DeepContextOutput["friction_deltas"];
   immediate_remediation?: string[];
   commercial_baseline?: CommercialBaseline;
+  recoverability?: RecoverabilityAssessment;
+  report_validation?: ReportValidation;
 }
 
 const VALID_STATUSES: EnterpriseDealStatus[] = [
   "ACTIVE",
   "STALLED — RECOVERABLE",
   "STALLED — UNCERTAIN",
+  "STALLED — LOW RISK",
+  "STALLED — MODERATE RISK",
   "STALLED — HIGH RISK",
+  "STALLED — CRITICAL RISK",
   "CLOSED LOST — RECOVERABLE",
   "CLOSED LOST — UNLIKELY",
   "CLOSED WON",
@@ -293,19 +308,28 @@ function trajectoryDirection(t: CanonicalTrajectory): string {
 
 export function statusFromTrajectory(
   trajectory: CanonicalTrajectory,
-  modelStatus: EnterpriseDealStatus
+  modelStatus: EnterpriseDealStatus,
+  riskTier?: "LOW" | "MODERATE" | "HIGH" | "CRITICAL"
 ): EnterpriseDealStatus {
   if (trajectory === "VALIDATED / VELOCITY" || modelStatus === "CLOSED WON") {
     return modelStatus;
   }
+  if (trajectory === "ACTIVE") return "ACTIVE";
   const closedLost = modelStatus.startsWith("CLOSED LOST");
+  if (trajectory === "NON-VIABLE / DEAD" && closedLost) return "CLOSED LOST — UNLIKELY";
+  if (riskTier) {
+    if (closedLost) {
+      return riskTier === "LOW" || riskTier === "MODERATE"
+        ? "CLOSED LOST — RECOVERABLE"
+        : "CLOSED LOST — UNLIKELY";
+    }
+    return stalledHeadline(riskTier) as EnterpriseDealStatus;
+  }
   if (trajectory === "DEFERRED (recoverable)") {
     return closedLost ? "CLOSED LOST — RECOVERABLE" : "STALLED — RECOVERABLE";
   }
-  if (trajectory === "DEFERRED (locked)" || trajectory === "NON-VIABLE / DEAD") {
-    return closedLost ? "CLOSED LOST — UNLIKELY" : "STALLED — HIGH RISK";
-  }
-  return modelStatus;
+  if (closedLost) return "CLOSED LOST — UNLIKELY";
+  return "STALLED — UNCERTAIN";
 }
 
 /** Layer 3 — project frozen derivation read-only; scoring runs once after grounding */
@@ -357,12 +381,30 @@ function applyCanonicalScoring(
     causal.blocker_classification
   );
 
+  const status = statusFromTrajectory(
+    frozen.trajectory_type,
+    result.deal_classification.status,
+    proprietary_indices.risk_tier
+  );
+  const immediateActionCount = (result.rescue_triage_plan?.immediate_0_30_days ?? []).length;
+  const report_validation = validateReportMatrix({
+    status,
+    riskTier: proprietary_indices.risk_tier,
+    viability: frozen.viability_score,
+    recoverabilityStatus: frozen.recoverability.status,
+    forces: causal.forces,
+    immediateActionCount,
+    stakeholders,
+  });
+
   const projected: EnterpriseAnalysis = {
     ...result,
     deal_classification: {
       ...result.deal_classification,
-      status: statusFromTrajectory(frozen.trajectory_type, result.deal_classification.status),
+      status,
     },
+    recoverability: frozen.recoverability,
+    report_validation,
     force_initialization: {
       ...result.force_initialization,
       blocker_classification: causal.blocker_classification,
@@ -387,6 +429,7 @@ function applyCanonicalScoring(
       role: (f.role ?? "independent") as ForceRole,
       derived_from: f.derived_from ?? [],
       evidence: f.evidence,
+      score_effect: f.score_effect,
     })),
     resolution_cycles: frozen.resolution_cycles,
     force_interaction_map: {
@@ -839,6 +882,7 @@ function toApiResponse(result: EnterpriseAnalysis): AnalysisResponse {
     deal_status: result.deal_classification.status,
     confidence_score: result.deal_classification.confidence_level,
     recoverability_score: result.viability_state.viability_score,
+    recoverability: result.recoverability,
     headline: result.executive_summary,
     diagnosis,
     action_plan,

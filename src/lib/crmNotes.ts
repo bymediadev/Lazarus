@@ -245,7 +245,12 @@ function metricsBlock(result: PostMortemResult): string {
     lines.push(`- **Department friction index:** ${triage.department_friction_index}/100`);
   }
   if (vs) {
-    lines.push(`- **Recoverability / Viability:** ${vs.state} (${vs.viability_score}/100)`);
+    lines.push(`- **Viability:** ${vs.state} (${vs.viability_score}/100)`);
+  }
+  if (result.recoverability) {
+    lines.push(
+      `- **Recoverability:** ${result.recoverability.status.replaceAll("_", " ").toLowerCase()}`
+    );
   }
   if (dt?.trajectory_type) {
     lines.push(`- **Trajectory:** ${dt.trajectory_type}`);

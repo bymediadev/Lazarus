@@ -5,7 +5,10 @@ export type EnterpriseDealStatus =
   | "ACTIVE"
   | "STALLED — RECOVERABLE"
   | "STALLED — UNCERTAIN"
+  | "STALLED — LOW RISK"
+  | "STALLED — MODERATE RISK"
   | "STALLED — HIGH RISK"
+  | "STALLED — CRITICAL RISK"
   | "CLOSED LOST — RECOVERABLE"
   | "CLOSED LOST — UNLIKELY"
   | "CLOSED WON";
@@ -110,6 +113,12 @@ export interface CausalForce {
   role?: ForceRole;
   derived_from?: string[];
   evidence: string;
+  score_effect?: {
+    dimension: string;
+    included: boolean;
+    reason: string;
+    duration: string;
+  };
 }
 
 export interface ForceCoupling {
@@ -418,6 +427,17 @@ export interface PostMortemResult {
   headline?: string;
   diagnosis?: string;
   action_plan?: string[];
+  recoverability?: {
+    status: "RECOVERABLE" | "CONDITIONALLY_RECOVERABLE" | "UNDETERMINED" | "NOT_CURRENTLY_RECOVERABLE";
+    confidence: number;
+    blocking_conditions: string[];
+    evidence_gaps: string[];
+    explanation?: string;
+  };
+  report_validation?: {
+    passed: boolean;
+    checks: { id: string; passed: boolean; detail: string }[];
+  };
 }
 
 function clampScore(n: unknown, fallback = 50): number {
@@ -430,7 +450,7 @@ export function statusTagClass(status: string): string {
   const s = status.toUpperCase();
   if (s.includes("CLOSED WON")) return "status-success";
   if (s.includes("CLOSED LOST")) return "status-failed";
-  if (s.includes("UNCERTAIN") || s.includes("HIGH RISK")) return "status-risk";
+  if (s.includes("UNCERTAIN") || s.includes("HIGH RISK") || s.includes("CRITICAL RISK")) return "status-risk";
   if (s.includes("ACTIVE")) return "status-active";
   return "status-stalled";
 }

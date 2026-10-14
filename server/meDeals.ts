@@ -116,7 +116,7 @@ export function lifecyclePhaseFromStatus(status: string): LifecyclePhase {
   if (s.includes("CLOSED WON") || s === "CLOSED_WON") return "closed_won";
   if (s.includes("CLOSED LOST") && s.includes("RECOVERABLE")) return "closed_lost_recoverable";
   if (s.includes("CLOSED LOST")) return "closed_lost_unlikely";
-  if (s.includes("HIGH RISK")) return "stalled_high_risk";
+  if (s.includes("CRITICAL RISK") || s.includes("HIGH RISK")) return "stalled_high_risk";
   if (s.includes("UNCERTAIN")) return "stalled_uncertain";
   if (s.includes("RECOVERABLE") || s.includes("STALLED")) return "stalled_recoverable";
   if (s.includes("ACTIVE")) return "active";

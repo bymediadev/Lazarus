@@ -10,6 +10,7 @@ import { statusFromTrajectory } from "../server/gemini.ts";
 import { alignBlockerNarrative } from "../src/lib/blockerNarrative.ts";
 import { commercialBaselineFromText } from "../src/lib/commercialBaseline.ts";
 import { DEFER_FORECAST_LINE, forecastGuidance, NON_VIABLE_FORECAST_LINE } from "../src/lib/forecastCall.ts";
+import { canonicalImmediateActions, classifyRisk, stalledHeadline } from "../src/lib/reportMatrix.ts";
 import { mergeOverlappingQuotes } from "../src/lib/evidenceQuotes.ts";
 import { readFileSync } from "fs";
 
@@ -495,12 +496,17 @@ if (northlinePath[2] !== northline.viability_score || !assertFlatRecoverablePath
   }
   failed = true;
 }
-if (statusFromTrajectory(northline.trajectory_type, "STALLED — HIGH RISK") !== "STALLED — RECOVERABLE") {
-  console.error("FAIL: Northline status should follow the recoverable trajectory");
+const northlineStatus = statusFromTrajectory(
+  northline.trajectory_type,
+  "STALLED — HIGH RISK",
+  northlinePi.risk_tier
+);
+if (!northlineStatus.includes(`${northlinePi.risk_tier} RISK`)) {
+  console.error("FAIL: Northline headline should use the risk tier", northlineStatus, northlinePi.risk_tier);
   failed = true;
 }
 const northlineForecast = forecastGuidance({
-  status: statusFromTrajectory(northline.trajectory_type, "STALLED — HIGH RISK"),
+  status: northlineStatus,
   trajectory: northline.trajectory_type,
   recoverability: northline.viability_score,
 });
@@ -595,11 +601,16 @@ if (structuralDeathForecast.line === NON_VIABLE_FORECAST_LINE) {
   console.error("FAIL: Viability 10 must not use the non-viable forecast line");
   failed = true;
 }
-if (statusFromTrajectory(structuralDeathFrozen.trajectory_type, "STALLED — RECOVERABLE") !== "STALLED — HIGH RISK") {
-  console.error("FAIL: A locked trajectory should not keep a recoverable headline");
+const structuralDeathPi = deriveProprietaryIndices(structuralDeathFrozen, [], "");
+const structuralDeathStatus = statusFromTrajectory(
+  structuralDeathFrozen.trajectory_type,
+  "STALLED — RECOVERABLE",
+  structuralDeathPi.risk_tier
+);
+if (!structuralDeathStatus.includes(`${structuralDeathPi.risk_tier} RISK`) || structuralDeathStatus.includes("RECOVERABLE")) {
+  console.error("FAIL: A locked deal headline should follow the risk tier", structuralDeathStatus, structuralDeathPi.risk_tier);
   failed = true;
 }
-const structuralDeathPi = deriveProprietaryIndices(structuralDeathFrozen, [], "");
 if (structuralDeathPi.formula.includes("timing_penalty")) {
   console.error("FAIL: Timing penalty should stay hidden when constraint is not above 40", structuralDeathPi.formula);
   failed = true;
@@ -699,8 +710,13 @@ try {
   console.error("FAIL: Suppressed Northline DRI formula could not be evaluated", err);
   failed = true;
 }
-if (statusFromTrajectory(suppressedFrozen.trajectory_type, "STALLED — HIGH RISK") !== "STALLED — RECOVERABLE") {
-  console.error("FAIL: Suppressed Northline status should follow the recoverable trajectory");
+const suppressedStatus = statusFromTrajectory(
+  suppressedFrozen.trajectory_type,
+  "STALLED — HIGH RISK",
+  suppressedPi.risk_tier
+);
+if (!suppressedStatus.includes(`${suppressedPi.risk_tier} RISK`)) {
+  console.error("FAIL: Suppressed Northline headline should use the risk tier", suppressedStatus, suppressedPi.risk_tier);
   failed = true;
 }
 if (suppressedForecast.removeFromForecast) {
@@ -1078,6 +1094,18 @@ if (evanFromCall.label !== "Inactive sponsor") {
   console.error("FAIL: An inactive COO is not an absent decision maker", evanFromCall);
   failed = true;
 }
+const priyaFromCall = reconcilePersona(
+  {
+    name: "Priya",
+    persona_type: "Unknown",
+    evidence: "Priya thinks it could take twelve to sixteen weeks because of integration and security reviews.",
+  },
+  "Is Priya willing to do that review? She's willing, but she can't commit her team to another integration project this quarter."
+);
+if (priyaFromCall.label !== "Resource constraint") {
+  console.error("FAIL: A capacity limit stated after Priya's name is a resource constraint", priyaFromCall);
+  failed = true;
+}
 if (sarahFromCall.label !== "Suppressed Champion" || davidFromCall.label !== "Unmet condition") {
   console.error("FAIL: Sarah and David should keep their labels", sarahFromCall, davidFromCall);
   failed = true;
@@ -1102,6 +1130,268 @@ const permanentForecast = forecastGuidance({
 });
 if (permanentBan.frozen.viability_state !== "NON-VIABLE (STRUCTURALLY LOCKED)" || permanentForecast.line !== NON_VIABLE_FORECAST_LINE) {
   console.error("FAIL: A permanent prohibition should stay non-viable", permanentBan.frozen, permanentForecast);
+  failed = true;
+}
+if (permanentBan.frozen.recoverability.status !== "NOT_CURRENTLY_RECOVERABLE") {
+  console.error("FAIL: A permanent prohibition should be not currently recoverable", permanentBan.frozen.recoverability);
+  failed = true;
+}
+
+const matrixDeal = deriveCanonicalState(
+  [
+    {
+      factor: "Discretionary spending freeze",
+      type: "Structural",
+      weight: 90,
+      evidence: "The company is freezing discretionary spending until the end of the quarter. Additional approval, technically.",
+    },
+    {
+      factor: "CFO financial case",
+      type: "Behavioral",
+      weight: 80,
+      evidence: "He wants a proper financial case and actual savings.",
+    },
+    {
+      factor: "Technical capacity",
+      type: "Behavioral",
+      weight: 75,
+      evidence: "She can't commit her team to another integration project this quarter.",
+    },
+    {
+      factor: "Continued interest",
+      type: "Intent",
+      weight: 40,
+      evidence: "The project hasn't disappeared.",
+    },
+  ],
+  "STRUCTURAL LOCK-INS"
+);
+if (matrixDeal.frozen.constraint_pressure !== 75 || matrixDeal.frozen.structural_lock_in !== 90) {
+  console.error("FAIL: A structural freeze and a resource limit stay on separate scores", {
+    constraint: matrixDeal.frozen.constraint_pressure,
+    structural: matrixDeal.frozen.structural_lock_in,
+  });
+  failed = true;
+}
+if (matrixDeal.frozen.viability_score !== 0) {
+  console.error("FAIL: Viability can still floor at 0", matrixDeal.frozen.viability_score);
+  failed = true;
+}
+if (matrixDeal.frozen.recoverability.status !== "CONDITIONALLY_RECOVERABLE") {
+  console.error("FAIL: A temporary freeze with stated pursuit should stay conditionally recoverable", matrixDeal.frozen.recoverability);
+  failed = true;
+}
+if (!matrixDeal.frozen.recoverability.explanation.toLowerCase().includes("viability")) {
+  console.error("FAIL: Recoverability should explain the viability score", matrixDeal.frozen.recoverability.explanation);
+  failed = true;
+}
+const freezeOnly = deriveCanonicalState(
+  [
+    {
+      factor: "Discretionary spending freeze",
+      type: "Structural",
+      weight: 90,
+      evidence: "The company is freezing discretionary spending until the end of the quarter.",
+    },
+  ],
+  "STRUCTURAL LOCK-INS"
+);
+if (freezeOnly.frozen.recoverability.status === "CONDITIONALLY_RECOVERABLE" || freezeOnly.frozen.recoverability.status === "NOT_CURRENTLY_RECOVERABLE") {
+  console.error("FAIL: A temporary freeze without a stated path is undetermined", freezeOnly.frozen.recoverability);
+  failed = true;
+}
+const competitorWon = deriveCanonicalState(
+  [
+    {
+      factor: "Competitor selected",
+      type: "Structural",
+      weight: 80,
+      evidence: "We selected FlowTrack and ended the evaluation.",
+    },
+    {
+      factor: "Earlier interest",
+      type: "Intent",
+      weight: 40,
+      evidence: "The project hasn't disappeared.",
+    },
+  ],
+  "MIXED"
+);
+if (competitorWon.frozen.recoverability.status !== "NOT_CURRENTLY_RECOVERABLE") {
+  console.error("FAIL: A selected competitor should close the current path without a permanent ban", competitorWon.frozen.recoverability);
+  failed = true;
+}
+const keptOpen = deriveCanonicalState(
+  [
+    {
+      factor: "Discretionary spending freeze",
+      type: "Structural",
+      weight: 90,
+      evidence: "The company is freezing discretionary spending until the end of the quarter.",
+    },
+  ],
+  "STRUCTURAL LOCK-INS",
+  "I don't think we should close the door. The project hasn't disappeared."
+);
+if (keptOpen.frozen.recoverability.status !== "CONDITIONALLY_RECOVERABLE") {
+  console.error("FAIL: Refusing to close the door should stay a path", keptOpen.frozen.recoverability);
+  failed = true;
+}
+const financial = matrixDeal.causal.forces.find((force) => force.factor === "CFO financial case");
+if (financial?.score_effect?.included !== false) {
+  console.error("FAIL: An overlapping financial case should not be counted twice", financial);
+  failed = true;
+}
+const droppedCapacity = deriveCanonicalState(
+  [
+    {
+      factor: "Discretionary Spending Freeze",
+      type: "Constraint",
+      weight: 75,
+      evidence: "The company is freezing discretionary spending until the end of the quarter.",
+    },
+    {
+      factor: "CFO's Demand for Demonstrated Savings",
+      type: "Constraint",
+      weight: 70,
+      evidence: "David wants us to demonstrate actual savings.",
+    },
+    {
+      factor: "Competing Vendor Pilot (FlowTrack)",
+      type: "Constraint",
+      weight: 60,
+      evidence: "They're piloting another platform.",
+    },
+    {
+      factor: "Potential Implementation Delays",
+      type: "Constraint",
+      weight: 50,
+      evidence: "Priya thinks it could take twelve to sixteen weeks because of integration and security reviews.",
+    },
+  ],
+  "MIXED",
+  "She told me she can't commit her team to another integration project this quarter."
+);
+const restoredCapacity = droppedCapacity.causal.forces.find((force) => /can't commit/i.test(force.evidence));
+const countedConstraints = droppedCapacity.causal.forces.filter(
+  (force) => force.score_effect?.included && force.score_effect.dimension === "constraint_pressure"
+);
+const countedSum = countedConstraints.reduce((total, force) => total + force.weight, 0);
+if (droppedCapacity.frozen.constraint_pressure !== 75 || restoredCapacity?.score_effect?.included !== true) {
+  console.error("FAIL: A stated resource limit should set constraint pressure even when extraction drops it", {
+    constraint: droppedCapacity.frozen.constraint_pressure,
+    restoredCapacity,
+  });
+  failed = true;
+}
+if (countedSum !== 150 || droppedCapacity.frozen.constraint_pressure === countedSum) {
+  console.error("FAIL: Concurrent blockers should keep the stronger constraint, not the sum", {
+    constraint: droppedCapacity.frozen.constraint_pressure,
+    countedSum,
+  });
+  failed = true;
+}
+const estimateOnly = deriveCanonicalState(
+  [
+    {
+      factor: "Potential Implementation Delays",
+      type: "Constraint",
+      weight: 50,
+      evidence: "Priya thinks it could take twelve to sixteen weeks because of integration and security reviews.",
+    },
+  ],
+  "MIXED",
+  "Priya thinks it could take twelve to sixteen weeks because of integration and security reviews."
+);
+if (
+  estimateOnly.causal.forces.some((force) => /can't commit|cannot commit capacity/i.test(`${force.factor} ${force.evidence}`)) ||
+  estimateOnly.frozen.constraint_pressure !== 50
+) {
+  console.error("FAIL: An implementation estimate must not be rewritten as a capacity constraint", estimateOnly.causal.forces);
+  failed = true;
+}
+const capacityOnly = deriveCanonicalState(
+  [],
+  "MIXED",
+  "She told me she can't commit her team to another integration project this quarter."
+);
+const capacityForce = capacityOnly.causal.forces.find((force) => /can't commit/i.test(force.evidence));
+if (
+  !capacityForce ||
+  capacityOnly.frozen.constraint_pressure !== 75 ||
+  capacityOnly.causal.forces.some((force) => /twelve to sixteen/i.test(`${force.factor} ${force.evidence}`))
+) {
+  console.error("FAIL: A capacity limit without an implementation estimate should still set constraint pressure", {
+    constraint: capacityOnly.frozen.constraint_pressure,
+    forces: capacityOnly.causal.forces,
+  });
+  failed = true;
+}
+const estimateAndCapacity = deriveCanonicalState(
+  [
+    {
+      factor: "Potential Implementation Delays",
+      type: "Constraint",
+      weight: 50,
+      evidence: "Priya thinks it could take twelve to sixteen weeks because of integration and security reviews.",
+    },
+  ],
+  "MIXED",
+  "She told me she can't commit her team to another integration project this quarter."
+);
+const keptEstimate = estimateAndCapacity.causal.forces.find((force) => /twelve to sixteen/i.test(force.evidence));
+const keptCapacity = estimateAndCapacity.causal.forces.find((force) => /can't commit/i.test(force.evidence));
+if (!keptEstimate || !keptCapacity || keptEstimate === keptCapacity || estimateAndCapacity.frozen.constraint_pressure !== 75) {
+  console.error("FAIL: An implementation estimate and a capacity limit should both be kept", {
+    constraint: estimateAndCapacity.frozen.constraint_pressure,
+    keptEstimate,
+    keptCapacity,
+  });
+  failed = true;
+}
+const pilotOnly = deriveCanonicalState(
+  [
+    {
+      factor: "Competing Vendor Pilot",
+      type: "Constraint",
+      weight: 90,
+      evidence: "They're piloting another platform.",
+    },
+  ],
+  "MIXED"
+);
+if (pilotOnly.frozen.constraint_pressure !== 0) {
+  console.error("FAIL: A competitive pilot should not set constraint pressure", pilotOnly.frozen.constraint_pressure);
+  failed = true;
+}
+const matrixPi = deriveProprietaryIndices(matrixDeal.frozen, [], "");
+if (!matrixPi.formula.includes("0.25×75") || !matrixPi.formula.includes("0.15×90")) {
+  console.error("FAIL: Independent structural and constraint scores should both enter the risk formula", matrixPi.formula);
+  failed = true;
+}
+const matrixStatus = statusFromTrajectory(matrixDeal.frozen.trajectory_type, "STALLED — HIGH RISK", matrixPi.risk_tier);
+if (classifyRisk(50) !== "MODERATE" || matrixStatus !== stalledHeadline(matrixPi.risk_tier)) {
+  console.error("FAIL: Headline must use the same tier as the risk score", classifyRisk(50), matrixStatus, matrixPi);
+  failed = true;
+}
+if (matrixPi.risk_tier === "MODERATE" && matrixStatus.includes("HIGH RISK")) {
+  console.error("FAIL: A moderate score must not be headlined as high risk", matrixStatus, matrixPi.deal_risk_index);
+  failed = true;
+}
+const undetermined = deriveCanonicalState([], "MIXED");
+if (undetermined.frozen.recoverability.status !== "UNDETERMINED") {
+  console.error("FAIL: No evidence should leave recoverability undetermined", undetermined.frozen.recoverability);
+  failed = true;
+}
+const actionList = canonicalImmediateActions({
+  rescue_triage_plan: {
+    immediate_0_30_days: [
+      "[0-30d] P1 | Owner: Marcus | Stakeholder: Sarah | Action: Send the revised financial model. | Outcome: Sarah names a finance contact.",
+    ],
+  },
+});
+if (actionList.length !== 1 || !actionList[0].toLowerCase().includes("financial model")) {
+  console.error("FAIL: The action summary should use the rescue plan", actionList);
   failed = true;
 }
 
