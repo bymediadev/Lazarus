@@ -298,7 +298,8 @@ export interface DiagnosticProfile {
 }
 
 const BUDGET_FIGURE = /\$[\d,]+|\b\d+\s*k\b|\bbudget\b/i;
-const PURCHASE_BUDGET = /\b(budget|fee|price|cost|afford|in range|invoice)\b/i;
+const QUALIFIED_PAY = /\$[\d,]+|\b\d+\s*k\b|\bin range\b|\bmodeled\b|\bour budget\b|\bmy budget\b|\bwilling to pay\b|\bcan pay\b|\bplatform fee\b/i;
+const UNQUALIFIED_BUDGET = /\b(?:do not|don't|dont) have the budget\b|\bno budget for\b|\byou (?:do not|don't) have the budget\b/i;
 const REVENUE_BAND = /\b(revenue|annually|doing about)\b/i;
 const PAID_WITHOUT_AMOUNT = /\b(not free|paid consultation|paid diagnostic|clarity consultation)\b/i;
 const URGENCY =
@@ -335,26 +336,28 @@ function sentenceAround(transcript: string, pattern: RegExp): string {
   return sentenceAt(text, match.index, match[0].length);
 }
 
-/** A dollar figure in the seller's customer description is not this buyer's budget. */
-function budgetEvidence(transcript: string): string {
-  const text = asProse(transcript);
+/**
+ * A qualified budget is this person's ability or willingness to pay for this offer.
+ * A remark that someone else lacks budget, or a revenue figure, is only a mention.
+ */
+function budgetRead(transcript: string): { qualified: string; mentioned: boolean } {
+  const buyer = asProse(buyerLines(transcript));
   const pattern = new RegExp(BUDGET_FIGURE.source, "gi");
   let match: RegExpExecArray | null;
-  while ((match = pattern.exec(text))) {
-    const sentence = sentenceAt(text, match.index, match[0].length);
-    if (REVENUE_BAND.test(sentence) && !/\bbudget\b/i.test(sentence)) continue;
-    if (/\bbudget\b/i.test(sentence) || (BUDGET_FIGURE.test(sentence) && PURCHASE_BUDGET.test(sentence))) {
-      return sentence;
-    }
+  while ((match = pattern.exec(buyer))) {
+    const sentence = sentenceAt(buyer, match.index, match[0].length);
+    if (UNQUALIFIED_BUDGET.test(sentence)) continue;
+    if (REVENUE_BAND.test(sentence) && !QUALIFIED_PAY.test(sentence)) continue;
+    if (QUALIFIED_PAY.test(sentence)) return { qualified: sentence, mentioned: true };
   }
-  return "";
+  return { qualified: "", mentioned: /\bbudget\b/i.test(asProse(transcript)) };
 }
 
 /** Qualification read for every upload. A non-purchase still reports what was missing. */
 export function diagnosticProfile(transcript: string): DiagnosticProfile {
   const text = transcript ?? "";
   const notAPurchase = isNotAPurchase(text);
-  const budgetHit = budgetEvidence(text);
+  const budgetReadout = budgetRead(text);
   const urgencyHit = sentenceAround(text, URGENCY);
   const interestHit = sentenceAround(text, PURCHASE_INTEREST);
   const refusalHit = sentenceAround(
@@ -368,24 +371,28 @@ export function diagnosticProfile(transcript: string): DiagnosticProfile {
       ? `The buyer stated interest in this purchase. Evidence: "${interestHit}"`
       : "No explicit interest in purchasing this service was stated.";
 
-  const budget = budgetHit
-    ? `Budget was discussed. Evidence: "${budgetHit}"`
-    : PAID_WITHOUT_AMOUNT.test(text)
-      ? "MISSING — NO BUDGET DISCUSSED. The seller said the offer is paid, and no price or ability to pay was established."
-      : "MISSING — NO BUDGET DISCUSSED";
+  const budget = budgetReadout.qualified
+    ? `Budget was qualified for this purchase. Evidence: "${budgetReadout.qualified}"`
+    : budgetReadout.mentioned
+      ? "Consultation budget was not qualified. Budget was mentioned, but not as this person's ability or willingness to pay for the consultation."
+      : PAID_WITHOUT_AMOUNT.test(text)
+        ? "Consultation budget was not qualified. The seller said the offer is paid, and this person's ability or willingness to pay was not established."
+        : "Consultation budget was not qualified.";
 
   const urgency = urgencyHit
     ? `A timeline was stated. Evidence: "${urgencyHit}"`
     : "MISSING — NO TIMELINE OR URGENCY ESTABLISHED";
 
   const missedProcess =
-    PAID_OFFER.test(text) && !CALENDAR_STEP.test(text)
-      ? "The seller introduced a paid consultation and did not secure a decision or a calendar time. The next step left on the call was a link, not a meeting."
-      : notAPurchase
-        ? "No purchase process was opened."
-        : CALENDAR_STEP.test(text)
-          ? "A follow-up time was part of the conversation."
-          : "No dated next meeting was secured on the call.";
+    notAPurchase && PAID_OFFER.test(text) && !CALENDAR_STEP.test(text)
+      ? "The seller introduced a paid consultation before confirming it was relevant. No decision or calendar time was secured. This is not evidence that a sale was lost."
+      : PAID_OFFER.test(text) && !CALENDAR_STEP.test(text)
+        ? "The seller introduced a paid consultation and did not secure a decision or a calendar time. The next step left on the call was a link, not a meeting."
+        : notAPurchase
+          ? "No purchase process was opened."
+          : CALENDAR_STEP.test(text)
+            ? "A follow-up time was part of the conversation."
+            : "No dated next meeting was secured on the call.";
 
   return { buyingSignals, budget, urgency, missedProcess };
 }

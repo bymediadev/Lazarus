@@ -440,7 +440,8 @@ function applyCanonicalScoring(
       ? {
           ...result.force_initialization,
           blocker_classification: causal.blocker_classification,
-          summary: "One owner is on the call and can decide. There is no authority gap and no second person who has to approve.",
+          summary:
+            "Business owner and apparent decision-maker. No purchase process was established.",
           classification_rationale:
             "The prospect declined to be the client. The seller offered a referral introduction instead of a close.",
         }

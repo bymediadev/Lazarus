@@ -40,10 +40,13 @@ function invisibleVetoHolder(result: PostMortemResult): string {
     stakeholders.find((s) => /technical_veto/i.test(s.authority_level ?? ""));
   if (veto) return stakeholderLabel(veto);
   const owner = stakeholders.find((s) => /economic owner/i.test(s.persona_type ?? s.stance ?? ""));
-  if (owner || facingFor(result).category === "not_a_deal") {
+  if (facingFor(result).category === "not_a_deal") {
     return owner
-      ? `None. ${owner.name} is the owner and the authority.`
-      : "None. The person on the call is the authority.";
+      ? `None identified. ${owner.name} is the business owner and apparent decision-maker; no purchase process was established.`
+      : "None identified. No purchase process was established.";
+  }
+  if (owner) {
+    return `None. ${owner.name} is the owner and the authority.`;
   }
   return "Not identified — review People Map";
 }
@@ -91,7 +94,13 @@ function peopleByRole(result: PostMortemResult): string {
   }
 
   const groups: { label: string; match: RegExp }[] = [
-    { label: "Economic owner (authority on the call)", match: /economic owner/i },
+    {
+      label:
+        facingFor(result).category === "not_a_deal"
+          ? "Business owner (apparent decision-maker)"
+          : "Economic owner (authority on the call)",
+      match: /economic owner/i,
+    },
     { label: "Aligned champion (push internally)", match: /aligned champion/i },
     { label: "Suppressed champion (intent, no authority)", match: /suppressed champion/i },
     { label: "Hidden detractor / veto risk", match: /hidden detractor/i },
@@ -158,7 +167,9 @@ function whoDoesWhat(result: PostMortemResult): string {
   const owner = stakeholders.find((s) => /economic owner/i.test(s.persona_type ?? s.stance ?? ""));
   if (owner) {
     lines.push(
-      `- **${owner.name}${owner.role ? ` (${owner.role})` : ""}:** Owner and authority. There is no one above them, and no internal step for them to run.`
+      notADeal
+        ? `- **${owner.name}${owner.role ? ` (${owner.role})` : ""}:** Business owner and apparent decision-maker. No purchase process was established.`
+        : `- **${owner.name}${owner.role ? ` (${owner.role})` : ""}:** Owner and authority. There is no one above them, and no internal step for them to run.`
     );
   }
   if (champion && !owner) {

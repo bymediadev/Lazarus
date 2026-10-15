@@ -143,7 +143,9 @@ export default function FastFactsPanel({
               {(result.stakeholders ?? []).some((person) =>
                 /economic owner/i.test(`${person.persona_type ?? ""} ${person.stance ?? ""}`)
               )
-                ? "The owner on the call is the authority. No one else has to approve."
+                ? facing.category === "not_a_deal"
+                  ? "Business owner and apparent decision-maker. No purchase process was established."
+                  : "The owner on the call is the authority. No one else has to approve."
                 : "No opposing or absent stakeholder is mapped. The people table is in Expanded Analysis."}
             </p>
           ) : (
