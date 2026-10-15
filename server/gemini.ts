@@ -367,7 +367,7 @@ function applyCanonicalScoring(
   const finalCycle = frozen.resolution_cycles.cycles[frozen.resolution_cycles.cycles.length - 1];
   const notAPurchase = isNotAPurchase(transcript);
   const stakeholders = result.stakeholders
-    .filter((person) => !isSellerIntroduction(person, transcript))
+    .filter((person) => !/^seller$/i.test(person.name.trim()) && !isSellerIntroduction(person, transcript))
     .map((person) => {
     const persona_type = reconcilePersona(
       {

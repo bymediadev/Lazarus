@@ -264,35 +264,63 @@ export interface DiagnosticProfile {
 }
 
 const BUDGET_FIGURE = /\$[\d,]+|\b\d+\s*k\b|\bbudget\b/i;
+const PURCHASE_BUDGET = /\b(budget|fee|price|cost|afford|in range|invoice)\b/i;
+const REVENUE_BAND = /\b(revenue|annually|doing about)\b/i;
 const PAID_WITHOUT_AMOUNT = /\b(not free|paid consultation|paid diagnostic|clarity consultation)\b/i;
 const URGENCY =
   /\b(q[1-4]|this quarter|next quarter|month-end|next week|deadline|urgent|as soon as|underwater until|after month-end)\b/i;
 const PAID_OFFER = /\b(clarity consultation|not free|paid consultation|paid diagnostic|send you (?:a |the )?link)\b/i;
 const CALENDAR_STEP =
-  /\b(reschedul\w*|calendar|three slots|book(?:ed|ing)?\s+(?:a |the )?(?:time|call|meeting)|schedule(?:d)?\s+(?:a |the )?(?:time|call|meeting)|lock(?:ed)?\s+(?:a |the )?(?:time|date))\b/i;
+  /\b(reschedul\w*|three slots|book(?:ed|ing)?\s+(?:a |the )?time|schedule(?:d)?\s+(?:a |the )?(?:time|meeting)|lock(?:ed)?\s+(?:a |the )?(?:time|date)|put (?:a )?time on (?:the )?calendar)\b/i;
 const PURCHASE_INTEREST =
   /\b(i like what i saw|in range|we can accelerate|move(?:d)? forward|send (?:me )?a proposal)\b/i;
 
-function sentenceAround(transcript: string, pattern: RegExp): string {
-  const match = pattern.exec(transcript);
-  if (!match || match.index == null) return "";
-  const beforeBreak = Math.max(transcript.lastIndexOf("\n", match.index), transcript.lastIndexOf(". ", match.index));
+function asProse(transcript: string): string {
+  return transcript.replace(/[ \t]*\n[ \t]*/g, " ");
+}
+
+function sentenceAt(text: string, index: number, matchLength: number): string {
+  const beforeBreak = Math.max(text.lastIndexOf(". ", index), text.lastIndexOf("! ", index), text.lastIndexOf("? ", index));
   const from = beforeBreak + 1;
-  const after = match.index + match[0].length;
-  const period = transcript.indexOf(".", after);
-  const lineEnd = transcript.indexOf("\n", after);
-  let end = transcript.length;
-  if (period !== -1) end = period;
-  if (lineEnd !== -1 && lineEnd < end) end = lineEnd;
-  const sentence = transcript.slice(from, end).replace(/\s+/g, " ").trim();
-  return sentence.length > 220 ? `${sentence.slice(0, 217)}...` : sentence;
+  const after = index + matchLength;
+  const period = text.indexOf(".", after);
+  const end = period === -1 ? text.length : period;
+  let sentence = text.slice(from, end).replace(/\s+/g, " ").trim();
+  if (sentence.length > 220) {
+    const cut = sentence.slice(0, 217);
+    const space = cut.lastIndexOf(" ");
+    sentence = `${(space > 160 ? cut.slice(0, space) : cut).trim()}...`;
+  }
+  return sentence;
+}
+
+function sentenceAround(transcript: string, pattern: RegExp): string {
+  const text = asProse(transcript);
+  const match = pattern.exec(text);
+  if (!match || match.index == null) return "";
+  return sentenceAt(text, match.index, match[0].length);
+}
+
+/** A dollar figure in the seller's customer description is not this buyer's budget. */
+function budgetEvidence(transcript: string): string {
+  const text = asProse(transcript);
+  const pattern = new RegExp(BUDGET_FIGURE.source, "gi");
+  let match: RegExpExecArray | null;
+  while ((match = pattern.exec(text))) {
+    const sentence = sentenceAt(text, match.index, match[0].length);
+    if (REVENUE_BAND.test(sentence) && !/\bbudget\b/i.test(sentence)) continue;
+    if (/\bbudget\b/i.test(sentence) || (BUDGET_FIGURE.test(sentence) && PURCHASE_BUDGET.test(sentence))) {
+      return sentence;
+    }
+  }
+  return "";
 }
 
 /** Qualification read for every upload. A non-purchase still reports what was missing. */
 export function diagnosticProfile(transcript: string): DiagnosticProfile {
   const text = transcript ?? "";
   const notAPurchase = isNotAPurchase(text);
-  const budgetHit = sentenceAround(text, BUDGET_FIGURE);
+  const budgetHit = budgetEvidence(text);
   const urgencyHit = sentenceAround(text, URGENCY);
   const interestHit = sentenceAround(text, PURCHASE_INTEREST);
   const refusalHit = sentenceAround(

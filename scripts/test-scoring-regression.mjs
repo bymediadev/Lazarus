@@ -1305,7 +1305,10 @@ if (stalledCategory !== "deal_stalled" || !publishesStallMetrics(stalledCategory
   failed = true;
 }
 const referralClose = [
+  "SELLER: They're probably doing about $500,000 to $1 million in revenue annually.",
+  "SELLER: someone messaged me. And I'll book a call.",
   channelCall,
+  "PROSPECT: But if you think that I'm going to be your client, no way a room full of 40 people, I'm going to be the client to the 40.",
   "SELLER: I'll send you a link to our clarity consultation framework. Unfortunately, it's not free, and I'm not going to push you. I'll just send you the link.",
 ].join("\n");
 const referralDiag = diagnosticProfile(referralClose);
@@ -1314,9 +1317,21 @@ if (
   !referralDiag.budget.startsWith("MISSING — NO BUDGET DISCUSSED") ||
   !referralDiag.urgency.startsWith("MISSING — NO TIMELINE") ||
   !/calendar time/i.test(referralDiag.missedProcess) ||
+  /500,000|\$1 million|Budget was discussed/i.test(referralDiag.budget) ||
   /partnership meeting|CRITICAL/i.test(JSON.stringify(referralDiag))
 ) {
   console.error("FAIL: A referral close still reports the missing qualification", referralDiag);
+  failed = true;
+}
+const wrappedRefusal = diagnosticProfile(
+  [
+    "PROSPECT: But if you think that I'm going to be your client, no way a",
+    "room full of 40 people, I'm going to be the client to the 40.",
+    "SELLER: I'm not here to like close you. You can be a channel partner.",
+  ].join("\n")
+);
+if (!/be the client to the 40/i.test(wrappedRefusal.buyingSignals)) {
+  console.error("FAIL: A wrapped refusal should stay one quote", wrappedRefusal);
   failed = true;
 }
 const sarahDiag = diagnosticProfile(sarahMarkTranscript);
