@@ -36,8 +36,10 @@ check(
 
 const secret = "hubspot-test-secret";
 const state = createSignedOAuthState(secret);
+const last = state.slice(-1);
+const tampered = state.slice(0, -1) + (last === "a" ? "b" : "a");
 check("signed oauth state verifies", verifySignedOAuthState(state, secret));
-check("tampered state rejected", !verifySignedOAuthState(state.slice(0, -2) + "ab", secret));
+check("tampered state rejected", tampered !== state && !verifySignedOAuthState(tampered, secret));
 check("wrong secret rejected", !verifySignedOAuthState(state, "other-secret"));
 
 const prevId = process.env.HUBSPOT_CLIENT_ID;
