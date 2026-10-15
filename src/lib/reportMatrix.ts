@@ -1,6 +1,6 @@
 import { uniqueActionSteps } from "./actionSteps";
 import { capacitySubject, samePerson } from "./evidenceAttribution";
-import { uniqueRecoveryNotes } from "./recoveryPlan";
+import { formatRecoveryAction, uniqueRecoveryNotes } from "./recoveryPlan";
 
 /** One threshold table for every transcript. Headline, scorecard, and notes read this tier. */
 export const RISK_THRESHOLDS = {
@@ -239,6 +239,21 @@ export function promisedRelationshipSteps(transcript: string, stakeholderName?: 
     );
   }
   return steps;
+}
+
+/** The next-move line is the promised actions themselves. No second sentence and no activity tag. */
+export function recommendedMoveLine(steps: string[]): string {
+  const actions: string[] = [];
+  const seen = new Set<string>();
+  for (const step of steps) {
+    const action = formatRecoveryAction(step).action.replace(/\.$/, "").trim();
+    const key = action.toLowerCase();
+    if (!action || seen.has(key)) continue;
+    seen.add(key);
+    actions.push(action);
+  }
+  if (!actions.length) return "No purchase step was promised.";
+  return `${actions.join(". ")}.`;
 }
 
 export interface MatrixFacing {

@@ -13,7 +13,7 @@ import { statusFromTrajectory, assertAnalysisSchema } from "../server/gemini.ts"
 import { alignBlockerNarrative } from "../src/lib/blockerNarrative.ts";
 import { commercialBaselineFromText } from "../src/lib/commercialBaseline.ts";
 import { DEFER_FORECAST_LINE, forecastGuidance, NON_VIABLE_FORECAST_LINE, NOT_A_PURCHASE_FORECAST_LINE } from "../src/lib/forecastCall.ts";
-import { canonicalImmediateActions, classifyRecoverability, classifyRisk, matrixFacing, promisedRelationshipSteps, publishesStallMetrics, reportCategory, stalledHeadline, validateReportMatrix } from "../src/lib/reportMatrix.ts";
+import { canonicalImmediateActions, classifyRecoverability, classifyRisk, matrixFacing, promisedRelationshipSteps, publishesStallMetrics, recommendedMoveLine, reportCategory, stalledHeadline, validateReportMatrix } from "../src/lib/reportMatrix.ts";
 import { formatCompressedCrmNotes } from "../src/lib/crmNotes.ts";
 import { mergeOverlappingQuotes } from "../src/lib/evidenceQuotes.ts";
 import { readFileSync } from "fs";
@@ -1250,12 +1250,16 @@ const channelNotes = formatCompressedCrmNotes({
   rescue_triage_plan: { immediate_0_30_days: [], near_term_30_90_days: ["Hold the weekly recovery motion from this week’s actions."], long_term_90_plus_days: [] },
   stakeholders: [],
 });
+const channelMove = channelNotes.split("**Recommended next move:**")[1]?.split("\n")[0] ?? "";
+const tightMove = recommendedMoveLine(channelSteps);
 if (
   !channelNotes.includes("Not a deal") ||
   !channelNotes.includes("invitation") ||
+  channelMove.trim() !== tightMove ||
+  /Activity|Current status|partnership|This is not a deal/i.test(channelMove) ||
   /CRITICAL|Stall signals|weekly recovery|partnership|Why it's stuck|buying group|NOT A PURCHASE/i.test(channelNotes)
 ) {
-  console.error("FAIL: A referral overview stays out of stalled-deal metrics", channelNotes);
+  console.error("FAIL: A referral overview stays out of stalled-deal metrics", channelMove, channelNotes);
   failed = true;
 }
 const wordCategory = reportCategory({
@@ -1280,8 +1284,14 @@ const wordNotes = formatCompressedCrmNotes({
   immediate_remediation: [],
   stakeholders: [],
 });
-if (wordCategory !== "not_a_deal" || /CRITICAL|Stall signals|Deal Risk Score/i.test(wordNotes) || !wordNotes.includes("Not a deal")) {
-  console.error("FAIL: A non-sales document stays Not a deal", wordCategory, wordNotes);
+const wordMove = wordNotes.split("**Recommended next move:**")[1]?.split("\n")[0] ?? "";
+if (
+  wordCategory !== "not_a_deal" ||
+  /CRITICAL|Stall signals|Deal Risk Score/i.test(wordNotes) ||
+  !wordNotes.includes("Not a deal") ||
+  wordMove.trim() !== "No purchase step was promised."
+) {
+  console.error("FAIL: A non-sales document stays Not a deal", wordCategory, wordMove, wordNotes);
   failed = true;
 }
 const stalledCategory = reportCategory({

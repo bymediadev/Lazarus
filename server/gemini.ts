@@ -20,7 +20,7 @@ import {
   type StakeholderSignal,
 } from "./grounding.js";
 import { alignBlockerNarrative } from "../src/lib/blockerNarrative.js";
-import { promisedRelationshipSteps, stalledHeadline, validateReportMatrix, type ReportValidation, type RecoverabilityAssessment } from "../src/lib/reportMatrix.js";
+import { promisedRelationshipSteps, recommendedMoveLine, stalledHeadline, validateReportMatrix, type ReportValidation, type RecoverabilityAssessment } from "../src/lib/reportMatrix.js";
 import { commercialBaselineFromText, type CommercialBaseline } from "../src/lib/commercialBaseline.js";
 import { attributeQuote } from "../src/lib/evidenceAttribution.js";
 import { assessIntentExtraction, buildIntentRetryInstructions } from "../src/lib/intentExtraction.js";
@@ -534,7 +534,7 @@ function applyCanonicalScoring(
     crm_intelligence: {
       ...result.crm_intelligence,
       recommended_next_action: notAPurchase
-        ? "Send the introduction already promised. This is not a deal."
+        ? recommendedMoveLine(relationshipSteps)
         : result.crm_intelligence.recommended_next_action,
       dominant_equilibrium_force:
         result.crm_intelligence.dominant_equilibrium_force || dominant?.factor || "",

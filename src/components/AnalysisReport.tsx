@@ -5,7 +5,7 @@ import { convergenceExplanation, viabilityCycleDisplay } from "../lib/convergenc
 import { peopleMapRows } from "../lib/evidenceAttribution";
 import { dependencyRelationships, MISSING_DEPENDENCY_NOTE } from "../lib/forceGraph";
 import { pipelineReading } from "../lib/pipelineReading";
-import { matrixFacing } from "../lib/reportMatrix";
+import { matrixFacing, recommendedMoveLine } from "../lib/reportMatrix";
 import { recoveryActionLines, uniqueRecoveryNotes } from "../lib/recoveryPlan";
 import { intentInputTrace, pinnedEquilibriumNote } from "../lib/scoreInputTrace";
 import { TRIGGER_ESTIMATE_NOTE, triggerLikelihood } from "../lib/triggerEstimate";
@@ -755,8 +755,12 @@ export default function AnalysisReport({
             <CrmField
               label="Recommended Next Action"
               value={
-                facing.category === "not_a_deal" && /partnership/i.test(r.crm_intelligence.recommended_next_action ?? "")
-                  ? "Send the introduction already promised. This is not a deal."
+                facing.category === "not_a_deal"
+                  ? recommendedMoveLine(
+                      (r.immediate_remediation ?? []).length
+                        ? r.immediate_remediation ?? []
+                        : plan.immediate_0_30_days
+                    )
                   : r.crm_intelligence.recommended_next_action
               }
             />

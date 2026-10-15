@@ -1,6 +1,6 @@
 import { PostMortemResult, StakeholderSignal } from "../types";
 import { forecastGuidance } from "./forecastCall";
-import { matrixFacing } from "./reportMatrix";
+import { matrixFacing, recommendedMoveLine } from "./reportMatrix";
 import { formatMetricLegendMarkdown } from "./metricLegend";
 import { recoveryActionNote, uniqueRecoveryNotes } from "./recoveryPlan";
 
@@ -144,10 +144,13 @@ function whoDoesWhat(result: PostMortemResult): string {
     /absent decision maker/i.test(s.persona_type ?? s.stance ?? "")
   );
   const crmNext = result.crm_intelligence?.recommended_next_action?.trim();
+  const notADeal = facingFor(result).category === "not_a_deal";
+  const immediate = result.immediate_remediation ?? [];
+  const promised = immediate.length ? immediate : (result.rescue_triage_plan?.immediate_0_30_days ?? []);
 
-  if (facingFor(result).category === "not_a_deal") {
+  if (notADeal) {
     lines.push(
-      "- **Sales manager / AE (our side):** Keep this off the forecast. Send the introduction already promised, and do not open a recovery cadence."
+      "- **Sales manager / AE (our side):** Keep this off the forecast. Do only the steps already promised, and do not open a recovery cadence."
     );
   } else {
     lines.push("- **Sales manager / AE (our side):** Own the next action date, clear the core blocker, and update forecast with recoverable vs flat-no judgment.");
@@ -173,7 +176,9 @@ function whoDoesWhat(result: PostMortemResult): string {
       `- **${absent.name}${absent.role ? ` (${absent.role})` : ""}:** Missing decision-maker — get them in the room or on the thread before treating close date as real.`
     );
   }
-  if (crmNext && !(facingFor(result).category === "not_a_deal" && /partnership/i.test(crmNext))) {
+  if (notADeal) {
+    lines.push(`- **Recommended next move:** ${recommendedMoveLine(promised)}`);
+  } else if (crmNext) {
     lines.push(`- **Recommended next move:** ${recoveryActionNote(crmNext).replace(/\n/g, "; ")}`);
   }
 
