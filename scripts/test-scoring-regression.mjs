@@ -13,7 +13,7 @@ import { statusFromTrajectory, assertAnalysisSchema } from "../server/gemini.ts"
 import { alignBlockerNarrative } from "../src/lib/blockerNarrative.ts";
 import { commercialBaselineFromText } from "../src/lib/commercialBaseline.ts";
 import { DEFER_FORECAST_LINE, forecastGuidance, NON_VIABLE_FORECAST_LINE, NOT_A_PURCHASE_FORECAST_LINE } from "../src/lib/forecastCall.ts";
-import { canonicalImmediateActions, classifyRecoverability, classifyRisk, diagnosticProfile, matrixFacing, promisedRelationshipSteps, publishesStallMetrics, recommendedMoveLine, reportCategory, stalledHeadline, validateReportMatrix } from "../src/lib/reportMatrix.ts";
+import { canonicalImmediateActions, classifyRecoverability, classifyRisk, diagnosticProfile, matrixFacing, promisedRelationshipSteps, publishesStallMetrics, purchaseMotion, recommendedMoveLine, reportCategory, stalledHeadline, validateReportMatrix } from "../src/lib/reportMatrix.ts";
 import { formatCompressedCrmNotes } from "../src/lib/crmNotes.ts";
 import { mergeOverlappingQuotes } from "../src/lib/evidenceQuotes.ts";
 import { readFileSync } from "fs";
@@ -1141,6 +1141,39 @@ if (!isNotAPurchase(channelCall)) {
 }
 if (isNotAPurchase("Sarah: I'll stay in touch with our channel partner after David approves.")) {
   console.error("FAIL: A real approval path is still a purchase");
+  failed = true;
+}
+if (!isNotAPurchase("PROSPECT: I am not going to be your client.")) {
+  console.error("FAIL: A buyer who refuses the client role is not a deal before any score");
+  failed = true;
+}
+if (isNotAPurchase("SELLER: I'm not here to close you. We'll stay in touch.")) {
+  console.error("FAIL: Seller politeness alone does not decide the transcript");
+  failed = true;
+}
+const sarahMotion = purchaseMotion(sarahMarkTranscript);
+if (sarahMotion.motion !== "deal_open" || isNotAPurchase(sarahMarkTranscript)) {
+  console.error("FAIL: A stalled purchase stays a deal when the transcript is read first", sarahMotion);
+  failed = true;
+}
+if (
+  reportCategory({
+    status: "NOT A PURCHASE",
+    trajectory: "DEFERRED (recoverable)",
+    transcript: sarahMarkTranscript,
+  }) !== "deal_stalled"
+) {
+  console.error("FAIL: An open purchase in the transcript overrides a not-a-purchase label");
+  failed = true;
+}
+if (
+  reportCategory({
+    status: "STALLED — HIGH RISK",
+    trajectory: "DEFERRED (recoverable)",
+    transcript: channelCall,
+  }) !== "not_a_deal"
+) {
+  console.error("FAIL: A refused client role overrides a stalled label");
   failed = true;
 }
 const referral = {

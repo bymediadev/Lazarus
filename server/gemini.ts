@@ -20,7 +20,7 @@ import {
   type StakeholderSignal,
 } from "./grounding.js";
 import { alignBlockerNarrative } from "../src/lib/blockerNarrative.js";
-import { diagnosticProfile, promisedRelationshipSteps, recommendedMoveLine, stalledHeadline, validateReportMatrix, type ReportValidation, type RecoverabilityAssessment } from "../src/lib/reportMatrix.js";
+import { diagnosticProfile, promisedRelationshipSteps, purchaseMotion, recommendedMoveLine, stalledHeadline, validateReportMatrix, type ReportValidation, type RecoverabilityAssessment } from "../src/lib/reportMatrix.js";
 import { commercialBaselineFromText, type CommercialBaseline } from "../src/lib/commercialBaseline.js";
 import { attributeQuote } from "../src/lib/evidenceAttribution.js";
 import { assessIntentExtraction, buildIntentRetryInstructions } from "../src/lib/intentExtraction.js";
@@ -32,7 +32,6 @@ import {
   deriveCanonicalState,
   lockForcesToTranscript,
   deriveProprietaryIndices,
-  isNotAPurchase,
   isSellerIntroduction,
   reconcilePersona,
   type CanonicalEquilibrium,
@@ -365,7 +364,8 @@ function applyCanonicalScoring(
     .sort((a, b) => b.weight - a.weight)[0];
 
   const finalCycle = frozen.resolution_cycles.cycles[frozen.resolution_cycles.cycles.length - 1];
-  const notAPurchase = isNotAPurchase(transcript);
+  const motion = purchaseMotion(transcript);
+  const notAPurchase = motion.motion === "not_a_deal";
   const stakeholders = result.stakeholders
     .filter((person) => !/^seller$/i.test(person.name.trim()) && !isSellerIntroduction(person, transcript))
     .map((person) => {
@@ -430,7 +430,7 @@ function applyCanonicalScoring(
       : result.executive_summary,
     live_deal_triage: notAPurchase
       ? {
-          root_issue: "Not a buyer. The prospect is a referral peer, not a purchaser.",
+          root_issue: motion.reason,
           core_blocker: "None on a purchase. They declined the client role.",
           department_friction_index: proprietary_indices.multi_department_friction,
         }

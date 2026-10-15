@@ -91,23 +91,55 @@ export function isSoleOperator(role = "", evidence = ""): boolean {
   return SOLE_OPERATOR.test(`${role} ${evidence}`);
 }
 
+const BUYER_DECLINED =
+  /\b(?:not going to be (?:your|the) client|won't be your client|will not be your client|i(?:'m| am) not (?:going to be )?(?:your|the) client|i might be the referral|be the referral|not a buyer|not the buyer|not going to buy|not here to buy)\b/i;
+const BUYER_REFUSAL_NEAR = /\bclient\b[\s\S]{0,80}\bno way\b|\bno way\b[\s\S]{0,80}\bclient\b/i;
+const PURCHASE_OPEN =
+  /\b(not moving this forward|signs? off|has to approve|have to approve|needs to approve|buys in|we can accelerate|send (?:me )?a proposal|platform fee|\bbudget\b|\bin range\b|\bapprov\w*)\b/i;
+
+export type PurchaseMotion = "not_a_deal" | "deal_open" | "unclear";
+
+function buyerLines(transcript: string): string {
+  const kept: string[] = [];
+  let seller = false;
+  let labeled = false;
+  for (const line of transcript.split(/\n/)) {
+    const speaker = line.match(/^\s*(?:\[[^\]]+\]\s*)?([A-Za-z][A-Za-z0-9 .'/()-]{0,60}?)\s*:\s*(.*)$/);
+    if (speaker) {
+      labeled = true;
+      seller = /^(seller|sc)$/i.test(speaker[1].trim());
+      if (!seller) kept.push(speaker[2] ?? "");
+      continue;
+    }
+    if (!seller) kept.push(line);
+  }
+  return labeled ? kept.join("\n") : transcript;
+}
+
 /**
- * The prospect declined the client role and the close is a referral relationship.
- * Seller politeness alone ("I'm not here to push") is not enough.
+ * Read the transcript before any score is published.
+ * A buyer who refuses the client role, with no purchase of their own, is not a deal.
+ * Seller politeness alone does not decide it. An open approval or fee does.
  */
+export function purchaseMotion(transcript: string): { motion: PurchaseMotion; reason: string } {
+  const buyer = buyerLines(transcript ?? "");
+  const declined = BUYER_DECLINED.test(buyer) || BUYER_REFUSAL_NEAR.test(buyer);
+  const open = PURCHASE_OPEN.test(buyer);
+  if (open) {
+    return { motion: "deal_open", reason: "A purchase is open in the transcript." };
+  }
+  if (declined) {
+    return {
+      motion: "not_a_deal",
+      reason: "The other person said they are not the buyer. No purchase was opened.",
+    };
+  }
+  return { motion: "unclear", reason: "" };
+}
+
+/** The transcript says this is not a purchase. Seller politeness alone is not enough. */
 export function isNotAPurchase(transcript: string): boolean {
-  const text = transcript.toLowerCase();
-  const declined =
-    /\b(?:not going to be your client|won't be your client|will not be your client|i(?:'m| am) not (?:going to be )?(?:your|the) client|i might be the referral|be the referral to)\b/.test(
-      text
-    ) ||
-    /\bclient\b[\s\S]{0,40}\bno way\b/.test(text) ||
-    /\bno way\b[\s\S]{0,40}\bclient\b/.test(text);
-  const relationship =
-    /\b(channel partner|stay in touch|not here to (?:like )?close|not (?:going to |here to )?push you)\b/.test(
-      text
-    );
-  return declined && relationship;
+  return purchaseMotion(transcript).motion === "not_a_deal";
 }
 
 function escapeRegExp(value: string): string {
@@ -158,11 +190,13 @@ export function reportCategory(input: {
   const status = input.status ?? "";
   const trajectory = input.trajectory ?? "";
   const relevance = (input.relevanceLabel ?? "").toLowerCase();
+  const motion = input.transcript ? purchaseMotion(input.transcript).motion : "unclear";
+  if (motion === "not_a_deal") return "not_a_deal";
   const notADeal =
-    relevance === "not_sales" ||
-    /NOT A (PURCHASE|DEAL)/i.test(status) ||
-    input.recoverabilityStatus === "FLAT_NO" ||
-    (input.transcript ? isNotAPurchase(input.transcript) : false);
+    motion !== "deal_open" &&
+    (relevance === "not_sales" ||
+      /NOT A (PURCHASE|DEAL)/i.test(status) ||
+      input.recoverabilityStatus === "FLAT_NO");
   if (notADeal) return "not_a_deal";
   if (
     /CLOSED WON/i.test(status) ||
