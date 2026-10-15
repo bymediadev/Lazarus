@@ -1,5 +1,6 @@
 import { PostMortemResult, StakeholderSignal } from "../types";
 import { forecastGuidance } from "./forecastCall";
+import { matrixFacing } from "./reportMatrix";
 import { formatMetricLegendMarkdown } from "./metricLegend";
 import { recoveryActionNote, uniqueRecoveryNotes } from "./recoveryPlan";
 
@@ -17,15 +18,25 @@ function stakeholderLabel(s: StakeholderSignal): string {
   return bits.join(" ");
 }
 
+function dealStatus(result: PostMortemResult): string {
+  return String(result.deal_classification?.status ?? result.deal_status ?? "");
+}
+
 function invisibleVetoHolder(result: PostMortemResult): string {
   const stakeholders = result.stakeholders ?? [];
   const veto =
     stakeholders.find((s) =>
       /hidden detractor|absent decision maker/i.test(s.persona_type ?? s.stance ?? "")
     ) ??
-    stakeholders.find((s) => /technical_veto|economic_buyer/i.test(s.authority_level ?? ""));
-  if (!veto) return "Not identified — review People Map";
-  return stakeholderLabel(veto);
+    stakeholders.find((s) => /technical_veto/i.test(s.authority_level ?? ""));
+  if (veto) return stakeholderLabel(veto);
+  const owner = stakeholders.find((s) => /economic owner/i.test(s.persona_type ?? s.stance ?? ""));
+  if (owner || /NOT A PURCHASE/i.test(dealStatus(result))) {
+    return owner
+      ? `None. ${owner.name} is the owner and the authority.`
+      : "None. The person on the call is the authority.";
+  }
+  return "Not identified — review People Map";
 }
 
 function coreBlocker(result: PostMortemResult): string {
@@ -44,6 +55,9 @@ function coreBlocker(result: PostMortemResult): string {
 }
 
 function nextActionDate(result: PostMortemResult): string {
+  if (/NOT A PURCHASE/i.test(dealStatus(result))) {
+    return "No forecast date — send what was already promised";
+  }
   const immediate =
     result.immediate_remediation?.[0] ||
     result.rescue_triage_plan?.immediate_0_30_days?.[0];
@@ -68,6 +82,7 @@ function peopleByRole(result: PostMortemResult): string {
   }
 
   const groups: { label: string; match: RegExp }[] = [
+    { label: "Economic owner (authority on the call)", match: /economic owner/i },
     { label: "Aligned champion (push internally)", match: /aligned champion/i },
     { label: "Suppressed champion (intent, no authority)", match: /suppressed champion/i },
     { label: "Hidden detractor / veto risk", match: /hidden detractor/i },
@@ -121,8 +136,20 @@ function whoDoesWhat(result: PostMortemResult): string {
   );
   const crmNext = result.crm_intelligence?.recommended_next_action?.trim();
 
-  lines.push("- **Sales manager / AE (our side):** Own the next action date, clear the core blocker, and update forecast with recoverable vs flat-no judgment.");
-  if (champion) {
+  if (/NOT A PURCHASE/i.test(dealStatus(result))) {
+    lines.push(
+      "- **Sales manager / AE (our side):** Keep this off the forecast. Send the introduction already promised, and do not open a recovery cadence."
+    );
+  } else {
+    lines.push("- **Sales manager / AE (our side):** Own the next action date, clear the core blocker, and update forecast with recoverable vs flat-no judgment.");
+  }
+  const owner = stakeholders.find((s) => /economic owner/i.test(s.persona_type ?? s.stance ?? ""));
+  if (owner) {
+    lines.push(
+      `- **${owner.name}${owner.role ? ` (${owner.role})` : ""}:** Owner and authority. There is no one above them, and no internal step for them to run.`
+    );
+  }
+  if (champion && !owner) {
     lines.push(
       `- **${champion.name}${champion.role ? ` (${champion.role})` : ""}:** Internal champion — arm them with the evidence and next step they can run inside their org.`
     );
@@ -241,19 +268,23 @@ function metricsBlock(result: PostMortemResult): string {
     lines.push(`- **Dispersion:** ${pi.stakeholder_dispersion_index}/100`);
     lines.push(`- **Stall signals:** ${pi.dialogue_stall_score}/100`);
     if (pi.authority_gap_flag) lines.push("- **Authority gap:** Yes");
+    else if (/NOT A PURCHASE/i.test(dealStatus(result))) lines.push("- **Authority gap:** No");
   } else if (triage && triage.department_friction_index > 0) {
     lines.push(`- **Department friction index:** ${triage.department_friction_index}/100`);
   }
   if (vs) {
     lines.push(`- **Viability:** ${vs.state} (${vs.viability_score}/100)`);
   }
+  const facing = matrixFacing({
+    status: dealStatus(result),
+    trajectory: dt?.trajectory_type,
+    recoverabilityStatus: result.recoverability?.status,
+  });
   if (result.recoverability) {
-    lines.push(
-      `- **Recoverability:** ${result.recoverability.status.replaceAll("_", " ").toLowerCase()}`
-    );
+    lines.push(`- **Recoverability:** ${facing.recoverabilityLabel}`);
   }
-  if (dt?.trajectory_type) {
-    lines.push(`- **Trajectory:** ${dt.trajectory_type}`);
+  if (facing.trajectoryLabel && facing.trajectoryLabel !== "—") {
+    lines.push(`- **Trajectory:** ${facing.trajectoryLabel}`);
   }
   return lines.length ? lines.join("\n") : "- Metrics not available for this run.";
 }

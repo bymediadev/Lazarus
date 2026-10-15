@@ -32,6 +32,8 @@ import {
   deriveCanonicalState,
   lockForcesToTranscript,
   deriveProprietaryIndices,
+  isNotAPurchase,
+  isSellerIntroduction,
   reconcilePersona,
   type CanonicalEquilibrium,
   type CanonicalTrajectory,
@@ -53,7 +55,8 @@ export type EnterpriseDealStatus =
   | "STALLED — CRITICAL RISK"
   | "CLOSED LOST — RECOVERABLE"
   | "CLOSED LOST — UNLIKELY"
-  | "CLOSED WON";
+  | "CLOSED WON"
+  | "NOT A PURCHASE";
 
 export type CausalForceType =
   | "Intent"
@@ -256,6 +259,7 @@ const VALID_STATUSES: EnterpriseDealStatus[] = [
   "CLOSED LOST — RECOVERABLE",
   "CLOSED LOST — UNLIKELY",
   "CLOSED WON",
+  "NOT A PURCHASE",
 ];
 
 function loadSystemPrompt(): string {
@@ -360,7 +364,10 @@ function applyCanonicalScoring(
     .sort((a, b) => b.weight - a.weight)[0];
 
   const finalCycle = frozen.resolution_cycles.cycles[frozen.resolution_cycles.cycles.length - 1];
-  const stakeholders = result.stakeholders.map((person) => {
+  const notAPurchase = isNotAPurchase(transcript);
+  const stakeholders = result.stakeholders
+    .filter((person) => !isSellerIntroduction(person, transcript))
+    .map((person) => {
     const persona_type = reconcilePersona(
       {
         name: person.name,
@@ -381,11 +388,13 @@ function applyCanonicalScoring(
     causal.blocker_classification
   );
 
-  const status = statusFromTrajectory(
-    frozen.trajectory_type,
-    result.deal_classification.status,
-    proprietary_indices.risk_tier
-  );
+  const status = notAPurchase
+    ? "NOT A PURCHASE"
+    : statusFromTrajectory(
+        frozen.trajectory_type,
+        result.deal_classification.status,
+        proprietary_indices.risk_tier
+      );
   const immediateActionCount = (result.rescue_triage_plan?.immediate_0_30_days ?? []).length;
   const report_validation = validateReportMatrix({
     status,
@@ -405,16 +414,34 @@ function applyCanonicalScoring(
       status,
     },
     recoverability: frozen.recoverability,
+    executive_summary: notAPurchase
+      ? "This call did not open a purchase. The prospect is the owner and declined the client role. The next step is the referral relationship already agreed, and it stays off the forecast."
+      : result.executive_summary,
+    live_deal_triage: notAPurchase
+      ? {
+          root_issue: "Not a buyer. The prospect is a referral peer, not a purchaser.",
+          core_blocker: "None on a purchase. They declined the client role.",
+          department_friction_index: proprietary_indices.multi_department_friction,
+        }
+      : result.live_deal_triage,
     report_validation,
-    force_initialization: {
-      ...result.force_initialization,
-      blocker_classification: causal.blocker_classification,
-      summary: alignBlockerNarrative(result.force_initialization.summary, causal.blocker_classification),
-      classification_rationale: alignBlockerNarrative(
-        result.force_initialization.classification_rationale,
-        causal.blocker_classification
-      ),
-    },
+    force_initialization: notAPurchase
+      ? {
+          ...result.force_initialization,
+          blocker_classification: causal.blocker_classification,
+          summary: "One owner is on the call and can decide. There is no authority gap and no second person who has to approve.",
+          classification_rationale:
+            "The prospect declined to be the client. The seller offered a referral introduction instead of a close.",
+        }
+      : {
+          ...result.force_initialization,
+          blocker_classification: causal.blocker_classification,
+          summary: alignBlockerNarrative(result.force_initialization.summary, causal.blocker_classification),
+          classification_rationale: alignBlockerNarrative(
+            result.force_initialization.classification_rationale,
+            causal.blocker_classification
+          ),
+        },
     commercial_baseline: commercialBaselineFromText(
       [
         transcript,
@@ -450,8 +477,12 @@ function applyCanonicalScoring(
       derived_from_cycles: true,
       net_force_balance: `${frozen.structural_lock_in}+${frozen.constraint_pressure}=${frozen.structural_lock_in + frozen.constraint_pressure} → ${frozen.equilibrium_state}`,
       dominating_forces: dominant ? [dominant.factor] : result.equilibrium_analysis.dominating_forces,
-      equilibrium_breaker: result.equilibrium_analysis.equilibrium_breaker,
-      explanation: frozen.derivation_formula,
+      equilibrium_breaker: notAPurchase
+        ? "No purchase was opened."
+        : result.equilibrium_analysis.equilibrium_breaker,
+      explanation: notAPurchase
+        ? "The call ended as a referral exchange. Nothing was opened to recover, so this stays off the forecast."
+        : frozen.derivation_formula,
     },
     viability_state: {
       state: frozen.viability_state,

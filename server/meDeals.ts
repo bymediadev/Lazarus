@@ -15,6 +15,7 @@ export type LifecyclePhase =
   | "closed_lost_recoverable"
   | "closed_lost_unlikely"
   | "closed_won"
+  | "not_a_purchase"
   | "unknown";
 
 type MemorySummary = {
@@ -119,6 +120,7 @@ export function lifecyclePhaseFromStatus(status: string): LifecyclePhase {
   if (s.includes("CRITICAL RISK") || s.includes("HIGH RISK")) return "stalled_high_risk";
   if (s.includes("UNCERTAIN")) return "stalled_uncertain";
   if (s.includes("RECOVERABLE") || s.includes("STALLED")) return "stalled_recoverable";
+  if (s.includes("NOT A PURCHASE")) return "not_a_purchase";
   if (s.includes("ACTIVE")) return "active";
   return "unknown";
 }
@@ -141,6 +143,8 @@ export function lifecycleLabel(phase: LifecyclePhase): string {
       return "Closed lost — unlikely";
     case "closed_won":
       return "Closed won";
+    case "not_a_purchase":
+      return "Not a purchase — off forecast";
     default:
       return "Status unknown";
   }
@@ -148,6 +152,7 @@ export function lifecycleLabel(phase: LifecyclePhase): string {
 
 function phaseRank(phase: LifecyclePhase): number {
   const order: LifecyclePhase[] = [
+    "not_a_purchase",
     "closed_lost_unlikely",
     "stalled_high_risk",
     "stalled_uncertain",

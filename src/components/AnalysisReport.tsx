@@ -5,6 +5,7 @@ import { convergenceExplanation, viabilityCycleDisplay } from "../lib/convergenc
 import { peopleMapRows } from "../lib/evidenceAttribution";
 import { dependencyRelationships, MISSING_DEPENDENCY_NOTE } from "../lib/forceGraph";
 import { pipelineReading } from "../lib/pipelineReading";
+import { matrixFacing } from "../lib/reportMatrix";
 import { recoveryActionLines, uniqueRecoveryNotes } from "../lib/recoveryPlan";
 import { intentInputTrace, pinnedEquilibriumNote } from "../lib/scoreInputTrace";
 import { TRIGGER_ESTIMATE_NOTE, triggerLikelihood } from "../lib/triggerEstimate";
@@ -136,7 +137,12 @@ export default function AnalysisReport({
   const tagClass = statusTagClass(String(dc.status));
   const blockerClass = blockerTagClass(init?.blocker_classification ?? "");
   const viabilityClass = viabilityTagClass(vs.state);
-  const trajectoryClass = trajectoryTagClass(dt.trajectory_type);
+  const facing = matrixFacing({
+    status: dc.status,
+    trajectory: dt.trajectory_type,
+    recoverabilityStatus: r.recoverability?.status,
+  });
+  const trajectoryClass = facing.offForecast ? "status-failed" : trajectoryTagClass(dt.trajectory_type);
   const equilibriumClass = equilibriumTagClass(eq.state);
 
   const copyPlan = async () => {
@@ -195,7 +201,7 @@ export default function AnalysisReport({
             {vs.state} — emergent {vs.viability_score}
           </span>
           <span className={`confidence-score ${trajectoryClass}`}>
-            Trajectory: {dt.trajectory_type}
+            Trajectory: {facing.trajectoryLabel}
           </span>
           <span className={`confidence-score ${equilibriumClass}`}>
             Equilibrium: {equilibriumLabel(eq.state)}
@@ -309,7 +315,7 @@ export default function AnalysisReport({
                 convergenceStatus: cycles.convergence_status,
                 totalCycles: cycles.total_cycles,
                 equilibrium: eq.state,
-                trajectory: dt.trajectory_type,
+                trajectory: facing.trajectoryLabel,
               })}
             </p>
             <p className="meta-line" style={{ marginBottom: "0.75rem" }}>
@@ -511,7 +517,12 @@ export default function AnalysisReport({
       <article className="card card-neutral">
         <h2 className="card-title">Derived Trajectory</h2>
         <div className="card-body">
-          <span className={`trajectory-badge ${trajectoryClass}`}>{dt.trajectory_type}</span>
+          <span className={`trajectory-badge ${trajectoryClass}`}>{facing.trajectoryLabel}</span>
+          {facing.offForecast && (
+            <p className="meta-line" style={{ marginTop: "0.75rem" }}>
+              Formula trajectory {dt.trajectory_type} is the viability math. The forecast judgment is off the number.
+            </p>
+          )}
           <p style={{ marginTop: "0.75rem" }}>{readableEquilibriumText(dt.derivation)}</p>
           {dt.driving_interactions.length > 0 && (
             <>
@@ -705,7 +716,7 @@ export default function AnalysisReport({
             <CrmField label="Convergence" value={r.crm_intelligence.convergence_status ?? cycles?.convergence_status} />
             <CrmField label="Deal State" value={r.crm_intelligence.deal_state} />
             <CrmField label="Viability Score (Derived)" value={r.crm_intelligence.viability_score} />
-            <CrmField label="Trajectory (Derived)" value={r.crm_intelligence.trajectory_type} />
+            <CrmField label="Trajectory (Derived)" value={facing.trajectoryLabel} />
             <CrmField label="Equilibrium State" value={equilibriumLabel(r.crm_intelligence.equilibrium_state)} />
             <CrmField label="Intent Strength" value={r.crm_intelligence.buyer_intent_strength} />
             <CrmField label="Effective Intent" value={r.crm_intelligence.effective_intent} />

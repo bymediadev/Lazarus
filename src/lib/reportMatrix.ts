@@ -15,7 +15,8 @@ export type RecoverabilityStatus =
   | "RECOVERABLE"
   | "CONDITIONALLY_RECOVERABLE"
   | "UNDETERMINED"
-  | "NOT_CURRENTLY_RECOVERABLE";
+  | "NOT_CURRENTLY_RECOVERABLE"
+  | "FLAT_NO";
 
 export type ForceDuration = "TEMPORARY" | "CONDITIONAL" | "ONGOING" | "PERMANENT" | "UNKNOWN";
 
@@ -77,7 +78,115 @@ export function formatRecoverability(status: RecoverabilityStatus): string {
       return "Undetermined";
     case "NOT_CURRENTLY_RECOVERABLE":
       return "Not currently recoverable";
+    case "FLAT_NO":
+      return "Flat no as a purchase";
   }
+}
+
+const SOLE_OPERATOR =
+  /\b(solopreneur|sole proprietor|sole owner|small-business owner|small business owner|owner-operator|owner operator)\b/i;
+
+/** The person owns the business. A suppressed-champion label does not fit. */
+export function isSoleOperator(role = "", evidence = ""): boolean {
+  return SOLE_OPERATOR.test(`${role} ${evidence}`);
+}
+
+/**
+ * The prospect declined the client role and the close is a referral relationship.
+ * Seller politeness alone ("I'm not here to push") is not enough.
+ */
+export function isNotAPurchase(transcript: string): boolean {
+  const text = transcript.toLowerCase();
+  const declined =
+    /\b(?:not going to be your client|won't be your client|will not be your client|i(?:'m| am) not (?:going to be )?(?:your|the) client|i might be the referral|be the referral to)\b/.test(
+      text
+    ) ||
+    /\bclient\b[\s\S]{0,40}\bno way\b/.test(text) ||
+    /\bno way\b[\s\S]{0,40}\bclient\b/.test(text);
+  const relationship =
+    /\b(channel partner|stay in touch|not here to (?:like )?close|not (?:going to |here to )?push you)\b/.test(
+      text
+    );
+  return declined && relationship;
+}
+
+function escapeRegExp(value: string): string {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+/** Seller-offered introduction. They do not speak and they do not approve the purchase. */
+export function isSellerIntroduction(
+  person: { name?: string; role?: string; persona_type?: string; stance?: string; evidence?: string },
+  transcript: string
+): boolean {
+  const name = (person.name ?? "").trim();
+  if (name.length < 2 || !transcript.trim()) return false;
+  const persona = `${person.persona_type ?? ""} ${person.stance ?? ""}`;
+  if (/absent decision maker|hidden detractor|economic owner|aligned champion/i.test(persona)) {
+    return false;
+  }
+  const blob = `${person.role ?? ""} ${person.evidence ?? ""}`;
+  if (/\b(approve|approver|decision maker|signs off|signing authority)\b/i.test(blob)) return false;
+
+  const named = `(?:^|[^A-Za-z0-9])${escapeRegExp(name)}(?![A-Za-z0-9])`;
+  const speaks = new RegExp(`(^|\\n)\\s*(?:\\[[^\\]]+\\]\\s*)?${escapeRegExp(name)}\\s*:`, "i").test(
+    transcript
+  );
+  if (speaks) return false;
+
+  const introduced = new RegExp(
+    `(?:send you to|introduce you to|warm connection with|put you in(?:to)? a warm connection(?: with)?|his name is|her name is|their name is)\\s+[\\s\\S]{0,80}${named}`,
+    "i"
+  ).test(transcript);
+  if (introduced) return true;
+
+  return (
+    /\breferral partner\b|\bcredit repair\b/i.test(person.role ?? "") &&
+    /\b(warm connection|send you to|credit repair)\b/i.test(transcript)
+  );
+}
+
+export interface MatrixFacing {
+  offForecast: boolean;
+  trajectoryLabel: string;
+  recoverabilityLabel: string;
+  planTitle: string;
+  whyTitle: string;
+}
+
+/** Labels the report shows. The viability formula can still say deferred. This is the forecast judgment. */
+export function matrixFacing(input: {
+  status?: string;
+  trajectory?: string;
+  recoverabilityStatus?: string;
+}): MatrixFacing {
+  const offForecast =
+    /NOT A PURCHASE/i.test(input.status ?? "") || input.recoverabilityStatus === "FLAT_NO";
+  if (offForecast) {
+    return {
+      offForecast: true,
+      trajectoryLabel: "Not a purchase — off forecast",
+      recoverabilityLabel: "Flat no as a purchase",
+      planTitle: "What to do next",
+      whyTitle: "What the call was",
+    };
+  }
+  const known = [
+    "RECOVERABLE",
+    "CONDITIONALLY_RECOVERABLE",
+    "UNDETERMINED",
+    "NOT_CURRENTLY_RECOVERABLE",
+    "FLAT_NO",
+  ].includes(input.recoverabilityStatus ?? "");
+  return {
+    offForecast: false,
+    trajectoryLabel: input.trajectory?.trim() || "—",
+    recoverabilityLabel: known
+      ? formatRecoverability(input.recoverabilityStatus as RecoverabilityStatus)
+      : "—",
+    planTitle: "Recovery plan",
+    whyTitle: "Why it is stalling",
+  };
 }
 
 const RESOURCE_CONDITION =
@@ -377,6 +486,16 @@ export function classifyRecoverability(input: {
   forces: MatrixForce[];
   evidence?: string;
 }): RecoverabilityAssessment {
+  if (isNotAPurchase(input.evidence ?? "")) {
+    return {
+      status: "FLAT_NO",
+      confidence: 75,
+      blocking_conditions: [],
+      evidence_gaps: [],
+      explanation:
+        "Flat no as a purchase. The prospect declined the client role. The next step is the referral relationship already agreed, not a recovery plan. Viability is the formula result, and it is not a reason to keep this on the forecast.",
+    };
+  }
   const blocker = input.blocker.toUpperCase();
   const corpus = [input.evidence ?? "", ...input.forces.map((force) => `${force.factor} ${force.evidence}`)].join("\n");
   const closed = closedPathReason(corpus);
@@ -478,7 +597,7 @@ export function validateReportMatrix(input: {
   recoverabilityStatus?: string;
   forces: MatrixForce[];
   immediateActionCount: number;
-  stakeholders?: { name?: string; persona_type?: string; stance?: string; evidence?: string }[];
+  stakeholders?: { name?: string; role?: string; persona_type?: string; stance?: string; evidence?: string }[];
   transcript?: string;
 }): ReportValidation {
   const checks: ReportCheck[] = [];
@@ -496,6 +615,7 @@ export function validateReportMatrix(input: {
     "CONDITIONALLY_RECOVERABLE",
     "UNDETERMINED",
     "NOT_CURRENTLY_RECOVERABLE",
+    "FLAT_NO",
   ].includes(input.recoverabilityStatus ?? "");
   checks.push({
     id: "viability_recoverability",
@@ -568,6 +688,35 @@ export function validateReportMatrix(input: {
         : freezeAlsoConstraint
           ? "A spending freeze was counted as constraint pressure as well as structural pressure."
           : "Overlapping financial evidence is not added twice.",
+  });
+  const transcript = input.transcript ?? "";
+  const notAPurchase = transcript ? isNotAPurchase(transcript) : false;
+  const purchaseAligned =
+    !notAPurchase ||
+    (/NOT A PURCHASE/i.test(input.status) && input.recoverabilityStatus === "FLAT_NO");
+  checks.push({
+    id: "purchase_motion",
+    passed: purchaseAligned,
+    detail: notAPurchase
+      ? purchaseAligned
+        ? "The prospect declined the client role. Headline and recoverability stay off the forecast."
+        : "The prospect declined the client role, but the headline or recoverability still treats this as a recoverable purchase."
+      : "No declined-client motion in the transcript.",
+  });
+  const soleSuppressed = (input.stakeholders ?? []).filter((person) => {
+    const label = `${person.persona_type ?? ""} ${person.stance ?? ""}`;
+    return /suppressed champion/i.test(label) && isSoleOperator(person.role ?? "", person.evidence ?? "");
+  });
+  const introduced = transcript
+    ? (input.stakeholders ?? []).filter((person) => isSellerIntroduction(person, transcript))
+    : [];
+  checks.push({
+    id: "people_map",
+    passed: soleSuppressed.length === 0 && introduced.length === 0,
+    detail:
+      soleSuppressed.length || introduced.length
+        ? `People map still mislabels ${[...soleSuppressed, ...introduced].map((person) => person.name).filter(Boolean).join(", ")}.`
+        : "The owner is not labeled a champion without authority, and seller introductions are not in the buying group.",
   });
   return { passed: checks.every((check) => check.passed), checks };
 }

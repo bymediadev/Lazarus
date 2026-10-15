@@ -59,8 +59,15 @@ Track EVERY persona mentioned:
 | Suppressed Champion | High intent but stripped of authority |
 | Hidden Detractor | Evidence of opposition or a refusal. Skepticism about an unreviewed design is not enough, and absence is not opposition |
 | Absent Decision Maker | Named person who must decide and is not in the evidence. Absence is not a no |
+| Economic owner | The person owns the business and can decide. A solopreneur or sole owner is the authority |
 
 Also set authority_level: economic_buyer | technical_veto | influencer | user | unknown
+
+A sole owner or solopreneur has authority. Do not label them Suppressed Champion. Suppressed Champion means they want the purchase and someone else must decide.
+
+Do not put the seller's referral introduction on the People Map. A person the seller offers to connect, who never speaks and does not approve a purchase, is not a stakeholder.
+
+If the prospect says they will not be the client and the agreed next step is a referral or channel relationship, this is not a stalled purchase. Set live_deal_triage.root_issue to "Not a buyer." Set core_blocker to "None on a purchase." Do not invent an authority gap or an internal champion. Next actions are only the introductions and materials already promised.
 
 Hidden Detractors and Absent Decision Makers MUST appear as Behavioral/Constraint forces with quoted evidence.
 
@@ -91,7 +98,7 @@ Intent is the buyer's stated willingness. Quote it when the buyer says they like
       "name": "",
       "role": "",
       "authority_level": "economic_buyer | technical_veto | influencer | user | unknown",
-      "persona_type": "Aligned Champion | Suppressed Champion | Hidden Detractor | Absent Decision Maker | Neutral | Unknown",
+      "persona_type": "Aligned Champion | Suppressed Champion | Hidden Detractor | Absent Decision Maker | Economic owner | Neutral | Unknown",
       "evidence": "verbatim quote from the person who said it. If someone else describes this person, do not put that quote on this person."
     }
   ],

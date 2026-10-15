@@ -3,7 +3,7 @@ import { readConstraint } from "../lib/constraintReading";
 import { mergeOverlappingQuotes } from "../lib/evidenceQuotes";
 import { commercialBaselineFromText } from "../lib/commercialBaseline";
 import { forecastGuidance } from "../lib/forecastCall";
-import { canonicalImmediateActions, formatRecoverability } from "../lib/reportMatrix";
+import { canonicalImmediateActions, formatRecoverability, matrixFacing } from "../lib/reportMatrix";
 import { convergenceExplanation, viabilityCycleDisplay } from "../lib/convergenceNote";
 import { recoveryActionLines } from "../lib/recoveryPlan";
 import type { PostMortemResult } from "../types";
@@ -99,6 +99,11 @@ export default function ExecutiveBrief({ result }: Props) {
     ...(result.stakeholders ?? []).map((person) => `${person.name} ${person.role ?? ""} ${person.evidence}`),
   ].join("\n");
   const constraint = readConstraint(constraintText);
+  const facing = matrixFacing({
+    status: typeof status === "string" ? status : undefined,
+    trajectory: result.deal_trajectory?.trajectory_type,
+    recoverabilityStatus: result.recoverability?.status,
+  });
   const guidance = forecastGuidance({
     status: typeof status === "string" ? status : undefined,
     trajectory: result.deal_trajectory?.trajectory_type,
@@ -112,7 +117,7 @@ export default function ExecutiveBrief({ result }: Props) {
     convergenceStatus: result.resolution_cycles?.convergence_status,
     totalCycles: result.resolution_cycles?.total_cycles ?? cycleRows.length,
     equilibrium: result.equilibrium_analysis?.state,
-    trajectory: result.deal_trajectory?.trajectory_type,
+    trajectory: facing.trajectoryLabel,
   });
 
   return (
@@ -148,7 +153,7 @@ export default function ExecutiveBrief({ result }: Props) {
             </span>
           )}
           {result.recoverability && (
-            <span>Recoverability: {formatRecoverability(result.recoverability.status)}</span>
+            <span>Recoverability: {facing.recoverabilityLabel || formatRecoverability(result.recoverability.status)}</span>
           )}
         </p>
         {result.recoverability?.explanation && (
@@ -167,7 +172,7 @@ export default function ExecutiveBrief({ result }: Props) {
         )}
       </div>
 
-      {constraint.kind !== "unspecified" && (
+      {!facing.offForecast && constraint.kind !== "unspecified" && (
         <div className="executive-brief-prose">
           <h2>Primary constraint</h2>
           <p>{constraint.label}</p>
@@ -187,9 +192,9 @@ export default function ExecutiveBrief({ result }: Props) {
         </div>
       )}
 
-      {constraint.kind === "unspecified" && prose.length > 0 && (
+      {(facing.offForecast || constraint.kind === "unspecified") && prose.length > 0 && (
         <div className="executive-brief-prose">
-          <h2>Why it is stalling</h2>
+          <h2>{facing.whyTitle}</h2>
           {prose.map((line) => (
             <p key={line}>
               <strong>Interpretation:</strong> {line}
@@ -214,7 +219,7 @@ export default function ExecutiveBrief({ result }: Props) {
       )}
 
       <div className="executive-brief-actions">
-        <h2>Recovery plan</h2>
+        <h2>{facing.planTitle}</h2>
         <p>{guidance.line}</p>
         {!guidance.showRecoveryPlan ? (
           <p>No action is proposed until the blocking condition itself changes.</p>

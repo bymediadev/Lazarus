@@ -130,7 +130,13 @@ export default function FastFactsPanel({
         <h2 className="card-title">People and constraints</h2>
         <div className="card-body">
           {vetoPeople.length === 0 && missingPeople.length === 0 && conditionStakeholders.length === 0 ? (
-            <p>No opposing or absent stakeholder is mapped. The people table is in Expanded Analysis.</p>
+            <p>
+              {(result.stakeholders ?? []).some((person) =>
+                /economic owner/i.test(`${person.persona_type ?? ""} ${person.stance ?? ""}`)
+              )
+                ? "The owner on the call is the authority. No one else has to approve."
+                : "No opposing or absent stakeholder is mapped. The people table is in Expanded Analysis."}
+            </p>
           ) : (
             <ul className="stall-collision-list">
               {vetoPeople.map((p, i) => (

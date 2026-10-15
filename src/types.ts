@@ -11,7 +11,8 @@ export type EnterpriseDealStatus =
   | "STALLED — CRITICAL RISK"
   | "CLOSED LOST — RECOVERABLE"
   | "CLOSED LOST — UNLIKELY"
-  | "CLOSED WON";
+  | "CLOSED WON"
+  | "NOT A PURCHASE";
 
 export type CausalForceType =
   | "Intent"
@@ -428,7 +429,7 @@ export interface PostMortemResult {
   diagnosis?: string;
   action_plan?: string[];
   recoverability?: {
-    status: "RECOVERABLE" | "CONDITIONALLY_RECOVERABLE" | "UNDETERMINED" | "NOT_CURRENTLY_RECOVERABLE";
+    status: "RECOVERABLE" | "CONDITIONALLY_RECOVERABLE" | "UNDETERMINED" | "NOT_CURRENTLY_RECOVERABLE" | "FLAT_NO";
     confidence: number;
     blocking_conditions: string[];
     evidence_gaps: string[];
@@ -448,6 +449,7 @@ function clampScore(n: unknown, fallback = 50): number {
 
 export function statusTagClass(status: string): string {
   const s = status.toUpperCase();
+  if (s.includes("NOT A PURCHASE")) return "status-failed";
   if (s.includes("CLOSED WON")) return "status-success";
   if (s.includes("CLOSED LOST")) return "status-failed";
   if (s.includes("UNCERTAIN") || s.includes("HIGH RISK") || s.includes("CRITICAL RISK")) return "status-risk";

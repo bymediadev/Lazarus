@@ -56,7 +56,9 @@ const FINISHED_AFTER_DAYS = 30;
 export function purgeAfterForStatus(status: string, now = new Date()): string | null {
   const normalized = status.toUpperCase().replace(/[—–-]/g, " ");
   const won = normalized.includes("CLOSED WON");
-  const flatNo = normalized.includes("CLOSED LOST") && normalized.includes("UNLIKELY");
+  const flatNo =
+    (normalized.includes("CLOSED LOST") && normalized.includes("UNLIKELY")) ||
+    normalized.includes("NOT A PURCHASE");
   if (!won && !flatNo) return null;
   const purge = new Date(now.getTime());
   purge.setDate(purge.getDate() + FINISHED_AFTER_DAYS);

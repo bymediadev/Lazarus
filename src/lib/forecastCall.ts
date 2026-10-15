@@ -4,6 +4,9 @@ export const NON_VIABLE_FORECAST_LINE =
 export const DEFER_FORECAST_LINE =
   "Defer from the active quarterly forecast. The evidence does not support a close this quarter, and it does not show that recovery is impossible.";
 
+export const NOT_A_PURCHASE_FORECAST_LINE =
+  "Flat no as a purchase. Keep the relationship, and keep it off the forecast.";
+
 export function forecastGuidance(input: {
   status?: string;
   trajectory?: string;
@@ -19,6 +22,9 @@ export function forecastGuidance(input: {
     trajectory === "NON-VIABLE / DEAD" ||
     /NON-VIABLE\s*\/\s*DEAD/i.test(trajectory);
 
+  if (/NOT A PURCHASE/i.test(status)) {
+    return { removeFromForecast: true, showRecoveryPlan: true, line: NOT_A_PURCHASE_FORECAST_LINE };
+  }
   if (dead) {
     return { removeFromForecast: true, showRecoveryPlan: false, line: NON_VIABLE_FORECAST_LINE };
   }

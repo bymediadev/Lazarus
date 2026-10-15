@@ -3,14 +3,17 @@ import {
   deriveProprietaryIndices,
   compileDealRiskReport,
   computeDialogueStallSignals,
+  computeStakeholderDispersion,
+  isNotAPurchase,
+  isSellerIntroduction,
   lockForcesToTranscript,
   reconcilePersona,
 } from "../server/scoring.ts";
 import { statusFromTrajectory, assertAnalysisSchema } from "../server/gemini.ts";
 import { alignBlockerNarrative } from "../src/lib/blockerNarrative.ts";
 import { commercialBaselineFromText } from "../src/lib/commercialBaseline.ts";
-import { DEFER_FORECAST_LINE, forecastGuidance, NON_VIABLE_FORECAST_LINE } from "../src/lib/forecastCall.ts";
-import { canonicalImmediateActions, classifyRisk, stalledHeadline } from "../src/lib/reportMatrix.ts";
+import { DEFER_FORECAST_LINE, forecastGuidance, NON_VIABLE_FORECAST_LINE, NOT_A_PURCHASE_FORECAST_LINE } from "../src/lib/forecastCall.ts";
+import { canonicalImmediateActions, classifyRecoverability, classifyRisk, matrixFacing, stalledHeadline, validateReportMatrix } from "../src/lib/reportMatrix.ts";
 import { mergeOverlappingQuotes } from "../src/lib/evidenceQuotes.ts";
 import { readFileSync } from "fs";
 
@@ -1108,6 +1111,145 @@ if (priyaFromCall.label !== "Resource constraint") {
 }
 if (sarahFromCall.label !== "Suppressed Champion" || davidFromCall.label !== "Unmet condition") {
   console.error("FAIL: Sarah and David should keep their labels", sarahFromCall, davidFromCall);
+  failed = true;
+}
+
+const soleOwner = reconcilePersona({
+  name: "[REDACTED NAME]",
+  role: "Small-business owner / Solopreneur",
+  persona_type: "Suppressed Champion",
+  evidence: "I'm scanning now because I started my finance and the residential piece.",
+});
+if (soleOwner.label !== "Economic owner" || soleOwner.key === "suppressed champion") {
+  console.error("FAIL: A solopreneur has authority and is not a suppressed champion", soleOwner);
+  failed = true;
+}
+
+const channelCall = [
+  "PROSPECT: if you think that I'm going to be your client, no way. I might be the referral to all of you.",
+  "SELLER: His name is [REFERRAL PARTNER]. I'll put you into a warm connection with him. I'm not here to like close you. You can be a great channel partner.",
+].join("\n");
+if (!isNotAPurchase(channelCall)) {
+  console.error("FAIL: A declined client role plus a channel close is not a purchase");
+  failed = true;
+}
+if (isNotAPurchase("Sarah: I'll stay in touch with our channel partner after David approves.")) {
+  console.error("FAIL: A real approval path is still a purchase");
+  failed = true;
+}
+const referral = {
+  name: "[REFERRAL PARTNER]",
+  role: "Credit Repair Specialist",
+  persona_type: "Neutral",
+  evidence: "His name is [REFERRAL PARTNER].",
+};
+if (!isSellerIntroduction(referral, channelCall)) {
+  console.error("FAIL: The seller's credit-repair introduction is not a buyer");
+  failed = true;
+}
+if (isSellerIntroduction({ name: "Sarah Chen", role: "Director of Operations", persona_type: "Suppressed Champion", evidence: "" }, northstarTranscript)) {
+  console.error("FAIL: A named champion is not a seller introduction");
+  failed = true;
+}
+
+const channelDispersion = computeStakeholderDispersion([
+  {
+    name: "[REDACTED NAME]",
+    role: "Small-business owner / Solopreneur",
+    persona_type: "Suppressed Champion",
+    evidence: "I started my finance and the residential piece.",
+  },
+  referral,
+]);
+if (channelDispersion.authority_gap || channelDispersion.index !== 0 || channelDispersion.multi_department_friction !== 0) {
+  console.error("FAIL: Owner plus a referral intro should not create an authority gap or department friction", channelDispersion);
+  failed = true;
+}
+const financeGate = computeStakeholderDispersion([
+  {
+    name: "Dana",
+    role: "Director of Operations",
+    persona_type: "Aligned Champion",
+    evidence: "Finance has to approve the budget before we can sign.",
+  },
+]);
+if (!financeGate.department_mentions.includes("finance")) {
+  console.error("FAIL: A finance approval is still department friction", financeGate);
+  failed = true;
+}
+
+const channelForecast = forecastGuidance({
+  status: "NOT A PURCHASE",
+  trajectory: "DEFERRED (recoverable)",
+  recoverability: 41,
+});
+if (!channelForecast.removeFromForecast || channelForecast.line !== NOT_A_PURCHASE_FORECAST_LINE) {
+  console.error("FAIL: A non-purchase stays off the forecast", channelForecast);
+  failed = true;
+}
+const channelRecovery = classifyRecoverability({
+  viability: 41,
+  trajectory: "DEFERRED (recoverable)",
+  blocker: "MIXED",
+  intent: 40,
+  forces: [],
+  evidence: channelCall,
+});
+if (channelRecovery.status !== "FLAT_NO") {
+  console.error("FAIL: A declined client role is a flat no in the report matrix", channelRecovery);
+  failed = true;
+}
+const channelFacing = matrixFacing({
+  status: "NOT A PURCHASE",
+  trajectory: "DEFERRED (recoverable)",
+  recoverabilityStatus: "FLAT_NO",
+});
+if (channelFacing.trajectoryLabel.toLowerCase().includes("recoverable") || channelFacing.recoverabilityLabel !== "Flat no as a purchase") {
+  console.error("FAIL: The report should not keep a recoverable trajectory label", channelFacing);
+  failed = true;
+}
+const channelMatrix = validateReportMatrix({
+  status: "NOT A PURCHASE",
+  viability: 41,
+  recoverabilityStatus: "FLAT_NO",
+  forces: [],
+  immediateActionCount: 1,
+  transcript: channelCall,
+  stakeholders: [
+    {
+      name: "[REDACTED NAME]",
+      role: "Small-business owner / Solopreneur",
+      persona_type: "Economic owner",
+      evidence: "I started my finance and the residential piece.",
+    },
+  ],
+});
+if (!channelMatrix.passed) {
+  console.error("FAIL: A corrected non-purchase should pass the report matrix", channelMatrix.checks);
+  failed = true;
+}
+const rawMatrix = validateReportMatrix({
+  status: "STALLED — LOW RISK",
+  riskTier: "LOW",
+  viability: 41,
+  recoverabilityStatus: "UNDETERMINED",
+  forces: [],
+  immediateActionCount: 1,
+  transcript: channelCall,
+  stakeholders: [
+    {
+      name: "[REDACTED NAME]",
+      role: "Small-business owner / Solopreneur",
+      persona_type: "Suppressed Champion",
+      evidence: "I started my finance and the residential piece.",
+    },
+    referral,
+  ],
+});
+const purchaseCheck = rawMatrix.checks.find((check) => check.id === "purchase_motion");
+const peopleCheck = rawMatrix.checks.find((check) => check.id === "people_map");
+if (!purchaseCheck || purchaseCheck.passed || !peopleCheck || peopleCheck.passed) {
+  console.error("FAIL: The old mislabel should fail the report matrix", rawMatrix.checks);
   failed = true;
 }
 

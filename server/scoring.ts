@@ -10,9 +10,12 @@ import { capacitySubject, samePerson, attributeStatement } from "../src/lib/evid
 import {
   classifyRecoverability,
   classifyRisk,
+  isSoleOperator,
   mapForcesToScores,
   type RecoverabilityAssessment,
 } from "../src/lib/reportMatrix.js";
+
+export { isNotAPurchase, isSellerIntroduction, isSoleOperator } from "../src/lib/reportMatrix.js";
 import { intentInputTrace } from "../src/lib/scoreInputTrace.js";
 
 export type CanonicalEquilibrium = "PINNED" | "MIXED" | "OPEN";
@@ -1022,6 +1025,14 @@ const DEPARTMENT_FRICTION = [
   "engineering",
 ];
 
+/** A separate department has to act. The owner's own trade is not that. */
+const DEPARTMENT_APPROVAL =
+  /\b(approve|approval|sign off|signs off|signed off|has to|have to|won't|will not|blocked by|must review)\b/i;
+
+function mentionsDepartment(blob: string, dept: string): boolean {
+  return new RegExp(`\\b${dept}\\b`, "i").test(blob);
+}
+
 const OPPOSITION_EVIDENCE =
   /\b(opposed|opposes|opposition|will block|blocks the|refuses to approve|against the (deal|purchase|project)|kill the deal|will not approve|won't approve)\b/i;
 const NOT_OPPOSED_EVIDENCE = /\b(not against|isn't against|is not against)\b/i;
@@ -1151,6 +1162,9 @@ export function reconcilePersona(s: StakeholderIndexInput, transcript = ""): Rec
     return { key: "resource constraint", label: "Resource constraint" };
   }
   if (raw.includes("absent")) return { key: "absent decision maker", label: "Absent Decision Maker" };
+  if (raw.includes("suppressed") && isSoleOperator(s.role ?? "", quoted)) {
+    return { key: "economic owner", label: "Economic owner" };
+  }
   if (raw.includes("suppressed")) return { key: "suppressed champion", label: "Suppressed Champion" };
   if (raw.includes("aligned") || raw.includes("champion")) {
     return { key: "aligned champion", label: "Aligned Champion" };
@@ -1200,9 +1214,13 @@ export function computeStakeholderDispersion(
 
   const deptMentions = new Set<string>();
   for (const s of stakeholders) {
+    const ownBook =
+      isSoleOperator(s.role ?? "", s.evidence ?? "") &&
+      !DEPARTMENT_APPROVAL.test(`${s.role ?? ""} ${s.evidence ?? ""}`);
+    if (ownBook) continue;
     const blob = normalizeText(`${s.role ?? ""} ${s.evidence ?? ""} ${s.name}`);
     for (const dept of DEPARTMENT_FRICTION) {
-      if (blob.includes(dept)) deptMentions.add(dept);
+      if (mentionsDepartment(blob, dept)) deptMentions.add(dept);
     }
   }
   const absence_term_applied = absent > 0;
@@ -1506,7 +1524,7 @@ export function explainScores(
       factors: [
         {
           basis: "observed",
-          text: `Department words in role, evidence, or name: ${departmentList}. Each distinct word adds 14.`,
+          text: `Department words matched on word boundaries in role, evidence, or name: ${departmentList}. Each distinct word adds 14. A sole owner's description of their own trade is not counted.`,
         },
         {
           basis: "inferred",
