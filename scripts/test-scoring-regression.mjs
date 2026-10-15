@@ -13,7 +13,7 @@ import { statusFromTrajectory, assertAnalysisSchema } from "../server/gemini.ts"
 import { alignBlockerNarrative } from "../src/lib/blockerNarrative.ts";
 import { commercialBaselineFromText } from "../src/lib/commercialBaseline.ts";
 import { DEFER_FORECAST_LINE, forecastGuidance, NON_VIABLE_FORECAST_LINE, NOT_A_PURCHASE_FORECAST_LINE } from "../src/lib/forecastCall.ts";
-import { canonicalImmediateActions, classifyRecoverability, classifyRisk, matrixFacing, promisedRelationshipSteps, publishesStallMetrics, recommendedMoveLine, reportCategory, stalledHeadline, validateReportMatrix } from "../src/lib/reportMatrix.ts";
+import { canonicalImmediateActions, classifyRecoverability, classifyRisk, diagnosticProfile, matrixFacing, promisedRelationshipSteps, publishesStallMetrics, recommendedMoveLine, reportCategory, stalledHeadline, validateReportMatrix } from "../src/lib/reportMatrix.ts";
 import { formatCompressedCrmNotes } from "../src/lib/crmNotes.ts";
 import { mergeOverlappingQuotes } from "../src/lib/evidenceQuotes.ts";
 import { readFileSync } from "fs";
@@ -1248,6 +1248,7 @@ const channelNotes = formatCompressedCrmNotes({
   crm_intelligence: { recommended_next_action: "Explore a channel partnership." },
   immediate_remediation: channelSteps,
   rescue_triage_plan: { immediate_0_30_days: [], near_term_30_90_days: ["Hold the weekly recovery motion from this week’s actions."], long_term_90_plus_days: [] },
+  diagnostic_profile: diagnosticProfile(channelCall),
   stakeholders: [],
 });
 const channelMove = channelNotes.split("**Recommended next move:**")[1]?.split("\n")[0] ?? "";
@@ -1301,6 +1302,35 @@ const stalledCategory = reportCategory({
 });
 if (stalledCategory !== "deal_stalled" || !publishesStallMetrics(stalledCategory)) {
   console.error("FAIL: A real stalled deal still publishes stall metrics", stalledCategory);
+  failed = true;
+}
+const referralClose = [
+  channelCall,
+  "SELLER: I'll send you a link to our clarity consultation framework. Unfortunately, it's not free, and I'm not going to push you. I'll just send you the link.",
+].join("\n");
+const referralDiag = diagnosticProfile(referralClose);
+if (
+  !/referral relationship/i.test(referralDiag.buyingSignals) ||
+  !referralDiag.budget.startsWith("MISSING — NO BUDGET DISCUSSED") ||
+  !referralDiag.urgency.startsWith("MISSING — NO TIMELINE") ||
+  !/calendar time/i.test(referralDiag.missedProcess) ||
+  /partnership meeting|CRITICAL/i.test(JSON.stringify(referralDiag))
+) {
+  console.error("FAIL: A referral close still reports the missing qualification", referralDiag);
+  failed = true;
+}
+const sarahDiag = diagnosticProfile(sarahMarkTranscript);
+if (
+  sarahDiag.budget.startsWith("MISSING") ||
+  sarahDiag.urgency.startsWith("MISSING") ||
+  /did not secure a decision/i.test(sarahDiag.missedProcess) ||
+  !/interest in this purchase/i.test(sarahDiag.buyingSignals)
+) {
+  console.error("FAIL: A real stalled deal keeps its budget, timeline, and buying signal", sarahDiag);
+  failed = true;
+}
+if (!channelNotes.includes("### Diagnostic evaluation") || !channelNotes.includes("Buying signals:")) {
+  console.error("FAIL: The overview prints the diagnostic even when it is not a deal", channelNotes);
   failed = true;
 }
 const channelMatrix = validateReportMatrix({

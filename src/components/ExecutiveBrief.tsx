@@ -175,6 +175,16 @@ export default function ExecutiveBrief({ result }: Props) {
         )}
       </div>
 
+      {result.diagnostic_profile && (
+        <div className="executive-brief-prose">
+          <h2>Diagnostic evaluation</h2>
+          <p><strong>Buying signals:</strong> {result.diagnostic_profile.buyingSignals}</p>
+          <p><strong>Budget:</strong> {result.diagnostic_profile.budget}</p>
+          <p><strong>Urgency and timeline:</strong> {result.diagnostic_profile.urgency}</p>
+          <p><strong>Missed process step:</strong> {result.diagnostic_profile.missedProcess}</p>
+        </div>
+      )}
+
       {!facing.offForecast && constraint.kind !== "unspecified" && (
         <div className="executive-brief-prose">
           <h2>Primary constraint</h2>

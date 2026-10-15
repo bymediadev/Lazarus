@@ -256,6 +256,88 @@ export function recommendedMoveLine(steps: string[]): string {
   return `${actions.join(". ")}.`;
 }
 
+export interface DiagnosticProfile {
+  buyingSignals: string;
+  budget: string;
+  urgency: string;
+  missedProcess: string;
+}
+
+const BUDGET_FIGURE = /\$[\d,]+|\b\d+\s*k\b|\bbudget\b/i;
+const PAID_WITHOUT_AMOUNT = /\b(not free|paid consultation|paid diagnostic|clarity consultation)\b/i;
+const URGENCY =
+  /\b(q[1-4]|this quarter|next quarter|month-end|next week|deadline|urgent|as soon as|underwater until|after month-end)\b/i;
+const PAID_OFFER = /\b(clarity consultation|not free|paid consultation|paid diagnostic|send you (?:a |the )?link)\b/i;
+const CALENDAR_STEP =
+  /\b(reschedul\w*|calendar|three slots|book(?:ed|ing)?\s+(?:a |the )?(?:time|call|meeting)|schedule(?:d)?\s+(?:a |the )?(?:time|call|meeting)|lock(?:ed)?\s+(?:a |the )?(?:time|date))\b/i;
+const PURCHASE_INTEREST =
+  /\b(i like what i saw|in range|we can accelerate|move(?:d)? forward|send (?:me )?a proposal)\b/i;
+
+function sentenceAround(transcript: string, pattern: RegExp): string {
+  const match = pattern.exec(transcript);
+  if (!match || match.index == null) return "";
+  const beforeBreak = Math.max(transcript.lastIndexOf("\n", match.index), transcript.lastIndexOf(". ", match.index));
+  const from = beforeBreak + 1;
+  const after = match.index + match[0].length;
+  const period = transcript.indexOf(".", after);
+  const lineEnd = transcript.indexOf("\n", after);
+  let end = transcript.length;
+  if (period !== -1) end = period;
+  if (lineEnd !== -1 && lineEnd < end) end = lineEnd;
+  const sentence = transcript.slice(from, end).replace(/\s+/g, " ").trim();
+  return sentence.length > 220 ? `${sentence.slice(0, 217)}...` : sentence;
+}
+
+/** Qualification read for every upload. A non-purchase still reports what was missing. */
+export function diagnosticProfile(transcript: string): DiagnosticProfile {
+  const text = transcript ?? "";
+  const notAPurchase = isNotAPurchase(text);
+  const budgetHit = sentenceAround(text, BUDGET_FIGURE);
+  const urgencyHit = sentenceAround(text, URGENCY);
+  const interestHit = sentenceAround(text, PURCHASE_INTEREST);
+  const refusalHit = sentenceAround(
+    text,
+    /\b(?:not going to be your client|won't be your client|will not be your client|i might be the referral|no way)\b/i
+  );
+
+  const buyingSignals = notAPurchase
+    ? `Interest was in a referral relationship, not in purchasing this service.${refusalHit ? ` Evidence: "${refusalHit}"` : ""}`
+    : interestHit
+      ? `The buyer stated interest in this purchase. Evidence: "${interestHit}"`
+      : "No explicit interest in purchasing this service was stated.";
+
+  const budget = budgetHit
+    ? `Budget was discussed. Evidence: "${budgetHit}"`
+    : PAID_WITHOUT_AMOUNT.test(text)
+      ? "MISSING — NO BUDGET DISCUSSED. The seller said the offer is paid, and no price or ability to pay was established."
+      : "MISSING — NO BUDGET DISCUSSED";
+
+  const urgency = urgencyHit
+    ? `A timeline was stated. Evidence: "${urgencyHit}"`
+    : "MISSING — NO TIMELINE OR URGENCY ESTABLISHED";
+
+  const missedProcess =
+    PAID_OFFER.test(text) && !CALENDAR_STEP.test(text)
+      ? "The seller introduced a paid consultation and did not secure a decision or a calendar time. The next step left on the call was a link, not a meeting."
+      : notAPurchase
+        ? "No purchase process was opened."
+        : CALENDAR_STEP.test(text)
+          ? "A follow-up time was part of the conversation."
+          : "No dated next meeting was secured on the call.";
+
+  return { buyingSignals, budget, urgency, missedProcess };
+}
+
+export function formatDiagnosticMarkdown(profile: DiagnosticProfile): string {
+  return [
+    "### Diagnostic evaluation",
+    `- **Buying signals:** ${profile.buyingSignals}`,
+    `- **Budget:** ${profile.budget}`,
+    `- **Urgency and timeline:** ${profile.urgency}`,
+    `- **Missed process step:** ${profile.missedProcess}`,
+  ].join("\n");
+}
+
 export interface MatrixFacing {
   category: ReportCategory;
   categoryLabel: string;

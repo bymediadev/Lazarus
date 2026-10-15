@@ -441,6 +441,13 @@ export interface PostMortemResult {
   };
   /** Sales-relevance gate. A not_sales document is not a deal even if analysis was forced. */
   relevance?: { label?: string; reason?: string };
+  /** Printed on every overview, including a call that is not a deal. */
+  diagnostic_profile?: {
+    buyingSignals: string;
+    budget: string;
+    urgency: string;
+    missedProcess: string;
+  };
 }
 
 function clampScore(n: unknown, fallback = 50): number {

@@ -1,6 +1,6 @@
 import { PostMortemResult, StakeholderSignal } from "../types";
 import { forecastGuidance } from "./forecastCall";
-import { matrixFacing, recommendedMoveLine } from "./reportMatrix";
+import { formatDiagnosticMarkdown, matrixFacing, recommendedMoveLine } from "./reportMatrix";
 import { formatMetricLegendMarkdown } from "./metricLegend";
 import { recoveryActionNote, uniqueRecoveryNotes } from "./recoveryPlan";
 
@@ -347,6 +347,8 @@ export function formatCompressedCrmNotes(result: PostMortemResult): string {
     `**Invisible veto / missing authority:** ${veto}`,
     eqNote ? `**Why it's stuck:** ${eqNote}` : null,
     "",
+    result.diagnostic_profile ? formatDiagnosticMarkdown(result.diagnostic_profile) : null,
+    result.diagnostic_profile ? "" : null,
     "### Who needs to do what",
     whoDoesWhat(result),
     "",

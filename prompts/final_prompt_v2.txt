@@ -69,6 +69,8 @@ Do not put the seller's referral introduction on the People Map. A person the se
 
 If the prospect says they will not be the client and the agreed next step is a referral or channel relationship, this is not a stalled purchase. Set live_deal_triage.root_issue to "Not a buyer." Set core_blocker to "None on a purchase." Do not invent an authority gap or an internal champion. Next actions are only the introductions and materials already promised.
 
+The server prints a diagnostic evaluation on every run, including a call that is not a deal: buying signals, whether a budget was established, whether a timeline was established, and whether a paid next step was left without a date. Do not invent a budget, a deadline, or a booked meeting. Interest in a referral is not interest in buying this service.
+
 Hidden Detractors and Absent Decision Makers MUST appear as Behavioral/Constraint forces with quoted evidence.
 
 ## 5. SCORING MATRIX (SERVER ENFORCED — FOR YOUR CLASSIFICATION)

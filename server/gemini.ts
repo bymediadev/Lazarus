@@ -20,7 +20,7 @@ import {
   type StakeholderSignal,
 } from "./grounding.js";
 import { alignBlockerNarrative } from "../src/lib/blockerNarrative.js";
-import { promisedRelationshipSteps, recommendedMoveLine, stalledHeadline, validateReportMatrix, type ReportValidation, type RecoverabilityAssessment } from "../src/lib/reportMatrix.js";
+import { diagnosticProfile, promisedRelationshipSteps, recommendedMoveLine, stalledHeadline, validateReportMatrix, type ReportValidation, type RecoverabilityAssessment } from "../src/lib/reportMatrix.js";
 import { commercialBaselineFromText, type CommercialBaseline } from "../src/lib/commercialBaseline.js";
 import { attributeQuote } from "../src/lib/evidenceAttribution.js";
 import { assessIntentExtraction, buildIntentRetryInstructions } from "../src/lib/intentExtraction.js";
@@ -246,6 +246,7 @@ export interface EnterpriseAnalysis {
   commercial_baseline?: CommercialBaseline;
   recoverability?: RecoverabilityAssessment;
   report_validation?: ReportValidation;
+  diagnostic_profile?: ReturnType<typeof diagnosticProfile>;
 }
 
 const VALID_STATUSES: EnterpriseDealStatus[] = [
@@ -531,6 +532,7 @@ function applyCanonicalScoring(
         }
       : result.rescue_triage_plan,
     immediate_remediation: notAPurchase ? relationshipSteps : result.immediate_remediation,
+    diagnostic_profile: diagnosticProfile(transcript),
     crm_intelligence: {
       ...result.crm_intelligence,
       recommended_next_action: notAPurchase

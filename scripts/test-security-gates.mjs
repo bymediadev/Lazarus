@@ -485,6 +485,26 @@ check(
     stored.rescue_triage_plan.immediate_0_30_days[0] === "Deliver the pilot proposal"
 );
 check("caller brief still contains the evidence", containsEvidence(fullBrief) === true);
+const notADealBrief = {
+  deal_classification: { status: "NOT A PURCHASE" },
+  proprietary_indices: { deal_risk_index: 79, dialogue_stall_score: 43 },
+  diagnostic_profile: {
+    buyingSignals: "Interest was in a referral relationship, not in purchasing this service.",
+    budget: "MISSING — NO BUDGET DISCUSSED",
+    urgency: "MISSING — NO TIMELINE OR URGENCY ESTABLISHED",
+    missedProcess: "The seller introduced a paid consultation and did not secure a calendar time.",
+  },
+  stakeholders: [{ name: "PROSPECT", evidence: "I might be the referral." }],
+};
+const storedNotADeal = storedAnalysisJson(JSON.stringify(notADealBrief));
+check(
+  "a non-purchase row keeps the diagnostic and drops the evidence key",
+  storedNotADeal &&
+    storedNotADeal.diagnostic_profile.budget.startsWith("MISSING") &&
+    storedNotADeal.diagnostic_profile.missedProcess.includes("calendar time") &&
+    storedNotADeal.stakeholders[0].evidence === undefined &&
+    containsEvidence(storedNotADeal) === false
+);
 check(
   "company key stamps company A and ignores a body tenant id",
   tenantForReportWrite({
