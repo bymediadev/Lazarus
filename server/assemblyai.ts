@@ -1,5 +1,18 @@
 const ASSEMBLYAI_BASE = "https://api.assemblyai.com/v2";
 
+/** Default: Universal-3.5 Pro with Universal-2 fallback for other languages. */
+const DEFAULT_SPEECH_MODELS = ["universal-3-5-pro", "universal-2"] as const;
+
+/**
+ * Contextual prompt for U3.5 Pro — describe the audio domain only.
+ * Do not say "speaker" (that injects inline labels; use speaker_labels instead).
+ * Disfluencies param is U2-only; ask U3.5 via prompt to keep fillers.
+ */
+const DEFAULT_SALES_PROMPT =
+  "B2B sales discovery or deal review call between a sales representative and a prospect. " +
+  "Preserve filler words like um, uh, and ah. Prefer accurate company names, product names, " +
+  "pricing, contract terms, and CRM or forecast language.";
+
 interface AssemblyUtterance {
   speaker: string;
   text: string;
@@ -23,12 +36,23 @@ interface AssemblyTranscriptJob {
   utterances?: AssemblyUtterance[];
   sentiment_analysis_results?: AssemblySentiment[];
   audio_duration?: number;
+  speech_model_used?: string;
 }
 
 export interface TranscriptionResult {
   formatted: string;
   durationSeconds?: number;
   speakerCount: number;
+}
+
+function resolveSpeechModels(): string[] {
+  const raw = process.env.ASSEMBLYAI_SPEECH_MODELS?.trim();
+  if (!raw) return [...DEFAULT_SPEECH_MODELS];
+  const models = raw
+    .split(",")
+    .map((m) => m.trim())
+    .filter(Boolean);
+  return models.length > 0 ? models : [...DEFAULT_SPEECH_MODELS];
 }
 
 export async function transcribeAudio(
@@ -58,6 +82,9 @@ export async function transcribeAudio(
   const { upload_url } = (await uploadRes.json()) as { upload_url: string };
 
   const speakersExpected = parseInt(process.env.ASSEMBLYAI_SPEAKERS ?? "2", 10);
+  const speechModels = resolveSpeechModels();
+  const prompt =
+    process.env.ASSEMBLYAI_PROMPT?.trim() || DEFAULT_SALES_PROMPT;
 
   const transcriptRes = await fetch(`${ASSEMBLYAI_BASE}/transcript`, {
     method: "POST",
@@ -67,9 +94,13 @@ export async function transcribeAudio(
     },
     body: JSON.stringify({
       audio_url: upload_url,
+      speech_models: speechModels,
+      language_detection: true,
+      prompt,
       speaker_labels: true,
       speakers_expected: Number.isFinite(speakersExpected) ? speakersExpected : 2,
       sentiment_analysis: true,
+      // Universal-2 only; ignored on universal-3-5-pro (prompt covers fillers there).
       disfluencies: true,
       punctuate: true,
       format_text: true,
@@ -77,7 +108,12 @@ export async function transcribeAudio(
   });
 
   if (!transcriptRes.ok) {
-    throw new Error(`AssemblyAI transcript request failed: ${transcriptRes.statusText}`);
+    const detail = await transcriptRes.text().catch(() => "");
+    throw new Error(
+      `AssemblyAI transcript request failed: ${transcriptRes.statusText}${
+        detail ? ` — ${detail.slice(0, 300)}` : ""
+      }`
+    );
   }
 
   const { id } = (await transcriptRes.json()) as { id: string };
@@ -200,9 +236,14 @@ function formatTranscription(job: AssemblyTranscriptJob): TranscriptionResult {
     );
   }
 
-  if (job.audio_duration) {
+  if (job.audio_duration || job.speech_model_used) {
     lines.push("");
-    lines.push(`[call duration: ${Math.round(job.audio_duration)}s, speakers: ${speakers.size}]`);
+    const bits = [
+      job.audio_duration ? `call duration: ${Math.round(job.audio_duration)}s` : null,
+      `speakers: ${speakers.size}`,
+      job.speech_model_used ? `model: ${job.speech_model_used}` : null,
+    ].filter(Boolean);
+    lines.push(`[${bits.join(", ")}]`);
   }
 
   return {
