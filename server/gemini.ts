@@ -20,7 +20,7 @@ import {
   type StakeholderSignal,
 } from "./grounding.js";
 import { alignBlockerNarrative } from "../src/lib/blockerNarrative.js";
-import { stalledHeadline, validateReportMatrix, type ReportValidation, type RecoverabilityAssessment } from "../src/lib/reportMatrix.js";
+import { promisedRelationshipSteps, stalledHeadline, validateReportMatrix, type ReportValidation, type RecoverabilityAssessment } from "../src/lib/reportMatrix.js";
 import { commercialBaselineFromText, type CommercialBaseline } from "../src/lib/commercialBaseline.js";
 import { attributeQuote } from "../src/lib/evidenceAttribution.js";
 import { assessIntentExtraction, buildIntentRetryInstructions } from "../src/lib/intentExtraction.js";
@@ -388,6 +388,16 @@ function applyCanonicalScoring(
     causal.blocker_classification
   );
 
+  const relationshipSteps = notAPurchase
+    ? promisedRelationshipSteps(
+        transcript,
+        stakeholders.find((person) =>
+          /solopreneur|small-business owner|small business owner|economic owner/i.test(
+            `${person.role ?? ""} ${person.persona_type ?? ""}`
+          )
+        )?.name
+      )
+    : [];
   const status = notAPurchase
     ? "NOT A PURCHASE"
     : statusFromTrajectory(
@@ -513,8 +523,19 @@ function applyCanonicalScoring(
       ],
     },
     reactivation_modeling: result.reactivation_modeling.slice(0, 3),
+    rescue_triage_plan: notAPurchase
+      ? {
+          immediate_0_30_days: relationshipSteps,
+          near_term_30_90_days: [],
+          long_term_90_plus_days: [],
+        }
+      : result.rescue_triage_plan,
+    immediate_remediation: notAPurchase ? relationshipSteps : result.immediate_remediation,
     crm_intelligence: {
       ...result.crm_intelligence,
+      recommended_next_action: notAPurchase
+        ? "Send the introduction already promised. This is not a deal."
+        : result.crm_intelligence.recommended_next_action,
       dominant_equilibrium_force:
         result.crm_intelligence.dominant_equilibrium_force || dominant?.factor || "",
       blocker_classification: causal.blocker_classification,

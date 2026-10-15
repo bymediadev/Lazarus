@@ -146,7 +146,105 @@ export function isSellerIntroduction(
   );
 }
 
+export type ReportCategory = "not_a_deal" | "deal_moving" | "deal_stalled" | "deal_closed";
+
+export function reportCategory(input: {
+  status?: string;
+  trajectory?: string;
+  recoverabilityStatus?: string;
+  relevanceLabel?: string;
+  transcript?: string;
+}): ReportCategory {
+  const status = input.status ?? "";
+  const trajectory = input.trajectory ?? "";
+  const relevance = (input.relevanceLabel ?? "").toLowerCase();
+  const notADeal =
+    relevance === "not_sales" ||
+    /NOT A (PURCHASE|DEAL)/i.test(status) ||
+    input.recoverabilityStatus === "FLAT_NO" ||
+    (input.transcript ? isNotAPurchase(input.transcript) : false);
+  if (notADeal) return "not_a_deal";
+  if (
+    /CLOSED WON/i.test(status) ||
+    (/CLOSED LOST/i.test(status) && /UNLIKELY/i.test(status)) ||
+    trajectory === "NON-VIABLE / DEAD"
+  ) {
+    return "deal_closed";
+  }
+  if (status === "ACTIVE" || trajectory === "ACTIVE" || trajectory === "VALIDATED / VELOCITY") {
+    return "deal_moving";
+  }
+  return "deal_stalled";
+}
+
+export function categoryLabel(category: ReportCategory): string {
+  switch (category) {
+    case "not_a_deal":
+      return "Not a deal";
+    case "deal_moving":
+      return "Deal, moving";
+    case "deal_stalled":
+      return "Deal, stalled";
+    case "deal_closed":
+      return "Deal, closed";
+  }
+}
+
+/** Stall, deal risk, dispersion, and department friction publish only for a stalled deal. */
+export function publishesStallMetrics(category: ReportCategory): boolean {
+  return category === "deal_stalled";
+}
+
+/** The prospect offered to send the seller into their group. */
+export function offeredNetworkingInvite(transcript: string): boolean {
+  return /\bsend you (?:that|an|the) invitation\b/i.test(transcript);
+}
+
+function promisedStep(action: string, outcome: string, progress: string, stakeholder: string): string {
+  return [
+    "Owner: Seller",
+    `Stakeholder: ${stakeholder}`,
+    `Action: ${action}`,
+    `Target outcome: ${outcome}`,
+    `Progress evidence: ${progress}`,
+    "Kind: activity",
+  ].join(" | ");
+}
+
+/** Steps already promised on a call that never became a purchase. No partnership meeting. */
+export function promisedRelationshipSteps(transcript: string, stakeholderName?: string): string[] {
+  const who = stakeholderName?.trim() || "Prospect";
+  const steps = [
+    promisedStep(
+      "Send the introduction already promised",
+      "The two people are introduced",
+      "Either person confirms the introduction happened",
+      who
+    ),
+    promisedStep(
+      "Send the framework link already promised",
+      "They can look if they want. No reply is a complete outcome",
+      "Only a reply that asks to proceed. Silence stays off the forecast",
+      who
+    ),
+  ];
+  if (offeredNetworkingInvite(transcript)) {
+    steps.push(
+      promisedStep(
+        "Accept the networking-group invitation when they send it",
+        "The reciprocal step they offered is taken",
+        "The seller is in the group or has a date to visit",
+        who
+      )
+    );
+  }
+  return steps;
+}
+
 export interface MatrixFacing {
+  category: ReportCategory;
+  categoryLabel: string;
+  showScorecard: boolean;
   offForecast: boolean;
   trajectoryLabel: string;
   recoverabilityLabel: string;
@@ -159,14 +257,18 @@ export function matrixFacing(input: {
   status?: string;
   trajectory?: string;
   recoverabilityStatus?: string;
+  relevanceLabel?: string;
+  transcript?: string;
 }): MatrixFacing {
-  const offForecast =
-    /NOT A PURCHASE/i.test(input.status ?? "") || input.recoverabilityStatus === "FLAT_NO";
-  if (offForecast) {
+  const category = reportCategory(input);
+  if (category === "not_a_deal") {
     return {
+      category,
+      categoryLabel: categoryLabel(category),
+      showScorecard: false,
       offForecast: true,
-      trajectoryLabel: "Not a purchase — off forecast",
-      recoverabilityLabel: "Flat no as a purchase",
+      trajectoryLabel: "Not a deal",
+      recoverabilityLabel: "Not a deal",
       planTitle: "What to do next",
       whyTitle: "What the call was",
     };
@@ -179,6 +281,9 @@ export function matrixFacing(input: {
     "FLAT_NO",
   ].includes(input.recoverabilityStatus ?? "");
   return {
+    category,
+    categoryLabel: categoryLabel(category),
+    showScorecard: true,
     offForecast: false,
     trajectoryLabel: input.trajectory?.trim() || "—",
     recoverabilityLabel: known

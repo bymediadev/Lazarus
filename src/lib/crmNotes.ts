@@ -22,6 +22,15 @@ function dealStatus(result: PostMortemResult): string {
   return String(result.deal_classification?.status ?? result.deal_status ?? "");
 }
 
+function facingFor(result: PostMortemResult) {
+  return matrixFacing({
+    status: dealStatus(result),
+    trajectory: result.deal_trajectory?.trajectory_type,
+    recoverabilityStatus: result.recoverability?.status,
+    relevanceLabel: result.relevance?.label,
+  });
+}
+
 function invisibleVetoHolder(result: PostMortemResult): string {
   const stakeholders = result.stakeholders ?? [];
   const veto =
@@ -31,7 +40,7 @@ function invisibleVetoHolder(result: PostMortemResult): string {
     stakeholders.find((s) => /technical_veto/i.test(s.authority_level ?? ""));
   if (veto) return stakeholderLabel(veto);
   const owner = stakeholders.find((s) => /economic owner/i.test(s.persona_type ?? s.stance ?? ""));
-  if (owner || /NOT A PURCHASE/i.test(dealStatus(result))) {
+  if (owner || facingFor(result).category === "not_a_deal") {
     return owner
       ? `None. ${owner.name} is the owner and the authority.`
       : "None. The person on the call is the authority.";
@@ -55,7 +64,7 @@ function coreBlocker(result: PostMortemResult): string {
 }
 
 function nextActionDate(result: PostMortemResult): string {
-  if (/NOT A PURCHASE/i.test(dealStatus(result))) {
+  if (facingFor(result).category === "not_a_deal") {
     return "No forecast date — send what was already promised";
   }
   const immediate =
@@ -136,7 +145,7 @@ function whoDoesWhat(result: PostMortemResult): string {
   );
   const crmNext = result.crm_intelligence?.recommended_next_action?.trim();
 
-  if (/NOT A PURCHASE/i.test(dealStatus(result))) {
+  if (facingFor(result).category === "not_a_deal") {
     lines.push(
       "- **Sales manager / AE (our side):** Keep this off the forecast. Send the introduction already promised, and do not open a recovery cadence."
     );
@@ -164,7 +173,7 @@ function whoDoesWhat(result: PostMortemResult): string {
       `- **${absent.name}${absent.role ? ` (${absent.role})` : ""}:** Missing decision-maker — get them in the room or on the thread before treating close date as real.`
     );
   }
-  if (crmNext) {
+  if (crmNext && !(facingFor(result).category === "not_a_deal" && /partnership/i.test(crmNext))) {
     lines.push(`- **Recommended next move:** ${recoveryActionNote(crmNext).replace(/\n/g, "; ")}`);
   }
 
@@ -172,6 +181,7 @@ function whoDoesWhat(result: PostMortemResult): string {
 }
 
 function whatToDo(result: PostMortemResult): string {
+  const notADeal = facingFor(result).category === "not_a_deal";
   const immediate = result.immediate_remediation ?? [];
   const plan = result.rescue_triage_plan ?? {
     immediate_0_30_days: [],
@@ -209,14 +219,26 @@ function whatToDo(result: PostMortemResult): string {
     sections.push(notes.map((note, i) => `${i + 1}. ${note.replace(/\n/g, "\n   ")}`).join("\n"));
   };
 
-  section("This week (0–7 days)", day0.length ? day0 : day30.slice(0, 2), "Set a dated next step with the champion.");
-  sections.push("");
-  section("30 days", day30, day30.length ? undefined : "Hold the weekly recovery motion from this week’s actions.");
-  if (day60.length) {
+  if (notADeal) {
+    const promised = uniqueRecoveryNotes(day0.length ? day0 : day30);
+    return promised.length
+      ? promised.map((note, i) => `${i + 1}. ${note.replace(/\n/g, "\n   ")}`).join("\n")
+      : "No purchase step was promised.";
+  }
+  section(
+    "This week (0–7 days)",
+    day0.length ? day0 : day30.slice(0, 2),
+    "Set a dated next step with the champion."
+  );
+  if (!notADeal) {
+    sections.push("");
+    section("30 days", day30, day30.length ? undefined : "Hold the weekly recovery motion from this week’s actions.");
+  }
+  if (!notADeal && day60.length) {
     sections.push("");
     section("60 days", day60);
   }
-  if (day90.length) {
+  if (!notADeal && day90.length) {
     sections.push("");
     section("90 days", day90);
   }
@@ -256,10 +278,13 @@ function historicalExtras(result: PostMortemResult): string[] {
 }
 
 function metricsBlock(result: PostMortemResult): string {
+  const facing = facingFor(result);
+  if (facing.category === "not_a_deal") {
+    return "- **Category:** Not a deal. Stall metrics are not applied.";
+  }
   const pi = result.proprietary_indices;
   const triage = result.live_deal_triage;
   const vs = result.viability_state;
-  const dt = result.deal_trajectory;
   const lines: string[] = [];
 
   if (pi) {
@@ -268,18 +293,12 @@ function metricsBlock(result: PostMortemResult): string {
     lines.push(`- **Dispersion:** ${pi.stakeholder_dispersion_index}/100`);
     lines.push(`- **Stall signals:** ${pi.dialogue_stall_score}/100`);
     if (pi.authority_gap_flag) lines.push("- **Authority gap:** Yes");
-    else if (/NOT A PURCHASE/i.test(dealStatus(result))) lines.push("- **Authority gap:** No");
   } else if (triage && triage.department_friction_index > 0) {
     lines.push(`- **Department friction index:** ${triage.department_friction_index}/100`);
   }
   if (vs) {
     lines.push(`- **Viability:** ${vs.state} (${vs.viability_score}/100)`);
   }
-  const facing = matrixFacing({
-    status: dealStatus(result),
-    trajectory: dt?.trajectory_type,
-    recoverabilityStatus: result.recoverability?.status,
-  });
   if (result.recoverability) {
     lines.push(`- **Recoverability:** ${facing.recoverabilityLabel}`);
   }
@@ -295,9 +314,10 @@ function metricsBlock(result: PostMortemResult): string {
  */
 export function formatCompressedCrmNotes(result: PostMortemResult): string {
   const client = result.client_name?.trim() || "Unknown account";
-  const status = String(
-    result.deal_classification?.status ?? result.deal_status ?? "STALLED"
-  );
+  const facing = facingFor(result);
+  const notADeal = facing.category === "not_a_deal";
+  const rawStatus = String(result.deal_classification?.status ?? result.deal_status ?? "STALLED");
+  const status = notADeal ? "Not a deal" : rawStatus;
   const rootIssue =
     result.live_deal_triage?.root_issue?.trim() ||
     result.executive_summary?.trim() ||
@@ -307,8 +327,8 @@ export function formatCompressedCrmNotes(result: PostMortemResult): string {
     result.live_deal_triage?.core_blocker?.trim() || coreBlocker(result);
   const veto = invisibleVetoHolder(result);
   const nextDate = nextActionDate(result);
-  const eqNote = result.equilibrium_analysis?.explanation?.trim();
-  const friction = frictionExtras(result);
+  const eqNote = notADeal ? "" : result.equilibrium_analysis?.explanation?.trim();
+  const friction = notADeal ? [] : frictionExtras(result);
   const history = historicalExtras(result);
 
   return [
@@ -316,7 +336,7 @@ export function formatCompressedCrmNotes(result: PostMortemResult): string {
     "",
     "### Exactly what's going on",
     `**Deal status:** ${status}`,
-    `**Forecast judgment:** ${forecastJudgment(result, status)}`,
+    `**Forecast judgment:** ${forecastJudgment(result, notADeal ? "NOT A PURCHASE" : rawStatus)}`,
     `**Root issue:** ${rootIssue}`,
     `**Core blocker:** ${blocker}`,
     `**Invisible veto / missing authority:** ${veto}`,
@@ -325,7 +345,7 @@ export function formatCompressedCrmNotes(result: PostMortemResult): string {
     "### Who needs to do what",
     whoDoesWhat(result),
     "",
-    "### People map (buying group)",
+    notADeal ? "### People" : "### People map (buying group)",
     peopleByRole(result),
     "",
     "### What to do",
@@ -341,17 +361,19 @@ export function formatCompressedCrmNotes(result: PostMortemResult): string {
     history.length ? "" : null,
     history.length ? "### Historical context" : null,
     history.length ? bulletList(history) : null,
-    "",
-    "---",
-    "",
-    formatMetricLegendMarkdown({
-      deal_risk_index: result.proprietary_indices?.deal_risk_index,
-      multi_department_friction: result.proprietary_indices?.multi_department_friction,
-      stakeholder_dispersion_index: result.proprietary_indices?.stakeholder_dispersion_index,
-      dialogue_stall_score: result.proprietary_indices?.dialogue_stall_score,
-      viability_score: result.viability_state?.viability_score,
-    }),
-    "",
+    notADeal ? null : "",
+    notADeal ? null : "---",
+    notADeal ? null : "",
+    notADeal
+      ? null
+      : formatMetricLegendMarkdown({
+          deal_risk_index: result.proprietary_indices?.deal_risk_index,
+          multi_department_friction: result.proprietary_indices?.multi_department_friction,
+          stakeholder_dispersion_index: result.proprietary_indices?.stakeholder_dispersion_index,
+          dialogue_stall_score: result.proprietary_indices?.dialogue_stall_score,
+          viability_score: result.viability_state?.viability_score,
+        }),
+    notADeal ? null : "",
     `*Generated by Lazarus Deal Recovery · ${new Date().toISOString().slice(0, 10)}*`,
   ]
     .filter((line) => line !== null)

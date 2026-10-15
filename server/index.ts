@@ -488,6 +488,7 @@ app.post(
             analysisJson: JSON.stringify({
               ...result,
               processed_at: processedAt,
+              relevance,
             }),
             dealMemorySummary: dealMemorySummary as Record<string, unknown>,
           })

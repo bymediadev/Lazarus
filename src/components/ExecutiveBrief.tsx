@@ -103,9 +103,10 @@ export default function ExecutiveBrief({ result }: Props) {
     status: typeof status === "string" ? status : undefined,
     trajectory: result.deal_trajectory?.trajectory_type,
     recoverabilityStatus: result.recoverability?.status,
+    relevanceLabel: result.relevance?.label,
   });
   const guidance = forecastGuidance({
-    status: typeof status === "string" ? status : undefined,
+    status: facing.category === "not_a_deal" ? "NOT A PURCHASE" : typeof status === "string" ? status : undefined,
     trajectory: result.deal_trajectory?.trajectory_type,
     recoverability: viability,
     viabilityState: result.viability_state?.state,
@@ -122,6 +123,7 @@ export default function ExecutiveBrief({ result }: Props) {
 
   return (
     <section className="executive-brief" aria-label="Executive brief">
+      {facing.category !== "not_a_deal" && (
       <ViabilityLineChart
         caption={cycleRows.length > 1 ? "Viability by calculation cycle" : "Viability"}
         points={
@@ -135,18 +137,19 @@ export default function ExecutiveBrief({ result }: Props) {
               : []
         }
       />
+      )}
 
       <div className="executive-brief-status">
-        <p className="executive-brief-status-label">Current Status: {status}</p>
+        <p className="executive-brief-status-label">Current Status: {facing.category === "not_a_deal" ? facing.categoryLabel : status}</p>
         {baselineParts.length > 0 && (
           <p className="executive-brief-commercial">Commercial Baseline: {baselineParts.join(" | ")}</p>
         )}
         <p className="executive-brief-status-metrics">
-          {viabilityDisplay.intermediate !== null && (
+          {facing.category !== "not_a_deal" && viabilityDisplay.intermediate !== null && (
             <span>Cycle 1 intermediate: {viabilityDisplay.intermediate}</span>
           )}
-          {viability !== undefined && <span>Final derived viability: {viability}</span>}
-          {risk !== undefined && (
+          {facing.category !== "not_a_deal" && viability !== undefined && <span>Final derived viability: {viability}</span>}
+          {facing.category !== "not_a_deal" && risk !== undefined && (
             <span>
               Deal Risk Index: {risk}
               {riskLabel ? ` (${riskLabel})` : ""}
@@ -159,7 +162,7 @@ export default function ExecutiveBrief({ result }: Props) {
         {result.recoverability?.explanation && (
           <p className="meta-line">{result.recoverability.explanation}</p>
         )}
-        {viabilityDisplay.note && <p className="meta-line">{viabilityDisplay.note}</p>}
+        {facing.category !== "not_a_deal" && viabilityDisplay.note && <p className="meta-line">{viabilityDisplay.note}</p>}
         {convergence && <p className="meta-line">{convergence}</p>}
         {result.report_validation && !result.report_validation.passed && (
           <p className="meta-line">

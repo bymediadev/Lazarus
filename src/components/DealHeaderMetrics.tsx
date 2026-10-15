@@ -8,6 +8,8 @@ interface Props {
   viabilityScore?: number;
   intermediateViability?: number;
   recoverability?: PostMortemResult["recoverability"];
+  /** When false, stall and risk scores stay off the snapshot. */
+  showScorecard?: boolean;
 }
 
 function MetricCard({
@@ -35,7 +37,18 @@ export default function DealHeaderMetrics({
   viabilityScore,
   intermediateViability,
   recoverability,
+  showScorecard = true,
 }: Props) {
+  if (!showScorecard) {
+    return (
+      <section className="deal-header-metrics" aria-label="Primary deal metrics">
+        <div className="deal-header-metrics-top">
+          <h2 className="deal-header-metrics-title">Forecast snapshot</h2>
+        </div>
+        <p className="deal-metric-detail-text">Not a deal. Stall metrics are not applied.</p>
+      </section>
+    );
+  }
   const driClass = driTagClass(pi.risk_tier);
   const legendScores = {
     deal_risk_index: pi.deal_risk_index,

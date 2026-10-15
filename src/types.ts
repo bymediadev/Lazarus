@@ -439,6 +439,8 @@ export interface PostMortemResult {
     passed: boolean;
     checks: { id: string; passed: boolean; detail: string }[];
   };
+  /** Sales-relevance gate. A not_sales document is not a deal even if analysis was forced. */
+  relevance?: { label?: string; reason?: string };
 }
 
 function clampScore(n: unknown, fallback = 50): number {

@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { recoveryActionLines } from "../lib/recoveryPlan";
-import { canonicalImmediateActions } from "../lib/reportMatrix";
+import { canonicalImmediateActions, matrixFacing } from "../lib/reportMatrix";
 import { forecastGuidance } from "../lib/forecastCall";
 import { formatCompressedCrmNotes } from "../lib/crmNotes";
 import { PostMortemResult, StakeholderSignal } from "../types";
@@ -64,9 +64,15 @@ export default function FastFactsPanel({
   const [pushError, setPushError] = useState<string | null>(null);
 
   const status = result.deal_classification?.status ?? "UNKNOWN";
+  const facing = matrixFacing({
+    status,
+    trajectory: result.deal_trajectory?.trajectory_type,
+    recoverabilityStatus: result.recoverability?.status,
+    relevanceLabel: result.relevance?.label,
+  });
   const trajectory = result.deal_trajectory?.trajectory_type ?? "";
   const guidance = forecastGuidance({
-    status,
+    status: facing.category === "not_a_deal" ? "NOT A PURCHASE" : status,
     trajectory,
     recoverability: result.recoverability_score ?? result.viability_state?.viability_score,
     viabilityState: result.viability_state?.state,
@@ -75,7 +81,10 @@ export default function FastFactsPanel({
   const vetoPeople = opposing(result);
   const missingPeople = absentPeople(result);
   const conditionStakeholders = conditionPeople(result);
-  const saveSteps = canonicalImmediateActions(result).slice(0, 1);
+  const saveSteps =
+    facing.category === "not_a_deal"
+      ? canonicalImmediateActions(result)
+      : canonicalImmediateActions(result).slice(0, 1);
 
   const noteBody = formatCompressedCrmNotes(result);
 
@@ -115,7 +124,7 @@ export default function FastFactsPanel({
       <article className="card card-amber concise-card fast-facts-card">
         <h2 className="card-title">What this deal is</h2>
         <div className="card-body">
-          <p className="fast-facts-status">{status}</p>
+          <p className="fast-facts-status">{facing.category === "not_a_deal" ? facing.categoryLabel : status}</p>
           <p>{guidance.line}</p>
           <p>
             <strong>Core blocker:</strong> {blocker}
@@ -198,7 +207,9 @@ export default function FastFactsPanel({
                   </li>
                 ))}
               </ol>
-              <p className="meta-line">The full recovery plan is in the brief above. This block is the note to copy.</p>
+              {facing.category !== "not_a_deal" && (
+                <p className="meta-line">The full recovery plan is in the brief above. This block is the note to copy.</p>
+              )}
             </>
           )}
         </div>

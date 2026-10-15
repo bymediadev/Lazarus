@@ -13,7 +13,8 @@ import { statusFromTrajectory, assertAnalysisSchema } from "../server/gemini.ts"
 import { alignBlockerNarrative } from "../src/lib/blockerNarrative.ts";
 import { commercialBaselineFromText } from "../src/lib/commercialBaseline.ts";
 import { DEFER_FORECAST_LINE, forecastGuidance, NON_VIABLE_FORECAST_LINE, NOT_A_PURCHASE_FORECAST_LINE } from "../src/lib/forecastCall.ts";
-import { canonicalImmediateActions, classifyRecoverability, classifyRisk, matrixFacing, stalledHeadline, validateReportMatrix } from "../src/lib/reportMatrix.ts";
+import { canonicalImmediateActions, classifyRecoverability, classifyRisk, matrixFacing, promisedRelationshipSteps, publishesStallMetrics, reportCategory, stalledHeadline, validateReportMatrix } from "../src/lib/reportMatrix.ts";
+import { formatCompressedCrmNotes } from "../src/lib/crmNotes.ts";
 import { mergeOverlappingQuotes } from "../src/lib/evidenceQuotes.ts";
 import { readFileSync } from "fs";
 
@@ -204,6 +205,10 @@ if (sPi.deal_risk_index < 45) {
 }
 if (!sPi.authority_gap_flag) {
   console.error("FAIL: Sarah/Mark should flag authority gap");
+  failed = true;
+}
+if (sPi.dialogue_stall_score <= 0 || sPi.deal_risk_index <= 0) {
+  console.error("FAIL: Sarah/Mark still uses deal risk and stall", sPi);
   failed = true;
 }
 
@@ -1127,6 +1132,7 @@ if (soleOwner.label !== "Economic owner" || soleOwner.key === "suppressed champi
 
 const channelCall = [
   "PROSPECT: if you think that I'm going to be your client, no way. I might be the referral to all of you.",
+  "PROSPECT: What I'll do is, I'm going to send you that invitation. To that group.",
   "SELLER: His name is [REFERRAL PARTNER]. I'll put you into a warm connection with him. I'm not here to like close you. You can be a great channel partner.",
 ].join("\n");
 if (!isNotAPurchase(channelCall)) {
@@ -1204,8 +1210,87 @@ const channelFacing = matrixFacing({
   trajectory: "DEFERRED (recoverable)",
   recoverabilityStatus: "FLAT_NO",
 });
-if (channelFacing.trajectoryLabel.toLowerCase().includes("recoverable") || channelFacing.recoverabilityLabel !== "Flat no as a purchase") {
-  console.error("FAIL: The report should not keep a recoverable trajectory label", channelFacing);
+if (
+  channelFacing.category !== "not_a_deal" ||
+  channelFacing.showScorecard ||
+  channelFacing.trajectoryLabel !== "Not a deal" ||
+  channelFacing.recoverabilityLabel !== "Not a deal"
+) {
+  console.error("FAIL: The report should say Not a deal and hide the scorecard", channelFacing);
+  failed = true;
+}
+const channelSteps = promisedRelationshipSteps(channelCall, "[REDACTED NAME]");
+if (
+  channelSteps.length !== 3 ||
+  !channelSteps.some((step) => /invitation/i.test(step)) ||
+  channelSteps.some((step) => /partnership/i.test(step))
+) {
+  console.error("FAIL: A referral call keeps the promised steps, including the networking invite", channelSteps);
+  failed = true;
+}
+const channelNotes = formatCompressedCrmNotes({
+  client_name: "Referral call",
+  deal_status: "NOT A PURCHASE",
+  deal_classification: { status: "NOT A PURCHASE", confidence_level: 70, recoverability_score: 0 },
+  executive_summary: "This conversation never opened a purchase.",
+  proprietary_indices: {
+    deal_risk_index: 79,
+    risk_tier: "CRITICAL",
+    multi_department_friction: 0,
+    stakeholder_dispersion_index: 0,
+    dialogue_stall_score: 43,
+    authority_gap_flag: false,
+    explanations: {},
+  },
+  viability_state: { state: "DEFERRED VIABILITY", viability_score: 0, equilibrium_derivation: "", derivation_components: { intent_strength: 0, constraint_pressure: 0, structural_lock_in_impact: 0, timing_accessibility: 0 } },
+  recoverability: { status: "FLAT_NO", explanation: "Not a purchase." },
+  equilibrium_analysis: { state: "OPEN", dominating_forces: [], equilibrium_breaker: "", explanation: "Why it's stuck should stay off this paste." },
+  crm_intelligence: { recommended_next_action: "Explore a channel partnership." },
+  immediate_remediation: channelSteps,
+  rescue_triage_plan: { immediate_0_30_days: [], near_term_30_90_days: ["Hold the weekly recovery motion from this week’s actions."], long_term_90_plus_days: [] },
+  stakeholders: [],
+});
+if (
+  !channelNotes.includes("Not a deal") ||
+  !channelNotes.includes("invitation") ||
+  /CRITICAL|Stall signals|weekly recovery|partnership|Why it's stuck|buying group|NOT A PURCHASE/i.test(channelNotes)
+) {
+  console.error("FAIL: A referral overview stays out of stalled-deal metrics", channelNotes);
+  failed = true;
+}
+const wordCategory = reportCategory({
+  status: "STALLED — HIGH RISK",
+  trajectory: "DEFERRED (recoverable)",
+  relevanceLabel: "not_sales",
+});
+const wordNotes = formatCompressedCrmNotes({
+  client_name: "Recipe",
+  deal_status: "STALLED — HIGH RISK",
+  relevance: { label: "not_sales", reason: "This is a Word document, not a purchase." },
+  proprietary_indices: {
+    deal_risk_index: 79,
+    risk_tier: "CRITICAL",
+    multi_department_friction: 28,
+    stakeholder_dispersion_index: 12,
+    dialogue_stall_score: 43,
+    authority_gap_flag: true,
+    explanations: {},
+  },
+  viability_state: { state: "DEFERRED VIABILITY", viability_score: 0, equilibrium_derivation: "", derivation_components: { intent_strength: 0, constraint_pressure: 0, structural_lock_in_impact: 0, timing_accessibility: 0 } },
+  immediate_remediation: [],
+  stakeholders: [],
+});
+if (wordCategory !== "not_a_deal" || /CRITICAL|Stall signals|Deal Risk Score/i.test(wordNotes) || !wordNotes.includes("Not a deal")) {
+  console.error("FAIL: A non-sales document stays Not a deal", wordCategory, wordNotes);
+  failed = true;
+}
+const stalledCategory = reportCategory({
+  status: "STALLED — HIGH RISK",
+  trajectory: "DEFERRED (recoverable)",
+  recoverabilityStatus: "RECOVERABLE",
+});
+if (stalledCategory !== "deal_stalled" || !publishesStallMetrics(stalledCategory)) {
+  console.error("FAIL: A real stalled deal still publishes stall metrics", stalledCategory);
   failed = true;
 }
 const channelMatrix = validateReportMatrix({
