@@ -1,0 +1,15 @@
+{
+  "name": "Lazarus Deal Recovery",
+  "user": "ubuntu",
+  "install": "export PATH=\"$(ls -d $HOME/.nvm/versions/node/*/bin | sort -V | tail -1):$PATH\" && npm ci && { [ -f .env ] || cp .env.example .env; }",
+  "terminals": [
+    {
+      "name": "dev",
+      "command": "export PATH=\"$(ls -d $HOME/.nvm/versions/node/*/bin | sort -V | tail -1):$PATH\" && npm run dev"
+    }
+  ],
+  "ports": [
+    { "name": "UI (Vite)", "port": 5173 },
+    { "name": "API (Express)", "port": 3001 }
+  ]
+}
