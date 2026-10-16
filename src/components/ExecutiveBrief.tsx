@@ -1,7 +1,7 @@
 import ViabilityLineChart from "./ViabilityLineChart";
 import { readConstraint } from "../lib/constraintReading";
 import { mergeOverlappingQuotes } from "../lib/evidenceQuotes";
-import { commercialBaselineFromText } from "../lib/commercialBaseline";
+import { presentCommercialBaseline } from "../lib/commercialBaseline";
 import { forecastGuidance } from "../lib/forecastCall";
 import { canonicalImmediateActions, formatRecoverability, matrixFacing } from "../lib/reportMatrix";
 import { convergenceExplanation, viabilityCycleDisplay } from "../lib/convergenceNote";
@@ -73,21 +73,16 @@ export default function ExecutiveBrief({ result }: Props) {
   const viability = result.viability_state?.viability_score ?? result.recoverability_score;
   const risk = result.proprietary_indices?.deal_risk_index;
   const riskTier = result.proprietary_indices?.risk_tier;
-  const baseline =
-    result.commercial_baseline ??
-    commercialBaselineFromText(
-      [
-        result.executive_summary ?? "",
-        ...(result.causal_forces ?? []).map((force) => `${force.factor} ${force.evidence}`),
-        ...(result.stakeholders ?? []).map((person) => `${person.name} ${person.role ?? ""}`),
-        ...(result.immediate_remediation ?? []),
-      ].join("\n")
-    );
+  const baseline = presentCommercialBaseline({
+    transcript: result.source_transcript,
+    stored: result.commercial_baseline,
+    diagnosticBudget: result.diagnostic_profile?.budget,
+  });
   const baselineParts = [
-    baseline.fee,
+    baseline.fee ?? "not established",
     baseline.owner ? `Account Owner: ${baseline.owner}` : null,
     baseline.target ? `Baseline Target: ${baseline.target}` : null,
-  ].filter((part): part is string => Boolean(part));
+  ];
   const riskLabel = riskTier ? riskTier.charAt(0) + riskTier.slice(1).toLowerCase() : null;
   const prose = stallProse(result);
   const allQuotes = evidenceQuotes(result);
@@ -104,9 +99,16 @@ export default function ExecutiveBrief({ result }: Props) {
     trajectory: result.deal_trajectory?.trajectory_type,
     recoverabilityStatus: result.recoverability?.status,
     relevanceLabel: result.relevance?.label,
+    transcript: result.source_transcript,
   });
   const guidance = forecastGuidance({
-    status: facing.category === "not_a_deal" ? "NOT A PURCHASE" : typeof status === "string" ? status : undefined,
+    status: facing.category === "unresolved"
+      ? "MOTION NOT ESTABLISHED"
+      : facing.offForecast
+        ? "NOT A PURCHASE"
+        : typeof status === "string"
+          ? status
+          : undefined,
     trajectory: result.deal_trajectory?.trajectory_type,
     recoverability: viability,
     viabilityState: result.viability_state?.state,
@@ -123,7 +125,7 @@ export default function ExecutiveBrief({ result }: Props) {
 
   return (
     <section className="executive-brief" aria-label="Executive brief">
-      {facing.category !== "not_a_deal" && (
+      {!facing.offForecast && (
       <ViabilityLineChart
         caption={cycleRows.length > 1 ? "Viability by calculation cycle" : "Viability"}
         points={
@@ -140,16 +142,19 @@ export default function ExecutiveBrief({ result }: Props) {
       )}
 
       <div className="executive-brief-status">
-        <p className="executive-brief-status-label">Current Status: {facing.category === "not_a_deal" ? facing.categoryLabel : status}</p>
-        {baselineParts.length > 0 && (
-          <p className="executive-brief-commercial">Commercial Baseline: {baselineParts.join(" | ")}</p>
-        )}
+        <p className="executive-brief-status-label">Current Status: {facing.offForecast ? facing.categoryLabel : status}</p>
+        <p className="executive-brief-commercial">Commercial Baseline: {baselineParts.filter(Boolean).join(" | ")}</p>
+        {(baseline.context ?? []).map((item) => (
+          <p key={`${item.kind}-${item.label}`} className="meta-line">
+            {item.kind === "seller_revenue" ? "Seller revenue" : "Amount in the call"}: {item.label}. {item.note}
+          </p>
+        ))}
         <p className="executive-brief-status-metrics">
-          {facing.category !== "not_a_deal" && viabilityDisplay.intermediate !== null && (
+          {!facing.offForecast && viabilityDisplay.intermediate !== null && (
             <span>Cycle 1 intermediate: {viabilityDisplay.intermediate}</span>
           )}
-          {facing.category !== "not_a_deal" && viability !== undefined && <span>Final derived viability: {viability}</span>}
-          {facing.category !== "not_a_deal" && risk !== undefined && (
+          {!facing.offForecast && viability !== undefined && <span>Final derived viability: {viability}</span>}
+          {!facing.offForecast && risk !== undefined && (
             <span>
               Deal Risk Index: {risk}
               {riskLabel ? ` (${riskLabel})` : ""}
@@ -162,7 +167,7 @@ export default function ExecutiveBrief({ result }: Props) {
         {result.recoverability?.explanation && (
           <p className="meta-line">{result.recoverability.explanation}</p>
         )}
-        {facing.category !== "not_a_deal" && viabilityDisplay.note && <p className="meta-line">{viabilityDisplay.note}</p>}
+        {!facing.offForecast && viabilityDisplay.note && <p className="meta-line">{viabilityDisplay.note}</p>}
         {convergence && <p className="meta-line">{convergence}</p>}
         {result.report_validation && !result.report_validation.passed && (
           <p className="meta-line">
@@ -182,6 +187,38 @@ export default function ExecutiveBrief({ result }: Props) {
           <p><strong>Budget:</strong> {result.diagnostic_profile.budget}</p>
           <p><strong>Urgency and timeline:</strong> {result.diagnostic_profile.urgency}</p>
           <p><strong>Missed process step:</strong> {result.diagnostic_profile.missedProcess}</p>
+          {(result.diagnostic_profile.said ?? []).length > 0 && (
+            <>
+              <h2>What was said</h2>
+              {(result.diagnostic_profile.said ?? []).map((line) => (
+                <p key={line}>{line}</p>
+              ))}
+            </>
+          )}
+          {result.diagnostic_profile.implied && (
+            <>
+              <h2>What that implies</h2>
+              <p>{result.diagnostic_profile.implied}</p>
+            </>
+          )}
+          {result.diagnostic_profile.unknown && (
+            <>
+              <h2>Unknown</h2>
+              <p>{result.diagnostic_profile.unknown}</p>
+            </>
+          )}
+          {result.diagnostic_profile.falseRead && (
+            <>
+              <h2>False read</h2>
+              <p>{result.diagnostic_profile.falseRead}</p>
+            </>
+          )}
+          {result.diagnostic_profile.restart && (
+            <>
+              <h2>Restart</h2>
+              <p>{result.diagnostic_profile.restart}</p>
+            </>
+          )}
         </div>
       )}
 

@@ -11,11 +11,13 @@ import {
 } from "../server/scoring.ts";
 import { statusFromTrajectory, assertAnalysisSchema } from "../server/gemini.ts";
 import { alignBlockerNarrative } from "../src/lib/blockerNarrative.ts";
-import { commercialBaselineFromText } from "../src/lib/commercialBaseline.ts";
+import { commercialBaselineFromText, presentCommercialBaseline } from "../src/lib/commercialBaseline.ts";
 import { DEFER_FORECAST_LINE, forecastGuidance, NON_VIABLE_FORECAST_LINE, NOT_A_PURCHASE_FORECAST_LINE } from "../src/lib/forecastCall.ts";
 import { canonicalImmediateActions, classifyRecoverability, classifyRisk, diagnosticProfile, matrixFacing, promisedRelationshipSteps, publishesStallMetrics, purchaseMotion, recommendedMoveLine, reportCategory, stalledHeadline, validateReportMatrix } from "../src/lib/reportMatrix.ts";
 import { formatCompressedCrmNotes } from "../src/lib/crmNotes.ts";
 import { mergeOverlappingQuotes } from "../src/lib/evidenceQuotes.ts";
+import { lifecycleDelta, lifecyclePhaseFromStatus, publishesLifecycleScores, scoreMovement } from "../server/meDeals.ts";
+import { storedReportColumns } from "../server/reportSanitize.ts";
 import { readFileSync } from "fs";
 
 // Transcript 1 — velocity / closed-won (pre-approved budget must NOT crush viability)
@@ -853,6 +855,162 @@ if (northlineBaseline.target !== "Post Month-End Access") {
   failed = true;
 }
 
+function feeMentions(baseline, pattern) {
+  return pattern.test(baseline.fee ?? "") || (baseline.context ?? []).some((item) => pattern.test(item.label));
+}
+const moneyCases = [
+  ["fixtures/daniel_referral_transcript.txt", /1,000,000|500,000/, "seller_revenue"],
+  ["fixtures/transcript_3_federal_audit.txt", /240,000|200,000/, "rejected"],
+  ["fixtures/cybercore_messy_paste.txt", /1,200,000|45,000|150,000/, "rejected"],
+  ["fixtures/transcript_1_velocity_deal.txt", null, null],
+];
+for (const [file, rejectedPattern, kind] of moneyCases) {
+  const baseline = commercialBaselineFromText(readFileSync(file, "utf-8"));
+  if (file.endsWith("transcript_1_velocity_deal.txt")) {
+    if (!baseline.fee?.includes("320,000")) {
+      console.error("FAIL: A supported buyer budget stays on the commercial baseline", baseline);
+      failed = true;
+    }
+    continue;
+  }
+  if (baseline.fee && rejectedPattern.test(baseline.fee)) {
+    console.error("FAIL: An unqualified amount is on the commercial baseline", file, baseline.fee);
+    failed = true;
+  }
+  if (!feeMentions(baseline, rejectedPattern) || !(baseline.context ?? []).some((item) => item.kind === kind && rejectedPattern.test(item.label))) {
+    console.error("FAIL: The unqualified amount should stay visible as context", file, baseline);
+    failed = true;
+  }
+}
+const bareBaseline = commercialBaselineFromText(
+  "PROSPECT: We have a budget of $40,000. I am not going to be your client.\nSELLER: Understood."
+);
+if (bareBaseline.fee?.includes("40,000") || !(bareBaseline.context ?? []).some((item) => item.label.includes("40,000"))) {
+  console.error("FAIL: A refused dollar stays off the qualified baseline", bareBaseline);
+  failed = true;
+}
+const gongBaseline = commercialBaselineFromText("Me: Our customers do about $2 million.\nThem: I am not going to be your client.");
+if (gongBaseline.fee?.includes("2,000,000") || !(gongBaseline.context ?? []).some((item) => item.kind === "seller_revenue" && item.label.includes("2,000,000"))) {
+  console.error("FAIL: Speaker-ambiguous revenue stays off the qualified baseline", gongBaseline);
+  failed = true;
+}
+const nameBaseline = commercialBaselineFromText(
+  "Jordan: The downtime is costing you $45,000 per day.\nCasey: Pull the plug. We signed with the other vendor yesterday."
+);
+if (nameBaseline.fee?.includes("45,000")) {
+  console.error("FAIL: An unassigned cost figure stays off the qualified baseline", nameBaseline);
+  failed = true;
+}
+const storedLie = presentCommercialBaseline({
+  stored: { fee: "$1,000,000 Annual Platform Fee", owner: null, target: null },
+  diagnosticBudget: "Consultation budget was not qualified. Budget was mentioned, but not as this person's ability or willingness to pay for the consultation.",
+});
+if (storedLie.fee !== null) {
+  console.error("FAIL: A saved fee cannot outvote a budget line that rejected it", storedLie);
+  failed = true;
+}
+const storedKept = presentCommercialBaseline({
+  stored: { fee: "$1,000,000 Annual Platform Fee", owner: "Sarah Chen", target: "Post Month-End Access" },
+  diagnosticBudget: 'Budget was qualified for this purchase. Evidence: "Budget-wise, $280K is what we modeled"',
+});
+if (!storedKept.fee?.includes("280,000") || storedKept.fee.includes("1,000,000") || storedKept.owner !== "Sarah Chen") {
+  console.error("FAIL: A saved run keeps the qualified buyer amount and drops the other figure", storedKept);
+  failed = true;
+}
+const storedNorthline = presentCommercialBaseline({
+  stored: { fee: "$280,000 Annual Platform Fee", owner: "Sarah Chen", target: "Post Month-End Access" },
+});
+if (storedNorthline.fee !== "$280,000 Annual Platform Fee") {
+  console.error("FAIL: A saved stalled deal with no budget rejection keeps its purchase value", storedNorthline);
+  failed = true;
+}
+const reopenedContext = presentCommercialBaseline({
+  stored: {
+    fee: "$1,000,000 Annual Platform Fee",
+    owner: null,
+    target: null,
+    context: [{ kind: "seller_revenue", label: "$1,000,000", note: "Not the purchase value." }],
+  },
+  diagnosticBudget: "Consultation budget was not qualified. Budget was mentioned, but not as this person's ability or willingness to pay for the consultation.",
+});
+if (
+  reopenedContext.fee !== null ||
+  !reopenedContext.context?.some((item) => item.kind === "seller_revenue" && item.label === "$1,000,000")
+) {
+  console.error("FAIL: A saved classification stays on the brief after the transcript is gone", reopenedContext);
+  failed = true;
+}
+const noInvention = presentCommercialBaseline({
+  stored: { fee: "$1,000,000 Annual Platform Fee", owner: null, target: null },
+  diagnosticBudget: "Consultation budget was not qualified.",
+});
+if (noInvention.fee !== null || (noInvention.context ?? []).length !== 0) {
+  console.error("FAIL: A rejected stored fee does not become a made-up context line", noInvention);
+  failed = true;
+}
+const sideAmount = commercialBaselineFromText(
+  "SELLER: Is the purchase still open?\nBUYER: We spend $2,000,000 on ads. Dave still has to approve the platform."
+);
+if (sideAmount.fee != null || !sideAmount.context?.some((item) => item.label === "$2,000,000")) {
+  console.error("FAIL: A buyer dollar that is not this purchase stays off the baseline", sideAmount);
+  failed = true;
+}
+const besideFee = commercialBaselineFromText(
+  "SC: Last week you mentioned the $280,000 annual platform fee was in range.\nMO: The renovation was $90,000. Budget-wise, $280K is what we modeled."
+);
+if (!besideFee.fee?.includes("280,000") || besideFee.fee.includes("90,000") || !besideFee.context?.some((item) => item.label === "$90,000")) {
+  console.error("FAIL: A side amount does not replace the purchase value", besideFee);
+  failed = true;
+}
+const savedMoney = storedReportColumns({
+  dealStatus: "NOT A PURCHASE",
+  analysisJson: {
+    commercial_baseline: {
+      fee: null,
+      owner: null,
+      target: null,
+      context: [{ kind: "seller_revenue", label: "$1,000,000", note: "Not the purchase value." }],
+    },
+    source_transcript: "SELLER: They're probably doing about $1 million in revenue annually.",
+    evidence: "a quote that must not be stored",
+  },
+});
+const savedContext = savedMoney.analysis_json?.commercial_baseline?.context ?? [];
+if (
+  savedMoney.transcript_text !== null ||
+  savedMoney.analysis_json?.source_transcript != null ||
+  savedMoney.analysis_json?.evidence != null ||
+  savedContext[0]?.kind !== "seller_revenue" ||
+  savedContext[0]?.label !== "$1,000,000"
+) {
+  console.error("FAIL: The money classification is kept and the transcript is not", savedMoney);
+  failed = true;
+}
+const scoreOnly = lifecycleDelta({
+  olderPhase: "stalled_high_risk",
+  newerPhase: "stalled_recoverable",
+  olderViability: 0,
+  newerViability: 53,
+  olderRisk: 67,
+  newerRisk: 64,
+});
+if (scoreOnly.direction !== "flat" || /improved/i.test(scoreOnly.summary) || !/stage unchanged/.test(scoreOnly.summary) || !/\+53/.test(scoreOnly.summary)) {
+  console.error("FAIL: A viability change does not move the stage", scoreOnly);
+  failed = true;
+}
+const stageMoved = lifecycleDelta({
+  olderPhase: "stalled_recoverable",
+  newerPhase: "closed_won",
+  olderViability: 53,
+  newerViability: 53,
+  olderRisk: 64,
+  newerRisk: 64,
+});
+if (stageMoved.direction !== "improved" || !/stage advanced/.test(stageMoved.summary)) {
+  console.error("FAIL: A real stage change is still reported", stageMoved);
+  failed = true;
+}
+
 const riskInputs = [];
 for (const viability_score of [0, 21, 52, 100]) {
   for (const constraint_pressure of [0, 40, 41, 80, 90]) {
@@ -1254,9 +1412,10 @@ if (
 }
 const channelSteps = promisedRelationshipSteps(channelCall, "[REDACTED NAME]");
 if (
-  channelSteps.length !== 3 ||
+  channelSteps.length !== 2 ||
   !channelSteps.some((step) => /invitation/i.test(step)) ||
-  channelSteps.some((step) => /partnership/i.test(step))
+  !channelSteps.some((step) => /introduction already promised/i.test(step)) ||
+  channelSteps.some((step) => /framework link|partnership/i.test(step))
 ) {
   console.error("FAIL: A referral call keeps the promised steps, including the networking invite", channelSteps);
   failed = true;
@@ -1370,6 +1529,44 @@ if (!/be the client to the 40/i.test(wrappedRefusal.buyingSignals)) {
   console.error("FAIL: A wrapped refusal should stay one quote", wrappedRefusal);
   failed = true;
 }
+const budgetAndRefusal = [
+  "PROSPECT: I am not going to be your client. I might be the referral.",
+  "PROSPECT: We can talk budget some other time.",
+].join("\n");
+if (purchaseMotion(budgetAndRefusal).motion !== "not_a_deal" || isNotAPurchase(budgetAndRefusal) === false) {
+  console.error("FAIL: The word budget does not open a purchase after a client-role refusal", purchaseMotion(budgetAndRefusal));
+  failed = true;
+}
+const unlabeledCall = "I will not be your client. We can talk budget later.";
+const unlabeledMotion = purchaseMotion(unlabeledCall);
+const unlabeledCategory = reportCategory({
+  status: "STALLED — HIGH RISK",
+  trajectory: "DEFERRED (recoverable)",
+  transcript: unlabeledCall,
+});
+if (unlabeledMotion.motion !== "unresolved" || unlabeledCategory !== "unresolved" || publishesStallMetrics(unlabeledCategory)) {
+  console.error("FAIL: An unlabeled transcript stays unresolved and publishes no stall metrics", unlabeledMotion, unlabeledCategory);
+  failed = true;
+}
+if (!/own service/i.test(referralDiag.falseRead) || !/does not reopen/i.test(referralDiag.restart)) {
+  console.error("FAIL: A referral call names the false read and refuses a restart", referralDiag);
+  failed = true;
+}
+if (/500,000|\$1 million/.test(referralDiag.budget)) {
+  console.error("FAIL: Seller revenue is not the buyer's budget", referralDiag.budget);
+  failed = true;
+}
+const repWin = readFileSync("fixtures/rep_claims_win_transcript.txt", "utf-8");
+const repWinDiag = diagnosticProfile(repWin);
+if (!/closed-won/i.test(repWinDiag.falseRead) || !/nothing is signed/i.test(repWinDiag.falseRead)) {
+  console.error("FAIL: A rep's closed-won claim stays apart from the buyer's words", repWinDiag.falseRead);
+  failed = true;
+}
+const sarahRestart = diagnosticProfile(sarahMarkTranscript);
+if (!/Dave buys in/i.test(sarahRestart.restart)) {
+  console.error("FAIL: A stalled deal restarts only on the condition the buyer named", sarahRestart.restart);
+  failed = true;
+}
 const sarahDiag = diagnosticProfile(sarahMarkTranscript);
 if (
   sarahDiag.budget.startsWith("MISSING") ||
@@ -1379,6 +1576,124 @@ if (
   !/interest in this purchase/i.test(sarahDiag.buyingSignals)
 ) {
   console.error("FAIL: A real stalled deal keeps its budget, timeline, and buying signal", sarahDiag);
+  failed = true;
+}
+const userFiles = [
+  ["fixtures/successful_deal_transcript.txt", "deal_closed"],
+  ["fixtures/transcript_1_velocity_deal.txt", "deal_closed"],
+  ["fixtures/cybercore_discovery_call.txt", "deal_closed"],
+  ["fixtures/sarah_cold_call_transcript.txt", "unresolved"],
+  ["fixtures/transcript_3_federal_audit.txt", "deal_open"],
+  ["fixtures/failed_deal_transcript.txt", "deal_closed"],
+];
+for (const [file, expected] of userFiles) {
+  const text = readFileSync(file, "utf-8");
+  const motion = purchaseMotion(text).motion;
+  if (motion !== expected) {
+    console.error(`FAIL: ${file} should be ${expected}, got ${motion}`);
+    failed = true;
+  }
+}
+const coldCategory = reportCategory({
+  status: "STALLED — HIGH RISK",
+  trajectory: "DEFERRED (recoverable)",
+  transcript: readFileSync("fixtures/sarah_cold_call_transcript.txt", "utf-8"),
+});
+if (coldCategory !== "unresolved" || publishesStallMetrics(coldCategory)) {
+  console.error("FAIL: A first call that only books a look does not get stall metrics", coldCategory);
+  failed = true;
+}
+const repDenied = reportCategory({
+  status: "CLOSED WON",
+  trajectory: "VALIDATED / VELOCITY",
+  transcript: repWin,
+});
+if (repDenied === "deal_closed") {
+  console.error("FAIL: The rep's closed-won label does not survive the buyer's nothing-is-signed");
+  failed = true;
+}
+const velocityDiag = diagnosticProfile(readFileSync("fixtures/transcript_1_velocity_deal.txt", "utf-8"));
+if (!/320,000/.test(velocityDiag.budget)) {
+  console.error("FAIL: A closed deal keeps the buyer's stated budget", velocityDiag.budget);
+  failed = true;
+}
+const auditDiag = diagnosticProfile(readFileSync("fixtures/transcript_3_federal_audit.txt", "utf-8"));
+if (/Nothing over \$200K gets signed/.test(auditDiag.budget)) {
+  console.error("FAIL: A spending cap is not a qualified budget", auditDiag.budget);
+  failed = true;
+}
+const cyberDiag = diagnosticProfile(readFileSync("fixtures/cybercore_discovery_call.txt", "utf-8"));
+if (/45,000|per day/.test(cyberDiag.budget)) {
+  console.error("FAIL: The seller's cost-of-problem figure is not the buyer's budget", cyberDiag.budget);
+  failed = true;
+}
+const coldText = readFileSync("fixtures/sarah_cold_call_transcript.txt", "utf-8");
+const coldDiag = diagnosticProfile(coldText);
+if (
+  purchaseMotion(coldText).motion !== "unresolved" ||
+  !/never opened a purchase/i.test(coldDiag.falseRead) ||
+  publishesStallMetrics(reportCategory({ status: "STALLED — HIGH RISK", transcript: coldText }))
+) {
+  console.error("FAIL: A labeled call with no purchase names that false read and hides stall metrics", coldDiag.falseRead);
+  failed = true;
+}
+const bareRefusal = "PROSPECT: We have a budget of $40,000. I am not going to be your client.\nSELLER: Understood.";
+const bareDiag = diagnosticProfile(bareRefusal);
+if (
+  purchaseMotion(bareRefusal).motion !== "not_a_deal" ||
+  /qualified for this purchase/i.test(bareDiag.budget) ||
+  /promised link/i.test(bareDiag.restart) ||
+  promisedRelationshipSteps(bareRefusal).length !== 0 ||
+  /exchange of introductions|referral relationship/i.test(`${bareDiag.implied} ${bareDiag.buyingSignals}`)
+) {
+  console.error("FAIL: A refusal with a dollar amount does not qualify budget or invent a link", bareDiag, promisedRelationshipSteps(bareRefusal));
+  failed = true;
+}
+const gongPaste = "Me: Our customers do about $2 million.\nThem: I am not going to be your client.";
+const gongDiag = diagnosticProfile(gongPaste);
+if (purchaseMotion(gongPaste).motion !== "unresolved" || /qualified for this purchase|2 million/i.test(gongDiag.budget)) {
+  console.error("FAIL: Me and Them stay unresolved and do not qualify revenue", purchaseMotion(gongPaste), gongDiag.budget);
+  failed = true;
+}
+const firstNames = "Jordan: The downtime is costing you $45,000 per day.\nCasey: Pull the plug. We signed with the other vendor yesterday.";
+const firstDiag = diagnosticProfile(firstNames);
+if (purchaseMotion(firstNames).motion !== "unresolved" || /qualified for this purchase|45,000/i.test(firstDiag.budget)) {
+  console.error("FAIL: Two first names with no role stay unresolved", purchaseMotion(firstNames), firstDiag.budget);
+  failed = true;
+}
+const sarahClosed = reportCategory({
+  status: "CLOSED WON",
+  trajectory: "VALIDATED / VELOCITY",
+  transcript: readFileSync("fixtures/sarah_mark_transcript.txt", "utf-8"),
+});
+if (sarahClosed !== "deal_stalled") {
+  console.error("FAIL: A closed-won stage does not close a purchase the buyer left open", sarahClosed);
+  failed = true;
+}
+if (reportCategory({ status: "STALLED — HIGH RISK", transcript: "" }) !== "unresolved") {
+  console.error("FAIL: An empty transcript stays unresolved");
+  failed = true;
+}
+const messy = readFileSync("fixtures/cybercore_messy_paste.txt", "utf-8");
+const messyDiag = diagnosticProfile(messy);
+if (purchaseMotion(messy).motion !== "deal_closed" || /45,000|150,000|per day/.test(messyDiag.budget)) {
+  console.error("FAIL: A glued header paste keeps seller money off the budget and still closes", purchaseMotion(messy).motion, messyDiag.budget);
+  failed = true;
+}
+const auditText = readFileSync("fixtures/transcript_3_federal_audit.txt", "utf-8");
+const auditFresh = diagnosticProfile(auditText);
+if (auditFresh.urgency.startsWith("MISSING") || /Nothing over|qualified for this purchase/i.test(auditFresh.budget)) {
+  console.error("FAIL: A 90-day freeze is a timeline and the cap is not a budget", auditFresh.urgency, auditFresh.budget);
+  failed = true;
+}
+if (
+  lifecyclePhaseFromStatus("NOT A PURCHASE") !== "not_a_purchase" ||
+  lifecyclePhaseFromStatus("MOTION NOT ESTABLISHED") !== "motion_not_established" ||
+  publishesLifecycleScores("not_a_purchase") ||
+  publishesLifecycleScores("motion_not_established") ||
+  scoreMovement("stalled_recoverable") !== "stalled_recoverable"
+) {
+  console.error("FAIL: Off-forecast threads publish no score movement, and a stalled deal stays stalled");
   failed = true;
 }
 if (!channelNotes.includes("### Diagnostic evaluation") || !channelNotes.includes("Buying signals:")) {

@@ -44,9 +44,9 @@ export default function HeroFold({ onScan }: { onScan: () => void }) {
         Recover more of the pipeline you already have.
       </h1>
       <p className="mt-4 max-w-2xl text-base leading-relaxed text-slate-200">
-        Lazarus helps sales teams turn stalled pipeline into recovery work you can assign. Instead
-        of letting a $100,000 deal sit untouched, it tells you whether it is recoverable, what is
-        blocking it, and what to do next.
+        Paste one transcript. The brief says recoverable, a flat no, not a deal, or motion not
+        established, and it carries the sentence that proves it. A rep can read that page in the room
+        without adding a hedge.
       </p>
       <ul className="mt-6 grid list-none gap-3 p-0 sm:grid-cols-2" aria-label="What this changes">
         {OUTCOMES.map((item) => (

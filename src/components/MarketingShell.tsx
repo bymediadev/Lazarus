@@ -43,6 +43,9 @@ export default function MarketingShell({
           <button type="button" onClick={() => scrollToSection("pricing")}>
             Pricing
           </button>
+          <button type="button" onClick={() => scrollToSection("answers")}>
+            Answers
+          </button>
         </nav>
         <div className="header-right">
           <button type="button" className="btn-secondary header-auth-login" onClick={onLogin}>

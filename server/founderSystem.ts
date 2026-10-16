@@ -301,6 +301,10 @@ export async function buildSystemStatus(): Promise<SystemStatus> {
   };
 }
 
+export function isUnsignedIntegrationProbe(route: string | null | undefined, statusCode: number): boolean {
+  return statusCode === 401 && /\/api\/integrations\/[^/]+\/status$/.test(route ?? "");
+}
+
 export function classifyIssue(route: string, statusCode: number, errorCode: string | null): {
   category: "AI" | "Auth" | "CRM" | "Quota" | "Network" | "Other";
   likely_fix: string;

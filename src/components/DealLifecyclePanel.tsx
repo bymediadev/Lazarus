@@ -22,6 +22,10 @@ type Props = {
   }) => void;
 };
 
+function hidesForecastScores(phase: string): boolean {
+  return phase === "not_a_purchase" || phase === "motion_not_established";
+}
+
 function phaseClass(phase: string): string {
   if (phase === "closed_won" || phase === "unstuck" || phase === "active") {
     return "deal-life-pill deal-life-pill-good";
@@ -220,7 +224,7 @@ export default function DealLifecyclePanel({
                         </span>
                         {thread.improvement && (
                           <span className={improveClass(thread.improvement.direction)}>
-                            {thread.improvement.direction}: {thread.improvement.summary}
+                            {thread.improvement.summary}
                           </span>
                         )}
                       </button>
@@ -240,6 +244,8 @@ export default function DealLifecyclePanel({
                           {selected.lifecycle_label}
                         </strong>
                       </div>
+                      {!hidesForecastScores(selected.lifecycle_phase) && (
+                        <>
                       <div>
                         <span>Viability</span>
                         <strong>
@@ -253,6 +259,8 @@ export default function DealLifecyclePanel({
                           {selected.risk_tier ? ` · ${selected.risk_tier}` : ""}
                         </strong>
                       </div>
+                        </>
+                      )}
                       <div>
                         <span>Value</span>
                         <strong>
@@ -314,11 +322,13 @@ export default function DealLifecyclePanel({
                               </span>
                             </div>
                             <p className="deal-life-timeline-status">{run.deal_status}</p>
+                            {!hidesForecastScores(run.lifecycle_phase) && (
                             <p className="deal-life-muted">
                               Viability {run.viability_score ?? "—"}
                               {run.deal_risk_index != null ? ` · risk ${run.deal_risk_index}` : ""}
                               {run.trajectory_type ? ` · ${run.trajectory_type}` : ""}
                             </p>
+                            )}
                             {run.since_previous && (
                               <p className={improveClass(run.since_previous.direction)}>
                                 vs prior run: {run.since_previous.summary}

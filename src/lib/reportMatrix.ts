@@ -94,39 +94,141 @@ export function isSoleOperator(role = "", evidence = ""): boolean {
 const BUYER_DECLINED =
   /\b(?:not going to be (?:your|the) client|won't be your client|will not be your client|i(?:'m| am) not (?:going to be )?(?:your|the) client|i might be the referral|be the referral|not a buyer|not the buyer|not going to buy|not here to buy)\b/i;
 const BUYER_REFUSAL_NEAR = /\bclient\b[\s\S]{0,80}\bno way\b|\bno way\b[\s\S]{0,80}\bclient\b/i;
-const PURCHASE_OPEN =
-  /\b(not moving this forward|signs? off|has to approve|have to approve|needs to approve|buys in|we can accelerate|send (?:me )?a proposal|platform fee|\bbudget\b|\bin range\b|\bapprov\w*)\b/i;
+/** A purchase act the buyer states. The word "budget" alone is not one. */
+const PURCHASE_ACT =
+  /\b(not moving this forward|signs? off|has to approve|have to approve|needs to approve|buys in|we can accelerate|send (?:me )?a proposal|platform fee|\bin range\b|\bapprov\w*|signing authority|annual contract|we modeled|nothing is signed|weigh in|platform budget)\b/i;
+const BUYER_WON =
+  /\b(contract is executed|closed-won|procurement issued the po|issued the po for)\b/i;
+const BUYER_LOST =
+  /\b(pull the plug|signed with|closed on our end|we(?:'re| are) not moving forward with any|please do formally close|formally close the opportunity)\b/i;
+const NOT_QUALIFIED_MONEY =
+  /\b(nothing over|gets signed until|hard freeze|cannot carry|can't carry|per day|costing you|not actionable|needs three quotes)\b/i;
 
-export type PurchaseMotion = "not_a_deal" | "deal_open" | "unclear";
+export type PurchaseMotion = "not_a_deal" | "deal_open" | "deal_closed" | "unresolved" | "unclear";
 
-function buyerLines(transcript: string): string {
-  const kept: string[] = [];
-  let seller = false;
+export interface TranscriptTurn {
+  speaker: string;
+  role: "seller" | "buyer" | "unknown";
+  text: string;
+}
+
+function sellersFromHeader(transcript: string): Set<string> {
+  const sellers = new Set<string>();
+  const blob = transcript.replace(/\r/g, "");
+  for (const match of blob.matchAll(
+    /\(([A-Za-z]{1,5})\)\s*[–—-][^()]{0,160}?\b(account executive|\bae\b|enterprise ae|sales rep)\b/gi
+  )) {
+    sellers.add(match[1].toLowerCase());
+  }
+  return sellers;
+}
+
+function sellerLabel(name: string, sellers: Set<string>): boolean {
+  const first = name.trim().split(/[\s(/]/)[0] ?? "";
+  return /^(seller|sc|rep|ae)$/i.test(first) || sellers.has(first.toLowerCase());
+}
+
+const HEADER_LINE = /^(?:transcript|transc\w*ipt|date|speakers)\s*:/i;
+const SKIP_SPEAKER = /^(?:from|to|subject|cc|bcc|stage|status|deal status|closed won|closed lost)\b/i;
+
+function expandSpeakerBreaks(transcript: string): string {
+  let text = transcript.replace(/\r/g, "");
+  text = text.replace(/(transc\w*ipt|transcript|date|speakers)\s*:/gi, "\n$&");
+  const initials = [...new Set([...text.matchAll(/\(([A-Za-z]{1,5})\)/g)].map((match) => match[1]))];
+  if (initials.length) {
+    const alt = initials.map((token) => token.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")).join("|");
+    text = text.replace(new RegExp(`(^|[^A-Za-z])(${alt}):`, "g"), "$1\n$2:");
+  }
+  return text;
+}
+
+/** Split a labeled transcript into speaker turns. Continuation lines stay with the current speaker. */
+export function parseTurns(transcript: string): { labeled: boolean; turns: TranscriptTurn[] } {
+  const turns: TranscriptTurn[] = [];
+  const expanded = expandSpeakerBreaks(transcript ?? "");
+  const sellers = sellersFromHeader(expanded);
   let labeled = false;
-  for (const line of transcript.split(/\n/)) {
+  let current: TranscriptTurn | null = null;
+  for (const rawLine of expanded.split(/\n/)) {
+    const line = rawLine.replace(/\r$/, "");
+    if (HEADER_LINE.test(line)) continue;
+    if (/^(closed won|closed lost)$/i.test(line.trim())) continue;
     const speaker = line.match(/^\s*(?:\[[^\]]+\]\s*)?([A-Za-z][A-Za-z0-9 .'/()-]{0,60}?)\s*:\s*(.*)$/);
+    if (speaker && SKIP_SPEAKER.test(speaker[1].trim())) continue;
     if (speaker) {
       labeled = true;
-      seller = /^(seller|sc)$/i.test(speaker[1].trim());
-      if (!seller) kept.push(speaker[2] ?? "");
+      const name = speaker[1].trim();
+      current = {
+        speaker: name,
+        role: sellerLabel(name, sellers) ? "seller" : "buyer",
+        text: (speaker[2] ?? "").trim(),
+      };
+      turns.push(current);
       continue;
     }
-    if (!seller) kept.push(line);
+    const extra = line.trim();
+    if (!extra) continue;
+    if (current) current.text = `${current.text} ${extra}`.trim();
+    else {
+      current = { speaker: "", role: "unknown", text: extra };
+      turns.push(current);
+    }
   }
-  return labeled ? kept.join("\n") : transcript;
+  return { labeled, turns };
+}
+
+function turnsText(turns: TranscriptTurn[], role: TranscriptTurn["role"]): string {
+  return turns
+    .filter((turn) => turn.role === role)
+    .map((turn) => turn.text)
+    .join("\n");
+}
+
+function buyerLines(transcript: string): string {
+  const parsed = parseTurns(transcript ?? "");
+  if (!parsed.labeled) return "";
+  return turnsText(parsed.turns, "buyer");
 }
 
 /**
  * Read the transcript before any score is published.
  * A buyer who refuses the client role, with no purchase of their own, is not a deal.
- * Seller politeness alone does not decide it. An open approval or fee does.
+ * The word "budget" does not open a purchase. An unlabeled transcript stays unresolved.
  */
 export function purchaseMotion(transcript: string): { motion: PurchaseMotion; reason: string } {
-  const buyer = buyerLines(transcript ?? "");
+  const parsed = parseTurns(transcript ?? "");
+  if (!parsed.labeled) {
+    return { motion: "unresolved", reason: "Speakers are not labeled, so no forecast judgment is published." };
+  }
+  const namedSpeakers = new Set(
+    parsed.turns.filter((turn) => turn.speaker && turn.role !== "unknown").map((turn) => turn.speaker.toLowerCase())
+  );
+  const sellerTurns = parsed.turns.filter((turn) => turn.role === "seller").length;
+  if (sellerTurns === 0 && namedSpeakers.size > 1) {
+    return {
+      motion: "unresolved",
+      reason: "No seller is labeled, so no forecast judgment is published.",
+    };
+  }
+  const buyer = turnsText(parsed.turns, "buyer");
   const declined = BUYER_DECLINED.test(buyer) || BUYER_REFUSAL_NEAR.test(buyer);
-  const open = PURCHASE_OPEN.test(buyer);
+  const open = PURCHASE_ACT.test(buyer);
+  const won = BUYER_WON.test(buyer);
+  const lost = BUYER_LOST.test(buyer);
+  if (declined && (open || won)) {
+    return {
+      motion: "unresolved",
+      reason: "The buyer both refused the client role and described a purchase. Those lines conflict.",
+    };
+  }
+  if ((won || lost) && !declined) {
+    return {
+      motion: "deal_closed",
+      reason: won ? "The buyer said the purchase is done." : "The buyer closed the purchase.",
+    };
+  }
   if (open) {
-    return { motion: "deal_open", reason: "A purchase is open in the transcript." };
+    return { motion: "deal_open", reason: "A purchase is open in the buyer's words." };
   }
   if (declined) {
     return {
@@ -134,12 +236,23 @@ export function purchaseMotion(transcript: string): { motion: PurchaseMotion; re
       reason: "The other person said they are not the buyer. No purchase was opened.",
     };
   }
-  return { motion: "unclear", reason: "" };
+  return {
+    motion: "unresolved",
+    reason: "No purchase was stated by the buyer, so no stall score is published.",
+  };
 }
 
 /** The transcript says this is not a purchase. Seller politeness alone is not enough. */
 export function isNotAPurchase(transcript: string): boolean {
   return purchaseMotion(transcript).motion === "not_a_deal";
+}
+
+/** The selling rep, whatever name the model gave them. They are not a buyer. */
+export function isSellingRep(person: { name?: string; role?: string }): boolean {
+  const name = (person.name ?? "").trim();
+  const role = person.role ?? "";
+  if (sellerLabel(name, new Set())) return true;
+  return /\b(account executive|service provider|sales rep)\b/i.test(`${name} ${role}`);
 }
 
 function escapeRegExp(value: string): string {
@@ -178,7 +291,7 @@ export function isSellerIntroduction(
   );
 }
 
-export type ReportCategory = "not_a_deal" | "deal_moving" | "deal_stalled" | "deal_closed";
+export type ReportCategory = "not_a_deal" | "unresolved" | "deal_moving" | "deal_stalled" | "deal_closed";
 
 export function reportCategory(input: {
   status?: string;
@@ -187,11 +300,16 @@ export function reportCategory(input: {
   relevanceLabel?: string;
   transcript?: string;
 }): ReportCategory {
+  if (typeof input.transcript === "string" && !input.transcript.trim()) return "unresolved";
   const status = input.status ?? "";
   const trajectory = input.trajectory ?? "";
   const relevance = (input.relevanceLabel ?? "").toLowerCase();
   const motion = input.transcript ? purchaseMotion(input.transcript).motion : "unclear";
   if (motion === "not_a_deal") return "not_a_deal";
+  if (motion === "unresolved" || /MOTION NOT ESTABLISHED/i.test(status)) return "unresolved";
+  if (motion === "deal_closed") return "deal_closed";
+  if (motion === "deal_open" && /CLOSED WON/i.test(status)) return "deal_stalled";
+  if (motion === "unclear" && input.transcript) return "unresolved";
   const notADeal =
     motion !== "deal_open" &&
     (relevance === "not_sales" ||
@@ -215,6 +333,8 @@ export function categoryLabel(category: ReportCategory): string {
   switch (category) {
     case "not_a_deal":
       return "Not a deal";
+    case "unresolved":
+      return "Motion not established";
     case "deal_moving":
       return "Deal, moving";
     case "deal_stalled":
@@ -248,21 +368,29 @@ function promisedStep(action: string, outcome: string, progress: string, stakeho
 /** Steps already promised on a call that never became a purchase. No partnership meeting. */
 export function promisedRelationshipSteps(transcript: string, stakeholderName?: string): string[] {
   const who = stakeholderName?.trim() || "Prospect";
-  const steps = [
-    promisedStep(
-      "Send the introduction already promised",
-      "The two people are introduced",
-      "Either person confirms the introduction happened",
-      who
-    ),
-    promisedStep(
-      "Send the framework link already promised",
-      "They can look if they want. No reply is a complete outcome",
-      "Only a reply that asks to proceed. Silence stays off the forecast",
-      who
-    ),
-  ];
-  if (offeredNetworkingInvite(transcript)) {
+  const text = transcript ?? "";
+  const steps: string[] = [];
+  if (/\b(send you to|introduce you to|warm connection|his name is|her name is|their name is)\b/i.test(text)) {
+    steps.push(
+      promisedStep(
+        "Send the introduction already promised",
+        "The two people are introduced",
+        "Either person confirms the introduction happened",
+        who
+      )
+    );
+  }
+  if (/\b(send you (?:a |the )?link|framework link|clarity consultation)\b/i.test(text)) {
+    steps.push(
+      promisedStep(
+        "Send the framework link already promised",
+        "They can look if they want. No reply is a complete outcome",
+        "Only a reply that asks to proceed. Silence stays off the forecast",
+        who
+      )
+    );
+  }
+  if (offeredNetworkingInvite(text)) {
     steps.push(
       promisedStep(
         "Accept the networking-group invitation when they send it",
@@ -295,6 +423,14 @@ export interface DiagnosticProfile {
   budget: string;
   urgency: string;
   missedProcess: string;
+  /** Full sentences, each with the speaker. */
+  said: string[];
+  implied: string;
+  unknown: string;
+  /** The wrong read a rep can reject out loud. */
+  falseRead: string;
+  /** The buyer's own condition, or a statement that this call does not reopen. */
+  restart: string;
 }
 
 const BUDGET_FIGURE = /\$[\d,]+|\b\d+\s*k\b|\bbudget\b/i;
@@ -303,7 +439,7 @@ const UNQUALIFIED_BUDGET = /\b(?:do not|don't|dont) have the budget\b|\bno budge
 const REVENUE_BAND = /\b(revenue|annually|doing about)\b/i;
 const PAID_WITHOUT_AMOUNT = /\b(not free|paid consultation|paid diagnostic|clarity consultation)\b/i;
 const URGENCY =
-  /\b(q[1-4]|this quarter|next quarter|month-end|next week|deadline|urgent|as soon as|underwater until|after month-end)\b/i;
+  /\b(q[1-4]|this quarter|next quarter|month-end|next week|deadline|urgent|as soon as|underwater until|after month-end|\d+\s*(?:days|months))\b/i;
 const PAID_OFFER = /\b(clarity consultation|not free|paid consultation|paid diagnostic|send you (?:a |the )?link)\b/i;
 const CALENDAR_STEP =
   /\b(reschedul\w*|three slots|book(?:ed|ing)?\s+(?:a |the )?time|schedule(?:d)?\s+(?:a |the )?(?:time|meeting)|lock(?:ed)?\s+(?:a |the )?(?:time|date)|put (?:a )?time on (?:the )?calendar)\b/i;
@@ -322,9 +458,12 @@ function sentenceAt(text: string, index: number, matchLength: number): string {
   const end = period === -1 ? text.length : period;
   let sentence = text.slice(from, end).replace(/\s+/g, " ").trim();
   if (sentence.length > 220) {
-    const cut = sentence.slice(0, 217);
-    const space = cut.lastIndexOf(" ");
-    sentence = `${(space > 160 ? cut.slice(0, space) : cut).trim()}...`;
+    const anchor = text.slice(index, index + matchLength);
+    const at = sentence.indexOf(anchor);
+    const left = Math.max(0, (at === -1 ? 0 : at) - 80);
+    const right = Math.min(sentence.length, left + 200);
+    const cut = sentence.slice(left, right);
+    sentence = `${left > 0 ? "..." : ""}${cut.trim()}${right < sentence.length ? "..." : ""}`;
   }
   return sentence;
 }
@@ -336,75 +475,328 @@ function sentenceAround(transcript: string, pattern: RegExp): string {
   return sentenceAt(text, match.index, match[0].length);
 }
 
+function meetingSet(transcript: string): boolean {
+  const parsed = parseTurns(transcript);
+  const buyer = asProse(turnsText(parsed.turns, "buyer"));
+  const seller = asProse(turnsText(parsed.turns, "seller"));
+  if (CALENDAR_STEP.test(buyer)) return true;
+  return CALENDAR_STEP.test(seller) && /\b(do that|yes|let's do|sounds good|send an invite)\b/i.test(buyer);
+}
+
+function hasReferralLanguage(transcript: string): boolean {
+  return /\b(invitation|introduce|referral|warm connection)\b/i.test(transcript);
+}
+
+function linkWasPromised(transcript: string): boolean {
+  return /\b(send you (?:a |the )?link|framework link|clarity consultation)\b/i.test(transcript);
+}
+
+function defenseLines(transcript: string, motion: PurchaseMotion): Pick<
+  DiagnosticProfile,
+  "said" | "implied" | "unknown" | "falseRead" | "restart"
+> {
+  const parsed = parseTurns(transcript);
+  const buyer = asProse(turnsText(parsed.turns, "buyer"));
+  const seller = asProse(turnsText(parsed.turns, "seller"));
+  const said = parsed.turns
+    .filter((turn) => turn.text)
+    .slice(0, 4)
+    .map((turn) => `${turn.speaker || "Speaker"}: ${turn.text.replace(/\s+/g, " ").trim()}`);
+  const happyEars =
+    /\bclosed[-\s]?won\b/i.test(seller) && /\b(nothing is signed|not done|we(?:'re| are) evaluating)\b/i.test(buyer);
+  const speakersKnown = parsed.labeled;
+  let falseRead = "";
+  if (happyEars) {
+    falseRead = "The rep called this closed-won. The buyer said nothing is signed.";
+  } else if (motion === "not_a_deal" && (/\b(finance|residential|business funding)\b/i.test(buyer) || /\b(revenue|doing about)\b/i.test(seller))) {
+    falseRead = "A stalled-deal read would treat their own business description as purchase intent. It is their own service.";
+  } else if (motion === "not_a_deal") {
+    falseRead = "A stalled-deal read would keep this on the forecast as recoverable. The buyer refused the client role.";
+  } else if (motion === "unresolved" && speakersKnown) {
+    falseRead = "A stalled-deal read would score a call where the buyer never opened a purchase.";
+  } else if (motion === "unresolved") {
+    falseRead = "A stalled-deal read would score this before the speakers are known.";
+  }
+  const namedRestart = sentenceAround(buyer, /\bIf\b[^.]*\bbuys in\b/i);
+  const restart =
+    motion === "unresolved"
+      ? speakersKnown
+        ? "No restart is published. The buyer did not name a condition."
+        : "No restart is published until a speaker can be read."
+      : motion === "not_a_deal"
+        ? linkWasPromised(transcript)
+          ? "This call does not reopen. Silence after the promised link is a complete outcome."
+          : "This call does not reopen."
+        : namedRestart
+          ? `The buyer named the restart: ${namedRestart}.`
+          : motion === "deal_closed"
+            ? "The buyer closed it. There is no restart."
+            : "No buyer condition for reopening was stated.";
+  const implied =
+    motion === "not_a_deal"
+      ? hasReferralLanguage(transcript)
+        ? "The commercial motion is an exchange of introductions. No purchase was opened."
+        : "The buyer refused the client role. No purchase was opened."
+      : motion === "unresolved"
+        ? speakersKnown
+          ? "No purchase was stated, so no commercial motion is implied."
+          : "The speakers are not established, so no commercial motion is implied."
+        : happyEars
+          ? "The rep's close and the buyer's words describe different calls."
+          : namedRestart
+            ? "The purchase is open and waiting on the condition the buyer named."
+            : "Read only the lines above. Do not add a motion they did not state.";
+  const unknownBits = [
+    !QUALIFIED_PAY.test(buyer) ? "no qualified budget" : "",
+    !URGENCY.test(buyer) ? "no timeline" : "",
+    !meetingSet(transcript) ? "no date" : "",
+  ].filter(Boolean);
+  return {
+    said,
+    implied,
+    unknown: unknownBits.length ? `Unknown: ${unknownBits.join(", ")}.` : "The lines above cover budget, timeline, and a date.",
+    falseRead,
+    restart,
+  };
+}
+
 /**
  * A qualified budget is this person's ability or willingness to pay for this offer.
  * A remark that someone else lacks budget, or a revenue figure, is only a mention.
  */
+export type MoneyKind = "buyer_budget" | "deal_value" | "seller_revenue" | "rejected";
+
+export interface MoneyContext {
+  kind: MoneyKind;
+  label: string;
+  note: string;
+}
+
+const MONEY_TOKEN = /\$\s*(\d{1,3}(?:,\d{3})+|\d+(?:\.\d+)?)\s*(k|m|million)?/gi;
+const PLATFORM_FEE_LABEL = /annual platform fee|platform fee|annual platform budget|annual contract/i;
+const PURCHASE_VALUE = /annual platform fee|platform fee|platform budget|annual contract|\bour budget\b|\bmy budget\b|willing to pay|\bin range\b/i;
+
+function moneyAmount(raw: string, unit: string | undefined): number | null {
+  let amount = Number(raw.replace(/,/g, ""));
+  const scale = (unit ?? "").toLowerCase();
+  if (scale === "k") amount *= 1_000;
+  if (scale === "m" || scale === "million") amount *= 1_000_000;
+  if (!Number.isFinite(amount) || amount <= 0) return null;
+  return Math.round(amount);
+}
+
+function formatMoney(amount: number): string {
+  return `$${amount.toLocaleString("en-US")}`;
+}
+
+function sameAmountIsPlatformFee(fullText: string, amount: number): boolean {
+  const prose = asProse(fullText);
+  return [...prose.matchAll(new RegExp(MONEY_TOKEN.source, "gi"))].some((match) => {
+    if (moneyAmount(match[1], match[2]) !== amount) return false;
+    return PLATFORM_FEE_LABEL.test(sentenceAt(prose, match.index ?? 0, match[0].length));
+  });
+}
+
+/** A buyer dollar is the purchase value only when the sentence is about this purchase. */
+function purchaseValueSentence(sentence: string, amount: number, fullText: string): boolean {
+  if (PURCHASE_VALUE.test(sentence)) return true;
+  return /\bwe modeled\b/i.test(sentence) && sameAmountIsPlatformFee(fullText, amount);
+}
+
+/**
+ * One reading of every dollar in the transcript.
+ * A qualified fee exists only when the buyer stated this purchase's value on an open or closed deal.
+ * Seller revenue, a rejected figure, a side amount, and an unreadable paste stay out of that fee.
+ */
+export function readPurchaseMoney(transcript: string): { qualifiedFee: string | null; context: MoneyContext[] } {
+  const text = transcript ?? "";
+  const motion = purchaseMotion(text).motion;
+  const canScore = motion === "deal_open" || motion === "deal_closed";
+  const parsed = parseTurns(text);
+  const context: MoneyContext[] = [];
+  let qualifiedAmount: number | null = null;
+  let qualifiedRank = 0;
+
+  const blobs: { role: "buyer" | "seller" | "unknown"; text: string }[] = parsed.labeled
+    ? [
+        { role: "buyer", text: turnsText(parsed.turns, "buyer") },
+        { role: "seller", text: turnsText(parsed.turns, "seller") },
+      ]
+    : [{ role: "unknown", text }];
+
+  for (const blob of blobs) {
+    const prose = asProse(blob.text);
+    MONEY_TOKEN.lastIndex = 0;
+    for (const match of prose.matchAll(MONEY_TOKEN)) {
+      const amount = moneyAmount(match[1], match[2]);
+      if (amount == null) continue;
+      const sentence = sentenceAt(prose, match.index ?? 0, match[0].length);
+      const label = formatMoney(amount);
+      const revenue =
+        (REVENUE_BAND.test(sentence) || /\bdo about\b/i.test(sentence)) &&
+        !PLATFORM_FEE_LABEL.test(sentence) &&
+        !/\bwe modeled\b/i.test(sentence);
+      const rejected =
+        UNQUALIFIED_BUDGET.test(sentence) ||
+        NOT_QUALIFIED_MONEY.test(sentence) ||
+        /\brejected\b/i.test(sentence) ||
+        /\bunder\s+\$/i.test(sentence);
+      if (revenue) {
+        context.push({ kind: "seller_revenue", label, note: "Not the purchase value." });
+        continue;
+      }
+      if (
+        rejected ||
+        blob.role !== "buyer" ||
+        !canScore ||
+        !purchaseValueSentence(sentence, amount, text)
+      ) {
+        context.push({
+          kind: "rejected",
+          label,
+          note: blob.role === "buyer" && canScore && !rejected ? "Not this purchase's value." : "Not a qualified purchase value.",
+        });
+        continue;
+      }
+      const rank = PLATFORM_FEE_LABEL.test(sentence) ? 3 : 2;
+      if (qualifiedAmount == null || rank > qualifiedRank || (rank === qualifiedRank && amount > qualifiedAmount)) {
+        qualifiedAmount = amount;
+        qualifiedRank = rank;
+      }
+    }
+  }
+
+  const qualifiedFee =
+    qualifiedAmount == null
+      ? null
+        : PLATFORM_FEE_LABEL.test(text) &&
+          [...asProse(text).matchAll(new RegExp(MONEY_TOKEN.source, "gi"))].some((match) => {
+            const amount = moneyAmount(match[1], match[2]);
+            if (amount !== qualifiedAmount) return false;
+            const sentence = sentenceAt(asProse(text), match.index ?? 0, match[0].length);
+            return PLATFORM_FEE_LABEL.test(sentence);
+          })
+        ? `${formatMoney(qualifiedAmount)} Annual Platform Fee`
+        : formatMoney(qualifiedAmount);
+
+  const seen = new Set<string>();
+  const kept = context.filter((item) => {
+    if (qualifiedAmount != null && item.label === formatMoney(qualifiedAmount)) return false;
+    const key = `${item.kind}:${item.label}`;
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+  return { qualifiedFee, context: kept.slice(0, 4) };
+}
+
 function budgetRead(transcript: string): { qualified: string; mentioned: boolean } {
   const buyer = asProse(buyerLines(transcript));
-  const pattern = new RegExp(BUDGET_FIGURE.source, "gi");
+  const pattern = new RegExp(MONEY_TOKEN.source, "gi");
   let match: RegExpExecArray | null;
+  let qualified = "";
+  let qualifiedRank = 0;
   while ((match = pattern.exec(buyer))) {
+    const amount = moneyAmount(match[1], match[2]);
+    if (amount == null) continue;
     const sentence = sentenceAt(buyer, match.index, match[0].length);
-    if (UNQUALIFIED_BUDGET.test(sentence)) continue;
-    if (REVENUE_BAND.test(sentence) && !QUALIFIED_PAY.test(sentence)) continue;
-    if (QUALIFIED_PAY.test(sentence)) return { qualified: sentence, mentioned: true };
+    if (UNQUALIFIED_BUDGET.test(sentence) || NOT_QUALIFIED_MONEY.test(sentence) || /\brejected\b/i.test(sentence)) continue;
+    if (REVENUE_BAND.test(sentence) && !PURCHASE_VALUE.test(sentence)) continue;
+    if (!purchaseValueSentence(sentence, amount, transcript)) continue;
+    const rank = PLATFORM_FEE_LABEL.test(sentence) ? 3 : 2;
+    if (!qualified || rank > qualifiedRank) {
+      qualified = sentence;
+      qualifiedRank = rank;
+    }
   }
-  return { qualified: "", mentioned: /\bbudget\b/i.test(asProse(transcript)) };
+  return { qualified, mentioned: /\bbudget\b/i.test(asProse(transcript)) };
 }
 
 /** Qualification read for every upload. A non-purchase still reports what was missing. */
 export function diagnosticProfile(transcript: string): DiagnosticProfile {
   const text = transcript ?? "";
-  const notAPurchase = isNotAPurchase(text);
+  const motion = purchaseMotion(text);
+  const notAPurchase = motion.motion === "not_a_deal";
+  const buyer = buyerLines(text);
   const budgetReadout = budgetRead(text);
-  const urgencyHit = sentenceAround(text, URGENCY);
-  const interestHit = sentenceAround(text, PURCHASE_INTEREST);
+  const urgencyHit = sentenceAround(buyer, URGENCY);
+  const interestHit = sentenceAround(buyer, PURCHASE_INTEREST);
   const refusalHit = sentenceAround(
     text,
     /\b(?:not going to be your client|won't be your client|will not be your client|i might be the referral|no way)\b/i
   );
+  const canScoreMoney = motion.motion === "deal_open" || motion.motion === "deal_closed";
 
   const buyingSignals = notAPurchase
-    ? `Interest was in a referral relationship, not in purchasing this service.${refusalHit ? ` Evidence: "${refusalHit}"` : ""}`
-    : interestHit
-      ? `The buyer stated interest in this purchase. Evidence: "${interestHit}"`
-      : "No explicit interest in purchasing this service was stated.";
+    ? hasReferralLanguage(text)
+      ? `Interest was in a referral relationship, not in purchasing this service.${refusalHit ? ` Evidence: "${refusalHit}"` : ""}`
+      : `No purchase was opened.${refusalHit ? ` Evidence: "${refusalHit}"` : ""}`
+    : motion.motion === "deal_closed"
+      ? motion.reason
+      : interestHit
+        ? `The buyer stated interest in this purchase. Evidence: "${interestHit}"`
+        : "No explicit interest in purchasing this service was stated.";
 
-  const budget = budgetReadout.qualified
-    ? `Budget was qualified for this purchase. Evidence: "${budgetReadout.qualified}"`
-    : budgetReadout.mentioned
-      ? "Consultation budget was not qualified. Budget was mentioned, but not as this person's ability or willingness to pay for the consultation."
-      : PAID_WITHOUT_AMOUNT.test(text)
-        ? "Consultation budget was not qualified. The seller said the offer is paid, and this person's ability or willingness to pay was not established."
-        : "Consultation budget was not qualified.";
+  const budget =
+    canScoreMoney && budgetReadout.qualified
+      ? `Budget was qualified for this purchase. Evidence: "${budgetReadout.qualified}"`
+      : budgetReadout.mentioned || budgetReadout.qualified
+        ? "Consultation budget was not qualified. Budget was mentioned, but not as this person's ability or willingness to pay for the consultation."
+        : PAID_WITHOUT_AMOUNT.test(text)
+          ? "Consultation budget was not qualified. The seller said the offer is paid, and this person's ability or willingness to pay was not established."
+          : "Consultation budget was not qualified.";
 
   const urgency = urgencyHit
     ? `A timeline was stated. Evidence: "${urgencyHit}"`
     : "MISSING — NO TIMELINE OR URGENCY ESTABLISHED";
 
+  const met = meetingSet(text);
   const missedProcess =
-    notAPurchase && PAID_OFFER.test(text) && !CALENDAR_STEP.test(text)
+    notAPurchase && PAID_OFFER.test(text) && !met
       ? "The seller introduced a paid consultation before confirming it was relevant. No decision or calendar time was secured. This is not evidence that a sale was lost."
-      : PAID_OFFER.test(text) && !CALENDAR_STEP.test(text)
+      : PAID_OFFER.test(text) && !met
         ? "The seller introduced a paid consultation and did not secure a decision or a calendar time. The next step left on the call was a link, not a meeting."
         : notAPurchase
           ? "No purchase process was opened."
-          : CALENDAR_STEP.test(text)
+          : met
             ? "A follow-up time was part of the conversation."
             : "No dated next meeting was secured on the call.";
 
-  return { buyingSignals, budget, urgency, missedProcess };
+  return {
+    buyingSignals,
+    budget,
+    urgency,
+    missedProcess,
+    ...defenseLines(text, motion.motion),
+  };
 }
 
 export function formatDiagnosticMarkdown(profile: DiagnosticProfile): string {
+  const said = (profile.said ?? []).map((line) => `- ${line}`);
   return [
     "### Diagnostic evaluation",
     `- **Buying signals:** ${profile.buyingSignals}`,
     `- **Budget:** ${profile.budget}`,
     `- **Urgency and timeline:** ${profile.urgency}`,
     `- **Missed process step:** ${profile.missedProcess}`,
-  ].join("\n");
+    said.length ? "" : null,
+    said.length ? "### What was said" : null,
+    ...said,
+    profile.implied ? "" : null,
+    profile.implied ? "### What that implies" : null,
+    profile.implied ? profile.implied : null,
+    profile.unknown ? "" : null,
+    profile.unknown ? "### Unknown" : null,
+    profile.unknown ? profile.unknown : null,
+    profile.falseRead ? "" : null,
+    profile.falseRead ? "### False read" : null,
+    profile.falseRead ? profile.falseRead : null,
+    profile.restart ? "" : null,
+    profile.restart ? "### Restart" : null,
+    profile.restart ? profile.restart : null,
+  ]
+    .filter((line) => line !== null)
+    .join("\n");
 }
 
 export interface MatrixFacing {
@@ -427,16 +819,16 @@ export function matrixFacing(input: {
   transcript?: string;
 }): MatrixFacing {
   const category = reportCategory(input);
-  if (category === "not_a_deal") {
+  if (category === "not_a_deal" || category === "unresolved") {
     return {
       category,
       categoryLabel: categoryLabel(category),
       showScorecard: false,
       offForecast: true,
-      trajectoryLabel: "Not a deal",
-      recoverabilityLabel: "Not a deal",
+      trajectoryLabel: category === "unresolved" ? "Motion not established" : "Not a deal",
+      recoverabilityLabel: category === "unresolved" ? "Motion not established" : "Not a deal",
       planTitle: "What to do next",
-      whyTitle: "What the call was",
+      whyTitle: category === "unresolved" ? "What could not be read" : "What the call was",
     };
   }
   const known = [

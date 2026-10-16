@@ -1,5 +1,5 @@
 import { secureFetch } from "./secureFetch.js";
-import { classifyIssue, buildSystemStatus } from "./founderSystem.js";
+import { classifyIssue, buildSystemStatus, isUnsignedIntegrationProbe } from "./founderSystem.js";
 import { serviceRoleClient } from "./founderAuth.js";
 import { isWhiteWhaleConfigured } from "./integrations/whitewhale/config.js";
 import { getWhiteWhaleUserOverview } from "./integrations/whitewhale/client.js";
@@ -457,10 +457,10 @@ export async function buildApisInventory(): Promise<ApisInventory> {
   }
 
   const currentFail = events.filter(
-    (e) => e.created_at >= mid && e.status_code >= 400
+    (e) => e.created_at >= mid && e.status_code >= 400 && !isUnsignedIntegrationProbe(e.route, e.status_code)
   );
   const priorFail = events.filter(
-    (e) => e.created_at < mid && e.status_code >= 400
+    (e) => e.created_at < mid && e.status_code >= 400 && !isUnsignedIntegrationProbe(e.route, e.status_code)
   );
   const currentCats = tallyCategories(currentFail);
   const priorCats = tallyCategories(priorFail);
@@ -612,11 +612,9 @@ export async function buildApisInventory(): Promise<ApisInventory> {
       id: "hubspot",
       label: "HubSpot",
       category: "CRM",
-      status: !integrationMap.hubspot?.configured
+      status: !integrationMap.hubspot?.configured || !integrationMap.hubspot.token_present
         ? "not_configured"
-        : integrationMap.hubspot.ok
-          ? "ok"
-          : "out",
+        : "ok",
       configured: !!integrationMap.hubspot?.configured,
       meaning: integrationMap.hubspot?.meaning ?? "HubSpot",
       billing: {
@@ -632,11 +630,9 @@ export async function buildApisInventory(): Promise<ApisInventory> {
       id: "salesforce",
       label: "Salesforce",
       category: "CRM",
-      status: !integrationMap.salesforce?.configured
+      status: !integrationMap.salesforce?.configured || !integrationMap.salesforce.token_present
         ? "not_configured"
-        : integrationMap.salesforce.ok
-          ? "ok"
-          : "out",
+        : "ok",
       configured: !!integrationMap.salesforce?.configured,
       meaning: integrationMap.salesforce?.meaning ?? "Salesforce",
       billing: {
@@ -671,8 +667,13 @@ export async function buildApisInventory(): Promise<ApisInventory> {
   // Escalate from telemetry if live probe says ok but many recent failures
   for (const p of providers) {
     if (p.status === "ok" && p.error_count_7d >= 5) {
-      p.status = "degraded";
-      p.meaning = `${p.meaning} · ${p.error_count_7d} related errors in 7d.`;
+      const note = `${p.error_count_7d} related errors in 7d.`;
+      if (p.probe === "live") {
+        p.meaning = `${p.meaning} · ${note} Live probe OK.`;
+      } else {
+        p.status = "degraded";
+        p.meaning = `${p.meaning} · ${note}`;
+      }
     }
     if (
       p.id === "gemini" &&
@@ -683,7 +684,6 @@ export async function buildApisInventory(): Promise<ApisInventory> {
         level: "pay_soon",
         detail: `${currentCats.Quota} quota errors in 7d — raise Gemini quota or switch model.`,
       };
-      if (p.status === "ok") p.status = "degraded";
     }
   }
 

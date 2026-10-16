@@ -7,6 +7,7 @@ const DROPPED_KEYS = new Set([
   "evidence",
   "transcript",
   "transcript_text",
+  "source_transcript",
   "historical_context_match",
   "historical_crm_context",
   "grounding_audit",

@@ -142,12 +142,13 @@ export default function AnalysisReport({
     trajectory: dt.trajectory_type,
     recoverabilityStatus: r.recoverability?.status,
     relevanceLabel: r.relevance?.label,
+    transcript: r.source_transcript,
   });
   const trajectoryClass = facing.offForecast ? "status-failed" : trajectoryTagClass(dt.trajectory_type);
   const equilibriumClass = equilibriumTagClass(eq.state);
 
   const copyPlan = async () => {
-    const sections: [string, string[]][] = facing.category === "not_a_deal"
+    const sections: [string, string[]][] = facing.offForecast
       ? [["What to do next", plan.immediate_0_30_days]]
       : [
           ["Immediate (0-30 days)", plan.immediate_0_30_days],
@@ -198,9 +199,9 @@ export default function AnalysisReport({
         <div className="full-analysis-body">
       <div className={`deal-status-banner ${tagClass}`}>
         <span className="deal-status-mode">Deterministic Scoring Engine</span>
-        <span className="deal-status-label">{facing.category === "not_a_deal" ? facing.categoryLabel : dc.status}</span>
+        <span className="deal-status-label">{facing.offForecast ? facing.categoryLabel : dc.status}</span>
         <div className="score-row">
-          {facing.category !== "not_a_deal" && (
+          {!facing.offForecast && (
           <span className={`confidence-score ${viabilityClass}`}>
             {vs.state} — emergent {vs.viability_score}
           </span>
@@ -492,8 +493,8 @@ export default function AnalysisReport({
         <h2 className="card-title">Emergent Viability State</h2>
         <div className="card-body">
           <div className="viability-header">
-            <span className={`viability-badge ${viabilityClass}`}>{facing.category === "not_a_deal" ? facing.categoryLabel : vs.state}</span>
-            {facing.category !== "not_a_deal" && (
+            <span className={`viability-badge ${viabilityClass}`}>{facing.offForecast ? facing.categoryLabel : vs.state}</span>
+            {!facing.offForecast && (
               <span className="viability-score">{vs.viability_score}/100</span>
             )}
           </div>
@@ -558,7 +559,7 @@ export default function AnalysisReport({
               <div className="state-metric">
                 <span className="crm-label">Intent Level</span>
                 <span className="state-value">
-                  {r.buyer_state.evidence[0]?.split("|").at(-1)?.trim() ?? "—"}
+                  {(r.buyer_state.evidence ?? [])[0]?.split("|").at(-1)?.trim() || "—"}
                 </span>
               </div>
               <div className="state-metric">
@@ -570,9 +571,9 @@ export default function AnalysisReport({
                 <span className="state-value">{r.buyer_state.decision_freedom}</span>
               </div>
             </div>
-            {r.buyer_state.evidence.length > 0 && (
+            {(r.buyer_state.evidence ?? []).length > 0 && (
               <ul className="restart-list" style={{ marginTop: "1rem" }}>
-                {r.buyer_state.evidence.map((e, i) => <li key={i}>{e}</li>)}
+                {(r.buyer_state.evidence ?? []).map((e, i) => <li key={i}>{e}</li>)}
               </ul>
             )}
           </div>
@@ -613,9 +614,9 @@ export default function AnalysisReport({
       )}
 
       <article className="card card-emerald">
-        <h2 className="card-title">{facing.category === "not_a_deal" ? facing.planTitle : "Rescue Triage Plan"}</h2>
+        <h2 className="card-title">{facing.offForecast ? facing.planTitle : "Rescue Triage Plan"}</h2>
         <div className="card-body">
-          {facing.category === "not_a_deal" ? (
+          {facing.offForecast ? (
             <ul className="restart-list">
               {uniqueRecoveryNotes(plan.immediate_0_30_days).map((item) => (
                 <li key={item}>
@@ -651,7 +652,7 @@ export default function AnalysisReport({
               </ul>
             </div>
           )}
-          {facing.category !== "not_a_deal" && plan.near_term_30_90_days.length > 0 && (
+          {!facing.offForecast && plan.near_term_30_90_days.length > 0 && (
             <div className="triage-bucket">
               <h4>Near-Term — 30–90 Days</h4>
               <ul className="restart-list">
@@ -665,7 +666,7 @@ export default function AnalysisReport({
               </ul>
             </div>
           )}
-          {facing.category !== "not_a_deal" && plan.long_term_90_plus_days.length > 0 && (
+          {!facing.offForecast && plan.long_term_90_plus_days.length > 0 && (
             <div className="triage-bucket">
               <h4>Long-Term — 90+ Days</h4>
               <ul className="restart-list">
@@ -680,7 +681,7 @@ export default function AnalysisReport({
             </div>
           )}
           <button className={`copy-button ${copied ? "copied" : ""}`} onClick={copyPlan}>
-            {copied ? "Copied!" : facing.category === "not_a_deal" ? "Copy next steps" : "Copy Rescue Plan"}
+            {copied ? "Copied!" : facing.offForecast ? "Copy next steps" : "Copy Rescue Plan"}
           </button>
         </div>
       </article>
@@ -699,7 +700,7 @@ export default function AnalysisReport({
               return (
                 <>
                   <p className="meta-line">{reading.note}</p>
-                  <p><strong>Current deal status:</strong> {facing.category === "not_a_deal" ? facing.categoryLabel : reading.currentStatus}</p>
+                  <p><strong>Current deal status:</strong> {facing.offForecast ? facing.categoryLabel : reading.currentStatus}</p>
                   {reading.qualification && (
                     <p><strong>Qualification reading:</strong> {reading.qualification}</p>
                   )}
@@ -737,8 +738,8 @@ export default function AnalysisReport({
             <CrmField label="Blocker Classification" value={r.crm_intelligence.blocker_classification ?? init?.blocker_classification} />
             <CrmField label="Structural Coupling" value={r.crm_intelligence.structural_constraint_type} />
             <CrmField label="Convergence" value={r.crm_intelligence.convergence_status ?? cycles?.convergence_status} />
-            <CrmField label="Deal State" value={facing.category === "not_a_deal" ? facing.categoryLabel : r.crm_intelligence.deal_state} />
-            {facing.category !== "not_a_deal" && (
+            <CrmField label="Deal State" value={facing.offForecast ? facing.categoryLabel : r.crm_intelligence.deal_state} />
+            {!facing.offForecast && (
               <CrmField label="Viability Score (Derived)" value={r.crm_intelligence.viability_score} />
             )}
             <CrmField label="Trajectory (Derived)" value={facing.trajectoryLabel} />
@@ -746,16 +747,16 @@ export default function AnalysisReport({
             <CrmField label="Intent Strength" value={r.crm_intelligence.buyer_intent_strength} />
             <CrmField label="Effective Intent" value={r.crm_intelligence.effective_intent} />
             <CrmField label="Constraint Pressure" value={r.crm_intelligence.constraint_pressure} />
-            {facing.category !== "not_a_deal" && (
+            {!facing.offForecast && (
               <CrmField label="Deal Risk Index (Derived)" value={r.crm_intelligence.deal_risk_index ?? String(pi?.deal_risk_index ?? "")} />
             )}
-            {facing.category !== "not_a_deal" && (
+            {!facing.offForecast && (
               <CrmField label="Risk Tier" value={r.crm_intelligence.risk_tier ?? pi?.risk_tier} />
             )}
             <CrmField
               label="Recommended Next Action"
               value={
-                facing.category === "not_a_deal"
+                facing.offForecast
                   ? recommendedMoveLine(
                       (r.immediate_remediation ?? []).length
                         ? r.immediate_remediation ?? []
@@ -768,7 +769,7 @@ export default function AnalysisReport({
         </article>
       )}
 
-      {pi && facing.category !== "not_a_deal" && (
+      {pi && !facing.offForecast && (
         <article className="card card-neutral">
           <h2 className="card-title">Proprietary Risk Compiler</h2>
           <div className="card-body">
@@ -860,9 +861,9 @@ export default function AnalysisReport({
         <DealHeaderMetrics
           indices={pi}
           viabilityScore={vs.viability_score}
-          intermediateViability={cycles?.cycles?.[0]?.state_snapshot.viability_score}
+          intermediateViability={cycles?.cycles?.[0]?.state_snapshot?.viability_score}
           recoverability={r.recoverability}
-          showScorecard={facing.showScorecard && facing.category !== "not_a_deal"}
+          showScorecard={facing.showScorecard && !facing.offForecast}
         />
       )}
 

@@ -6265,7 +6265,10 @@ a.run-button:hover {
 .marketing-nav {
   display: flex;
   align-items: center;
+  flex-wrap: wrap;
   gap: 0.25rem;
+  min-width: 0;
+  max-width: 100%;
 }
 
 .marketing-nav button,
@@ -6496,6 +6499,7 @@ a.marketing-text-link {
 
   .marketing-nav {
     order: 3;
+    flex: 1 1 100%;
     width: 100%;
   }
 

@@ -20,7 +20,7 @@ import {
   type StakeholderSignal,
 } from "./grounding.js";
 import { alignBlockerNarrative } from "../src/lib/blockerNarrative.js";
-import { diagnosticProfile, promisedRelationshipSteps, purchaseMotion, recommendedMoveLine, stalledHeadline, validateReportMatrix, type ReportValidation, type RecoverabilityAssessment } from "../src/lib/reportMatrix.js";
+import { diagnosticProfile, isSellingRep, promisedRelationshipSteps, purchaseMotion, recommendedMoveLine, stalledHeadline, validateReportMatrix, type ReportValidation, type RecoverabilityAssessment } from "../src/lib/reportMatrix.js";
 import { commercialBaselineFromText, type CommercialBaseline } from "../src/lib/commercialBaseline.js";
 import { attributeQuote } from "../src/lib/evidenceAttribution.js";
 import { assessIntentExtraction, buildIntentRetryInstructions } from "../src/lib/intentExtraction.js";
@@ -366,8 +366,10 @@ function applyCanonicalScoring(
   const finalCycle = frozen.resolution_cycles.cycles[frozen.resolution_cycles.cycles.length - 1];
   const motion = purchaseMotion(transcript);
   const notAPurchase = motion.motion === "not_a_deal";
+  const unresolved = motion.motion === "unresolved";
+  const quiet = notAPurchase || unresolved;
   const stakeholders = result.stakeholders
-    .filter((person) => !/^seller$/i.test(person.name.trim()) && !isSellerIntroduction(person, transcript))
+    .filter((person) => !isSellingRep(person) && !isSellerIntroduction(person, transcript))
     .map((person) => {
     const persona_type = reconcilePersona(
       {
@@ -399,7 +401,9 @@ function applyCanonicalScoring(
         )?.name
       )
     : [];
-  const status = notAPurchase
+  const status = unresolved
+    ? "MOTION NOT ESTABLISHED"
+    : notAPurchase
     ? "NOT A PURCHASE"
     : statusFromTrajectory(
         frozen.trajectory_type,
@@ -425,25 +429,31 @@ function applyCanonicalScoring(
       status,
     },
     recoverability: frozen.recoverability,
-    executive_summary: notAPurchase
+    executive_summary: unresolved
+      ? "Speakers could not be read. No forecast judgment is published."
+      : notAPurchase
       ? "This call did not open a purchase. The prospect is the owner and declined the client role. The next step is the referral relationship already agreed, and it stays off the forecast."
       : result.executive_summary,
-    live_deal_triage: notAPurchase
+    live_deal_triage: quiet
       ? {
           root_issue: motion.reason,
-          core_blocker: "None on a purchase. They declined the client role.",
-          department_friction_index: proprietary_indices.multi_department_friction,
+          core_blocker: unresolved
+            ? "None. The speakers are not established."
+            : "None on a purchase. They declined the client role.",
+          department_friction_index: 0,
         }
       : result.live_deal_triage,
     report_validation,
-    force_initialization: notAPurchase
+    force_initialization: quiet
       ? {
           ...result.force_initialization,
           blocker_classification: causal.blocker_classification,
-          summary:
-            "Business owner and apparent decision-maker. No purchase process was established.",
-          classification_rationale:
-            "The prospect declined to be the client. The seller offered a referral introduction instead of a close.",
+          summary: unresolved
+            ? "Speakers are not established. No purchase process was read."
+            : "Business owner and apparent decision-maker. No purchase process was established.",
+          classification_rationale: unresolved
+            ? "The transcript has no speaker labels, so no person is assigned a role."
+            : "The prospect declined to be the client. The seller offered a referral introduction instead of a close.",
         }
       : {
           ...result.force_initialization,
@@ -454,14 +464,7 @@ function applyCanonicalScoring(
             causal.blocker_classification
           ),
         },
-    commercial_baseline: commercialBaselineFromText(
-      [
-        transcript,
-        result.executive_summary,
-        ...result.causal_forces.map((force) => `${force.factor} ${force.evidence}`),
-        ...result.stakeholders.map((person) => `${person.name} ${person.role ?? ""}`),
-      ].join("\n")
-    ),
+    commercial_baseline: commercialBaselineFromText(transcript),
     causal_forces: causal.forces.map((f) => ({
       factor: f.factor,
       type: f.type as CausalForceType,
@@ -489,11 +492,15 @@ function applyCanonicalScoring(
       derived_from_cycles: true,
       net_force_balance: `${frozen.structural_lock_in}+${frozen.constraint_pressure}=${frozen.structural_lock_in + frozen.constraint_pressure} → ${frozen.equilibrium_state}`,
       dominating_forces: dominant ? [dominant.factor] : result.equilibrium_analysis.dominating_forces,
-      equilibrium_breaker: notAPurchase
-        ? "No purchase was opened."
+      equilibrium_breaker: quiet
+        ? unresolved
+          ? "Speakers are not established."
+          : "No purchase was opened."
         : result.equilibrium_analysis.equilibrium_breaker,
-      explanation: notAPurchase
-        ? "The call ended as a referral exchange. Nothing was opened to recover, so this stays off the forecast."
+      explanation: quiet
+        ? unresolved
+          ? "No forecast line is published until the speakers can be read."
+          : "The call ended as a referral exchange. Nothing was opened to recover, so this stays off the forecast."
         : frozen.derivation_formula,
     },
     viability_state: {
@@ -525,18 +532,18 @@ function applyCanonicalScoring(
       ],
     },
     reactivation_modeling: result.reactivation_modeling.slice(0, 3),
-    rescue_triage_plan: notAPurchase
+    rescue_triage_plan: quiet
       ? {
           immediate_0_30_days: relationshipSteps,
           near_term_30_90_days: [],
           long_term_90_plus_days: [],
         }
       : result.rescue_triage_plan,
-    immediate_remediation: notAPurchase ? relationshipSteps : result.immediate_remediation,
+    immediate_remediation: quiet ? relationshipSteps : result.immediate_remediation,
     diagnostic_profile: diagnosticProfile(transcript),
     crm_intelligence: {
       ...result.crm_intelligence,
-      recommended_next_action: notAPurchase
+      recommended_next_action: quiet
         ? recommendedMoveLine(relationshipSteps)
         : result.crm_intelligence.recommended_next_action,
       dominant_equilibrium_force:
@@ -550,8 +557,8 @@ function applyCanonicalScoring(
       buyer_intent_strength: String(frozen.intent_strength),
       effective_intent: String(frozen.effective_intent),
       constraint_pressure: String(frozen.constraint_pressure),
-      deal_risk_index: String(proprietary_indices.deal_risk_index),
-      risk_tier: proprietary_indices.risk_tier,
+      deal_risk_index: quiet ? "" : String(proprietary_indices.deal_risk_index),
+      risk_tier: quiet ? "" : proprietary_indices.risk_tier,
     },
     proprietary_indices,
     stakeholders,

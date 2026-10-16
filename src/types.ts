@@ -413,11 +413,14 @@ export interface PostMortemResult {
     fee: string | null;
     owner: string | null;
     target: string | null;
+    context?: { kind: "buyer_budget" | "deal_value" | "seller_revenue" | "rejected"; label: string; note: string }[];
   };
   sources?: TranscriptSources;
   processed_at?: string;
   id?: string | null;
   warnings?: string[];
+  /** The call text for this run. Present on the live response and on an owner reopen. Not stored in analysis_json. */
+  source_transcript?: string;
   /** Why Now / buying signals from WhiteWhale (server auto-lookup). */
   whitewhale_intel?: WhiteWhaleAccountIntel | null;
   weighted_cause_structure?: WeightedCauseStructure;
@@ -447,6 +450,11 @@ export interface PostMortemResult {
     budget: string;
     urgency: string;
     missedProcess: string;
+    said?: string[];
+    implied?: string;
+    unknown?: string;
+    falseRead?: string;
+    restart?: string;
   };
 }
 
@@ -690,6 +698,7 @@ export function normalizeResult(raw: PostMortemResult): PostMortemResult {
           equilibrium_state: raw.crm_intelligence.equilibrium_state ?? "metastable",
         }
       : undefined,
+    source_transcript: raw.source_transcript,
   };
 }
 

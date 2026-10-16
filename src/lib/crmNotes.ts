@@ -40,7 +40,7 @@ function invisibleVetoHolder(result: PostMortemResult): string {
     stakeholders.find((s) => /technical_veto/i.test(s.authority_level ?? ""));
   if (veto) return stakeholderLabel(veto);
   const owner = stakeholders.find((s) => /economic owner/i.test(s.persona_type ?? s.stance ?? ""));
-  if (facingFor(result).category === "not_a_deal") {
+  if (facingFor(result).offForecast) {
     return owner
       ? `None identified. ${owner.name} is the business owner and apparent decision-maker; no purchase process was established.`
       : "None identified. No purchase process was established.";
@@ -67,8 +67,10 @@ function coreBlocker(result: PostMortemResult): string {
 }
 
 function nextActionDate(result: PostMortemResult): string {
-  if (facingFor(result).category === "not_a_deal") {
-    return "No forecast date — send what was already promised";
+  if (facingFor(result).offForecast) {
+    return facingFor(result).category === "unresolved"
+      ? "No forecast date — speakers are not established"
+      : "No forecast date — send what was already promised";
   }
   const immediate =
     result.immediate_remediation?.[0] ||
@@ -96,7 +98,7 @@ function peopleByRole(result: PostMortemResult): string {
   const groups: { label: string; match: RegExp }[] = [
     {
       label:
-        facingFor(result).category === "not_a_deal"
+        facingFor(result).offForecast
           ? "Business owner (apparent decision-maker)"
           : "Economic owner (authority on the call)",
       match: /economic owner/i,
@@ -153,7 +155,7 @@ function whoDoesWhat(result: PostMortemResult): string {
     /absent decision maker/i.test(s.persona_type ?? s.stance ?? "")
   );
   const crmNext = result.crm_intelligence?.recommended_next_action?.trim();
-  const notADeal = facingFor(result).category === "not_a_deal";
+  const notADeal = facingFor(result).offForecast;
   const immediate = result.immediate_remediation ?? [];
   const promised = immediate.length ? immediate : (result.rescue_triage_plan?.immediate_0_30_days ?? []);
 
@@ -197,7 +199,7 @@ function whoDoesWhat(result: PostMortemResult): string {
 }
 
 function whatToDo(result: PostMortemResult): string {
-  const notADeal = facingFor(result).category === "not_a_deal";
+  const notADeal = facingFor(result).offForecast;
   const immediate = result.immediate_remediation ?? [];
   const plan = result.rescue_triage_plan ?? {
     immediate_0_30_days: [],
@@ -295,8 +297,8 @@ function historicalExtras(result: PostMortemResult): string[] {
 
 function metricsBlock(result: PostMortemResult): string {
   const facing = facingFor(result);
-  if (facing.category === "not_a_deal") {
-    return "- **Category:** Not a deal. Stall metrics are not applied.";
+  if (facing.offForecast) {
+    return `- **Category:** ${facing.categoryLabel}. Stall metrics are not applied.`;
   }
   const pi = result.proprietary_indices;
   const triage = result.live_deal_triage;
@@ -331,9 +333,9 @@ function metricsBlock(result: PostMortemResult): string {
 export function formatCompressedCrmNotes(result: PostMortemResult): string {
   const client = result.client_name?.trim() || "Unknown account";
   const facing = facingFor(result);
-  const notADeal = facing.category === "not_a_deal";
+  const notADeal = facing.offForecast;
   const rawStatus = String(result.deal_classification?.status ?? result.deal_status ?? "STALLED");
-  const status = notADeal ? "Not a deal" : rawStatus;
+  const status = notADeal ? facing.categoryLabel : rawStatus;
   const rootIssue =
     result.live_deal_triage?.root_issue?.trim() ||
     result.executive_summary?.trim() ||
@@ -363,7 +365,7 @@ export function formatCompressedCrmNotes(result: PostMortemResult): string {
     "### Who needs to do what",
     whoDoesWhat(result),
     "",
-    notADeal ? "### People" : "### People map (buying group)",
+    notADeal ? "### People" : "### People map",
     peopleByRole(result),
     "",
     "### What to do",

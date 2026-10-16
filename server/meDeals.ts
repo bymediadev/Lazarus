@@ -16,6 +16,7 @@ export type LifecyclePhase =
   | "closed_lost_unlikely"
   | "closed_won"
   | "not_a_purchase"
+  | "motion_not_established"
   | "unknown";
 
 type MemorySummary = {
@@ -112,8 +113,19 @@ async function requireDealTenant(req: Request, res: Response): Promise<string | 
   return tenantId;
 }
 
+export function publishesLifecycleScores(phase: LifecyclePhase): boolean {
+  return phase !== "not_a_purchase" && phase !== "motion_not_established";
+}
+
+/** A viability change does not earn the unstuck label. The phase stays the latest status. */
+export function scoreMovement(phase: LifecyclePhase): LifecyclePhase {
+  return phase;
+}
+
 export function lifecyclePhaseFromStatus(status: string): LifecyclePhase {
   const s = status.toUpperCase();
+  if (s.includes("MOTION NOT ESTABLISHED")) return "motion_not_established";
+  if (s.includes("NOT A PURCHASE") || s.includes("NOT A DEAL")) return "not_a_purchase";
   if (s.includes("CLOSED WON") || s === "CLOSED_WON") return "closed_won";
   if (s.includes("CLOSED LOST") && s.includes("RECOVERABLE")) return "closed_lost_recoverable";
   if (s.includes("CLOSED LOST")) return "closed_lost_unlikely";
@@ -145,6 +157,8 @@ export function lifecycleLabel(phase: LifecyclePhase): string {
       return "Closed won";
     case "not_a_purchase":
       return "Not a purchase — off forecast";
+    case "motion_not_established":
+      return "Motion not established";
     default:
       return "Status unknown";
   }
@@ -153,6 +167,7 @@ export function lifecycleLabel(phase: LifecyclePhase): string {
 function phaseRank(phase: LifecyclePhase): number {
   const order: LifecyclePhase[] = [
     "not_a_purchase",
+    "motion_not_established",
     "closed_lost_unlikely",
     "stalled_high_risk",
     "stalled_uncertain",
@@ -210,10 +225,20 @@ function runSnapshot(row: DealRow) {
   };
 }
 
-function improvementBetween(
-  older: ReturnType<typeof runSnapshot>,
-  newer: ReturnType<typeof runSnapshot>
-): {
+function sameStage(older: LifecyclePhase, newer: LifecyclePhase): boolean {
+  if (older === newer) return true;
+  return older.startsWith("stalled_") && newer.startsWith("stalled_");
+}
+
+/** A viability change is a score. Stage movement is a different phase, and a move inside stalled does not count. */
+export function lifecycleDelta(input: {
+  olderPhase: LifecyclePhase;
+  newerPhase: LifecyclePhase;
+  olderViability: number | null;
+  newerViability: number | null;
+  olderRisk: number | null;
+  newerRisk: number | null;
+}): {
   direction: "improved" | "worsened" | "flat" | "unknown";
   summary: string;
   viability_delta: number | null;
@@ -221,22 +246,22 @@ function improvementBetween(
   phase_delta: number;
 } {
   const viability_delta =
-    older.viability_score != null && newer.viability_score != null
-      ? newer.viability_score - older.viability_score
+    input.olderViability != null && input.newerViability != null
+      ? input.newerViability - input.olderViability
       : null;
   const risk_delta =
-    older.deal_risk_index != null && newer.deal_risk_index != null
-      ? newer.deal_risk_index - older.deal_risk_index
-      : null;
-  const phase_delta = phaseRank(newer.lifecycle_phase) - phaseRank(older.lifecycle_phase);
-
-  let score = 0;
-  if (viability_delta != null) score += Math.sign(viability_delta);
-  if (risk_delta != null) score -= Math.sign(risk_delta); // lower risk = better
-  if (phase_delta !== 0) score += Math.sign(phase_delta);
-
+    input.olderRisk != null && input.newerRisk != null ? input.newerRisk - input.olderRisk : null;
+  const phase_delta = sameStage(input.olderPhase, input.newerPhase)
+    ? 0
+    : phaseRank(input.newerPhase) - phaseRank(input.olderPhase);
   const direction =
-    score > 0 ? "improved" : score < 0 ? "worsened" : viability_delta == null && risk_delta == null ? "unknown" : "flat";
+    phase_delta > 0
+      ? "improved"
+      : phase_delta < 0
+        ? "worsened"
+        : viability_delta == null && risk_delta == null
+          ? "unknown"
+          : "flat";
 
   const bits: string[] = [];
   if (viability_delta != null && viability_delta !== 0) {
@@ -245,8 +270,9 @@ function improvementBetween(
   if (risk_delta != null && risk_delta !== 0) {
     bits.push(`risk ${risk_delta > 0 ? "+" : ""}${risk_delta}`);
   }
-  if (phase_delta > 0) bits.push("lifecycle improved");
-  if (phase_delta < 0) bits.push("lifecycle slipped");
+  if (phase_delta > 0) bits.push("stage advanced");
+  else if (phase_delta < 0) bits.push("stage slipped");
+  else if (viability_delta || risk_delta) bits.push("stage unchanged");
   if (!bits.length) bits.push(direction === "unknown" ? "not enough scored runs yet" : "no material change");
 
   return {
@@ -256,6 +282,20 @@ function improvementBetween(
     risk_delta,
     phase_delta,
   };
+}
+
+function improvementBetween(
+  older: ReturnType<typeof runSnapshot>,
+  newer: ReturnType<typeof runSnapshot>
+): ReturnType<typeof lifecycleDelta> {
+  return lifecycleDelta({
+    olderPhase: older.lifecycle_phase,
+    newerPhase: newer.lifecycle_phase,
+    olderViability: older.viability_score,
+    newerViability: newer.viability_score,
+    olderRisk: older.deal_risk_index,
+    newerRisk: newer.deal_risk_index,
+  });
 }
 
 export function registerMeDealRoutes(app: Express): void {
@@ -357,24 +397,22 @@ export function registerMeDealRoutes(app: Express): void {
           const runs = g.runs;
           const latest = runs[runs.length - 1];
           const earliest = runs[0];
+          const phase = scoreMovement(latest.lifecycle_phase);
+          const scored = publishesLifecycleScores(phase);
           const improvement =
-            runs.length >= 2 ? improvementBetween(earliest, latest) : null;
-
-          let phase = latest.lifecycle_phase;
-          if (
-            improvement?.direction === "improved" &&
-            (phase === "stalled_recoverable" ||
-              phase === "stalled_uncertain" ||
-              phase === "stalled_high_risk")
-          ) {
-            phase = "unstuck";
-          }
+            scored && runs.length >= 2 ? improvementBetween(earliest, latest) : null;
 
           const timeline = runs.map((run, idx) => {
             const prev = idx > 0 ? runs[idx - 1] : null;
-            const step = prev ? improvementBetween(prev, run) : null;
+            const step =
+              prev && publishesLifecycleScores(run.lifecycle_phase)
+                ? improvementBetween(prev, run)
+                : null;
             return {
               ...run,
+              viability_score: publishesLifecycleScores(run.lifecycle_phase) ? run.viability_score : null,
+              deal_risk_index: publishesLifecycleScores(run.lifecycle_phase) ? run.deal_risk_index : null,
+              trajectory_type: publishesLifecycleScores(run.lifecycle_phase) ? run.trajectory_type : null,
               since_previous: step,
             };
           });
@@ -390,9 +428,9 @@ export function registerMeDealRoutes(app: Express): void {
             lifecycle_phase: phase,
             lifecycle_label: lifecycleLabel(phase),
             deal_status: latest.deal_status,
-            deal_risk_index: latest.deal_risk_index,
-            viability_score: latest.viability_score,
-            risk_tier: latest.risk_tier,
+            deal_risk_index: scored ? latest.deal_risk_index : null,
+            viability_score: scored ? latest.viability_score : null,
+            risk_tier: scored ? latest.risk_tier : null,
             core_blocker: latest.core_blocker,
             headline: latest.headline,
             account_id: latest.account_id ?? g.crm?.account_id ?? null,
@@ -448,7 +486,7 @@ export function registerMeDealRoutes(app: Express): void {
       const { data, error } = await supabase
         .from("call_post_mortems")
         .select(
-          "id, client_name, deal_value, deal_status, stall_cause, why_it_stalled, restart_plan, created_at, analysis_json, ingest_metadata, deal_memory_summary, user_id"
+          "id, client_name, deal_value, deal_status, stall_cause, why_it_stalled, restart_plan, created_at, analysis_json, ingest_metadata, deal_memory_summary, transcript_text, user_id"
         )
         .eq("id", dealId)
         .eq("user_id", userId)
@@ -498,6 +536,9 @@ export function registerMeDealRoutes(app: Express): void {
           ...analysis,
           id: data.id,
           client_name: analysis.client_name ?? data.client_name,
+          ...(typeof data.transcript_text === "string" && data.transcript_text.trim()
+            ? { source_transcript: data.transcript_text }
+            : {}),
         },
       });
     } catch (err) {

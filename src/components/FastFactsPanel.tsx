@@ -69,10 +69,11 @@ export default function FastFactsPanel({
     trajectory: result.deal_trajectory?.trajectory_type,
     recoverabilityStatus: result.recoverability?.status,
     relevanceLabel: result.relevance?.label,
+    transcript: result.source_transcript,
   });
   const trajectory = result.deal_trajectory?.trajectory_type ?? "";
   const guidance = forecastGuidance({
-    status: facing.category === "not_a_deal" ? "NOT A PURCHASE" : status,
+    status: facing.category === "unresolved" ? "MOTION NOT ESTABLISHED" : facing.offForecast ? "NOT A PURCHASE" : status,
     trajectory,
     recoverability: result.recoverability_score ?? result.viability_state?.viability_score,
     viabilityState: result.viability_state?.state,
@@ -82,7 +83,7 @@ export default function FastFactsPanel({
   const missingPeople = absentPeople(result);
   const conditionStakeholders = conditionPeople(result);
   const saveSteps =
-    facing.category === "not_a_deal"
+    facing.offForecast
       ? canonicalImmediateActions(result)
       : canonicalImmediateActions(result).slice(0, 1);
 
@@ -124,7 +125,7 @@ export default function FastFactsPanel({
       <article className="card card-amber concise-card fast-facts-card">
         <h2 className="card-title">What this deal is</h2>
         <div className="card-body">
-          <p className="fast-facts-status">{facing.category === "not_a_deal" ? facing.categoryLabel : status}</p>
+          <p className="fast-facts-status">{facing.offForecast ? facing.categoryLabel : status}</p>
           <p>{guidance.line}</p>
           <p>
             <strong>Core blocker:</strong> {blocker}
@@ -143,7 +144,7 @@ export default function FastFactsPanel({
               {(result.stakeholders ?? []).some((person) =>
                 /economic owner/i.test(`${person.persona_type ?? ""} ${person.stance ?? ""}`)
               )
-                ? facing.category === "not_a_deal"
+                ? facing.offForecast
                   ? "Business owner and apparent decision-maker. No purchase process was established."
                   : "The owner on the call is the authority. No one else has to approve."
                 : "No opposing or absent stakeholder is mapped. The people table is in Expanded Analysis."}
@@ -209,7 +210,7 @@ export default function FastFactsPanel({
                   </li>
                 ))}
               </ol>
-              {facing.category !== "not_a_deal" && (
+              {!facing.offForecast && (
                 <p className="meta-line">The full recovery plan is in the brief above. This block is the note to copy.</p>
               )}
             </>

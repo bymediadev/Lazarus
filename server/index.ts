@@ -573,6 +573,7 @@ app.post(
       audio_meta: audioMeta ?? null,
       warnings,
       relevance,
+      source_transcript: transcript,
     });
     committed = true;
   } catch (err) {

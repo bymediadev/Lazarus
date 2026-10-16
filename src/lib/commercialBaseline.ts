@@ -1,32 +1,11 @@
+import { readPurchaseMoney, type MoneyContext } from "./reportMatrix";
+
 export interface CommercialBaseline {
   fee: string | null;
   owner: string | null;
   target: string | null;
-}
-
-function formatDollars(amount: number): string {
-  return `$${Math.round(amount).toLocaleString("en-US")}`;
-}
-
-function findFee(text: string): string | null {
-  const matches = [...text.matchAll(/\$\s*(\d{1,3}(?:,\d{3})+|\d+(?:\.\d+)?)\s*(k|m|million)?/gi)];
-  if (!matches.length) return null;
-  let best: { amount: number; annual: boolean } | null = null;
-  for (const match of matches) {
-    let amount = Number(match[1].replace(/,/g, ""));
-    const unit = (match[2] ?? "").toLowerCase();
-    if (unit === "k") amount *= 1000;
-    if (unit === "m" || unit === "million") amount *= 1_000_000;
-    if (!Number.isFinite(amount) || amount <= 0) continue;
-    const window = text.slice(Math.max(0, (match.index ?? 0) - 48), (match.index ?? 0) + match[0].length + 48);
-    const annual = /annual|platform fee|per year/i.test(window);
-    if (!best || (annual && !best.annual) || (annual === best.annual && amount > best.amount)) {
-      best = { amount, annual };
-    }
-  }
-  if (!best) return null;
-  const formatted = formatDollars(best.amount);
-  return best.annual ? `${formatted} Annual Platform Fee` : formatted;
+  /** Dollars the call named that are not the qualified purchase value. */
+  context?: MoneyContext[];
 }
 
 function findOwner(text: string): string | null {
@@ -45,10 +24,70 @@ function findTarget(text: string): string | null {
   return null;
 }
 
+function feeFromQualifiedBudget(budget: string): string | null {
+  const match = budget.match(/\$\s*(\d{1,3}(?:,\d{3})+|\d+(?:\.\d+)?)\s*(k|m|million)?/i);
+  if (!match) return null;
+  let amount = Number(match[1].replace(/,/g, ""));
+  const unit = (match[2] ?? "").toLowerCase();
+  if (unit === "k") amount *= 1_000;
+  if (unit === "m" || unit === "million") amount *= 1_000_000;
+  if (!Number.isFinite(amount) || amount <= 0) return null;
+  const formatted = `$${Math.round(amount).toLocaleString("en-US")}`;
+  return /annual platform fee|platform fee|annual platform budget|annual contract/i.test(budget)
+    ? `${formatted} Annual Platform Fee`
+    : formatted;
+}
+
+/** Qualified purchase value from the transcript. Other dollars stay in context. */
 export function commercialBaselineFromText(text: string): CommercialBaseline {
+  const money = readPurchaseMoney(text ?? "");
   return {
-    fee: findFee(text),
-    owner: findOwner(text),
-    target: findTarget(text),
+    fee: money.qualifiedFee,
+    owner: findOwner(text ?? ""),
+    target: findTarget(text ?? ""),
+    context: money.context,
+  };
+}
+
+function keptContext(raw: CommercialBaseline["context"]): MoneyContext[] {
+  if (!Array.isArray(raw)) return [];
+  const out: MoneyContext[] = [];
+  for (const item of raw) {
+    if (!item || typeof item.label !== "string" || !/^\$[\d,]+/.test(item.label)) continue;
+    if (item.kind !== "seller_revenue" && item.kind !== "rejected" && item.kind !== "deal_value" && item.kind !== "buyer_budget") {
+      continue;
+    }
+    out.push({
+      kind: item.kind,
+      label: item.label,
+      note: typeof item.note === "string" ? item.note.slice(0, 160) : "",
+    });
+    if (out.length === 4) break;
+  }
+  return out;
+}
+
+/**
+ * The headline uses one reading.
+ * A stored fee is ignored when the transcript or the budget line does not qualify it.
+ * Stored context is the classification saved with the row. It is not rebuilt from the fee.
+ */
+export function presentCommercialBaseline(input: {
+  transcript?: string | null;
+  stored?: CommercialBaseline | null;
+  diagnosticBudget?: string | null;
+}): CommercialBaseline {
+  if (input.transcript?.trim()) {
+    return commercialBaselineFromText(input.transcript);
+  }
+  const budget = input.diagnosticBudget ?? "";
+  const rejected = /not qualified/i.test(budget);
+  const qualified = /qualified for this purchase/i.test(budget);
+  const fee = rejected ? null : qualified ? feeFromQualifiedBudget(budget) : input.stored?.fee ?? null;
+  return {
+    fee,
+    owner: input.stored?.owner ?? null,
+    target: input.stored?.target ?? null,
+    context: keptContext(input.stored?.context),
   };
 }

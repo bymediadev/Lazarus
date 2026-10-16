@@ -49,7 +49,10 @@ export default function MarketingHome({
         <ol className="marketing-report-walk marketing-report-walk-secondary">
           <li>
             <h3>Forecast snapshot</h3>
-            <p>Five scores sit at the top. Use them when someone asks why the number moved.</p>
+            <p>
+              Five scores sit at the top of a stalled deal. Use them when someone asks why the number
+              moved. When the call is not a deal, those scores stay off the page.
+            </p>
             <ul>
               <li>
                 <strong>Deal Risk Score</strong> — how likely this deal stalls or drops.
@@ -348,6 +351,64 @@ export default function MarketingHome({
               <p>
                 No. A manager can drop the file for the team. A rep can also run the one deal they are
                 trying to save. Either way, it is not a new daily tool.
+              </p>
+            </div>
+          </details>
+
+          <div className="marketing-qa-group">
+            <h3>What the brief will defend</h3>
+            <p>
+              Recoverable, a flat no, not a deal, or motion not established. The sentence is on the
+              page.
+            </p>
+          </div>
+          <details className="marketing-qa-item">
+            <summary>What is the difference between recoverable, a flat no, and not a deal?</summary>
+            <div className="marketing-qa-panel">
+              <p>
+                Recoverable means a purchase is open and a person can still move it. A flat no means
+                the buyer closed it. Not a deal means the buyer refused the client role. Motion not
+                established means the speakers can be read and no purchase was stated, or the
+                speakers cannot be read. The brief says which one, and it does not print a stall
+                score unless the purchase is open and stalled.
+              </p>
+            </div>
+          </details>
+          <details className="marketing-qa-item">
+            <summary>What if the call never opened a purchase?</summary>
+            <div className="marketing-qa-panel">
+              <p>
+                When the speakers can be read and the buyer never opened a purchase, the brief says
+                motion not established and prints no stall score. When nobody is labeled, it says
+                the same thing. Not a deal is reserved for the buyer who refused the client role.
+              </p>
+            </div>
+          </details>
+          <details className="marketing-qa-item">
+            <summary>Does silence after a link mean the deal stalled?</summary>
+            <div className="marketing-qa-panel">
+              <p>
+                No. If the call never opened a purchase, silence after the link is a complete
+                outcome. It is not a stall and it does not go back on the forecast.
+              </p>
+            </div>
+          </details>
+          <details className="marketing-qa-item">
+            <summary>Will the brief invent a next meeting?</summary>
+            <div className="marketing-qa-panel">
+              <p>
+                No. A restart appears only when the buyer named the condition. Otherwise the brief
+                says this call does not reopen.
+              </p>
+            </div>
+          </details>
+          <details className="marketing-qa-item">
+            <summary>What will the brief refuse to claim when the quote is from the wrong person?</summary>
+            <div className="marketing-qa-panel">
+              <p>
+                A seller’s revenue figure is not the buyer’s budget. A seller describing their own
+                pipeline is not a meeting that was set. If the quote does not prove the sentence, that
+                sentence stays off the page.
               </p>
             </div>
           </details>

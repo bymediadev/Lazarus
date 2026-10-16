@@ -8,7 +8,7 @@ import {
   serviceRoleClient,
 } from "./founderAuth.js";
 import { runCriticalAlertPass, runDigestAlert, isDigestHour } from "./founderAlerts.js";
-import { buildSystemStatus, classifyIssue } from "./founderSystem.js";
+import { buildSystemStatus, classifyIssue, isUnsignedIntegrationProbe } from "./founderSystem.js";
 import { buildApisInventory } from "./founderApis.js";
 import { buildWorkspaceHealth } from "./workspaceHealth.js";
 import { issueTenantApiKey } from "./tenantApiKey.js";
@@ -143,7 +143,7 @@ export function registerFounderRoutes(app: Express): void {
 
         for (const e of events ?? []) {
           events24 += 1;
-          if (e.status_code >= 400) errors24 += 1;
+          if (e.status_code >= 400 && !isUnsignedIntegrationProbe(e.route, e.status_code)) errors24 += 1;
           if (typeof e.duration_ms === "number") durations.push(e.duration_ms);
           const hour = new Date(e.created_at).toISOString().slice(11, 13);
           peakHours[hour] = (peakHours[hour] ?? 0) + 1;
@@ -158,6 +158,7 @@ export function registerFounderRoutes(app: Express): void {
           .limit(8);
 
         for (const f of fails ?? []) {
+          if (isUnsignedIntegrationProbe(f.route, f.status_code)) continue;
           const cls = classifyIssue(f.route, f.status_code, f.error_code);
           hangups.push({
             ...f,

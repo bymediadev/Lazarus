@@ -22,6 +22,13 @@ export function forecastGuidance(input: {
     trajectory === "NON-VIABLE / DEAD" ||
     /NON-VIABLE\s*\/\s*DEAD/i.test(trajectory);
 
+  if (/MOTION NOT ESTABLISHED/i.test(status)) {
+    return {
+      removeFromForecast: true,
+      showRecoveryPlan: false,
+      line: "Motion not established. Keep this off the forecast until the speakers can be read.",
+    };
+  }
   if (/NOT A (PURCHASE|DEAL)/i.test(status)) {
     return { removeFromForecast: true, showRecoveryPlan: true, line: NOT_A_PURCHASE_FORECAST_LINE };
   }
