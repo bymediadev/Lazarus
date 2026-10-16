@@ -16,7 +16,7 @@ import { DEFER_FORECAST_LINE, forecastGuidance, NON_VIABLE_FORECAST_LINE, NOT_A_
 import { canonicalImmediateActions, classifyRecoverability, classifyRisk, diagnosticProfile, matrixFacing, promisedRelationshipSteps, publishesStallMetrics, purchaseMotion, recommendedMoveLine, reportCategory, stalledHeadline, validateReportMatrix } from "../src/lib/reportMatrix.ts";
 import { formatCompressedCrmNotes } from "../src/lib/crmNotes.ts";
 import { mergeOverlappingQuotes } from "../src/lib/evidenceQuotes.ts";
-import { lifecycleDelta, lifecyclePhaseFromStatus, publishesLifecycleScores, scoreMovement } from "../server/meDeals.ts";
+import { lifecycleDelta, lifecyclePhaseFromStatus, presentLifecycleRun, presentThreadImprovement, publishesLifecycleScores, scoreMovement } from "../server/meDeals.ts";
 import { storedReportColumns } from "../server/reportSanitize.ts";
 import { readFileSync } from "fs";
 
@@ -994,7 +994,7 @@ const scoreOnly = lifecycleDelta({
   olderRisk: 67,
   newerRisk: 64,
 });
-if (scoreOnly.direction !== "flat" || /improved/i.test(scoreOnly.summary) || !/stage unchanged/.test(scoreOnly.summary) || !/\+53/.test(scoreOnly.summary)) {
+if (scoreOnly.direction !== "flat" || scoreOnly.summary !== "viability +53 · risk -3 · stage unchanged") {
   console.error("FAIL: A viability change does not move the stage", scoreOnly);
   failed = true;
 }
@@ -1008,6 +1008,82 @@ const stageMoved = lifecycleDelta({
 });
 if (stageMoved.direction !== "improved" || !/stage advanced/.test(stageMoved.summary)) {
   console.error("FAIL: A real stage change is still reported", stageMoved);
+  failed = true;
+}
+
+const danielText = readFileSync("fixtures/daniel_referral_transcript.txt", "utf-8");
+const danielFacing = matrixFacing({ status: "NOT A PURCHASE", transcript: danielText });
+const danielBaseline = commercialBaselineFromText(danielText);
+const danielBudget = diagnosticProfile(danielText).budget;
+if (
+  danielFacing.trajectoryLabel !== "Not a deal" ||
+  danielFacing.showScorecard ||
+  danielFacing.offForecast !== true ||
+  danielBaseline.fee != null ||
+  /1,000,000|500,000/.test(danielBaseline.fee ?? "") ||
+  !danielBaseline.context?.some((item) => item.kind === "seller_revenue" && /1,000,000|500,000/.test(item.label)) ||
+  !danielBudget.startsWith("Consultation budget was not qualified")
+) {
+  console.error("FAIL: The referral read stays off the forecast and keeps seller revenue out of the fee", danielFacing, danielBaseline, danielBudget);
+  failed = true;
+}
+const referralUnclassified = presentCommercialBaseline({
+  stored: { fee: "$1,000,000 Annual Platform Fee", owner: null, target: null },
+  diagnosticBudget: "Consultation budget was not qualified.",
+});
+const referralClassified = presentCommercialBaseline({
+  stored: {
+    fee: null,
+    owner: null,
+    target: null,
+    context: [{ kind: "seller_revenue", label: "$1,000,000", note: "Not the purchase value." }],
+  },
+  diagnosticBudget: "Consultation budget was not qualified.",
+});
+if (referralUnclassified.fee !== null || (referralUnclassified.context ?? []).length !== 0) {
+  console.error("FAIL: A referral row with no stored classification stays unclassified", referralUnclassified);
+  failed = true;
+}
+if (
+  referralClassified.fee !== null ||
+  !referralClassified.context?.some((item) => item.kind === "seller_revenue" && item.label === "$1,000,000")
+) {
+  console.error("FAIL: Known seller revenue stays labeled and off the purchase value", referralClassified);
+  failed = true;
+}
+const olderReferralRun = {
+  lifecycle_phase: "stalled_recoverable",
+  viability_score: 41,
+  deal_risk_index: 70,
+  trajectory_type: "DEFERRED (recoverable)",
+};
+const currentReferralRun = {
+  lifecycle_phase: "not_a_purchase",
+  viability_score: 12,
+  deal_risk_index: 80,
+  trajectory_type: "NON-VIABLE / DEAD",
+};
+const shownOlderReferral = presentLifecycleRun(olderReferralRun, null);
+const shownCurrentReferral = presentLifecycleRun(currentReferralRun, olderReferralRun);
+if (
+  presentThreadImprovement([olderReferralRun, currentReferralRun]) !== null ||
+  shownOlderReferral.viability_score !== 41 ||
+  shownOlderReferral.deal_risk_index !== 70 ||
+  shownCurrentReferral.viability_score !== null ||
+  shownCurrentReferral.deal_risk_index !== null ||
+  shownCurrentReferral.since_previous !== null ||
+  olderReferralRun.viability_score !== 41
+) {
+  console.error("FAIL: An older referral snapshot keeps its scores and the current off-forecast run adds no thread delta", shownOlderReferral, shownCurrentReferral);
+  failed = true;
+}
+if (
+  storedNorthline.fee !== "$280,000 Annual Platform Fee" ||
+  storedNorthline.owner !== "Sarah Chen" ||
+  storedNorthline.target !== "Post Month-End Access" ||
+  lifecyclePhaseFromStatus("STALLED — RECOVERABLE") !== "stalled_recoverable"
+) {
+  console.error("FAIL: The Northline saved run keeps the purchase and the stalled phase", storedNorthline);
   failed = true;
 }
 

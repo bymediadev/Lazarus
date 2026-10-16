@@ -284,9 +284,16 @@ export function lifecycleDelta(input: {
   };
 }
 
+type LifecycleSnapshot = {
+  lifecycle_phase: LifecyclePhase;
+  viability_score: number | null;
+  deal_risk_index: number | null;
+  trajectory_type: string | null;
+};
+
 function improvementBetween(
-  older: ReturnType<typeof runSnapshot>,
-  newer: ReturnType<typeof runSnapshot>
+  older: LifecycleSnapshot,
+  newer: LifecycleSnapshot
 ): ReturnType<typeof lifecycleDelta> {
   return lifecycleDelta({
     olderPhase: older.lifecycle_phase,
@@ -296,6 +303,35 @@ function improvementBetween(
     olderRisk: older.deal_risk_index,
     newerRisk: newer.deal_risk_index,
   });
+}
+
+/**
+ * Saved runs stay as they were written.
+ * Stall scores appear only for a run whose own saved phase is on the forecast.
+ * A later run can change the thread header. It does not replace an earlier run's scores.
+ */
+export function presentLifecycleRun<T extends LifecycleSnapshot>(
+  run: T,
+  previous: LifecycleSnapshot | null
+): T & { since_previous: ReturnType<typeof lifecycleDelta> | null } {
+  const publishes = publishesLifecycleScores(run.lifecycle_phase);
+  return {
+    ...run,
+    viability_score: publishes ? run.viability_score : null,
+    deal_risk_index: publishes ? run.deal_risk_index : null,
+    trajectory_type: publishes ? run.trajectory_type : null,
+    since_previous: previous && publishes ? improvementBetween(previous, run) : null,
+  };
+}
+
+/** The thread delta uses the latest saved phase. An off-forecast latest run publishes no delta. */
+export function presentThreadImprovement(
+  runs: LifecycleSnapshot[]
+): ReturnType<typeof lifecycleDelta> | null {
+  if (runs.length < 2) return null;
+  const latest = runs[runs.length - 1];
+  if (!publishesLifecycleScores(scoreMovement(latest.lifecycle_phase))) return null;
+  return improvementBetween(runs[0], latest);
 }
 
 export function registerMeDealRoutes(app: Express): void {
@@ -399,23 +435,9 @@ export function registerMeDealRoutes(app: Express): void {
           const earliest = runs[0];
           const phase = scoreMovement(latest.lifecycle_phase);
           const scored = publishesLifecycleScores(phase);
-          const improvement =
-            scored && runs.length >= 2 ? improvementBetween(earliest, latest) : null;
+          const improvement = presentThreadImprovement(runs);
 
-          const timeline = runs.map((run, idx) => {
-            const prev = idx > 0 ? runs[idx - 1] : null;
-            const step =
-              prev && publishesLifecycleScores(run.lifecycle_phase)
-                ? improvementBetween(prev, run)
-                : null;
-            return {
-              ...run,
-              viability_score: publishesLifecycleScores(run.lifecycle_phase) ? run.viability_score : null,
-              deal_risk_index: publishesLifecycleScores(run.lifecycle_phase) ? run.deal_risk_index : null,
-              trajectory_type: publishesLifecycleScores(run.lifecycle_phase) ? run.trajectory_type : null,
-              since_previous: step,
-            };
-          });
+          const timeline = runs.map((run, idx) => presentLifecycleRun(run, idx > 0 ? runs[idx - 1] : null));
 
           return {
             thread_key: g.thread_key,

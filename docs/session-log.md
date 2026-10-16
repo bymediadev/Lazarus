@@ -6,6 +6,20 @@ Two-sentence handoff notes for each build session. Append newest entries at the 
 
 ---
 
+## 2026-10-16 — Forecast judgments and commercial baseline
+
+**Built:** A rejected amount stays off the qualified purchase value. Northline keeps the $280,000 annual platform fee and a stalled status, with viability change separate from stage movement. The referral stays off the forecast. Each saved run keeps the judgment stored with that run.
+
+**Files:** `src/lib/commercialBaseline.ts`, `src/lib/reportMatrix.ts`, `server/meDeals.ts`, `server/gemini.ts`, `server/reportSanitize.ts`, `scripts/test-scoring-regression.mjs`, `fixtures/daniel_referral_transcript.txt`
+
+**Verified:** Commit `7e12b2f` is on main. GitHub test and Pages deploy succeeded. `www.getldr.ca` serves `assets/index-Dl0Nwxuw.js`. Saved referral brief: Not a deal, baseline not established, no $1,000,000 fee, no stall scorecard. Northline brief: $280,000 Annual Platform Fee, Sarah Chen, post month-end, viability 53, risk 64. List line: viability +53 · risk -3 · stage unchanged.
+
+**Known limitations:** The current referral row has no transcript and no stored seller-revenue classification, so the brief leaves that amount unclassified. A new save can store the classification; the old row should not have one invented. Older runs saved as stalled still show the viability stored on those runs. The thread header follows the latest judgment and does not rewrite history. Production API health is ok and does not name a commit, so the Render revision for `7e12b2f` is unconfirmed. The historical-snapshot regression is locked in the scoring suite. Gemini's live probe is healthy; quota history is an operational billing item.
+
+**Mess / later:** Confirm the Render deploy SHA, then check the deployed API. Supabase Preview reported: "Remote migration versions not found in local migrations directory." Do not silently migrate old runs.
+
+---
+
 ## 2026-09-10 — Salesforce PKCE (missing code challenge)
 
 **Built:** Salesforce authorize now sends S256 `code_challenge`; token exchange sends `code_verifier`. Top-level `/oauth-start` hop sets an httpOnly cookie so the verifier is not lost on the Pages → API cross-site POST.
