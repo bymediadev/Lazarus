@@ -77,6 +77,50 @@ for (const slug of ["login", "portal", "app", "qualify"]) {
   applyNoindex(join(dist, `${slug}.html`), `/${slug}`);
 }
 
+const QUALIFY_TITLE = "Off-hours forecast triage | Lazarus Deal Recovery";
+const QUALIFY_DESCRIPTION =
+  "Off-hours tour of a stalled deal. The transcript is redacted in the browser, then a weekday morning unlocks the action plan.";
+
+function applyQualifyMeta(filePath) {
+  if (!existsSync(filePath)) return;
+  let html = readFileSync(filePath, "utf8");
+  html = html.replace(/<title>[\s\S]*?<\/title>/, `<title>${QUALIFY_TITLE}</title>`);
+  html = html.replace(
+    /<meta\s+name="description"\s+content="[\s\S]*?"\s*\/>/,
+    `<meta name="description" content="${QUALIFY_DESCRIPTION}" />`
+  );
+  html = html.replace(
+    /<meta property="og:title" content="[^"]*" \/>/,
+    `<meta property="og:title" content="${QUALIFY_TITLE}" />`
+  );
+  html = html.replace(
+    /<meta\s+property="og:description"\s+content="[\s\S]*?"\s*\/>/,
+    `<meta property="og:description" content="${QUALIFY_DESCRIPTION}" />`
+  );
+  html = html.replace(
+    /<meta name="twitter:title" content="[^"]*" \/>/,
+    `<meta name="twitter:title" content="${QUALIFY_TITLE}" />`
+  );
+  html = html.replace(
+    /<meta\s+name="twitter:description"\s+content="[\s\S]*?"\s*\/>/,
+    `<meta name="twitter:description" content="${QUALIFY_DESCRIPTION}" />`
+  );
+  writeFileSync(filePath, html);
+}
+
+applyQualifyMeta(join(dist, "qualify", "index.html"));
+applyQualifyMeta(join(dist, "qualify.html"));
+
+for (const variant of ["linkedin", "email"]) {
+  const dir = join(dist, "qualify", variant);
+  mkdirSync(dir, { recursive: true });
+  const file = join(dir, "index.html");
+  copyFileSync(join(dist, "qualify", "index.html"), file);
+  let html = readFileSync(file, "utf8");
+  html = html.replaceAll(`${SITE}/qualify"`, `${SITE}/qualify/${variant}"`);
+  writeFileSync(file, html);
+}
+
 applySpaFallback404(join(dist, "404.html"));
 
 const staticHtmlFolders = [

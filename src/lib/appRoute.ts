@@ -15,7 +15,7 @@ export function getAppRoute(pathname = currentPathname()): AppRoute {
     return "app";
   }
   if (pathname === "/login") return "login";
-  if (pathname === "/qualify") return "qualify";
+  if (pathname === "/qualify" || pathname.startsWith("/qualify/")) return "qualify";
   return "home";
 }
 

@@ -715,7 +715,7 @@ export default function App() {
   useEffect(() => {
     if (!auth.session || auth.passwordRecovery || isPasswordRecoveryPending()) return;
     if (hasOAuthReturnParams()) return;
-    if (route === "home" || route === "login" || route === "qualify") {
+    if (route === "home" || route === "login") {
       goTo("/portal");
     }
     if (!openedDealsOnLogin) {

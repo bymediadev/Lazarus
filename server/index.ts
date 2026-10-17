@@ -888,7 +888,8 @@ if (process.env.NODE_ENV === "production" || existsSync(distPath)) {
       p === "/portal" ||
       p.startsWith("/portal/") ||
       p === "/login" ||
-      p === "/qualify"
+      p === "/qualify" ||
+      p.startsWith("/qualify/")
     ) {
       res.setHeader("X-Robots-Tag", "noindex, nofollow");
     }

@@ -13,7 +13,9 @@ type Props = {
 
 export default function OffHoursQualifier({ mode, onOpenPortal }: Props) {
   const [arrival] = useState<Arrival>(() =>
-    typeof window === "undefined" ? "site" : readArrival(window.location.search, document.referrer)
+    typeof window === "undefined"
+      ? "site"
+      : readArrival(window.location.search, document.referrer, window.location.pathname)
   );
   const [open, setOpen] = useState(mode === "page" || (mode === "dock" && arrivalOpensNow(arrival)));
 

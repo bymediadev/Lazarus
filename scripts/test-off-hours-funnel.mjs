@@ -1,3 +1,4 @@
+import { getAppRoute } from "../src/lib/appRoute.ts";
 import { arrivalOpensNow, qualifySharePath, readArrival, SHARE_LINKS } from "../src/qualifier/arrival.ts";
 import { inviteCopy, matchKeyword, parseKeywords } from "../src/qualifier/invite.ts";
 import { companyDomain, preCallBrief } from "../src/qualifier/brief.ts";
@@ -98,13 +99,18 @@ const sunday = bookingSlotFromMessage({
 check("Sunday embed booking is refused", sunday && "refused" in sunday);
 
 check("linkedin query opens now", readArrival("?from=linkedin", "") === "linkedin" && arrivalOpensNow("linkedin"));
+check("linkedin path opens now", readArrival("", "", "/qualify/linkedin") === "linkedin");
+check("email path opens now", readArrival("", "", "/qualify/email") === "email");
 check("linkedin referrer opens now", readArrival("", "https://www.linkedin.com/feed/") === "linkedin");
 check("email medium opens now", readArrival("?utm_medium=email", "") === "email" && arrivalOpensNow("email"));
 check("a normal visit stays on the site timer", readArrival("", "https://www.google.com/") === "site" && !arrivalOpensNow("site"));
-check("linkedin share link is the live qualify page", SHARE_LINKS.linkedin === "https://www.getldr.ca/qualify?from=linkedin");
-check("email share link is the live qualify page", SHARE_LINKS.email === "https://www.getldr.ca/qualify?from=email");
-check("home linkedin sends people to /qualify", qualifySharePath("?from=linkedin", "") === "/qualify?from=linkedin");
-check("home email sends people to /qualify", qualifySharePath("?utm_medium=email", "") === "/qualify?utm_medium=email&from=email");
+check("linkedin share link is its own qualify page", SHARE_LINKS.linkedin === "https://www.getldr.ca/qualify/linkedin");
+check("email share link is its own qualify page", SHARE_LINKS.email === "https://www.getldr.ca/qualify/email");
+check("home linkedin sends people to /qualify/linkedin", qualifySharePath("?from=linkedin", "") === "/qualify/linkedin");
+check("home email sends people to /qualify/email", qualifySharePath("?utm_medium=email", "") === "/qualify/email");
+check("qualify linkedin path is the qualify route", getAppRoute("/qualify/linkedin") === "qualify");
+check("qualify email path is the qualify route", getAppRoute("/qualify/email") === "qualify");
+check("a bare linkedin path is not the qualifier", getAppRoute("/linkedin") === "home");
 check("a normal home visit stays on the home page", qualifySharePath("", "") == null);
 check("qualify is a keyword", matchKeyword("Can we qualify this week?") === "qualify");
 check("yes alone is a keyword", matchKeyword("Yes") === "yes");
