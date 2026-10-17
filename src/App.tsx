@@ -1299,7 +1299,15 @@ export default function App() {
         </div>
       )}
       {trustPack && <TrustPackModal slug={trustPack} onClose={() => setTrustPack(null)} />}
-      {auth.session && (auth.passwordRecovery || isPasswordRecoveryPending()) ? (
+      {route === "qualify" ? (
+        <MarketingShell
+          onHome={() => goTo("/")}
+          onPortal={() => openTool()}
+          onLogin={() => openLogin("signin")}
+        >
+          <OffHoursQualifier mode="page" onOpenPortal={() => openTool()} />
+        </MarketingShell>
+      ) : auth.session && (auth.passwordRecovery || isPasswordRecoveryPending()) ? (
         <PasswordRecoveryScreen />
       ) : auth.session && !mfaChecked ? (
         <div className="login-screen">
@@ -1334,21 +1342,15 @@ export default function App() {
           onPortal={() => openTool()}
           onLogin={() => openLogin("signin")}
         >
-          {route === "qualify" ? (
-            <OffHoursQualifier mode="page" onOpenPortal={() => openTool()} />
-          ) : (
-            <>
-              <MarketingHome
-                onSignup={() => openLogin("signup")}
-                onPortal={() => openTool()}
-                onCheckout={(plan) => void handleCheckout(plan)}
-                stripeConfigured={directCheckoutReady() || stripeConfigured}
-                checkoutBusy={checkoutBusy}
-                checkoutError={billingError}
-              />
-              <OffHoursQualifier mode="dock" onOpenPortal={() => openTool()} />
-            </>
-          )}
+          <MarketingHome
+            onSignup={() => openLogin("signup")}
+            onPortal={() => openTool()}
+            onCheckout={(plan) => void handleCheckout(plan)}
+            stripeConfigured={directCheckoutReady() || stripeConfigured}
+            checkoutBusy={checkoutBusy}
+            checkoutError={billingError}
+          />
+          <OffHoursQualifier mode="dock" onOpenPortal={() => openTool()} />
         </MarketingShell>
       ) : (
         <>

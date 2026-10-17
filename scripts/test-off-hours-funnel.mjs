@@ -112,14 +112,20 @@ check("hello is not a keyword", matchKeyword("Hello there") == null);
 check("custom keywords come from the list", matchKeyword("send the triage", parseKeywords("triage,hello")) === "triage");
 const linkedinInvite = inviteCopy({ channel: "linkedin", name: "Priya" });
 check("linkedin invite carries the share link", linkedinInvite.link === SHARE_LINKS.linkedin && linkedinInvite.text.includes(SHARE_LINKS.linkedin));
-check("linkedin invite stays short", linkedinInvite.text.length < 500 && linkedinInvite.text.includes("Priya"));
+check("linkedin invite stays short", linkedinInvite.text.length < 600 && linkedinInvite.text.includes("Priya"));
+const companyAt = linkedinInvite.text.indexOf("https://www.linkedin.com/company/lazarus-deal-recovery");
+const personalAt = linkedinInvite.text.indexOf("https://www.linkedin.com/in/jjebennett/");
 check(
-  "invite shows Joshua's email and LinkedIn",
-  linkedinInvite.text.includes("joshua@getldr.ca") &&
-    linkedinInvite.text.includes("https://www.linkedin.com/in/jjebennett/")
+  "invite shows the company page, then Joshua's profile",
+  linkedinInvite.text.includes("joshua@getldr.ca") && companyAt > 0 && personalAt > companyAt
 );
 const emailInvite = inviteCopy({ channel: "email" });
 check("email invite uses the email share link", emailInvite.link === SHARE_LINKS.email);
+check(
+  "email invite keeps the company page and leaves out Joshua's profile",
+  emailInvite.text.includes("https://www.linkedin.com/company/lazarus-deal-recovery") &&
+    !emailInvite.text.includes("https://www.linkedin.com/in/jjebennett/")
+);
 
 const noOwner = answerGate("ownership", "no", EMPTY_GATES);
 check("no forecast owner gets the report and no morning", noOwner.access === "report" && noOwner.reason === "ownership");

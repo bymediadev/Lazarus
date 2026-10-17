@@ -5,7 +5,7 @@ import { navigateApp, scrollToSection } from "../lib/appRoute";
 import { API_BASE, PostMortemApiError, runPostMortem } from "../lib/api";
 import { bakedCaptchaSiteKey } from "../lib/captcha";
 import { contactMailto, sendContactNote } from "../lib/contact";
-import { BOOKING_URL, FOUNDER_EMAIL, FOUNDER_LINKEDIN, FOUNDER_NAME } from "../lib/site";
+import { BOOKING_URL, COMPANY_LINKEDIN, FOUNDER_EMAIL, FOUNDER_LINKEDIN, FOUNDER_NAME } from "../lib/site";
 import { DEMO_DEALS } from "./deals";
 import { answerFaq } from "./faq";
 import { findRedactions, redactTranscript, redactionCounts, type RedactionSpan } from "./redact";
@@ -905,8 +905,12 @@ export default function OffHoursFunnel({ active, arrival = "site", onOpenPortal 
           <p className="ohq-lead">
             Your meeting with {FOUNDER_NAME} is booked. The note goes to{" "}
             <a href={`mailto:${FOUNDER_EMAIL}`}>{FOUNDER_EMAIL}</a>.{" "}
+            <a href={COMPANY_LINKEDIN} target="_blank" rel="noopener noreferrer">
+              Company LinkedIn
+            </a>
+            , then{" "}
             <a href={FOUNDER_LINKEDIN} target="_blank" rel="noopener noreferrer">
-              LinkedIn
+              Joshua Bennett
             </a>
             . The report is below.
           </p>
@@ -932,8 +936,12 @@ export default function OffHoursFunnel({ active, arrival = "site", onOpenPortal 
               <p className="ohq-lead">
                 These are meetings with {FOUNDER_NAME}, before your team meets. Monday to Friday. 8 in the morning until 12 noon, and 2 in the afternoon. Shown in New York time. Saturday and Sunday are closed. The note goes to{" "}
                 <a href={`mailto:${FOUNDER_EMAIL}`}>{FOUNDER_EMAIL}</a>.{" "}
+                <a href={COMPANY_LINKEDIN} target="_blank" rel="noopener noreferrer">
+                  Company LinkedIn
+                </a>
+                , then{" "}
                 <a href={FOUNDER_LINKEDIN} target="_blank" rel="noopener noreferrer">
-                  LinkedIn
+                  Joshua Bennett
                 </a>
                 .
               </p>

@@ -1,4 +1,4 @@
-import { FOUNDER_EMAIL, FOUNDER_LINKEDIN, FOUNDER_NAME } from "../lib/site";
+import { COMPANY_LINKEDIN, FOUNDER_EMAIL, FOUNDER_LINKEDIN, FOUNDER_NAME } from "../lib/site";
 import { SHARE_LINKS, type Arrival } from "./arrival";
 
 /** Default words that unlock the qualify link. Override with OFF_HOURS_KEYWORDS. */
@@ -58,7 +58,8 @@ export function inviteCopy(input: {
     "",
     FOUNDER_NAME,
     FOUNDER_EMAIL,
-    FOUNDER_LINKEDIN,
+    COMPANY_LINKEDIN,
+    ...(input.channel === "email" ? [] : [FOUNDER_LINKEDIN]),
   ].join("\n");
   return {
     subject: "Your stalled deal — under a minute",
