@@ -69,7 +69,7 @@ function applySpaFallback404(filePath) {
   writeFileSync(filePath, html);
 }
 
-for (const slug of ["login", "portal", "app"]) {
+for (const slug of ["login", "portal", "app", "qualify"]) {
   mkdirSync(join(dist, slug), { recursive: true });
   copyFileSync(indexHtml, join(dist, slug, "index.html"));
   copyFileSync(indexHtml, join(dist, `${slug}.html`));

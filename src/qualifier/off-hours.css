@@ -1,0 +1,356 @@
+.ohq-dock {
+  position: fixed;
+  left: 1.15rem;
+  bottom: 1.15rem;
+  z-index: 41;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.65rem;
+  max-width: calc(100vw - 2rem);
+}
+
+.ohq-launch {
+  border: 1px solid var(--amber);
+  background: var(--panel);
+  color: var(--amber);
+  font: inherit;
+  font-size: 0.82rem;
+  font-weight: 650;
+  letter-spacing: 0.04em;
+  padding: 0.65rem 1.05rem;
+  border-radius: 999px;
+  cursor: pointer;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
+}
+
+.ohq-launch:hover {
+  background: rgba(201, 162, 39, 0.12);
+}
+
+.ohq-panel,
+.ohq-page {
+  color: var(--text);
+}
+
+.ohq-panel {
+  width: min(26rem, calc(100vw - 2rem));
+  max-height: min(36rem, calc(100vh - 6.5rem));
+  overflow: auto;
+  padding: 1rem 1.05rem 1.15rem;
+  border: 1px solid var(--panel-border);
+  border-radius: 12px;
+  background: var(--panel);
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.45);
+}
+
+.ohq-page {
+  width: min(46rem, calc(100% - 2rem));
+  margin: 2.5rem auto 4rem;
+  padding: 1.5rem 1.25rem 2rem;
+  border: 1px solid var(--panel-border);
+  border-radius: 16px;
+  background: linear-gradient(180deg, #0c1430 0%, var(--panel) 8rem);
+}
+
+.ohq-close {
+  float: right;
+  background: none;
+  border: none;
+  color: var(--muted);
+  font: inherit;
+  font-size: 0.78rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  cursor: pointer;
+}
+
+.ohq-kicker {
+  margin: 0 0 0.35rem;
+  color: var(--amber);
+  font-family: var(--mono);
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.ohq-flow h2 {
+  margin: 0 0 0.6rem;
+  font-size: 1.35rem;
+  line-height: 1.25;
+}
+
+.ohq-flow h2:focus {
+  outline: none;
+}
+
+.ohq-lead,
+.ohq-next,
+.ohq-call-line {
+  margin: 0 0 0.9rem;
+  color: var(--muted);
+  font-size: 0.95rem;
+  line-height: 1.5;
+}
+
+.ohq-call-line {
+  color: var(--text);
+  padding: 0.75rem 0.85rem;
+  border-left: 3px solid var(--teal);
+  background: rgba(61, 214, 198, 0.08);
+}
+
+.ohq-progress {
+  margin: 0 0 0.35rem;
+  color: var(--label);
+  font-family: var(--mono);
+  font-size: 0.72rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.ohq-options,
+.ohq-board {
+  display: grid;
+  gap: 0.45rem;
+  margin: 0 0 1rem;
+  padding: 0;
+  list-style: none;
+}
+
+.ohq-option,
+.ohq-deal {
+  width: 100%;
+  text-align: left;
+  font: inherit;
+  color: var(--text);
+  background: #070b1c;
+  border: 1px solid var(--panel-border);
+  border-radius: 8px;
+  padding: 0.7rem 0.75rem;
+  cursor: pointer;
+}
+
+.ohq-option:hover,
+.ohq-deal:hover {
+  border-color: var(--teal);
+}
+
+.ohq-option.is-selected {
+  border-color: var(--teal);
+  box-shadow: inset 3px 0 0 var(--teal);
+}
+
+.ohq-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-top: 0.35rem;
+}
+
+.ohq-link {
+  display: inline-flex;
+  align-items: center;
+  text-decoration: none;
+}
+
+.ohq-tier {
+  display: inline-block;
+  margin: 0 0 0.45rem;
+  padding: 0.2rem 0.5rem;
+  border-radius: 999px;
+  font-family: var(--mono);
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.ohq-tier-primary {
+  color: #052015;
+  background: var(--emerald);
+}
+
+.ohq-tier-secondary {
+  color: #1a1400;
+  background: var(--amber);
+}
+
+.ohq-tier-partner-later,
+.ohq-tier-bad-fit {
+  color: var(--text);
+  background: #1a2744;
+}
+
+.ohq-facts {
+  display: grid;
+  gap: 0.55rem;
+  margin: 0 0 0.9rem;
+}
+
+.ohq-facts div {
+  display: grid;
+  gap: 0.1rem;
+}
+
+.ohq-facts dt {
+  color: var(--label);
+  font-size: 0.72rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.ohq-facts dd {
+  margin: 0;
+}
+
+.ohq-list {
+  margin: 0 0 0.8rem;
+  padding-left: 1.1rem;
+  color: var(--muted);
+}
+
+.ohq-list-warn {
+  color: #f3d48a;
+}
+
+.ohq-deal {
+  display: grid;
+  gap: 0.15rem;
+}
+
+.ohq-deal-verdict {
+  font-family: var(--mono);
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.ohq-deal-closable .ohq-deal-verdict {
+  color: var(--emerald);
+}
+
+.ohq-deal-recoverable .ohq-deal-verdict {
+  color: var(--amber);
+}
+
+.ohq-deal-flat-no .ohq-deal-verdict {
+  color: #f0a0a0;
+}
+
+.ohq-deal-name {
+  font-weight: 650;
+}
+
+.ohq-deal-meta {
+  color: var(--label);
+  font-size: 0.82rem;
+}
+
+.ohq-brief {
+  margin: -0.15rem 0 0.35rem;
+  padding: 0.75rem 0.8rem 0.85rem;
+  border: 1px solid var(--panel-border);
+  border-top: none;
+  border-radius: 0 0 8px 8px;
+  background: #070b1c;
+}
+
+.ohq-brief p,
+.ohq-brief blockquote {
+  margin: 0 0 0.55rem;
+  color: var(--muted);
+  font-size: 0.92rem;
+}
+
+.ohq-brief blockquote {
+  color: var(--text);
+  border-left: 2px solid var(--teal);
+  padding-left: 0.65rem;
+}
+
+.ohq-crm {
+  margin: 0 0 0.65rem;
+  white-space: pre-wrap;
+  font-family: var(--mono);
+  font-size: 0.75rem;
+  line-height: 1.45;
+  color: var(--text);
+}
+
+.ohq-form {
+  display: grid;
+  gap: 0.7rem;
+}
+
+.ohq-form label {
+  display: grid;
+  gap: 0.3rem;
+  font-size: 0.78rem;
+  color: var(--muted);
+}
+
+.ohq-form input,
+.ohq-form textarea {
+  width: 100%;
+  font: inherit;
+  color: var(--text);
+  background: #070b1c;
+  border: 1px solid var(--panel-border);
+  border-radius: 8px;
+  padding: 0.55rem 0.65rem;
+}
+
+.ohq-form input:focus,
+.ohq-form textarea:focus,
+.ohq-option:focus-visible,
+.ohq-deal:focus-visible,
+.ohq-launch:focus-visible,
+.ohq-close:focus-visible {
+  outline: 2px solid var(--teal);
+  outline-offset: 1px;
+}
+
+.ohq-hp {
+  position: absolute;
+  left: -9999px;
+  height: 0;
+  overflow: hidden;
+}
+
+.ohq-error {
+  margin: 0;
+  color: #f0a0a0;
+  font-size: 0.85rem;
+}
+
+.ohq-error a {
+  color: var(--teal);
+}
+
+@media (max-width: 800px) {
+  .ohq-dock {
+    left: 0.75rem;
+    bottom: 0.75rem;
+    max-width: calc(100vw - 1.5rem);
+  }
+
+  .ohq-panel {
+    width: min(26rem, calc(100vw - 1.5rem));
+    max-height: calc(100dvh - 10.5rem);
+  }
+
+  .ohq-page {
+    margin-top: 1.25rem;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ohq-deal,
+  .ohq-option,
+  .ohq-launch {
+    transition: none;
+  }
+}

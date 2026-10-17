@@ -1,4 +1,4 @@
-export type AppRoute = "home" | "app" | "login";
+export type AppRoute = "home" | "app" | "login" | "qualify";
 
 export function currentPathname(): string {
   const path = window.location.pathname.replace(/\/+$/, "");
@@ -15,11 +15,12 @@ export function getAppRoute(pathname = currentPathname()): AppRoute {
     return "app";
   }
   if (pathname === "/login") return "login";
+  if (pathname === "/qualify") return "qualify";
   return "home";
 }
 
 export function isMarketingRoute(route: AppRoute): boolean {
-  return route === "home";
+  return route === "home" || route === "qualify";
 }
 
 export function hasOAuthReturnParams(search = window.location.search): boolean {

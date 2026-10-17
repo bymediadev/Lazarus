@@ -34,6 +34,7 @@ import {
 } from "./lib/billing";
 import MarketingHome from "./components/MarketingHome";
 import MarketingShell from "./components/MarketingShell";
+import OffHoursQualifier from "./qualifier/OffHoursQualifier";
 import { fetchFounderMe } from "./lib/founderApi";
 import {
   getAppRoute,
@@ -345,6 +346,15 @@ export default function App() {
     }
     if (route === "login") {
       applyDocumentMeta({ title: "Log in | Lazarus Deal Recovery", robots: "noindex" });
+      return;
+    }
+    if (route === "qualify") {
+      applyDocumentMeta({
+        title: "Off-hours forecast triage | Lazarus Deal Recovery",
+        description:
+          "Six questions on forecast fit, then a sample forecast call. A person reads the note in the morning.",
+        robots: "noindex",
+      });
       return;
     }
     applyDocumentMeta({ title: "Deal Recovery Portal | Lazarus Deal Recovery", robots: "noindex" });
@@ -705,7 +715,7 @@ export default function App() {
   useEffect(() => {
     if (!auth.session || auth.passwordRecovery || isPasswordRecoveryPending()) return;
     if (hasOAuthReturnParams()) return;
-    if (route === "home" || route === "login") {
+    if (route === "home" || route === "login" || route === "qualify") {
       goTo("/portal");
     }
     if (!openedDealsOnLogin) {
@@ -1324,14 +1334,21 @@ export default function App() {
           onPortal={() => openTool()}
           onLogin={() => openLogin("signin")}
         >
-          <MarketingHome
-            onSignup={() => openLogin("signup")}
-            onPortal={() => openTool()}
-            onCheckout={(plan) => void handleCheckout(plan)}
-            stripeConfigured={directCheckoutReady() || stripeConfigured}
-            checkoutBusy={checkoutBusy}
-            checkoutError={billingError}
-          />
+          {route === "qualify" ? (
+            <OffHoursQualifier mode="page" onOpenPortal={() => openTool()} />
+          ) : (
+            <>
+              <MarketingHome
+                onSignup={() => openLogin("signup")}
+                onPortal={() => openTool()}
+                onCheckout={(plan) => void handleCheckout(plan)}
+                stripeConfigured={directCheckoutReady() || stripeConfigured}
+                checkoutBusy={checkoutBusy}
+                checkoutError={billingError}
+              />
+              <OffHoursQualifier mode="dock" onOpenPortal={() => openTool()} />
+            </>
+          )}
         </MarketingShell>
       ) : (
         <>

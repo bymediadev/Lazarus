@@ -23,6 +23,7 @@ export default function SiteFooter() {
           <a href={SEO_PATHS.plan}>Recovery plan</a>
           <a href={SEO_PATHS.howTo}>How do I recover this deal?</a>
           <a href={SEO_PATHS.integrations}>HubSpot &amp; Salesforce</a>
+          <a href="/qualify">Off-hours triage</a>
         </nav>
         <nav className="site-footer-nav" aria-label="Legal">
           {TRUST_PACK_NAV.map(({ slug, label }) => (
