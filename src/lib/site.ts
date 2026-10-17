@@ -54,6 +54,10 @@ export const SITE_ORIGIN = "https://www.getldr.ca";
 
 export const FOUNDER_NAME = "Joshua Bennett";
 
+export const FOUNDER_EMAIL = "joshua@getldr.ca";
+
+export const FOUNDER_LINKEDIN = "https://www.linkedin.com/in/jjebennett/";
+
 export const COMPANY_LINKEDIN = "https://www.linkedin.com/company/lazarus-deal-recovery";
 
 export const SITE_TITLE = "Deal Recovery Software for Stalled B2B Sales | Lazarus";

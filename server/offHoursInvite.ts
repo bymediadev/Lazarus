@@ -1,4 +1,5 @@
 import type { Express, Request } from "express";
+import { FOUNDER_EMAIL, FOUNDER_NAME } from "../src/lib/site.js";
 import { inviteCopy, matchKeyword, parseKeywords } from "../src/qualifier/invite.js";
 import type { Arrival } from "../src/qualifier/arrival.js";
 import { clientIp } from "./rateLimit.js";
@@ -56,9 +57,8 @@ async function sendInviteEmail(input: {
   const apiKey = (process.env.RESEND_API_KEY ?? "").trim();
   if (!apiKey) return { emailed: false, error: "RESEND_API_KEY is not set." };
   const from =
-    (process.env.CONTACT_FROM ?? "").trim() ||
-    (process.env.FOUNDER_ALERT_FROM ?? "").trim() ||
-    "Lazarus Deal Recovery <support@getldr.ca>";
+    (process.env.OFF_HOURS_INVITE_FROM ?? "").trim() ||
+    `${FOUNDER_NAME} <${FOUNDER_EMAIL}>`;
   const sent = await fetch("https://api.resend.com/emails", {
     method: "POST",
     headers: {

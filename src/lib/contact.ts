@@ -1,4 +1,5 @@
 import { API_BASE, apiAuthHeaders } from "./api";
+import { FOUNDER_EMAIL } from "./site";
 
 export type ContactTopic = "feedback" | "sales" | "technical" | "support";
 
@@ -10,8 +11,7 @@ export const CONTACT_TOPICS: { id: ContactTopic; label: string; hint: string }[]
 ];
 
 export function contactInboxEmail(topic: ContactTopic): string {
-  if (topic === "feedback") return "joshua@getldr.ca";
-  if (topic === "sales") return "sales@getldr.ca";
+  if (topic === "feedback" || topic === "sales") return FOUNDER_EMAIL;
   return "support@getldr.ca";
 }
 

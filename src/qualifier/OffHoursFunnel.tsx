@@ -5,7 +5,7 @@ import { navigateApp, scrollToSection } from "../lib/appRoute";
 import { API_BASE, PostMortemApiError, runPostMortem } from "../lib/api";
 import { bakedCaptchaSiteKey } from "../lib/captcha";
 import { contactMailto, sendContactNote } from "../lib/contact";
-import { BOOKING_URL } from "../lib/site";
+import { BOOKING_URL, FOUNDER_EMAIL, FOUNDER_LINKEDIN, FOUNDER_NAME } from "../lib/site";
 import { DEMO_DEALS } from "./deals";
 import { answerFaq } from "./faq";
 import { findRedactions, redactTranscript, redactionCounts, type RedactionSpan } from "./redact";
@@ -902,7 +902,14 @@ export default function OffHoursFunnel({ active, arrival = "site", onOpenPortal 
               </a>
             </p>
           )}
-          <p className="ohq-lead">Your meeting with us is booked. The report is below.</p>
+          <p className="ohq-lead">
+            Your meeting with {FOUNDER_NAME} is booked. The note goes to{" "}
+            <a href={`mailto:${FOUNDER_EMAIL}`}>{FOUNDER_EMAIL}</a>.{" "}
+            <a href={FOUNDER_LINKEDIN} target="_blank" rel="noopener noreferrer">
+              LinkedIn
+            </a>
+            . The report is below.
+          </p>
           {report && <EngineReport report={report} />}
           <div className="ohq-actions">
             {onOpenPortal && (
@@ -923,7 +930,12 @@ export default function OffHoursFunnel({ active, arrival = "site", onOpenPortal 
               </button>
               <h2 id="ohq-cal-title">Times with us</h2>
               <p className="ohq-lead">
-                These are meetings with us, before your team meets. Monday to Friday. 8 in the morning until 12 noon, and 2 in the afternoon. Shown in New York time. Saturday and Sunday are closed.
+                These are meetings with {FOUNDER_NAME}, before your team meets. Monday to Friday. 8 in the morning until 12 noon, and 2 in the afternoon. Shown in New York time. Saturday and Sunday are closed. The note goes to{" "}
+                <a href={`mailto:${FOUNDER_EMAIL}`}>{FOUNDER_EMAIL}</a>.{" "}
+                <a href={FOUNDER_LINKEDIN} target="_blank" rel="noopener noreferrer">
+                  LinkedIn
+                </a>
+                .
               </p>
               <div className="ohq-slots">
                 {slots.map((slot) => (

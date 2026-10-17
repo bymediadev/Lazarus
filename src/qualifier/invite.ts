@@ -1,3 +1,4 @@
+import { FOUNDER_EMAIL, FOUNDER_LINKEDIN, FOUNDER_NAME } from "../lib/site";
 import { SHARE_LINKS, type Arrival } from "./arrival";
 
 /** Default words that unlock the qualify link. Override with OFF_HOURS_KEYWORDS. */
@@ -54,6 +55,10 @@ export function inviteCopy(input: {
     link,
     "",
     "Paste one stalled call. You will see recoverable or flat no before your next forecast call.",
+    "",
+    FOUNDER_NAME,
+    FOUNDER_EMAIL,
+    FOUNDER_LINKEDIN,
   ].join("\n");
   return {
     subject: "Your stalled deal — under a minute",

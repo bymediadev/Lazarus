@@ -112,7 +112,12 @@ check("hello is not a keyword", matchKeyword("Hello there") == null);
 check("custom keywords come from the list", matchKeyword("send the triage", parseKeywords("triage,hello")) === "triage");
 const linkedinInvite = inviteCopy({ channel: "linkedin", name: "Priya" });
 check("linkedin invite carries the share link", linkedinInvite.link === SHARE_LINKS.linkedin && linkedinInvite.text.includes(SHARE_LINKS.linkedin));
-check("linkedin invite stays short", linkedinInvite.text.length < 400 && linkedinInvite.text.includes("Priya"));
+check("linkedin invite stays short", linkedinInvite.text.length < 500 && linkedinInvite.text.includes("Priya"));
+check(
+  "invite shows Joshua's email and LinkedIn",
+  linkedinInvite.text.includes("joshua@getldr.ca") &&
+    linkedinInvite.text.includes("https://www.linkedin.com/in/jjebennett/")
+);
 const emailInvite = inviteCopy({ channel: "email" });
 check("email invite uses the email share link", emailInvite.link === SHARE_LINKS.email);
 

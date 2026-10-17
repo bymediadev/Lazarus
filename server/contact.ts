@@ -1,4 +1,5 @@
 import type { Express, Request } from "express";
+import { FOUNDER_EMAIL } from "../src/lib/site.js";
 import { serviceRoleClient } from "./founderAuth.js";
 import { clientIp } from "./rateLimit.js";
 
@@ -35,8 +36,7 @@ function destinationFor(topic: ContactTopic): string {
           : "CONTACT_EMAIL_SUPPORT";
   const override = (process.env[envKey] ?? "").trim();
   if (override) return override;
-  if (topic === "feedback") return "joshua@getldr.ca";
-  if (topic === "sales") return "sales@getldr.ca";
+  if (topic === "feedback" || topic === "sales") return FOUNDER_EMAIL;
   return "support@getldr.ca";
 }
 

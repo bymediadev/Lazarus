@@ -1,4 +1,4 @@
-import { COMPANY_LINKEDIN, SEO_PATHS } from "../lib/site";
+import { FOUNDER_LINKEDIN, SEO_PATHS } from "../lib/site";
 import { openTrustPack, TRUST_PACK_NAV, trustPackUrl, type TrustPackSlug } from "../lib/trustPack";
 
 export default function SiteFooter() {
@@ -42,7 +42,7 @@ export default function SiteFooter() {
               {label}
             </a>
           ))}
-          <a href={COMPANY_LINKEDIN} target="_blank" rel="noopener noreferrer">
+          <a href={FOUNDER_LINKEDIN} target="_blank" rel="noopener noreferrer">
             LinkedIn
           </a>
         </nav>

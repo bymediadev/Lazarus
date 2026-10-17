@@ -42,7 +42,7 @@
         "useNewZLibDeCompress": true
       },
       "mapper": {
-        "url": "https://www.getldr.ca/api/off-hours/invite",
+        "url": "https://api.getldr.ca/api/off-hours/invite",
         "serializeUrl": false,
         "method": "post",
         "headers": [
