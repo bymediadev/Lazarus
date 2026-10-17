@@ -60,6 +60,7 @@ export function isDemoBypassActive(): boolean {
   const viteEnv = (
     import.meta as ImportMeta & { env?: Record<string, string | undefined> }
   ).env;
+  if (import.meta.env.DEV) return true;
   if ((viteEnv?.VITE_GUEST_USAGE_BYPASS ?? "").trim().toLowerCase() === "true") {
     return true;
   }

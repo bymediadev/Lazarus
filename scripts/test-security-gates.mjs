@@ -27,6 +27,7 @@ import {
   isPpuIpRateLimited,
   consumePpuIpSlot,
   resetGuestRateLimitBuckets,
+  skipAnonymousGuestCap,
 } from "../server/guestRateLimit.ts";
 import { requireEmailDelivery } from "../server/authRoutes.ts";
 import {
@@ -833,6 +834,20 @@ check(
 );
 if (prevBypass === undefined) delete process.env.GUEST_USAGE_DEMO_BYPASS;
 else process.env.GUEST_USAGE_DEMO_BYPASS = prevBypass;
+
+check(
+  "local testing skips the 5-free guest cap",
+  skipAnonymousGuestCap({ nodeEnv: "development" }) === true &&
+    skipAnonymousGuestCap({ nodeEnv: "" }) === true
+);
+check(
+  "production portal keeps the 5-free guest cap",
+  skipAnonymousGuestCap({ nodeEnv: "production" }) === false
+);
+check(
+  "off-hours qualifier skips the 5-free guest cap in production",
+  skipAnonymousGuestCap({ offHours: true, nodeEnv: "production" }) === true
+);
 
 check("crm link refuses a different owner", crmLinkWriteAllowed("user-a", "user-b") === false);
 check("crm link allows the same owner", crmLinkWriteAllowed("user-a", "user-a") === true);

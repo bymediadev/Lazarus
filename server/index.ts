@@ -69,6 +69,7 @@ import {
   consumePpuIpSlot,
   ppuIpLimitMessage,
   guestServerLimitMessage,
+  skipAnonymousGuestCap,
 } from "./guestRateLimit.js";
 import {
   ensureBillingCustomer,
@@ -88,6 +89,8 @@ import { registerMeDealRoutes } from "./meDeals.js";
 import { registerTelemetryRoutes } from "./telemetry.js";
 import { getRuntimeConfig, rejectIfAnalysesBlocked } from "./runtimeConfig.js";
 import { registerContactRoutes } from "./contact.js";
+import { registerOffHoursLeadRoutes } from "./offHoursLead.js";
+import { registerOffHoursInviteRoutes } from "./offHoursInvite.js";
 import { corsAllowedOrigins } from "./integrations/oauthShared.js";
 import { secretsEqual } from "./cryptoSecrets.js";
 import { rateLimit, skipPublicAndWebhooks } from "./rateLimit.js";
@@ -322,14 +325,18 @@ app.post(
       }
       if (!skipIpCeiling) consumeIpMonth = true;
       if (!authUserIdEarly) {
-        if (await isAnonymousGuestRateLimited(req)) {
+        const skipGuestCap = skipAnonymousGuestCap({
+          offHours: String(req.body?.off_hours ?? "").trim() === "1",
+          nodeEnv: process.env.NODE_ENV,
+        });
+        if (!skipGuestCap && (await isAnonymousGuestRateLimited(req))) {
           res.status(402).json({
             error: guestServerLimitMessage(),
             code: "GUEST_USAGE_LIMIT",
           });
           return;
         }
-        consumeGuestFree = true;
+        consumeGuestFree = !skipGuestCap;
       } else {
         const decision = await reserveAnalysis(authUserIdEarly);
         if (!decision.ok) {
@@ -829,6 +836,8 @@ registerAuthRoutes(app);
 registerFeedbackRoutes(app);
 registerBillingRoutes(app);
 registerContactRoutes(app);
+registerOffHoursLeadRoutes(app);
+registerOffHoursInviteRoutes(app);
 registerFounderRoutes(app);
 registerTenantKeyRoutes(app);
 registerMeDealRoutes(app);

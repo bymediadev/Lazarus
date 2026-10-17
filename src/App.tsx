@@ -352,7 +352,7 @@ export default function App() {
       applyDocumentMeta({
         title: "Off-hours forecast triage | Lazarus Deal Recovery",
         description:
-          "Six questions on forecast fit, then a sample forecast call. A person reads the note in the morning.",
+          "Off-hours tour of a stalled deal. The transcript is redacted in the browser, then a weekday morning unlocks the action plan.",
         robots: "noindex",
       });
       return;

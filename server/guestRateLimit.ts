@@ -202,6 +202,15 @@ export function ppuIpLimitMessage(): string {
   return `This network has used ${n} pay-per-report analyses this month. At $10 each, a monthly plan is much more cost-effective — Entry is $99/mo for 20 analyses, Team is $499/mo unlimited. Wait until next month, or subscribe.`;
 }
 
+/**
+ * The advertised 5-free cap stays on the main portal in production.
+ * Local testing skips it. The off-hours qualifier skips it too: the plan stays behind a weekday booking.
+ */
+export function skipAnonymousGuestCap(opts: { offHours?: boolean; nodeEnv?: string }): boolean {
+  if (opts.offHours) return true;
+  return (opts.nodeEnv ?? "") !== "production";
+}
+
 export function isDemoUsageBypassAllowed(req: Request): boolean {
   const header = String(req.headers["x-lazarus-demo-bypass"] ?? "").trim();
   if (header !== "1") return false;

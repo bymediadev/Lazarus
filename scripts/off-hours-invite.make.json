@@ -1,0 +1,340 @@
+{
+  "name": "Off-hours keyword → qualify link",
+  "flow": [
+    {
+      "id": 1,
+      "module": "gateway:CustomWebHook",
+      "version": 1,
+      "parameters": {},
+      "mapper": {},
+      "metadata": {
+        "designer": {
+          "x": 0,
+          "y": 0,
+          "name": "Keyword in"
+        },
+        "restore": {
+          "parameters": {
+            "hook": {
+              "data": {
+                "editable": "true"
+              },
+              "label": "Off-hours keyword"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "hook",
+            "type": "hook:gateway-webhook",
+            "label": "Webhooks",
+            "required": true
+          }
+        ]
+      }
+    },
+    {
+      "id": 2,
+      "module": "http:ActionSendData",
+      "version": 3,
+      "parameters": {
+        "handleErrors": true,
+        "useNewZLibDeCompress": true
+      },
+      "mapper": {
+        "url": "https://www.getldr.ca/api/off-hours/invite",
+        "serializeUrl": false,
+        "method": "post",
+        "headers": [
+          {
+            "name": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "name": "X-Off-Hours-Secret",
+            "value": ""
+          }
+        ],
+        "qs": [],
+        "bodyType": "raw",
+        "parseResponse": true,
+        "authUser": "",
+        "authPass": "",
+        "timeout": "20",
+        "shareCookies": false,
+        "ca": "",
+        "rejectUnauthorized": true,
+        "followRedirect": true,
+        "useQuerystring": false,
+        "gzip": true,
+        "useMtls": false,
+        "contentType": "application/json",
+        "inputMethod": "raw",
+        "data": "{\n  \"channel\": \"{{ifempty(1.channel; \"email\")}}\",\n  \"text\": \"{{ifempty(1.text; 1.message)}}\",\n  \"to\": \"{{ifempty(1.to; 1.email)}}\",\n  \"name\": \"{{1.name}}\",\n  \"linkedin\": \"{{1.linkedin}}\"\n}",
+        "followAllRedirects": false
+      },
+      "metadata": {
+        "designer": {
+          "x": 300,
+          "y": 0,
+          "name": "Send qualify invite"
+        },
+        "restore": {
+          "expect": {
+            "headers": {
+              "mode": "edit"
+            },
+            "qs": {
+              "mode": "edit"
+            }
+          }
+        },
+        "expect": [
+          {
+            "name": "url",
+            "type": "url",
+            "label": "URL",
+            "required": true
+          },
+          {
+            "name": "serializeUrl",
+            "type": "boolean",
+            "label": "Serialize URL",
+            "required": true
+          },
+          {
+            "name": "method",
+            "type": "select",
+            "label": "Method",
+            "required": true,
+            "validate": true,
+            "options": [
+              {
+                "value": "get",
+                "label": "GET"
+              },
+              {
+                "value": "post",
+                "label": "POST"
+              },
+              {
+                "value": "put",
+                "label": "PUT"
+              },
+              {
+                "value": "patch",
+                "label": "PATCH"
+              },
+              {
+                "value": "delete",
+                "label": "DELETE"
+              }
+            ]
+          },
+          {
+            "name": "headers",
+            "type": "array",
+            "label": "Headers",
+            "spec": [
+              {
+                "name": "name",
+                "label": "Name",
+                "type": "text",
+                "required": true
+              },
+              {
+                "name": "value",
+                "label": "Value",
+                "type": "text"
+              }
+            ]
+          },
+          {
+            "name": "qs",
+            "type": "array",
+            "label": "Query String",
+            "spec": [
+              {
+                "name": "name",
+                "label": "Name",
+                "type": "text",
+                "required": true
+              },
+              {
+                "name": "value",
+                "label": "Value",
+                "type": "text"
+              }
+            ]
+          },
+          {
+            "name": "bodyType",
+            "type": "select",
+            "label": "Body type",
+            "options": [
+              {
+                "value": "",
+                "label": "Empty"
+              },
+              {
+                "value": "raw",
+                "label": "Raw"
+              },
+              {
+                "value": "application/x-www-form-urlencoded",
+                "label": "Application/x-www-form-urlencoded"
+              },
+              {
+                "value": "multipart/form-data",
+                "label": "Multipart/form-data"
+              }
+            ]
+          },
+          {
+            "name": "parseResponse",
+            "type": "boolean",
+            "label": "Parse response",
+            "required": true
+          },
+          {
+            "name": "contentType",
+            "type": "select",
+            "label": "Content type",
+            "options": [
+              {
+                "value": "text/plain",
+                "label": "Text (text/plain)"
+              },
+              {
+                "value": "application/json",
+                "label": "JSON (application/json)"
+              },
+              {
+                "value": "application/xml",
+                "label": "XML (application/xml)"
+              }
+            ]
+          },
+          {
+            "name": "data",
+            "type": "text",
+            "label": "Request content"
+          }
+        ]
+      }
+    },
+    {
+      "id": 3,
+      "module": "builtin:BasicRouter",
+      "version": 1,
+      "mapper": null,
+      "metadata": {
+        "designer": {
+          "x": 600,
+          "y": 0,
+          "name": "Email or LinkedIn"
+        }
+      },
+      "routes": [
+        {
+          "flow": [
+            {
+              "id": 4,
+              "module": "util:SetVariable2",
+              "version": 1,
+              "parameters": {},
+              "filter": {
+                "name": "Email sent",
+                "conditions": [
+                  [
+                    {
+                      "a": "{{2.data.channel}}",
+                      "b": "email",
+                      "o": "text:equal"
+                    },
+                    {
+                      "a": "{{2.data.matched}}",
+                      "b": "true",
+                      "o": "boolean:equal"
+                    }
+                  ]
+                ]
+              },
+              "mapper": {
+                "name": "status",
+                "scope": "roundtrip",
+                "value": "Email invite sent. Link: {{2.data.link}}"
+              },
+              "metadata": {
+                "designer": {
+                  "x": 900,
+                  "y": -150,
+                  "name": "Email done"
+                }
+              }
+            }
+          ]
+        },
+        {
+          "flow": [
+            {
+              "id": 5,
+              "module": "util:SetVariable2",
+              "version": 1,
+              "parameters": {},
+              "filter": {
+                "name": "LinkedIn reply ready",
+                "conditions": [
+                  [
+                    {
+                      "a": "{{2.data.channel}}",
+                      "b": "linkedin",
+                      "o": "text:equal"
+                    },
+                    {
+                      "a": "{{2.data.matched}}",
+                      "b": "true",
+                      "o": "boolean:equal"
+                    }
+                  ]
+                ]
+              },
+              "mapper": {
+                "name": "linkedin_reply",
+                "scope": "roundtrip",
+                "value": "{{2.data.reply}}"
+              },
+              "metadata": {
+                "designer": {
+                  "x": 900,
+                  "y": 150,
+                  "name": "LinkedIn reply text"
+                }
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "metadata": {
+    "instant": true,
+    "version": 1,
+    "scenario": {
+      "roundtrips": 1,
+      "maxErrors": 3,
+      "autoCommit": true,
+      "autoCommitTriggerLast": true,
+      "sequential": false,
+      "slots": null,
+      "confidential": false,
+      "dataloss": false,
+      "dlq": false,
+      "freshVariables": false
+    },
+    "designer": {
+      "orphans": []
+    },
+    "zone": "us1.make.com"
+  }
+}

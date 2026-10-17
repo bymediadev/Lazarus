@@ -92,6 +92,8 @@ export interface PostMortemPayload {
   salesforceOpportunityId?: string;
   /** Cloudflare Turnstile token — required in production before analysis. */
   captchaToken?: string;
+  /** Off-hours qualifier. Skips the 5-free guest cap; the plan stays behind a weekday booking. */
+  offHours?: boolean;
 }
 
 export async function runPostMortem(payload: PostMortemPayload): Promise<PostMortemResponse> {
@@ -116,6 +118,10 @@ export async function runPostMortem(payload: PostMortemPayload): Promise<PostMor
   }
 
   formData.append("deal_value", payload.dealValue || "0");
+
+  if (payload.offHours) {
+    formData.append("off_hours", "1");
+  }
 
   if (payload.fieldCapture) {
     formData.append("field_capture", "1");

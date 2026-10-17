@@ -75,14 +75,23 @@
   text-transform: uppercase;
 }
 
-.ohq-flow h2 {
+.ohq-flow > h2 {
   margin: 0 0 0.6rem;
   font-size: 1.35rem;
   line-height: 1.25;
 }
 
-.ohq-flow h2:focus {
+.ohq-flow > h2:focus {
   outline: none;
+}
+
+.ohq-page:has(.ohq-report),
+.ohq-panel:has(.ohq-report) {
+  width: min(72rem, calc(100vw - 2rem));
+}
+
+.ohq-report {
+  margin-top: 1.25rem;
 }
 
 .ohq-lead,
@@ -108,6 +117,12 @@
   font-size: 0.72rem;
   letter-spacing: 0.08em;
   text-transform: uppercase;
+}
+
+.ohq-options legend {
+  margin: 0.85rem 0 0.15rem;
+  color: var(--text);
+  font-size: 0.95rem;
 }
 
 .ohq-options,
@@ -293,6 +308,104 @@
 }
 
 .ohq-form input,
+.ohq-form textarea,
+.ohq-form select,
+.ohq-meet select {
+  width: 100%;
+  font: inherit;
+  color: var(--text);
+  background: #070b1c;
+  border: 1px solid var(--panel-border);
+  border-radius: 8px;
+  padding: 0.55rem 0.65rem;
+}
+
+.ohq-meet {
+  display: grid;
+  gap: 0.45rem;
+}
+
+.ohq-meet > span,
+.ohq-meet label span {
+  font-size: 0.78rem;
+  color: var(--muted);
+}
+
+.ohq-month {
+  display: grid;
+  gap: 0.45rem;
+  padding: 0.65rem;
+  border: 1px solid var(--panel-border);
+  border-radius: 8px;
+  background: #070b1c;
+}
+
+.ohq-month-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+.ohq-month-bar button {
+  font: inherit;
+  color: var(--text);
+  background: transparent;
+  border: 1px solid var(--panel-border);
+  border-radius: 8px;
+  padding: 0.35rem 0.55rem;
+  cursor: pointer;
+}
+
+.ohq-month-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 0.2rem;
+}
+
+.ohq-month-name {
+  text-align: center;
+  font-size: 0.68rem;
+  color: var(--muted);
+}
+
+.ohq-month-grid button {
+  font: inherit;
+  color: var(--text);
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  padding: 0.4rem 0;
+  cursor: pointer;
+}
+
+.ohq-month-grid button:hover,
+.ohq-month-grid button.is-selected {
+  border-color: var(--teal);
+}
+
+.ohq-form input:focus,
+.ohq-form textarea:focus,
+.ohq-form select:focus,
+.ohq-meet select:focus,
+.ohq-option:focus-visible,
+.ohq-deal:focus-visible,
+.ohq-launch:focus-visible,
+.ohq-close:focus-visible {
+  outline: 2px solid var(--teal);
+  outline-offset: 1px;
+}
+
+.ohq-drop,
+.ohq-check {
+  display: grid;
+  gap: 0.35rem;
+  margin: 0 0 0.8rem;
+  color: var(--muted);
+  font-size: 0.85rem;
+}
+
+.ohq-drop textarea,
 .ohq-form textarea {
   width: 100%;
   font: inherit;
@@ -303,14 +416,81 @@
   padding: 0.55rem 0.65rem;
 }
 
-.ohq-form input:focus,
-.ohq-form textarea:focus,
-.ohq-option:focus-visible,
-.ohq-deal:focus-visible,
-.ohq-launch:focus-visible,
-.ohq-close:focus-visible {
-  outline: 2px solid var(--teal);
-  outline-offset: 1px;
+.ohq-drop input[type="file"] {
+  font: inherit;
+  color: var(--muted);
+}
+
+.ohq-check {
+  grid-template-columns: auto 1fr;
+  align-items: start;
+}
+
+.ohq-highlight {
+  margin: 0 0 0.8rem;
+  max-height: 9rem;
+  overflow: auto;
+  white-space: pre-wrap;
+  font-size: 0.88rem;
+  line-height: 1.45;
+}
+
+.ohq-mark {
+  border-radius: 3px;
+  padding: 0 0.1rem;
+}
+
+.ohq-mark-name {
+  background: rgba(61, 214, 198, 0.28);
+}
+
+.ohq-mark-company {
+  background: rgba(201, 162, 39, 0.32);
+}
+
+.ohq-mark-amount {
+  background: rgba(240, 160, 160, 0.35);
+}
+
+.ohq-slots {
+  display: grid;
+  gap: 0.4rem;
+  margin: 0 0 0.8rem;
+}
+
+.ohq-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  display: grid;
+  place-items: center;
+  padding: 1rem;
+  background: rgba(0, 5, 33, 0.72);
+}
+
+.ohq-modal-card {
+  width: min(32rem, 100%);
+  max-height: min(40rem, calc(100vh - 2rem));
+  overflow: auto;
+  padding: 1rem 1.05rem 1.2rem;
+  border: 1px solid var(--panel-border);
+  border-radius: 12px;
+  background: var(--panel);
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.45);
+}
+
+.ohq-modal-card h2 {
+  margin: 0 0 0.45rem;
+  font-size: 1.2rem;
+}
+
+.ohq-cal-frame {
+  width: 100%;
+  height: 28rem;
+  margin-top: 0.8rem;
+  border: 1px solid var(--panel-border);
+  border-radius: 8px;
+  background: #070b1c;
 }
 
 .ohq-hp {
