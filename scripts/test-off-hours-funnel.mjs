@@ -5,7 +5,7 @@ import { companyDomain, preCallBrief } from "../src/qualifier/brief.ts";
 import { answerGate, classifyAmount, EMPTY_GATES, HOLD_COPY, morningAllowed, parseDealAmount, routeContext, routeIntegrity } from "../src/qualifier/gates.ts";
 import { isPrivateAddress, profileFromHtml } from "../server/companyProfile.ts";
 import { answerFaq } from "../src/qualifier/faq.ts";
-import { redactTranscript } from "../src/qualifier/redact.ts";
+import { redactEvidence, redactTranscript } from "../src/qualifier/redact.ts";
 import { bookingSlotFromMessage, forecastInstant, forecastWindow, formatSlot, isOpenSlot, morningSlots, slotsBeforeForecast, zonedTimeToUtc } from "../src/qualifier/slots.ts";
 import { readTeaser, scoreVerdict } from "../src/qualifier/teaser.ts";
 
@@ -34,6 +34,17 @@ check("dollar amount is redacted", !redacted.text.includes("$84,000") && !redact
 check("email is redacted", !redacted.text.includes("jane.doe@northwind.com"));
 check("day count stays", redacted.text.includes("47 days"));
 check("Thursday stays", /Thursday/.test(redacted.text));
+const evidence = redactEvidence({
+  transcript: "Priya Shah: the deal is $84,000.",
+  email: "jane.doe@northwind.com can join Thursday.",
+});
+check(
+  "portal evidence redacts the transcript and the email",
+  !evidence.transcript.text.includes("Priya Shah") &&
+    !evidence.transcript.text.includes("$84,000") &&
+    !evidence.email.text.includes("jane.doe@northwind.com") &&
+    evidence.email.text.includes("Thursday")
+);
 
 const price = answerFaq("Can you discount this to $40?");
 check("discount question stays on the published price", price.answer.includes("$99") && price.answer.includes("$10"));

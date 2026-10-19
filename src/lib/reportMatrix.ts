@@ -96,7 +96,7 @@ const BUYER_DECLINED =
 const BUYER_REFUSAL_NEAR = /\bclient\b[\s\S]{0,80}\bno way\b|\bno way\b[\s\S]{0,80}\bclient\b/i;
 /** A purchase act the buyer states. The word "budget" alone is not one. */
 const PURCHASE_ACT =
-  /\b(not moving this forward|signs? off|has to approve|have to approve|needs to approve|buys in|we can accelerate|send (?:me )?a proposal|platform fee|\bin range\b|\bapprov\w*|signing authority|annual contract|we modeled|nothing is signed|weigh in|platform budget)\b/i;
+  /\b(not moving this forward|signs? off|has to approve|have to approve|needs to approve|buys in|we can accelerate|send (?:me )?a proposal|platform fee|\bin range\b|signing authority|annual contract|we modeled|nothing is signed|weigh in|platform budget)\b/i;
 const BUYER_WON =
   /\b(contract is executed|closed-won|procurement issued the po|issued the po for)\b/i;
 const BUYER_LOST =
@@ -112,24 +112,43 @@ export interface TranscriptTurn {
   text: string;
 }
 
+const SELLER_ROLE =
+  /\b(account executive|\bae\b|enterprise ae|sales rep(?:resentative)?|account rep|sdr|bdr)\b/i;
+
 function sellersFromHeader(transcript: string): Set<string> {
   const sellers = new Set<string>();
   const blob = transcript.replace(/\r/g, "");
   for (const match of blob.matchAll(
-    /\(([A-Za-z]{1,5})\)\s*[–—-][^()]{0,160}?\b(account executive|\bae\b|enterprise ae|sales rep)\b/gi
+    /\(([A-Za-z]{1,5})\)\s*[–—-][^()\n]{0,160}?\b(account executive|\bae\b|enterprise ae|sales rep(?:resentative)?)\b/gi
   )) {
     sellers.add(match[1].toLowerCase());
+  }
+  // "Marcus Reed — Sales Representative" / "**Marcus Reed — Sales Representative**"
+  for (const match of blob.matchAll(
+    /(?:^|\n)\s*\**([A-Z][A-Za-z.'-]+(?:\s+[A-Z][A-Za-z.'-]+){0,2})\**\s*[–—-]\s*\**[^\n]*?\b(account executive|\bae\b|enterprise ae|sales rep(?:resentative)?|account rep)\b/gi
+  )) {
+    const full = match[1].replace(/\*+/g, "").trim();
+    const first = full.split(/\s+/)[0] ?? "";
+    if (first) sellers.add(first.toLowerCase());
+    if (full) sellers.add(full.toLowerCase());
   }
   return sellers;
 }
 
 function sellerLabel(name: string, sellers: Set<string>): boolean {
-  const first = name.trim().split(/[\s(/]/)[0] ?? "";
-  return /^(seller|sc|rep|ae)$/i.test(first) || sellers.has(first.toLowerCase());
+  const cleaned = name.replace(/\*+/g, "").trim();
+  const first = cleaned.split(/[\s(/]/)[0] ?? "";
+  return (
+    /^(seller|sc|rep|ae)$/i.test(first) ||
+    sellers.has(first.toLowerCase()) ||
+    sellers.has(cleaned.toLowerCase()) ||
+    SELLER_ROLE.test(cleaned)
+  );
 }
 
-const HEADER_LINE = /^(?:transcript|transc\w*ipt|date|speakers)\s*:/i;
-const SKIP_SPEAKER = /^(?:from|to|subject|cc|bcc|stage|status|deal status|closed won|closed lost)\b/i;
+const HEADER_LINE = /^(?:transcript|transc\w*ipt|date|speakers|scenario|participants|context|overview)\s*:/i;
+const SKIP_SPEAKER =
+  /^(?:from|to|subject|cc|bcc|stage|status|deal status|closed won|closed lost|scenario|participants|context|overview)\b/i;
 
 function expandSpeakerBreaks(transcript: string): string {
   let text = transcript.replace(/\r/g, "");
@@ -150,10 +169,14 @@ export function parseTurns(transcript: string): { labeled: boolean; turns: Trans
   let labeled = false;
   let current: TranscriptTurn | null = null;
   for (const rawLine of expanded.split(/\n/)) {
-    const line = rawLine.replace(/\r$/, "");
+    const line = rawLine.replace(/\r$/, "").replace(/\*+/g, "");
     if (HEADER_LINE.test(line)) continue;
     if (/^(closed won|closed lost)$/i.test(line.trim())) continue;
-    const speaker = line.match(/^\s*(?:\[[^\]]+\]\s*)?([A-Za-z][A-Za-z0-9 .'/()-]{0,60}?)\s*:\s*(.*)$/);
+    // Role headers are not dialogue turns: "Marcus Reed — Sales Representative"
+    if (/^[A-Z][A-Za-z.'-]+(?:\s+[A-Z][A-Za-z.'-]+){0,2}\s*[–—-]\s+\S/.test(line.trim())) continue;
+    const speaker = line.match(
+      /^\s*(?:\[[^\]]+\]\s*)?([A-Za-z][A-Za-z0-9 .'/()-]{0,60}?)\s*:\s*(.*)$/
+    );
     if (speaker && SKIP_SPEAKER.test(speaker[1].trim())) continue;
     if (speaker) {
       labeled = true;
@@ -439,7 +462,7 @@ const UNQUALIFIED_BUDGET = /\b(?:do not|don't|dont) have the budget\b|\bno budge
 const REVENUE_BAND = /\b(revenue|annually|doing about)\b/i;
 const PAID_WITHOUT_AMOUNT = /\b(not free|paid consultation|paid diagnostic|clarity consultation)\b/i;
 const URGENCY =
-  /\b(q[1-4]|this quarter|next quarter|month-end|next week|deadline|urgent|as soon as|underwater until|after month-end|\d+\s*(?:days|months))\b/i;
+  /\b(q[1-4]|this quarter|next quarter|month-end|next week|deadline|urgent|as soon as|underwater until|after month-end|annual planning(?: cycle)?|(?:a |about |in about )?(?:\d+|one|two|three|four|five|six|seven|eight|nine|ten)(?:\s*-\s*(?:\d+|one|two|three|four|five|six|seven|eight|nine|ten))?\s*(?:day|days|week|weeks|month|months)(?!\s+ago)(?:\s+(?:workflow )?assessment|\s+organizational review|\s+planning(?: cycle)?)?)\b/i;
 const PAID_OFFER = /\b(clarity consultation|not free|paid consultation|paid diagnostic|send you (?:a |the )?link)\b/i;
 const CALENDAR_STEP =
   /\b(reschedul\w*|three slots|book(?:ed|ing)?\s+(?:a |the )?time|schedule(?:d)?\s+(?:a |the )?(?:time|meeting)|lock(?:ed)?\s+(?:a |the )?(?:time|date)|put (?:a )?time on (?:the )?calendar)\b/i;

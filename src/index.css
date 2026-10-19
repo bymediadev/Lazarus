@@ -2104,6 +2104,88 @@ button.header-brand {
   margin-top: 0;
 }
 
+.redact-review {
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+  margin: 0;
+  padding: 0.75rem 0.8rem;
+  border: 1px solid rgba(201, 162, 39, 0.45);
+  border-radius: 6px;
+  background: rgba(12, 16, 36, 0.72);
+}
+
+.redact-review p,
+.redact-review label span {
+  margin: 0;
+  font-size: 0.84rem;
+  line-height: 1.45;
+  color: rgba(210, 220, 240, 0.86);
+}
+
+.redact-review label {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.redact-review textarea {
+  width: 100%;
+  min-height: 7rem;
+  box-sizing: border-box;
+  font: inherit;
+  font-size: 0.84rem;
+  line-height: 1.45;
+}
+
+.redact-highlight {
+  margin: 0;
+  max-height: 8rem;
+  overflow: auto;
+  white-space: pre-wrap;
+  font-size: 0.84rem;
+  line-height: 1.45;
+}
+
+.redact-mark {
+  border-radius: 3px;
+  padding: 0 0.1rem;
+}
+
+.redact-mark-name {
+  background: rgba(61, 214, 198, 0.28);
+}
+
+.redact-mark-company {
+  background: rgba(201, 162, 39, 0.32);
+}
+
+.redact-mark-amount {
+  background: rgba(92, 219, 92, 0.28);
+}
+
+.redact-leftover {
+  color: var(--amber) !important;
+}
+
+.redact-check {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  align-items: start;
+  gap: 0.5rem;
+}
+
+.redact-check input {
+  margin-top: 0.2rem;
+}
+
+.redact-choice {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.65rem;
+}
+
 .run-button-above-fold {
   font-size: 0.92rem;
   padding: 1.1rem 1.5rem;

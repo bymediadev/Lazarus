@@ -24,8 +24,9 @@ const STOP = new Set(
     "forecast", "crm", "call", "meeting", "champion", "buyer", "rep", "manager",
     "sales", "vp", "ceo", "cro", "cfo", "cto", "ae", "sdr", "it", "q1", "q2", "q3", "q4",
     "lazarus", "google", "gemini", "hubspot", "salesforce", "zoom", "teams",
-    "recoverable", "checkpoint", "next", "this", "that", "week", "month", "today",
-    "eastern", "morning",
+    "recoverable", "checkpoint", "next", "this", "that", "week", "weeks", "month", "months",
+    "today", "eastern", "morning", "representative", "operations", "director", "president",
+    "assessment", "review", "planning", "cycle", "workflow", "organizational", "annual",
   ]
 );
 
@@ -152,5 +153,16 @@ export function redactionCounts(spans: RedactionSpan[]): Record<RedactionKind, n
     name: spans.filter((span) => span.kind === "name").length,
     company: spans.filter((span) => span.kind === "company").length,
     amount: spans.filter((span) => span.kind === "amount").length,
+  };
+}
+
+/** Portal and qualifier both send these strings, never the pasted originals. */
+export function redactEvidence(input: { transcript: string; email: string }): {
+  transcript: { text: string; spans: RedactionSpan[] };
+  email: { text: string; spans: RedactionSpan[] };
+} {
+  return {
+    transcript: redactTranscript(input.transcript),
+    email: redactTranscript(input.email),
   };
 }

@@ -35,6 +35,10 @@ import {
 import MarketingHome from "./components/MarketingHome";
 import MarketingShell from "./components/MarketingShell";
 import OffHoursQualifier from "./qualifier/OffHoursQualifier";
+import TranscriptRedaction, {
+  buildRedactionReview,
+  type RedactionReview,
+} from "./components/TranscriptRedaction";
 import { fetchFounderMe } from "./lib/founderApi";
 import {
   getAppRoute,
@@ -196,6 +200,7 @@ export default function App() {
   const [liveTriageError, setLiveTriageError] = useState<string | null>(null);
   const [callTranscript, setCallTranscript] = useState("");
   const [emailThread, setEmailThread] = useState("");
+  const [redactionReview, setRedactionReview] = useState<RedactionReview | null>(null);
   const [demoTranscriptLoading, setDemoTranscriptLoading] = useState(false);
   const [demoTranscriptNotice, setDemoTranscriptNotice] = useState<string | null>(null);
   const [emailImportNotice, setEmailImportNotice] = useState<string | null>(null);
@@ -900,6 +905,15 @@ export default function App() {
       return;
     }
 
+    const activeReview =
+      redactionReview &&
+      redactionReview.sourceTranscript === callTranscript &&
+      redactionReview.sourceEmail === emailThread
+        ? redactionReview
+        : null;
+    const transcriptForRun = activeReview?.confirmed ? activeReview.transcript : callTranscript;
+    const emailForRun = activeReview?.confirmed ? activeReview.email : emailThread;
+
     if (captchaRequired && !captchaTokenRef.current) {
       setError(
         captchaSiteKey
@@ -929,8 +943,8 @@ export default function App() {
         id: crypto.randomUUID(),
         createdAt: new Date().toISOString(),
         dealValue,
-        transcript: callTranscript,
-        emailThread,
+        transcript: transcriptForRun,
+        emailThread: emailForRun,
         recordingFile: recordingSource === "upload" ? file ?? undefined : undefined,
         documentFile: documentFile ?? undefined,
         recordingSessionId: fieldSessionId ?? undefined,
@@ -960,8 +974,8 @@ export default function App() {
       await runAnalysis({
         file,
         document: documentFile,
-        transcript: callTranscript,
-        emailThread,
+        transcript: transcriptForRun,
+        emailThread: emailForRun,
         dealValue,
         fieldCapture: recordingSource === "field",
         accountId: accountId.trim() || undefined,
@@ -1060,6 +1074,15 @@ export default function App() {
       setError(guestCapLockMessage(true));
       return;
     }
+    const activeReview =
+      redactionReview &&
+      redactionReview.sourceTranscript === callTranscript &&
+      redactionReview.sourceEmail === emailThread
+        ? redactionReview
+        : null;
+    const transcriptForRun = activeReview?.confirmed ? activeReview.transcript : callTranscript;
+    const emailForRun = activeReview?.confirmed ? activeReview.email : emailThread;
+
     if (captchaRequired && !captchaTokenRef.current) {
       setError(
         captchaSiteKey
@@ -1103,7 +1126,7 @@ export default function App() {
       setSalesCycleDays(nextCycleDays);
       setHistoricalCrmJson(JSON.stringify(context, null, 2));
 
-      const transcript = callTranscript.trim() || crmEvidenceText(context);
+      const transcript = transcriptForRun.trim() || crmEvidenceText(context);
       if (!transcript.trim()) {
         throw new Error("This deal has no stage, notes, meetings, or tasks to score yet.");
       }
@@ -1112,7 +1135,7 @@ export default function App() {
         file,
         document: documentFile,
         transcript,
-        emailThread,
+        emailThread: emailForRun,
         dealValue,
         fieldCapture: recordingSource === "field",
         accountId: nextAccountId || undefined,
@@ -1475,6 +1498,9 @@ export default function App() {
               {demoTranscriptNotice && (
                 <p className="demo-transcript-notice">{demoTranscriptNotice}</p>
               )}
+              <p className="demo-transcript-notice">
+                Redact names, companies, and amounts in this browser, or send the pasted text as it is.
+              </p>
             </div>
             <div
               className={`dropzone dropzone-tab dropzone-unified ${dragOver ? "drag-over" : ""} ${hasUploadedRecording || hasDocument ? "has-file" : ""}`}
@@ -1546,6 +1572,22 @@ export default function App() {
               </ul>
             )}
             <div className="intake-run-cta" aria-label="Primary analysis action">
+              {redactionReview &&
+                redactionReview.sourceTranscript === callTranscript &&
+                redactionReview.sourceEmail === emailThread && (
+                  <TranscriptRedaction
+                    review={redactionReview}
+                    fileAttached={hasUploadedRecording || hasDocument || hasFieldRecording}
+                    onChange={(next) => {
+                      setRedactionReview(next);
+                      if (next.confirmed) setError(null);
+                    }}
+                    onUseOriginal={() => {
+                      setRedactionReview(null);
+                      setError(null);
+                    }}
+                  />
+                )}
               {captchaRequired && captchaSiteKey && (
                 <AnalysisCaptcha
                   siteKey={captchaSiteKey}
@@ -1568,6 +1610,24 @@ export default function App() {
                   {loading && loadingAction === "revive" ? "Reviving…" : "Revive"}
                 </button>
               )}
+              {(callTranscript.trim() || emailThread.trim()) &&
+                !(
+                  redactionReview?.confirmed &&
+                  redactionReview.sourceTranscript === callTranscript &&
+                  redactionReview.sourceEmail === emailThread
+                ) && (
+                  <button
+                    type="button"
+                    className="btn-secondary"
+                    onClick={() => {
+                      setRedactionReview(buildRedactionReview(callTranscript, emailThread));
+                      setError(null);
+                    }}
+                    disabled={loading || paywalled}
+                  >
+                    Redact in the browser
+                  </button>
+                )}
               <button
                 className="run-button run-button-above-fold"
                 data-guide-target="guide-run-analysis"
