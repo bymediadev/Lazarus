@@ -1,0 +1,57 @@
+Cold Qualification Transcript — Complex Test Case
+
+Scenario: First contact. No prior relationship. Unclear budget, authority, urgency, and buying intent.
+
+Participants:
+Marcus Reed — Sales Representative
+Daniel Foster — VP of Operations, Northstar Industrial Group
+
+Context: Marcus is calling from Vertex Systems about a workflow automation platform designed to reduce manual processing across operations.
+
+**Marcus:** Hi, Daniel. Marcus Reed calling from Vertex Systems. I know you weren't expecting my call. Can I take 30 seconds to explain why I'm reaching out, and you can tell me if it's relevant?
+
+**Daniel:** You've got 30 seconds.
+
+**Marcus:** We work with operations teams that are dealing with manual handoffs, duplicated data entry, and reporting delays across departments. I'm calling to find out whether any of that is a current priority for Northstar or whether I've got the wrong person.
+
+**Daniel:** We have all of those problems. That doesn't mean we're looking to buy anything.
+
+**Marcus:** Fair enough. I'm not assuming you're in the market. Where do those issues tend to cause the most trouble for your team?
+
+**Daniel:** Reporting, mostly. We have information sitting in three different systems. My team pulls it together manually every week. It's annoying, but we get it done.
+
+**Marcus:** How much time does that process take?
+
+**Daniel:** Depends on the week. Maybe 20 to 30 hours across the team.
+
+**Marcus:** And is that time affecting other work, or is it simply an inefficient process your team has learned to live with?
+
+**Daniel:** Both, probably. But I don't want you multiplying 30 hours by someone's hourly rate and telling me we're losing a fortune. That's how vendors manufacture business cases.
+
+**Marcus:** Understood. I wouldn't treat every hour as recoverable savings. Has the process caused a missed deadline, a reporting error, or a decision being delayed recently?
+
+**Daniel:** We sent an incomplete report to our CFO two months ago. One division's numbers hadn't been updated. It was embarrassing, and my COO noticed.
+
+**Marcus:** What did your COO ask for after that?
+
+**Daniel:** He wants the reporting process improved before our next annual planning cycle. That's in about five months. Whether that means new software, new procedures, or hiring someone is still open.
+
+**Marcus:** Have you already started evaluating options?
+
+**Daniel:** We've had introductory calls with two other vendors. I wasn't interested in their proposals or the long-term commitment they wanted up front.
+
+**Marcus:** What would a realistic evaluation path look like on your side if you did look further?
+
+**Daniel:** First we'd need a three-week workflow assessment so we can see what actually breaks. After that, IT usually wants a six-to-eight-week organizational review before anything touches the ERP, CRM, and reporting database. Our IT team is cautious about the older ERP.
+
+**Marcus:** Who else would need to weigh in besides you and IT?
+
+**Daniel:** I'd own the operational requirements. Finance looks at the numbers. My COO decides whether this is a priority. There is no dedicated automation budget right now. A significant purchase would need executive approval, and I am not going to invent a made-up budget for a qualification call.
+
+**Marcus:** Understood. I'm not asking you to commit to buying. Would it be useful if I sent a short overview of how other operations teams structured that three-week assessment, and we can decide later whether a deeper conversation makes sense?
+
+**Daniel:** You can send it. I'm not scheduling a meeting from this call. If the overview is useful, I'll read it. If not, I won't pretend otherwise.
+
+**Marcus:** That's fair. I'll send the overview and leave the next step with you.
+
+**Daniel:** Sounds good.

@@ -13,7 +13,7 @@ import { statusFromTrajectory, assertAnalysisSchema } from "../server/gemini.ts"
 import { alignBlockerNarrative } from "../src/lib/blockerNarrative.ts";
 import { commercialBaselineFromText, presentCommercialBaseline } from "../src/lib/commercialBaseline.ts";
 import { DEFER_FORECAST_LINE, forecastGuidance, NON_VIABLE_FORECAST_LINE, NOT_A_PURCHASE_FORECAST_LINE } from "../src/lib/forecastCall.ts";
-import { canonicalImmediateActions, classifyRecoverability, classifyRisk, diagnosticProfile, matrixFacing, promisedRelationshipSteps, publishesStallMetrics, purchaseMotion, recommendedMoveLine, reportCategory, stalledHeadline, validateReportMatrix } from "../src/lib/reportMatrix.ts";
+import { canonicalImmediateActions, classifyRecoverability, classifyRisk, diagnosticProfile, matrixFacing, parseTurns, promisedRelationshipSteps, publishesStallMetrics, purchaseMotion, recommendedMoveLine, reportCategory, stalledHeadline, validateReportMatrix } from "../src/lib/reportMatrix.ts";
 import { formatCompressedCrmNotes } from "../src/lib/crmNotes.ts";
 import { mergeOverlappingQuotes } from "../src/lib/evidenceQuotes.ts";
 import { lifecycleDelta, lifecyclePhaseFromStatus, presentLifecycleRun, presentThreadImprovement, publishesLifecycleScores, scoreMovement } from "../server/meDeals.ts";
@@ -1735,6 +1735,33 @@ const firstNames = "Jordan: The downtime is costing you $45,000 per day.\nCasey:
 const firstDiag = diagnosticProfile(firstNames);
 if (purchaseMotion(firstNames).motion !== "unresolved" || /qualified for this purchase|45,000/i.test(firstDiag.budget)) {
   console.error("FAIL: Two first names with no role stay unresolved", purchaseMotion(firstNames), firstDiag.budget);
+  failed = true;
+}
+const coldQualify = readFileSync("fixtures/daniel_cold_qualification.txt", "utf-8");
+const coldTurns = parseTurns(coldQualify);
+const coldSeller = coldTurns.turns.filter((turn) => turn.role === "seller").map((turn) => turn.speaker);
+const coldBuyer = coldTurns.turns.filter((turn) => turn.role === "buyer").map((turn) => turn.speaker);
+const coldMotion = purchaseMotion(coldQualify);
+const coldQualifyDiag = diagnosticProfile(coldQualify);
+if (
+  !coldTurns.labeled ||
+  !coldSeller.some((name) => /^Marcus$/i.test(name)) ||
+  !coldBuyer.some((name) => /^Daniel$/i.test(name)) ||
+  coldSeller.some((name) => /^Daniel$/i.test(name)) ||
+  coldMotion.motion !== "unresolved" ||
+  !/never opened a purchase/i.test(coldQualifyDiag.falseRead) ||
+  !/timeline was stated/i.test(coldQualifyDiag.urgency) ||
+  !/five months|three-week|six-to-eight-week|annual planning/i.test(coldQualifyDiag.urgency) ||
+  /looking to buy|send a proposal|we can accelerate/i.test(coldQualifyDiag.buyingSignals)
+) {
+  console.error("FAIL: Cold qualification keeps seller/buyer roles, keeps the timeline, and does not treat pain as a purchase", {
+    coldSeller,
+    coldBuyer,
+    coldMotion,
+    urgency: coldQualifyDiag.urgency,
+    buyingSignals: coldQualifyDiag.buyingSignals,
+    falseRead: coldQualifyDiag.falseRead,
+  });
   failed = true;
 }
 const sarahClosed = reportCategory({
