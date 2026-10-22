@@ -46,12 +46,20 @@ export function apiTargetLabel(): string {
   }
 }
 
+export interface CompanyScoreContext {
+  domain: string;
+  profile: string;
+  account: string;
+  amount: string;
+}
+
 export interface PostMortemResponse extends PostMortemResult {
   id?: string | null;
   sources?: TranscriptSources;
   warnings?: string[];
   grounding_audit?: GroundingAudit;
   processed_at?: string;
+  company_context?: CompanyScoreContext | null;
 }
 
 export interface RelevanceVerdict {
@@ -94,6 +102,12 @@ export interface PostMortemPayload {
   captchaToken?: string;
   /** Off-hours qualifier. Skips the 5-free guest cap; the plan stays behind a weekday booking. */
   offHours?: boolean;
+  /** Public company website. Fetched for score context (title / description). */
+  companyUrl?: string;
+  /** Account name typed in the qualifier fit step. */
+  accountName?: string;
+  /** Dollar amount typed in the qualifier fit step (context only). */
+  amountAtRisk?: string;
 }
 
 export async function runPostMortem(payload: PostMortemPayload): Promise<PostMortemResponse> {
@@ -121,6 +135,19 @@ export async function runPostMortem(payload: PostMortemPayload): Promise<PostMor
 
   if (payload.offHours) {
     formData.append("off_hours", "1");
+  }
+
+  const companyUrl = payload.companyUrl?.trim();
+  if (companyUrl) {
+    formData.append("company_url", companyUrl);
+  }
+  const accountName = payload.accountName?.trim();
+  if (accountName) {
+    formData.append("account_name", accountName);
+  }
+  const amountAtRisk = payload.amountAtRisk?.trim();
+  if (amountAtRisk) {
+    formData.append("amount_at_risk", amountAtRisk);
   }
 
   if (payload.fieldCapture) {

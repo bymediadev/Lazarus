@@ -452,6 +452,18 @@
   background: rgba(240, 160, 160, 0.35);
 }
 
+.ohq-export {
+  margin: 0 0 1rem;
+  padding: 0.85rem 0.9rem;
+  border: 1px solid rgba(201, 162, 39, 0.4);
+  border-radius: 8px;
+  background: rgba(12, 16, 36, 0.55);
+}
+
+.ohq-export .ohq-lead {
+  margin-bottom: 0.65rem;
+}
+
 .ohq-slots {
   display: grid;
   gap: 0.4rem;

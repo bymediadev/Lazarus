@@ -1,0 +1,137 @@
+# Cold Qualification Transcript — Complex Test Case
+
+Scenario: First contact. No prior relationship. Unclear budget, authority, urgency, and buying intent.
+
+Participants:
+
+- Marcus Reed — Sales Representative
+- Daniel Foster — VP of Operations, Northstar Industrial Group
+- Context: Marcus is calling about a workflow automation platform designed to reduce manual processing across operations.
+
+Marcus: Hi, Daniel. Marcus Reed calling from Vertex Systems. I know you weren't expecting my call. Can I take 30 seconds to explain why I'm reaching out, and you can tell me if it's relevant?
+
+Daniel: You've got 30 seconds.
+
+Marcus: We work with operations teams that are dealing with manual handoffs, duplicated data entry, and reporting delays across departments. I'm calling to find out whether any of that is a current priority for Northstar or whether I've got the wrong person.
+
+Daniel: We have all of those problems. That doesn't mean we're looking to buy anything.
+
+Marcus: Fair enough. I'm not assuming you're in the market. Where do those issues tend to cause the most trouble for your team?
+
+Daniel: Reporting, mostly. We have information sitting in three different systems. My team pulls it together manually every week. It's annoying, but we get it done.
+
+Marcus: How much time does that process take?
+
+Daniel: Depends on the week. Maybe 20 to 30 hours across the team.
+
+Marcus: And is that time affecting other work, or is it simply an inefficient process your team has learned to live with?
+
+Daniel: Both, probably. But I don't want you multiplying 30 hours by someone's hourly rate and telling me we're losing a fortune. That's how vendors manufacture business cases.
+
+Marcus: Understood. I wouldn't treat every hour as recoverable savings. Has the process caused a missed deadline, a reporting error, or a decision being delayed recently?
+
+Daniel: We sent an incomplete report to our CFO two months ago. One division's numbers hadn't been reconciled. We corrected it the next day. Nobody lost money, and nobody got fired.
+
+Marcus: Has anything changed since then to prevent it happening again?
+
+Daniel: We added another review step. It catches most of the problems, but it adds more work.
+
+Marcus: So you've reduced the risk of an error by adding a manual control, but you've also added work to an already manual process. Is that accurate?
+
+Daniel: Yes. That's a reasonable description.
+
+Marcus: Has leadership asked you to fix this, or is it something you would like to improve if the right opportunity came along?
+
+Daniel: My COO has complained about reporting delays. He wants better visibility across the business. He hasn't told me to purchase software.
+
+Marcus: Is there a deadline attached to that request?
+
+Daniel: He wants the reporting process improved before our next annual planning cycle. That's in about five months. Whether that means new software, new procedures, or hiring someone is still open.
+
+Marcus: What options have you considered so far?
+
+Daniel: We're looking at three things. We could improve our existing systems, hire an analyst, or investigate automation. We haven't decided which direction makes sense.
+
+Marcus: Have you started evaluating vendors?
+
+Daniel: I've had two introductory calls. One company sent me a proposal I haven't read. Another wanted a six-month commitment before they'd even discuss implementation. I wasn't interested.
+
+Marcus: What would a solution have to demonstrate for you to consider it seriously?
+
+Daniel: It would need to work with our existing systems, reduce the manual reconciliation, and not create a new IT headache. We have enough software already.
+
+Marcus: Which systems would it need to integrate with?
+
+Daniel: Our ERP, our CRM, and the reporting database. The ERP is the big one. It's older, and our IT team is cautious about connecting anything to it.
+
+Marcus: Is that a technical limitation, or would IT need to approve the integration before you could proceed?
+
+Daniel: Both could be true. I haven't asked them to assess a specific product. They won't allocate engineering time to a vendor conversation without a credible business case.
+
+Marcus: That sounds like an important dependency. Who would need to be involved if you decided the problem was worth solving?
+
+Daniel: I'd own the operational requirements. IT would assess feasibility. Finance would challenge the numbers. My COO would ultimately decide whether this deserves priority.
+
+Marcus: And who controls the budget for something like this?
+
+Daniel: It depends on the cost. I can approve some operational expenses within my department's limits. A significant software purchase would need executive approval. I don't have a dedicated automation budget sitting there waiting to be spent.
+
+Marcus: Do you know what financial range leadership would consider reasonable?
+
+Daniel: No. We haven't established one. I'm not going to give you a made-up budget just to get through a qualification call.
+
+Marcus: That's fair. Without a defined budget, we'd need to establish the value and understand the approval process before talking seriously about commercial terms. Have you estimated what the current process costs the business?
+
+Daniel: Not properly. We know the hours involved. We haven't measured the cost of errors, the opportunity cost, or what it would take to change the process. I would need Finance involved before presenting a number to the COO.
+
+Marcus: If you found a solution that met the technical requirements and had a defensible financial case, would you be prepared to sponsor it internally?
+
+Daniel: Potentially. I'm not promising to sponsor a purchase. I'd be willing to present a credible recommendation if the evidence supported it.
+
+Marcus: Understood. What could prevent this project from moving forward, even if the numbers looked good?
+
+Daniel: Three things. IT could reject the integration. Finance could decide the return isn't strong enough. Or the COO could put it behind our other priorities. We're also reviewing our operating structure, and that could change who owns the reporting process.
+
+Marcus: When will you know whether the operating structure is changing?
+
+Daniel: Probably within six to eight weeks. There are discussions happening now, but nothing has been announced.
+
+Marcus: Would that affect your ability to evaluate solutions before the planning cycle?
+
+Daniel: It might. I don't want to build a business case for a process that another department could own in two months.
+
+Marcus: That makes sense. Is anyone else actively working on the reporting problem right now?
+
+Daniel: One of our analysts is documenting the current workflow. He's supposed to finish in three weeks. After that, we'll have a better idea of where the bottlenecks are.
+
+Marcus: Would that documentation be the logical starting point before evaluating automation?
+
+Daniel: Probably. Otherwise, we'd be asking vendors to solve a problem we haven't properly mapped.
+
+Marcus: If I suggested a follow-up after that workflow assessment, would that be useful?
+
+Daniel: Maybe. I don't want a product demo next week. I don't have enough information to judge whether your product is relevant.
+
+Marcus: What would make a follow-up worthwhile to you?
+
+Daniel: If you can show how you handle older ERP integrations, explain the implementation requirements, and give me a realistic way to assess potential savings without inventing them, I'd look at it. I would also need to know what the process would demand from our IT team.
+
+Marcus: We can discuss those points, although I'd want to understand your environment before claiming we can support your particular ERP. Would you be comfortable scheduling a short technical discovery after your analyst completes the workflow assessment?
+
+Daniel: Send me an email with the information you mentioned. I'll review it. If the workflow assessment gives us something useful, I may be willing to arrange a call. I'm not agreeing to a meeting today.
+
+Marcus: That's reasonable. Is there a date when you'd expect the workflow assessment to be complete?
+
+Daniel: Three weeks from now, assuming the analyst isn't pulled into another project.
+
+Marcus: I'll send the information and leave the next step with you. If I haven't heard back, would you be comfortable with me checking in after the assessment period?
+
+Daniel: You can check in. That doesn't mean I'll be ready to buy anything.
+
+Marcus: Absolutely. The purpose would be to see whether the problem is sufficiently defined to warrant further evaluation, not to assume you're buying. Thanks for your time, Daniel.
+
+Daniel: All right. Send the email. Goodbye.
+
+Marcus: Goodbye.
+
+End of transcript.

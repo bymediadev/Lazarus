@@ -123,9 +123,9 @@ function sellersFromHeader(transcript: string): Set<string> {
   )) {
     sellers.add(match[1].toLowerCase());
   }
-  // "Marcus Reed — Sales Representative" / "**Marcus Reed — Sales Representative**"
+  // "Marcus Reed — Sales Representative" / "- Marcus Reed — Sales Representative" / "**Marcus Reed — …**"
   for (const match of blob.matchAll(
-    /(?:^|\n)\s*\**([A-Z][A-Za-z.'-]+(?:\s+[A-Z][A-Za-z.'-]+){0,2})\**\s*[–—-]\s*\**[^\n]*?\b(account executive|\bae\b|enterprise ae|sales rep(?:resentative)?|account rep)\b/gi
+    /(?:^|\n)\s*(?:[-*•]\s+)?\**([A-Z][A-Za-z.'-]+(?:\s+[A-Z][A-Za-z.'-]+){0,2})\**\s*[–—-]\s*\**[^\n]*?\b(account executive|\bae\b|enterprise ae|sales rep(?:resentative)?|account rep)\b/gi
   )) {
     const full = match[1].replace(/\*+/g, "").trim();
     const first = full.split(/\s+/)[0] ?? "";
@@ -172,8 +172,8 @@ export function parseTurns(transcript: string): { labeled: boolean; turns: Trans
     const line = rawLine.replace(/\r$/, "").replace(/\*+/g, "");
     if (HEADER_LINE.test(line)) continue;
     if (/^(closed won|closed lost)$/i.test(line.trim())) continue;
-    // Role headers are not dialogue turns: "Marcus Reed — Sales Representative"
-    if (/^[A-Z][A-Za-z.'-]+(?:\s+[A-Z][A-Za-z.'-]+){0,2}\s*[–—-]\s+\S/.test(line.trim())) continue;
+    // Role headers are not dialogue turns: "Marcus Reed — Sales Representative" / "- Marcus Reed — …"
+    if (/^(?:[-*•]\s+)?[A-Z][A-Za-z.'-]+(?:\s+[A-Z][A-Za-z.'-]+){0,2}\s*[–—-]\s+\S/.test(line.trim())) continue;
     const speaker = line.match(
       /^\s*(?:\[[^\]]+\]\s*)?([A-Za-z][A-Za-z0-9 .'/()-]{0,60}?)\s*:\s*(.*)$/
     );

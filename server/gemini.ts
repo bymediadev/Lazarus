@@ -367,6 +367,9 @@ function applyCanonicalScoring(
   const motion = purchaseMotion(transcript);
   const notAPurchase = motion.motion === "not_a_deal";
   const unresolved = motion.motion === "unresolved";
+  /** Unlabeled / no-seller — different from “buyer never opened a purchase.” */
+  const speakersUnread =
+    unresolved && /speaker|no seller is labeled/i.test(motion.reason);
   const quiet = notAPurchase || unresolved;
   const stakeholders = result.stakeholders
     .filter((person) => !isSellingRep(person) && !isSellerIntroduction(person, transcript))
@@ -429,16 +432,20 @@ function applyCanonicalScoring(
       status,
     },
     recoverability: frozen.recoverability,
-    executive_summary: unresolved
+    executive_summary: speakersUnread
       ? "Speakers could not be read. No forecast judgment is published."
+      : unresolved
+      ? "No purchase was opened on this call. Pain and process talk alone are not a forecast line."
       : notAPurchase
       ? "This call did not open a purchase. The prospect is the owner and declined the client role. The next step is the referral relationship already agreed, and it stays off the forecast."
       : result.executive_summary,
     live_deal_triage: quiet
       ? {
           root_issue: motion.reason,
-          core_blocker: unresolved
+          core_blocker: speakersUnread
             ? "None. The speakers are not established."
+            : unresolved
+            ? "None. No purchase was opened."
             : "None on a purchase. They declined the client role.",
           department_friction_index: 0,
         }
@@ -448,11 +455,15 @@ function applyCanonicalScoring(
       ? {
           ...result.force_initialization,
           blocker_classification: causal.blocker_classification,
-          summary: unresolved
+          summary: speakersUnread
             ? "Speakers are not established. No purchase process was read."
+            : unresolved
+            ? "No purchase was stated. No purchase process was read."
             : "Business owner and apparent decision-maker. No purchase process was established.",
-          classification_rationale: unresolved
+          classification_rationale: speakersUnread
             ? "The transcript has no speaker labels, so no person is assigned a role."
+            : unresolved
+            ? motion.reason
             : "The prospect declined to be the client. The seller offered a referral introduction instead of a close.",
         }
       : {
@@ -493,13 +504,15 @@ function applyCanonicalScoring(
       net_force_balance: `${frozen.structural_lock_in}+${frozen.constraint_pressure}=${frozen.structural_lock_in + frozen.constraint_pressure} → ${frozen.equilibrium_state}`,
       dominating_forces: dominant ? [dominant.factor] : result.equilibrium_analysis.dominating_forces,
       equilibrium_breaker: quiet
-        ? unresolved
+        ? speakersUnread
           ? "Speakers are not established."
           : "No purchase was opened."
         : result.equilibrium_analysis.equilibrium_breaker,
       explanation: quiet
-        ? unresolved
+        ? speakersUnread
           ? "No forecast line is published until the speakers can be read."
+          : unresolved
+          ? "No forecast line is published. The buyer never opened a purchase."
           : "The call ended as a referral exchange. Nothing was opened to recover, so this stays off the forecast."
         : frozen.derivation_formula,
     },

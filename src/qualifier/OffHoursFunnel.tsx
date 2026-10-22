@@ -2,7 +2,7 @@ import { FormEvent, lazy, Suspense, useCallback, useEffect, useId, useMemo, useR
 import { createPortal } from "react-dom";
 import AnalysisCaptcha from "../components/AnalysisCaptcha";
 import { navigateApp, scrollToSection } from "../lib/appRoute";
-import { API_BASE, PostMortemApiError, runPostMortem } from "../lib/api";
+import { API_BASE, PostMortemApiError, runPostMortem, type PostMortemResponse } from "../lib/api";
 import { bakedCaptchaSiteKey } from "../lib/captcha";
 import { contactMailto, sendContactNote } from "../lib/contact";
 import { BOOKING_URL, COMPANY_LINKEDIN, FOUNDER_EMAIL, FOUNDER_LINKEDIN, FOUNDER_NAME } from "../lib/site";
@@ -19,8 +19,8 @@ import {
   type MeetingZoneId,
 } from "./slots";
 import TeamMeetingPicker from "./TeamMeetingPicker";
+import { exportQualifierBundle } from "./export";
 import { readTeaser, type DealTeaser } from "./teaser";
-import type { PostMortemResult } from "../types";
 
 const AnalysisReport = lazy(() => import("../components/AnalysisReport"));
 import type { Arrival } from "./arrival";
@@ -96,7 +96,7 @@ function leadMessage(input: {
   return lines.join("\n").slice(0, 4000);
 }
 
-function EngineReport({ report, titleId }: { report: PostMortemResult; titleId?: string }) {
+function EngineReport({ report, titleId }: { report: PostMortemResponse; titleId?: string }) {
   return (
     <div className="ohq-report panel panel-right">
       <div className="panel-label report-panel-label" id={titleId} tabIndex={-1}>
@@ -105,6 +105,22 @@ function EngineReport({ report, titleId }: { report: PostMortemResult; titleId?:
       <Suspense fallback={<p className="ohq-lead">Opening the report…</p>}>
         <AnalysisReport result={report} sources={report.sources} />
       </Suspense>
+    </div>
+  );
+}
+
+function ExportReview({ onExport }: { onExport: () => void }) {
+  return (
+    <div className="ohq-export">
+      <p className="ohq-lead">
+        Download the full local read — fit gates, speakers, purchase motion, timeline, redaction, teaser, and the engine
+        report — as Markdown and JSON.
+      </p>
+      <div className="ohq-actions">
+        <button type="button" className="btn-secondary" onClick={onExport}>
+          Export this qualifier run
+        </button>
+      </div>
     </div>
   );
 }
@@ -208,7 +224,7 @@ export default function OffHoursFunnel({ active, arrival = "site", onOpenPortal 
   const [confirmed, setConfirmed] = useState(false);
   const [counts, setCounts] = useState({ name: 0, company: 0, amount: 0 });
   const [error, setError] = useState<string | null>(null);
-  const [report, setReport] = useState<PostMortemResult | null>(null);
+  const [report, setReport] = useState<PostMortemResponse | null>(null);
   const [teaser, setTeaser] = useState<DealTeaser | null>(null);
   const [view, setView] = useState<ViewChoice>("results");
   const [unlocked, setUnlocked] = useState(false);
@@ -225,6 +241,46 @@ export default function OffHoursFunnel({ active, arrival = "site", onOpenPortal 
   const [captchaToken, setCaptchaToken] = useState("");
   const [captchaReset, setCaptchaReset] = useState(0);
   const onCaptcha = useCallback((token: string) => setCaptchaToken(token), []);
+  const exportRun = useCallback(() => {
+    exportQualifierBundle({
+      arrival,
+      stage,
+      companyUrl,
+      accountName,
+      acvText,
+      forecastInput,
+      meetingZone,
+      gateAnswers,
+      access,
+      hold,
+      commitment,
+      sourceTranscript: source,
+      redactedTranscript: redacted,
+      spans,
+      teaser,
+      report,
+      noticeTitle: notice?.title ?? null,
+      noticeBody: notice?.body ?? null,
+    });
+  }, [
+    arrival,
+    stage,
+    companyUrl,
+    accountName,
+    acvText,
+    forecastInput,
+    meetingZone,
+    gateAnswers,
+    access,
+    hold,
+    commitment,
+    source,
+    redacted,
+    spans,
+    teaser,
+    report,
+    notice,
+  ]);
   const forecastAt = useMemo(() => forecastInstant(forecastInput, meetingZone), [forecastInput, meetingZone]);
   const slots = useMemo(
     () => (forecastAt ? slotsBeforeForecast(forecastAt, new Date(), slotLimit) : []),
@@ -325,11 +381,16 @@ export default function OffHoursFunnel({ active, arrival = "site", onOpenPortal 
     setStage("scoring");
     setError(null);
     try {
+      const domain = companyDomain(companyUrl) ?? undefined;
       const result = await runPostMortem({
         transcript: redacted,
         dealValue: "0",
         captchaToken: captchaToken || undefined,
         offHours: true,
+        companyUrl: companyUrl.trim() || undefined,
+        accountName: accountName.trim() || undefined,
+        amountAtRisk: acvText.trim() || undefined,
+        accountId: domain,
       });
       setReport(result);
       setTeaser(readTeaser(result));
@@ -825,13 +886,26 @@ export default function OffHoursFunnel({ active, arrival = "site", onOpenPortal 
             Scoring the redacted transcript
           </h2>
           <p className="ohq-lead" role="status">
-            The deal engine is reading what you confirmed. The original text was not attached.
+            The deal engine is reading what you confirmed, plus the company site and amount you typed. The original
+            text was not attached.
           </p>
         </>
       )}
 
       {stage === "teaser" && teaser && (
         <>
+          {report?.company_context && (
+            <p className="ohq-lead">
+              Looking at {report.company_context.domain || "this account"}
+              {report.company_context.account && report.company_context.account !== "—"
+                ? ` — ${report.company_context.account}`
+                : ""}
+              {report.company_context.amount && report.company_context.amount !== "—"
+                ? ` (${report.company_context.amount})`
+                : ""}
+              . {report.company_context.profile}
+            </p>
+          )}
           {teaser.verdict === "Flat no" && <p className="ohq-next">{FLAT_NO_DIRECTIVE}</p>}
           {teaser.verdict === "Checkpoint" && <p className="ohq-next">{CHECKPOINT_DIRECTIVE}</p>}
           {teaser.verdict === "Recoverable" && access !== "calendar" && (
@@ -870,7 +944,12 @@ export default function OffHoursFunnel({ active, arrival = "site", onOpenPortal 
               )}
             </>
           )}
-          {report && <EngineReport report={report} titleId={titleId} />}
+          {report && (
+            <>
+              <ExportReview onExport={exportRun} />
+              <EngineReport report={report} titleId={titleId} />
+            </>
+          )}
         </>
       )}
 
@@ -914,7 +993,12 @@ export default function OffHoursFunnel({ active, arrival = "site", onOpenPortal 
             </a>
             . The report is below.
           </p>
-          {report && <EngineReport report={report} />}
+          {report && (
+            <>
+              <ExportReview onExport={exportRun} />
+              <EngineReport report={report} />
+            </>
+          )}
           <div className="ohq-actions">
             {onOpenPortal && (
               <button type="button" className="btn-secondary" onClick={onOpenPortal}>

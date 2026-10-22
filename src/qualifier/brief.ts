@@ -32,6 +32,27 @@ export type PreCallFacts = {
   blocker: string;
 };
 
+/** Prefixed onto the call before scoring. Facts they typed plus the site blurb — not dialogue. */
+export function formatCompanyScoreContext(input: {
+  domain: string;
+  profile: string;
+  account?: string;
+  amount?: string;
+}): string {
+  const domain = input.domain.trim() || "—";
+  const profile = input.profile.trim() || "The site did not publish a description.";
+  const account = input.account?.trim() || "—";
+  const amount = input.amount?.trim() || "—";
+  return [
+    "--- COMPANY CONTEXT (not call dialogue) ---",
+    `Prospect site: ${domain}`,
+    `Published description: ${profile}`,
+    `Account at risk: ${account}`,
+    `Amount at risk: ${amount}`,
+    "--- CALL TRANSCRIPT ---",
+  ].join("\n");
+}
+
 /** Walk-in card. Every line is a fact they typed or the score returned. */
 export function preCallBrief(input: PreCallFacts): string {
   const profile = input.profile.trim() || "The site did not publish a description.";

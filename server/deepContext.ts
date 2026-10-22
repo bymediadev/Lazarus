@@ -19,6 +19,13 @@ export interface LiveSessionObjection {
   source: string;
 }
 
+export interface CompanyScoreContext {
+  domain: string;
+  profile: string;
+  account: string;
+  amount: string;
+}
+
 export interface DeepContextInput {
   accountId?: string;
   salesCycleDays?: number;
@@ -27,6 +34,8 @@ export interface DeepContextInput {
   liveSessionObjections?: LiveSessionObjection[];
   /** Account buying signals / Why Now (from WhiteWhale). */
   whitewhaleContext?: WhiteWhaleAccountIntel | null;
+  /** Prospect site + typed fit facts — orientation for the report, not purchase evidence. */
+  companyContext?: CompanyScoreContext | null;
 }
 
 export interface LiveDealTriage {
@@ -295,8 +304,9 @@ export function buildIngestMetadata(ctx: DeepContextInput): IngestMetadata | und
   const hasHistory = (ctx.historicalCrmContext?.length ?? 0) > 0;
   const hasObjections = (ctx.liveSessionObjections?.length ?? 0) > 0;
   const hasWw = !!ctx.whitewhaleContext?.domain;
+  const hasCompany = !!ctx.companyContext?.domain;
 
-  if (!ctx.accountId && !ctx.salesCycleDays && !hasHistory && !hasObjections && !hasWw) {
+  if (!ctx.accountId && !ctx.salesCycleDays && !hasHistory && !hasObjections && !hasWw && !hasCompany) {
     return undefined;
   }
 
@@ -421,6 +431,10 @@ export function buildDealMemorySummary(
 export function formatSupplementalEvidence(ctx?: DeepContextInput | null): string {
   if (!ctx) return "";
   const lines: string[] = [];
+  if (ctx.companyContext?.domain) {
+    const c = ctx.companyContext;
+    lines.push(c.domain, c.profile, c.account, c.amount);
+  }
   for (const entry of ctx.historicalCrmContext ?? []) {
     if (entry.stage?.trim()) lines.push(entry.stage.trim());
     for (const holder of entry.past_identified_veto_holders ?? []) {
@@ -444,6 +458,19 @@ export function buildDeepContextMessageBlock(ctx: DeepContextInput): string {
 
   if (ctx.accountId) parts.push(`Account ID: ${ctx.accountId}`);
   if (ctx.salesCycleDays) parts.push(`Sales cycle length: ${ctx.salesCycleDays} days`);
+
+  if (ctx.companyContext && (ctx.companyContext.domain || ctx.companyContext.account || ctx.companyContext.amount)) {
+    const c = ctx.companyContext;
+    parts.push(
+      [
+        "COMPANY CONTEXT (orientation for the report — not call dialogue; do NOT treat site marketing copy as purchase evidence):",
+        `Prospect site: ${c.domain || "—"}`,
+        `Published description: ${c.profile || "The site did not publish a description."}`,
+        `Account at risk: ${c.account || "—"}`,
+        `Amount at risk: ${c.amount || "—"}`,
+      ].join("\n")
+    );
+  }
 
   if (ctx.historicalCrmContext?.length) {
     parts.push(

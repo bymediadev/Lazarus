@@ -1,10 +1,14 @@
 import { getAppRoute } from "../src/lib/appRoute.ts";
 import { arrivalOpensNow, qualifySharePath, readArrival, SHARE_LINKS } from "../src/qualifier/arrival.ts";
 import { inviteCopy, matchKeyword, parseKeywords } from "../src/qualifier/invite.ts";
-import { companyDomain, preCallBrief } from "../src/qualifier/brief.ts";
+import { companyDomain, formatCompanyScoreContext, preCallBrief } from "../src/qualifier/brief.ts";
+import { buildDeepContextMessageBlock } from "../server/deepContext.ts";
 import { answerGate, classifyAmount, EMPTY_GATES, HOLD_COPY, morningAllowed, parseDealAmount, routeContext, routeIntegrity } from "../src/qualifier/gates.ts";
 import { isPrivateAddress, profileFromHtml } from "../server/companyProfile.ts";
 import { answerFaq } from "../src/qualifier/faq.ts";
+import { readFileSync } from "fs";
+import { buildQualifierExport, formatQualifierExportMarkdown } from "../src/qualifier/export.ts";
+import { diagnosticProfile, parseTurns, purchaseMotion } from "../src/lib/reportMatrix.ts";
 import { redactEvidence, redactTranscript } from "../src/qualifier/redact.ts";
 import { bookingSlotFromMessage, forecastInstant, forecastWindow, formatSlot, isOpenSlot, morningSlots, slotsBeforeForecast, zonedTimeToUtc } from "../src/qualifier/slots.ts";
 import { readTeaser, scoreVerdict } from "../src/qualifier/teaser.ts";
@@ -44,6 +48,115 @@ check(
     !evidence.transcript.text.includes("$84,000") &&
     !evidence.email.text.includes("jane.doe@northwind.com") &&
     evidence.email.text.includes("Thursday")
+);
+const coldQualifyText = readFileSync("fixtures/daniel_cold_qualification.txt", "utf8");
+const coldQualifyFull = readFileSync("fixtures/daniel_cold_qualification_full.txt", "utf8");
+const fullTurns = parseTurns(coldQualifyFull);
+const fullSellers = [
+  ...new Set(fullTurns.turns.filter((turn) => turn.role === "seller").map((turn) => turn.speaker)),
+];
+const fullBuyers = [
+  ...new Set(fullTurns.turns.filter((turn) => turn.role === "buyer").map((turn) => turn.speaker)),
+];
+const fullMotion = purchaseMotion(coldQualifyFull);
+const fullDiagnostic = diagnosticProfile(coldQualifyFull);
+check(
+  "full cold qualify keeps Marcus as seller with bullet role headers",
+  fullSellers.includes("Marcus") && !fullBuyers.includes("Marcus") && fullBuyers.includes("Daniel")
+);
+check(
+  "full cold qualify does not treat pain as a purchase",
+  fullMotion.motion === "unresolved" || fullMotion.motion === "not_a_deal"
+);
+check(
+  "full cold qualify keeps the planning timeline without 'ago'",
+  /timeline was stated/i.test(fullDiagnostic.urgency) &&
+    /annual planning|five months|three weeks|six to eight|six-to-eight/i.test(fullDiagnostic.urgency) &&
+    !/\btwo months ago\b/i.test(fullDiagnostic.urgency)
+);
+const exportPayload = buildQualifierExport({
+  arrival: "linkedin",
+  stage: "teaser",
+  companyUrl: "northstar.example",
+  accountName: "Northstar",
+  acvText: "80000",
+  forecastInput: "2026-10-22T14:00",
+  meetingZone: "America/Toronto",
+  gateAnswers: { ...EMPTY_GATES, ownership: "yes", acv: "over-25k" },
+  access: "report",
+  hold: null,
+  commitment: null,
+  sourceTranscript: coldQualifyText,
+  redactedTranscript: coldQualifyText,
+  spans: [],
+  teaser: {
+    risk: 62,
+    riskTier: "HIGH",
+    verdict: "Checkpoint",
+    blocker: "No purchase was opened.",
+    quote: "That doesn't mean we're looking to buy anything.",
+    thisWeek: [],
+  },
+  report: {
+    client_name: "Northstar",
+    company_context: {
+      domain: "northstar.example",
+      profile: "Logistics software for mid-market fleets.",
+      account: "Northstar",
+      amount: "80000",
+    },
+  },
+  noticeTitle: null,
+  noticeBody: null,
+});
+const exportMd = formatQualifierExportMarkdown(exportPayload);
+check(
+  "qualifier export keeps seller and buyer roles",
+  exportPayload.read.speakers.sellers.includes("Marcus") &&
+    exportPayload.read.speakers.buyers.includes("Daniel") &&
+    exportPayload.read.purchase_motion.motion === "unresolved"
+);
+check(
+  "qualifier export keeps the planning timeline",
+  /timeline was stated/i.test(exportPayload.read.diagnostic.urgency) &&
+    /annual planning|five months|three-week|six-to-eight-week/i.test(exportMd)
+);
+check(
+  "qualifier export markdown carries the teaser verdict",
+  /Verdict: Checkpoint/.test(exportMd) && /## Teaser/.test(exportMd) && /## Purchase read/.test(exportMd)
+);
+check(
+  "qualifier export carries company context used for the score",
+  exportPayload.company_context?.domain === "northstar.example" &&
+    /## Company context/.test(exportMd) &&
+    /Logistics software for mid-market fleets/.test(exportMd)
+);
+const scoreContext = formatCompanyScoreContext({
+  domain: "harborlogistics.com",
+  profile: "Freight systems for regional carriers.",
+  account: "Northline",
+  amount: "$80,000",
+});
+check(
+  "company score context is labeled as not dialogue",
+  /not call dialogue/i.test(scoreContext) &&
+    scoreContext.includes("harborlogistics.com") &&
+    scoreContext.includes("Northline") &&
+    scoreContext.includes("CALL TRANSCRIPT")
+);
+const deepBlock = buildDeepContextMessageBlock({
+  companyContext: {
+    domain: "harborlogistics.com",
+    profile: "Freight systems for regional carriers.",
+    account: "Northline",
+    amount: "$80,000",
+  },
+});
+check(
+  "deep context orients the engine without treating the site as purchase evidence",
+  /COMPANY CONTEXT/.test(deepBlock) &&
+    /not treat site marketing copy as purchase evidence/i.test(deepBlock) &&
+    deepBlock.includes("Northline")
 );
 
 const price = answerFaq("Can you discount this to $40?");

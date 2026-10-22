@@ -26,6 +26,8 @@ import { normalizeEmailThread, normalizeManualTranscript } from "./normalize.js"
 import { scanLiveObjections as scanLiveObjectionsServer } from "./liveObjections.js";
 import { runLiveTriage } from "./liveTriage.js";
 import { classifySalesRelevance } from "./relevanceGate.js";
+import { readCompanyProfile } from "./companyProfile.js";
+import { companyDomain } from "../src/qualifier/brief.js";
 import { canonicalTrustPackPath, registerTrustPackRoutes, trustPackSlugFromPath } from "./trustPack.js";
 import {
   mapHubSpotDealToDeepContext,
@@ -364,6 +366,33 @@ app.post(
     const processedAt = new Date().toISOString();
     const dealValue = parseFloat(String(req.body.deal_value)) || 0;
     const deepContext = parseDeepContextFromBody(req.body as Record<string, unknown>);
+    const companyUrlRaw = String(req.body.company_url ?? "").trim();
+    const accountNameTyped = String(req.body.account_name ?? "").trim().slice(0, 160);
+    const amountAtRiskTyped = String(req.body.amount_at_risk ?? "").trim().slice(0, 40);
+    let companyContext: {
+      domain: string;
+      profile: string;
+      account: string;
+      amount: string;
+    } | null = null;
+    if (companyUrlRaw || accountNameTyped || amountAtRiskTyped) {
+      const lookedUp = companyUrlRaw
+        ? await readCompanyProfile(companyUrlRaw)
+        : { domain: companyDomain(companyUrlRaw) ?? "", profile: "" };
+      const domain = lookedUp.domain || companyDomain(companyUrlRaw) || "";
+      if (domain || accountNameTyped || amountAtRiskTyped) {
+        companyContext = {
+          domain,
+          profile: lookedUp.profile || "The site did not publish a description.",
+          account: accountNameTyped || "—",
+          amount: amountAtRiskTyped || "—",
+        };
+        deepContext.companyContext = companyContext;
+        if (!deepContext.accountId && domain) {
+          deepContext.accountId = domain;
+        }
+      }
+    }
     const manualRaw = normalizeTextField(req.body.transcript);
     const livePayloadText = deepContext.liveTranscriptPayload?.length
       ? formatLiveTranscriptPayload(deepContext.liveTranscriptPayload)
@@ -581,6 +610,7 @@ app.post(
       warnings,
       relevance,
       source_transcript: transcript,
+      company_context: companyContext,
     });
     committed = true;
   } catch (err) {
